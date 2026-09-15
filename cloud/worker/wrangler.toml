@@ -4,9 +4,27 @@ compatibility_date = "2026-09-01"
 
 # 部署：wrangler deploy
 # 配置密钥：wrangler secret put GITHUB_TOKEN
+#
+# 同一个 Worker 同时提供：静态界面（[assets]）+ /api/* 网关
+# 好处：一个自定义域名搞定，前后端同源，没有 CORS
+
+# 保留 workers.dev 兜底入口（国内 DNS 被污染，仅作备用）
+workers_dev = true
+preview_urls = false
+
 [vars]
 REPO = "bopii6/videogen"
 BUNDLE_TAG = "bundles"
+
+# 工作台界面（cloud/ui）由 Worker 直接托管
+[assets]
+directory = "../ui"
+
+# 自定义域名（Cloudflare 会自动建 DNS 记录 + 签发证书）
+# 注意：video.hellojoy.top 已被现有服务占用，改用独立子域，避免冲突
+# [[routes]]
+# pattern = "vg.hellojoy.top"
+# custom_domain = true
 
 [observability]
 enabled = true

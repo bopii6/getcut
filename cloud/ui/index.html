@@ -131,7 +131,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = window.VIDEOGEN_API || localStorage.getItem("vg_api") || "https://videogen-api.13177217912ws.workers.dev";
+const API = window.VIDEOGEN_API || localStorage.getItem("vg_api") || "";
 const $ = (s) => document.querySelector(s);
 const state = { bundle: null, job: null, timer: null, opts: { subtitles:true, sources:true, sfx:true, useLlm:true } };
 

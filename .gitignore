@@ -56,3 +56,6 @@ server_e2e.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# wrangler ±¾µØ»º´æ
+.wrangler/
