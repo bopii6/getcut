@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>videogen · 云端工作台</title>
+<style>
+  :root{
+    --bg:#0b0c0e; --panel:#14161a; --panel2:#1b1e23; --line:#262a31;
+    --fg:#e8eaed; --dim:#9aa1ab; --accent:#6ee7a8; --accent2:#3ddc97;
+    --radius:12px; --t:160ms cubic-bezier(.4,0,.2,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:15px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  a{color:var(--accent)}
+  header{position:sticky;top:0;z-index:9;backdrop-filter:blur(12px);
+    background:rgba(11,12,14,.78);border-bottom:1px solid var(--line)}
+  .wrap{max-width:940px;margin:0 auto;padding:0 20px}
+  header .wrap{display:flex;align-items:center;gap:12px;height:60px}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:650;letter-spacing:.2px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 12px var(--accent)}
+  .tag{margin-left:auto;font-size:12px;color:var(--dim);border:1px solid var(--line);
+    padding:3px 9px;border-radius:999px}
+  main{max-width:940px;margin:0 auto;padding:26px 20px 80px}
+  h2{font-size:16px;margin:30px 0 12px;letter-spacing:.3px}
+  h2:first-child{margin-top:6px}
+  .muted{color:var(--dim);font-size:13px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .drop{border:1.5px dashed #333941;border-radius:var(--radius);padding:30px 20px;text-align:center;
+    cursor:pointer;transition:var(--t);background:var(--panel)}
+  .drop:hover,.drop.over{border-color:var(--accent);background:#141a17}
+  .drop b{color:var(--accent)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  select,input[type=text]{background:var(--panel2);color:var(--fg);border:1px solid var(--line);
+    border-radius:9px;padding:9px 11px;font:inherit;min-width:140px}
+  select:focus,input:focus{outline:none;border-color:var(--accent)}
+  button{background:var(--accent);color:#06210f;border:0;border-radius:9px;padding:10px 16px;
+    font:inherit;font-weight:650;cursor:pointer;transition:var(--t)}
+  button:hover{filter:brightness(1.08)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line);font-weight:500}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer;
+    font-size:13px;color:var(--dim);transition:var(--t);user-select:none}
+  .chip.on{border-color:var(--accent);color:var(--accent);background:#121a15}
+  .item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);
+    border-radius:10px;background:var(--panel);margin-bottom:9px}
+  .item .nm{font-weight:600}
+  .item .sz{color:var(--dim);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .item button{margin-left:auto;padding:7px 13px;font-size:13px}
+  .bar{height:7px;background:var(--panel2);border-radius:99px;overflow:hidden;margin:14px 0 8px}
+  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));
+    transition:width 400ms ease}
+  .steps{list-style:none;padding:0;margin:8px 0 0;font-size:13.5px;color:var(--dim)}
+  .steps li{padding:3px 0}
+  .steps li.ok{color:var(--accent)}
+  .steps li.run{color:var(--fg)}
+  video{width:100%;max-width:400px;border-radius:10px;background:#000;display:block;margin-top:12px}
+  .err{color:#ff8b8b;font-size:13.5px;margin-top:10px;white-space:pre-wrap}
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1e2229;
+    border:1px solid var(--line);padding:10px 16px;border-radius:10px;opacity:0;transition:var(--t);pointer-events:none}
+  .toast.show{opacity:1}
+  footer{border-top:1px solid var(--line);margin-top:50px;padding:18px 0;color:var(--dim);font-size:12.5px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="logo"><span class="dot"></span> videogen</div>
+  <span class="tag">云端渲染 · GitHub Actions</span>
+</div></header>
+
+<main>
+  <h2>01 上传素材包</h2>
+  <div class="drop" id="drop" role="button" tabindex="0" aria-label="上传素材包 zip">
+    <div>把 <b>素材包 zip</b> 拖到这里，或点击选择</div>
+    <div class="muted" style="margin-top:6px">content.json + manifest.json + images/ + videos/</div>
+  </div>
+  <div class="err" id="upErr"></div>
+
+  <h2>02 选择素材包</h2>
+  <div id="bundles"><div class="muted">加载中…</div></div>
+
+  <h2>03 渲染配置</h2>
+  <div class="card">
+    <div class="row" style="margin-bottom:14px">
+      <span class="muted" style="min-width:64px">成片形态</span>
+      <select id="format">
+        <option value="portrait_editorial">竖屏信息版（9:16 画布 · 顶部大标题）</option>
+        <option value="portrait">竖屏满版（9:16 满屏 · 素材铺满）</option>
+      </select>
+    </div>
+    <div class="row" style="margin-bottom:14px">
+      <span class="muted" style="min-width:64px">语速</span>
+      <select id="rate">
+        <option value="">默认</option>
+        <option value="+10%">+10%</option>
+        <option value="+15%">+15%</option>
+        <option value="+20%">+20%</option>
+        <option value="-10%">-10%</option>
+      </select>
+    </div>
+    <div class="chips">
+      <div class="chip on" data-k="subtitles">字幕</div>
+      <div class="chip on" data-k="sources">资料来源</div>
+      <div class="chip on" data-k="sfx">音效</div>
+      <div class="chip on" data-k="useLlm">LLM 导演</div>
+    </div>
+  </div>
+
+  <h2>04 渲染</h2>
+  <div class="card">
+    <div class="row">
+      <button id="go" disabled>开始渲染</button>
+      <span class="muted" id="goHint">先选一个素材包</span>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="muted" id="stage">待命</div>
+    <ul class="steps" id="steps"></ul>
+    <div id="result"></div>
+    <div class="err" id="rErr"></div>
+  </div>
+
+  <h2>历史成片</h2>
+  <div id="renders"><div class="muted">加载中…</div></div>
+
+  <footer>渲染在 GitHub Actions 容器里执行（ffmpeg + Remotion），一次约 6-10 分钟 · 服务端不保存素材</footer>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = window.VIDEOGEN_API || localStorage.getItem("vg_api") || "";
+const $ = (s) => document.querySelector(s);
+const state = { bundle: null, job: null, timer: null, opts: { subtitles:true, sources:true, sfx:true, useLlm:true } };
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+function api(path){ return API.replace(/\/$/,"") + path; }
+function human(n){ return n>1048576 ? (n/1048576).toFixed(1)+" MB" : Math.round(n/1024)+" KB"; }
+
+if (!API) {
+  $("#upErr").textContent = "未配置后端地址：请用 ?api=https://xxx.workers.dev 打开本页（会记住）";
+}
+
+// ---------- 素材包 ----------
+async function loadBundles(){
+  const box = $("#bundles");
+  try{
+    const r = await fetch(api("/api/bundles"));
+    const d = await r.json();
+    if(!d.bundles || !d.bundles.length){ box.innerHTML = '<div class="muted">还没有素材包，先在上面传一个 zip。</div>'; return; }
+    box.innerHTML = "";
+    d.bundles.forEach(b=>{
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `<div><div class="nm"></div><div class="sz">${human(b.size)} · ${(b.created||"").slice(0,10)}</div></div>`;
+      el.querySelector(".nm").textContent = b.name;
+      const btn = document.createElement("button");
+      btn.textContent = state.bundle === b.name ? "已选" : "选它";
+      btn.onclick = () => { state.bundle = b.name; $("#go").disabled=false; $("#goHint").textContent = "已选："+b.name; loadBundles(); };
+      el.appendChild(btn); box.appendChild(el);
+    });
+  }catch(e){ box.innerHTML = '<div class="err">读取素材包失败：'+(e.message||e)+'</div>'; }
+}
+
+// ---------- 上传 ----------
+const drop = $("#drop");
+drop.onclick = () => pick();
+drop.onkeydown = (e)=>{ if(e.key==="Enter"||e.key===" ") pick(); };
+drop.addEventListener("dragover", e=>{ e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", ()=> drop.classList.remove("over"));
+drop.addEventListener("drop", e=>{ e.preventDefault(); drop.classList.remove("over");
+  if(e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); });
+function pick(){ const i=document.createElement("input"); i.type="file"; i.accept=".zip";
+  i.onchange=()=>i.files[0]&&upload(i.files[0]); i.click(); }
+
+async function upload(file){
+  if(!/\.zip$/i.test(file.name)){ $("#upErr").textContent="请上传 zip"; return; }
+  $("#upErr").textContent=""; drop.querySelector("div").textContent = "上传中… "+file.name;
+  try{
+    const r = await fetch(api("/api/upload"), { method:"POST",
+      headers:{ "content-type":"application/zip", "x-bundle-name":encodeURIComponent(file.name) }, body:file });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error||"上传失败");
+    toast("已上传："+d.name); state.bundle = d.name;
+    $("#go").disabled=false; $("#goHint").textContent="已选："+d.name;
+    loadBundles();
+  }catch(e){ $("#upErr").textContent = "上传失败："+(e.message||e); }
+  drop.querySelector("div").innerHTML = '把 <b>素材包 zip</b> 拖到这里，或点击选择';
+}
+
+// ---------- 配置 ----------
+document.querySelectorAll(".chip").forEach(c=>{
+  c.onclick = ()=>{ const k=c.dataset.k; state.opts[k]=!state.opts[k]; c.classList.toggle("on", state.opts[k]); };
+});
+
+// ---------- 渲染 ----------
+$("#go").onclick = async () => {
+  if(!state.bundle) return;
+  $("#go").disabled = true; $("#result").innerHTML=""; $("#rErr").textContent="";
+  $("#stage").textContent="正在触发云端渲染…";
+  try{
+    const r = await fetch(api("/api/render"), { method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({ bundle:state.bundle, format:$("#format").value, rate:$("#rate").value, ...state.opts }) });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error||"触发失败");
+    state.job = d.job; poll();
+  }catch(e){ $("#rErr").textContent = e.message||String(e); $("#go").disabled=false; $("#stage").textContent="待命"; }
+};
+
+const STAGE_CN = { queued:"排队中", running:"渲染中", done:"完成", failed:"失败" };
+function poll(){
+  clearInterval(state.timer);
+  state.timer = setInterval(async ()=>{
+    try{
+      const r = await fetch(api("/api/status?job="+state.job));
+      const d = await r.json();
+      $("#bar").style.width = (d.stage==="done"?100:(d.progress||0))+"%";
+      $("#stage").textContent = `${STAGE_CN[d.stage]||d.stage} · 任务 ${state.job}` +
+        (d.run_url ? ` · ${d.run_url}` : "");
+      $("#steps").innerHTML = (d.steps||[]).map(s=>
+        `<li class="${s.conclusion==="success"?"ok":(s.status==="in_progress"?"run":"")}">${s.conclusion==="success"?"✓":(s.status==="in_progress"?"▸":"·")} ${s.name}</li>`).join("");
+      if(d.stage==="done"){ clearInterval(state.timer); showVideo(); $("#go").disabled=false; }
+      if(d.stage==="failed"){ clearInterval(state.timer); $("#rErr").textContent="渲染失败，点上面的 run 链接看日志"; $("#go").disabled=false; }
+    }catch(e){ /* 网络抖动继续轮询 */ }
+  }, 5000);
+}
+
+function showVideo(){
+  const src = api("/api/video?job="+state.job);
+  $("#result").innerHTML = `<video controls playsinline src="${src}"></video>
+    <div class="row" style="margin-top:10px"><a href="${src}" download="${state.job}.mp4">下载成片</a></div>`;
+  toast("渲染完成");
+  loadRenders();
+}
+
+// ---------- 历史 ----------
+async function loadRenders(){
+  const box=$("#renders");
+  try{
+    const r = await fetch(api("/api/renders")); const d = await r.json();
+    if(!d.renders || !d.renders.length){ box.innerHTML='<div class="muted">还没有成片。</div>'; return; }
+    box.innerHTML="";
+    d.renders.forEach(x=>{
+      const el=document.createElement("div"); el.className="item";
+      el.innerHTML = `<div><div class="nm"></div><div class="sz">${(x.created||"").slice(0,16).replace("T"," ")} · ${x.has_video?"有视频":"渲染失败"}</div></div>`;
+      el.querySelector(".nm").textContent = x.job;
+      if(x.has_video){ const b=document.createElement("button"); b.textContent="播放";
+        b.onclick=()=>{ state.job=x.job; $("#result").innerHTML=""; showVideo(); window.scrollTo({top:document.body.scrollHeight/2,behavior:"smooth"}); };
+        el.appendChild(b); }
+      box.appendChild(el);
+    });
+  }catch(e){ box.innerHTML='<div class="err">读取历史失败：'+(e.message||e)+'</div>'; }
+}
+
+loadBundles(); loadRenders();
+</script>
+</body>
+</html>

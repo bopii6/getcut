@@ -1,0 +1,12 @@
+name = "videogen-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# 部署：wrangler deploy
+# 配置密钥：wrangler secret put GITHUB_TOKEN
+[vars]
+REPO = "bopii6/videogen"
+BUNDLE_TAG = "bundles"
+
+[observability]
+enabled = true
