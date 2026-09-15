@@ -1,0 +1,30 @@
+# --- secrets ---
+.env
+*_key.txt
+!*_key.txt.example
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# --- node ---
+renderer/node_modules/
+renderer/public/media/
+renderer/props.json
+renderer/render.log
+renderer/visual_out.mp4
+
+# --- runtime data ---
+work/
+uploads/
+outputs/
+jobs.json
+
+# --- os/editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

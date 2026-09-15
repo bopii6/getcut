@@ -1,0 +1,57 @@
+[90mRemotion root directory:[39m [90mE:\短视频生成\videogen\renderer[39m
+[90mApplied configuration from E:\短视频生成\videogen\renderer\remotion.config.ts.[39m
+[90mChecking if[39m [90mmain[39m [90mis the entry file[39m
+[90mSelected[39m [90mE:\短视频生成\videogen\renderer\src\index.ts[39m [90mas the entry point because file exists and is a common entry point and no entry point was explicitly selected[39m
+[90m[90mEntry point = E:\短视频生成\videogen\renderer\src\index.ts (common paths)[39m[90m[39m
+[90mEnsuring browser executable[39m
+[90mEnsured browser is available.[39m
+[40m openBrowser() [49m [90mOpening browser: gl = null, executable = E:\短视频生成\videogen\renderer\node_modules\.remotion\chrome-headless-shell\win64\chrome-headless-shell-win64\chrome-headless-shell.exe, enableMultiProcessOnLinux = true[39m
+Bundling 6%
+Bundling 21%
+Bundling 65%
+Bundling 71%
+Bundling 76%
+Bundling 81%
+Bundling 87%
+Bundling 92%
+Bundling 98%
+Bundling 100%
+Copying public dir 11.6 MB
+Copying public dir 24 MB
+Copying public dir 34.7 MB
+Copying public dir 45.4 MB
+Copying public dir 57 MB
+Copying public dir 67.8 MB
+Copying public dir 78.5 MB
+Copying public dir 89 MB
+Copying public dir 99.9 MB
+Copying public dir 110.6 MB
+[90mBundling done in 2365ms[39m
+[90mCopying done in 279ms[39m
+Getting composition
+[90mBundled under[39m [90mC:\Users\wang\AppData\Local\Temp\remotion-webpack-bundle-tLtY7f[39m
+[90mCreated directory for temporary files[39m [90mC:\Users\wang\AppData\Local\Temp\remotion-v4.0.524-assetsza6n9yf2f5[39m
+[40m Tab 0, delayRender() [49m [90m[90m"Loading root component - See https://remotion.dev/docs/troubleshooting/loading-root-component if you experience a timeout" handle was cleared after 1ms[39m[90m[39m
+[40m Tab 0, delayRender() [49m [90m[90m"Waiting for root component to load - See https://remotion.dev/docs/troubleshooting/loading-root-component if you experience a timeout" handle was cleared after 340ms[39m[90m[39m
+[40m selectComposition() [49m [90mRunning calculateMetadata()...[39m
+[40m Tab 0, delayRender() [49m [90m[90m"Running the calculateMetadata() function for composition main" handle was cleared after 2ms[39m[90m[39m
+[40m selectComposition() [49m [90mcalculateMetadata() took 8ms[39m
+[90mComposition = main (Passed as argument)[39m
+[90mFormat = png (Out name extension)[39m
+[90mOutput = still_test.png[39m
+Rendered 0/1
+Rendered 0/1
+Rendered 0/1
+Rendered 0/1
+Rendered 0/1
+Rendered 0/1
+Rendered 0/1
+Rendered 1/1
+[34m+                    still_test.png[39m
+[90mCleaning up...[39m
+[90mCleanup job "Delete C:\Users\wang\AppData\Local\Temp\remotion-webpack-bundle-tLtY7f" done[39m
+[90mCleanup job "Close server" done[39m
+[90mCleanup job "Cleanup bundle" done[39m
+[90mReceived SIGTERM signal. Killing browser process[39m
+[90mCleanup job "Close browser" done[39m
+[90mCleanup done in 132ms[39m

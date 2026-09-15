@@ -1,0 +1,571 @@
+{
+ "durationInFrames": 3012,
+ "accent": "#a44231",
+ "accentSoft": "#c96b5a",
+ "stylePack": "data",
+ "headline": {
+  "lines": [
+   {
+    "text": "造AI三巨头集体喊刹车",
+    "highlight": null
+   },
+   {
+    "text": "特朗普：这是骗局",
+    "highlight": "这是骗局"
+   }
+  ]
+ },
+ "sources": [
+  "华尔街见闻",
+  "21世纪经济报道",
+  "澎湃新闻",
+  "财联社",
+  "第一财经"
+ ],
+ "disclaimer": "本片内容基于公开报道与公开资料整理，观点仅供参考，不构成任何投资建议",
+ "showSubtitles": true,
+ "shots": [
+  {
+   "kind": "title_card",
+   "startMs": 93,
+   "endMs": 4500,
+   "overlay": {
+    "label": "AI刹车｜谁赢",
+    "keyword": "刹车",
+    "code": "SIGNAL / 01"
+   }
+  },
+  {
+   "kind": "footage",
+   "startMs": 4500,
+   "endMs": 7413,
+   "media": "AI刹车2-素材包__images__17-amodei.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "人物",
+   "code": "01 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 7413,
+   "endMs": 10315,
+   "media": "AI刹车2-素材包__images__12-altman.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "表态",
+   "code": "02 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 10315,
+   "endMs": 13522,
+   "media": "AI刹车2-素材包__images__13-musk.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "点赞",
+   "code": "03 / RACE"
+  },
+  {
+   "kind": "panel",
+   "startMs": 13522,
+   "endMs": 19185,
+   "media": "AI刹车2-素材包__videos__03-trading.mp4",
+   "mediaKind": "video",
+   "overlay": {
+    "variant": "statement",
+    "label": "急转弯",
+    "title": "集体踩刹车",
+    "subtitle": "AI巨头首次同边",
+    "badge": "转向",
+    "rightNote": "",
+    "rows": [
+     {
+      "code": "01",
+      "text": "呼吁放慢"
+     },
+     {
+      "code": "02",
+      "text": "控制节奏"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "footage",
+   "startMs": 19185,
+   "endMs": 24022,
+   "media": "AI刹车2-素材包__images__22-redchart.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "暴跌",
+   "code": "05 / RACE"
+  },
+  {
+   "kind": "panel",
+   "startMs": 24022,
+   "endMs": 28685,
+   "media": "AI刹车2-素材包__videos__50-tradingv.mp4",
+   "mediaKind": "video",
+   "overlay": {
+    "variant": "stat",
+    "label": "英伟达",
+    "amount": "1766 亿美元",
+    "desc": "一夜蒸发"
+   }
+  },
+  {
+   "kind": "footage",
+   "startMs": 28685,
+   "endMs": 31598,
+   "media": "AI刹车2-素材包__images__28-chip.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "芯片",
+   "code": "07 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 31598,
+   "endMs": 35402,
+   "media": "AI刹车2-素材包__videos__07-cyber.mp4",
+   "mediaKind": "video",
+   "chapterLabel": "逆势",
+   "code": "08 / RACE"
+  },
+  {
+   "kind": "panel",
+   "startMs": 35402,
+   "endMs": 38859,
+   "media": "AI刹车2-素材包__videos__08-cyber.mp4",
+   "mediaKind": "video",
+   "overlay": {
+    "variant": "stat",
+    "label": "CrowdStrike",
+    "amount": "14%",
+    "desc": "单日涨创历史新高"
+   }
+  },
+  {
+   "kind": "footage",
+   "startMs": 38859,
+   "endMs": 43402,
+   "media": "AI刹车2-素材包__videos__52-cyberv.mp4",
+   "mediaKind": "video",
+   "chapterLabel": "ETF",
+   "code": "10 / RACE"
+  },
+  {
+   "kind": "panel",
+   "startMs": 43402,
+   "endMs": 48467,
+   "media": "AI刹车2-素材包__images__01-money.jpg",
+   "mediaKind": "image",
+   "overlay": {
+    "variant": "fact",
+    "label": "越猛越值钱",
+    "card": {
+     "title": "猛冲越贵",
+     "body": "AI跑得猛 防守值钱"
+    },
+    "badge": ""
+   }
+  },
+  {
+   "kind": "footage",
+   "startMs": 48467,
+   "endMs": 53696,
+   "media": "AI刹车2-素材包__videos__09-chip.mp4",
+   "mediaKind": "video",
+   "chapterLabel": "分化",
+   "code": "12 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 53696,
+   "endMs": 57794,
+   "media": "AI刹车2-素材包__images__55-trump.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "转折",
+   "code": "13 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 57794,
+   "endMs": 63630,
+   "media": "AI刹车2-素材包__videos__11-city.mp4",
+   "mediaKind": "video",
+   "chapterLabel": "峰会",
+   "code": "14 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 63630,
+   "endMs": 66370,
+   "media": "AI刹车2-素材包__images__31-call.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "免提",
+   "code": "15 / RACE"
+  },
+  {
+   "kind": "panel",
+   "startMs": 66370,
+   "endMs": 68946,
+   "media": "AI刹车2-素材包__images__56-trump.jpg",
+   "mediaKind": "image",
+   "overlay": {
+    "variant": "statement",
+    "label": "不接管",
+    "title": "机器人骗局",
+    "subtitle": "不会接管世界",
+    "badge": "反驳",
+    "rightNote": "",
+    "rows": []
+   }
+  },
+  {
+   "kind": "footage",
+   "startMs": 68946,
+   "endMs": 71337,
+   "media": "AI刹车2-素材包__videos__10-energy.mp4",
+   "mediaKind": "video",
+   "chapterLabel": "石油",
+   "code": "17 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 71337,
+   "endMs": 73402,
+   "media": "AI刹车2-素材包__videos__05-datacenter.mp4",
+   "mediaKind": "video",
+   "chapterLabel": "胜负",
+   "code": "18 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 73402,
+   "endMs": 76674,
+   "media": "AI刹车2-素材包__images__15-huang.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "黄仁勋",
+   "code": "19 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 76674,
+   "endMs": 81239,
+   "media": "AI刹车2-素材包__images__18-amodei.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "吹哨",
+   "code": "20 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 81239,
+   "endMs": 86728,
+   "media": "AI刹车2-素材包__images__14-huang.jpg",
+   "mediaKind": "image",
+   "chapterLabel": "姿态",
+   "code": "21 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 86728,
+   "endMs": 89935,
+   "media": "AI刹车2-素材包__videos__04-trading.mp4",
+   "mediaKind": "video",
+   "chapterLabel": "追问",
+   "code": "22 / RACE"
+  },
+  {
+   "kind": "footage",
+   "startMs": 89935,
+   "endMs": 93446,
+   "media": "AI刹车2-素材包__videos__51-tradingv.mp4",
+   "mediaKind": "video",
+   "chapterLabel": "两难",
+   "code": "23 / RACE"
+  },
+  {
+   "kind": "quote_card",
+   "startMs": 93446,
+   "endMs": 99018,
+   "overlay": {
+    "label": "峰会现场",
+    "quote": "谁赢AI谁赢"
+   }
+  }
+ ],
+ "clauses": [
+  {
+   "text": "造AI的三巨头",
+   "startMs": 93,
+   "endMs": 1583
+  },
+  {
+   "text": "第一次站到了同一边",
+   "startMs": 1583,
+   "endMs": 2996
+  },
+  {
+   "text": "集体喊刹车",
+   "startMs": 2996,
+   "endMs": 4500
+  },
+  {
+   "text": "周末",
+   "startMs": 4500,
+   "endMs": 5293
+  },
+  {
+   "text": "Anthropic的CEO阿莫迪发文",
+   "startMs": 5293,
+   "endMs": 7413
+  },
+  {
+   "text": "呼吁放慢前沿模型",
+   "startMs": 7413,
+   "endMs": 9022
+  },
+  {
+   "text": "奥特曼随即表态",
+   "startMs": 9022,
+   "endMs": 10315
+  },
+  {
+   "text": "说控制节奏不等于停止",
+   "startMs": 10315,
+   "endMs": 12098
+  },
+  {
+   "text": "马斯克也点了赞",
+   "startMs": 12098,
+   "endMs": 13522
+  },
+  {
+   "text": "这是AI头部玩家第一次集体释放减速信号",
+   "startMs": 13522,
+   "endMs": 17522
+  },
+  {
+   "text": "市场当场炸了",
+   "startMs": 17522,
+   "endMs": 19185
+  },
+  {
+   "text": "费城半导体指数暴跌5.86%",
+   "startMs": 19185,
+   "endMs": 22109
+  },
+  {
+   "text": "创7月以来最大单日跌幅",
+   "startMs": 22109,
+   "endMs": 24022
+  },
+  {
+   "text": "30只成份股无一幸免",
+   "startMs": 24022,
+   "endMs": 26065
+  },
+  {
+   "text": "英伟达一夜蒸发1766亿美元",
+   "startMs": 26065,
+   "endMs": 28685
+  },
+  {
+   "text": "整条芯片产业链少了超过5000亿",
+   "startMs": 28685,
+   "endMs": 31598
+  },
+  {
+   "text": "但诡异的是",
+   "startMs": 31598,
+   "endMs": 32685
+  },
+  {
+   "text": "有一类股票逆势暴涨",
+   "startMs": 32685,
+   "endMs": 34141
+  },
+  {
+   "text": "网络安全",
+   "startMs": 34141,
+   "endMs": 35402
+  },
+  {
+   "text": "CrowdStrike单日涨近14%",
+   "startMs": 35402,
+   "endMs": 37761
+  },
+  {
+   "text": "创历史新高",
+   "startMs": 37761,
+   "endMs": 38859
+  },
+  {
+   "text": "网安ETF一天涨了10.66%",
+   "startMs": 38859,
+   "endMs": 41565
+  },
+  {
+   "text": "是挂牌以来最猛的一天",
+   "startMs": 41565,
+   "endMs": 43402
+  },
+  {
+   "text": "市场在用真金白银说一件事",
+   "startMs": 43402,
+   "endMs": 45609
+  },
+  {
+   "text": "AI跑得越猛",
+   "startMs": 45609,
+   "endMs": 46826
+  },
+  {
+   "text": "防守就越值钱",
+   "startMs": 46826,
+   "endMs": 48467
+  },
+  {
+   "text": "软件板块跑赢半导体10.67个百分点",
+   "startMs": 48467,
+   "endMs": 51848
+  },
+  {
+   "text": "有记录以来最大的分化",
+   "startMs": 51848,
+   "endMs": 53696
+  },
+  {
+   "text": "而就在同一天",
+   "startMs": 53696,
+   "endMs": 54935
+  },
+  {
+   "text": "特朗普把这场辩论推到了新高度",
+   "startMs": 54935,
+   "endMs": 57794
+  },
+  {
+   "text": "洛杉矶一场科技峰会上",
+   "startMs": 57794,
+   "endMs": 59880
+  },
+  {
+   "text": "黄仁勋正在台上对话",
+   "startMs": 59880,
+   "endMs": 61663
+  },
+  {
+   "text": "特朗普的电话突然打了进来",
+   "startMs": 61663,
+   "endMs": 63630
+  },
+  {
+   "text": "他当场按下免提",
+   "startMs": 63630,
+   "endMs": 65457
+  },
+  {
+   "text": "特朗普说",
+   "startMs": 65457,
+   "endMs": 66370
+  },
+  {
+   "text": "机器人不会接管世界",
+   "startMs": 66370,
+   "endMs": 67815
+  },
+  {
+   "text": "这都是骗局",
+   "startMs": 67815,
+   "endMs": 68946
+  },
+  {
+   "text": "数据中心是未来25年的石油",
+   "startMs": 68946,
+   "endMs": 71337
+  },
+  {
+   "text": "谁赢得AI",
+   "startMs": 71337,
+   "endMs": 72294
+  },
+  {
+   "text": "谁就赢了",
+   "startMs": 72294,
+   "endMs": 73402
+  },
+  {
+   "text": "最耐人寻味的是黄仁勋",
+   "startMs": 73402,
+   "endMs": 75391
+  },
+  {
+   "text": "他一边附和特朗普",
+   "startMs": 75391,
+   "endMs": 76674
+  },
+  {
+   "text": "一边为一位辞职的Anthropic研究员点赞",
+   "startMs": 76674,
+   "endMs": 79217
+  },
+  {
+   "text": "说要认真对待吹哨人的声音",
+   "startMs": 79217,
+   "endMs": 81239
+  },
+  {
+   "text": "这可能是这个行业最诚实的姿态",
+   "startMs": 81239,
+   "endMs": 83435
+  },
+  {
+   "text": "一边踩油门",
+   "startMs": 83435,
+   "endMs": 84457
+  },
+  {
+   "text": "一边承认刹车有它的道理",
+   "startMs": 84457,
+   "endMs": 86728
+  },
+  {
+   "text": "最后三个问题",
+   "startMs": 86728,
+   "endMs": 87957
+  },
+  {
+   "text": "刹车",
+   "startMs": 87957,
+   "endMs": 88772
+  },
+  {
+   "text": "踩得下去吗",
+   "startMs": 88772,
+   "endMs": 89935
+  },
+  {
+   "text": "市场为什么一只手卖芯片",
+   "startMs": 89935,
+   "endMs": 91902
+  },
+  {
+   "text": "另一只手买安全",
+   "startMs": 91902,
+   "endMs": 93446
+  },
+  {
+   "text": "还有那句谁赢AI谁赢",
+   "startMs": 93446,
+   "endMs": 95750
+  },
+  {
+   "text": "这到底是一场竞赛",
+   "startMs": 95750,
+   "endMs": 97065
+  },
+  {
+   "text": "还是一场没人踩刹车的比赛",
+   "startMs": 97065,
+   "endMs": 99018
+  }
+ ],
+ "template": "portrait"
+}

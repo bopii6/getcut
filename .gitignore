@@ -1,0 +1,58 @@
+# ================= 密钥：绝不入库 =================
+.env
+*_key.txt
+!*_key.txt.example
+
+# ================= 凭据 / 第三方逆向产物：绝不入库 =================
+_tools/_niwo_*
+_tools/_demo_*
+_tools/_render_detail.json
+_tools/_assets_meta.json
+_tools/_mixkit_meta.txt
+_tools/niwo-fe.js
+_tools/niwo-vs.js
+_tools/niwo-presign.js
+niwo-bundle-*/
+
+# ================= 大体积素材 / 成片 / 压缩包 =================
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.zip
+*.raw
+# 素材包目录（仅用于本地渲染输入）
+*-素材包/
+bundle-*/
+e2e-bundle/
+_tools/demos/
+
+# ================= Python =================
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# ================= Node / Remotion =================
+node_modules/
+.pnpm-store/
+
+# ================= 运行时产物 =================
+work/
+uploads/
+outputs/
+jobs.json
+renderer/props.json
+renderer/props_portrait.json
+renderer/render.log
+renderer/visual_out.mp4
+renderer/portrait_out.mp4
+renderer/still_test.*
+server_e2e.log*
+
+# ================= 系统 / 编辑器 =================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
