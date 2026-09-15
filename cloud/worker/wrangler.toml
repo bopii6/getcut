@@ -22,9 +22,9 @@ directory = "../ui"
 
 # 自定义域名（Cloudflare 会自动建 DNS 记录 + 签发证书）
 # 注意：video.hellojoy.top 已被现有服务占用，改用独立子域，避免冲突
-# [[routes]]
-# pattern = "vg.hellojoy.top"
-# custom_domain = true
+[[routes]]
+pattern = "vg.hellojoy.top"
+custom_domain = true
 
 [observability]
 enabled = true
