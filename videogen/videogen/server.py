@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import threading
 import time
 import uuid
@@ -101,6 +102,12 @@ def index() -> str:
 @app.get("/api/bundles")
 def bundles():
     return _find_bundles()
+
+
+@app.get("/healthz")
+def healthz():
+    """云平台健康检查（不落盘、不触发扫描副作用）。"""
+    return {"ok": True, "jobs": len(JOBS), "version": "1.0"}
 
 
 def _bundle_meta(bundle: str | None) -> dict:
@@ -404,9 +411,12 @@ def _worker(job_id: str, body: dict) -> None:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--port", type=int, default=8600)
+    # 云部署：HOST 需为 0.0.0.0；PORT 由平台注入（如 Cloudflare Containers / Fly / Railway）
+    ap.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
+    ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8600")))
     a = ap.parse_args()
-    uvicorn.run(app, host="127.0.0.1", port=a.port, log_level="warning")
+    print(f"videogen studio on http://{a.host}:{a.port}  workspace={WORKSPACES}", flush=True)
+    uvicorn.run(app, host=a.host, port=a.port, log_level="warning")
 
 
 if __name__ == "__main__":

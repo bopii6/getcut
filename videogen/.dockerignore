@@ -1,0 +1,33 @@
+# 镜像构建上下文排除项（配合 Dockerfile 使用）
+.env
+*_key.txt
+!*_key.txt.example
+
+# 运行时产物
+work/
+outputs/
+uploads/
+jobs.json
+renderer/props.json
+renderer/props_portrait.json
+renderer/render.log
+renderer/visual_out.mp4
+renderer/portrait_out.mp4
+renderer/still_test.*
+server_e2e.log*
+
+# 依赖与缓存（镜像内重新安装）
+renderer/node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 媒体（素材包在运行期上传，不打进镜像）
+renderer/public/media/
+
+# 其他
+.git/
+.gitignore
+.DS_Store
+Thumbs.db

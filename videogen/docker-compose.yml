@@ -1,0 +1,25 @@
+# 本地 / 云主机一键运行：docker compose up -d --build
+# 密钥放同目录 .env（从 .env.example 复制后填写，切勿提交）
+services:
+  videogen:
+    build: .
+    image: videogen:latest
+    container_name: videogen
+    restart: unless-stopped
+    ports:
+      - "8600:8600"
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8600"
+      VIDEOGEN_WORKSPACE: /data
+    volumes:
+      - videogen-data:/data
+      - videogen-outputs:/app/outputs
+    # Remotion(Chrome) 渲染吃内存，按机器规格调整
+    shm_size: "1gb"
+
+volumes:
+  videogen-data:
+  videogen-outputs:
