@@ -62,10 +62,11 @@ jobs:
           ZIP=$(ls in/*.zip | head -1)
           NAME=$(basename "$ZIP" .zip)
           mkdir -p data
-          unzip -q "$ZIP" -d "data/$NAME"
+          # 兼容 Windows 反斜杠路径 / 多套一层目录（uv 环境自带 python3）
+          python3 tools/unzip_normalize.py "$ZIP" "data/$NAME"
           test -f "data/$NAME/content.json"
           echo "BUNDLE=$NAME" >> "$GITHUB_ENV"
-          echo "素材包：$NAME（$(ls data/$NAME | wc -l) 项）"
+          echo "素材包：$NAME（$(ls -A "data/$NAME" | wc -l) 项）"
 
       - name: 登录 GHCR
         uses: docker/login-action@v3
