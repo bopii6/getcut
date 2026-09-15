@@ -157,8 +157,8 @@ async function loadBundles(){
       el.innerHTML = `<div><div class="nm"></div><div class="sz">${human(b.size)} · ${(b.created||"").slice(0,10)}</div></div>`;
       el.querySelector(".nm").textContent = b.name;
       const btn = document.createElement("button");
-      btn.textContent = state.bundle === b.name ? "已选" : "选它";
-      btn.onclick = () => { state.bundle = b.name; $("#go").disabled=false; $("#goHint").textContent = "已选："+b.name; loadBundles(); };
+      btn.textContent = state.bundle === b.slug ? "已选" : "选它";
+      btn.onclick = () => { state.bundle = b.slug; state.bundleLabel = b.name; $("#go").disabled=false; $("#goHint").textContent = "已选："+b.name; loadBundles(); };
       el.appendChild(btn); box.appendChild(el);
     });
   }catch(e){ box.innerHTML = '<div class="err">读取素材包失败：'+(e.message||e)+'</div>'; }
@@ -183,7 +183,7 @@ async function upload(file){
       headers:{ "content-type":"application/zip", "x-bundle-name":encodeURIComponent(file.name) }, body:file });
     const d = await r.json();
     if(!r.ok) throw new Error(d.error||"上传失败");
-    toast("已上传："+d.name); state.bundle = d.name;
+    toast("已上传："+d.name); state.bundle = d.slug; state.bundleLabel = d.name;
     $("#go").disabled=false; $("#goHint").textContent="已选："+d.name;
     loadBundles();
   }catch(e){ $("#upErr").textContent = "上传失败："+(e.message||e); }
