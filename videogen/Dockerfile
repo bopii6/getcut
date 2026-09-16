@@ -12,6 +12,17 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PORT=8600 \
     VIDEOGEN_WORKSPACE=/data
 
+# 国内主机可换成阿里云 apt 源（默认走官方源）
+ARG APT_MIRROR=
+RUN if [ -n "$APT_MIRROR" ]; then \
+      if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i "s|deb.debian.org|$APT_MIRROR|g; s|security.debian.org|$APT_MIRROR|g" /etc/apt/sources.list.d/debian.sources; \
+      fi; \
+      if [ -f /etc/apt/sources.list ]; then \
+        sed -i "s|deb.debian.org|$APT_MIRROR|g; s|security.debian.org|$APT_MIRROR|g" /etc/apt/sources.list; \
+      fi; \
+    fi
+
 # 1) ffmpeg + 中文字体 + Remotion(Headless Chrome) 运行库 + Node 20
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ffmpeg \

@@ -34,6 +34,8 @@ function slugify(name) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    console.log("REQ", request.method, url.pathname,
+                "cl=" + (request.headers.get("content-length") || "-"));
     const cors = {
       "access-control-allow-origin": "*",
       "access-control-allow-methods": "GET,POST,OPTIONS",
@@ -114,9 +116,12 @@ export default {
         const slug = slugify(display);
         const tag = `bundle-${slug}`;
 
-        const body = await request.arrayBuffer();
-        if (!body.byteLength) return json({ error: "空文件" }, 400);
-        if (body.byteLength > 200 * 1024 * 1024) return json({ error: "zip 超过 200MB" }, 413);
+        // 大文件不能先缓冲到内存（Cloudflare 会先把大 body 缓冲一遍，
+        // 之后 arrayBuffer() 会报 "Body has already been used"）。
+        // 直接把请求体作为数据流转交给 GitHub，全程不落地。
+        const declaredLength = Number(request.headers.get("content-length") || 0);
+        if (!request.body) return json({ error: "请求体为空" }, 400);
+        if (declaredLength > 200 * 1024 * 1024) return json({ error: "zip 超过 200MB" }, 413);
 
         let rel = await gh(`/repos/${repo}/releases/tags/${tag}`);
         if (rel.status === 404) {
@@ -140,17 +145,16 @@ export default {
         const existing = (release.assets || []).find((a) => a.name === assetName);
         if (existing) await gh(`/repos/${repo}/releases/assets/${existing.id}`, { method: "DELETE" });
 
+        const upHeaders = {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/zip",
+          "user-agent": "videogen-worker",
+        };
+        if (declaredLength) upHeaders["content-length"] = String(declaredLength);
+
         const up = await fetch(
           `${UPLOADS}/repos/${repo}/releases/${release.id}/assets?name=${encodeURIComponent(assetName)}`,
-          {
-            method: "POST",
-            headers: {
-              authorization: `Bearer ${token}`,
-              "content-type": "application/zip",
-              "user-agent": "videogen-worker",
-            },
-            body,
-          },
+          { method: "POST", headers: upHeaders, body: request.body, duplex: "half" },
         );
         if (!up.ok) return json({ error: "上传失败", detail: (await up.text()).slice(0, 300) }, 502);
         return json({ ok: true, slug, name: display, asset: assetName });
