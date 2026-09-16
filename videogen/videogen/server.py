@@ -181,6 +181,37 @@ def me(request: Request):
     return {"email": email}
 
 
+# ---------- 试听（B5）----------
+
+@app.get("/api/voice-preview")
+def voice_preview(voice: str = "zh-CN-YunxiNeural"):
+    """音色试听：合成一句短样，按音色缓存（首次约 1-2 秒）。"""
+    import asyncio
+    import re as _re
+    import edge_tts
+    safe = _re.sub(r"[^A-Za-z0-9_-]", "", voice)[:64] or "x"
+    d = ROOT / "assets" / "voice_previews"
+    d.mkdir(parents=True, exist_ok=True)
+    f = d / f"{safe}.mp3"
+    if not f.exists() or f.stat().st_size == 0:
+        try:
+            asyncio.run(edge_tts.Communicate(
+                "大家好，这是一段配音试听，听听这个声音合不合适。", voice).save(str(f)))
+        except Exception as e:  # noqa: BLE001
+            return JSONResponse({"error": f"试听合成失败：{e}"}, status_code=502)
+    return FileResponse(f, media_type="audio/mpeg")
+
+
+@app.get("/api/bgm/{name}")
+def bgm_file(name: str):
+    """BGM 试听/播放：只允许 assets/music 下的 mp3。"""
+    f = (ROOT / "assets" / "music" / name).resolve()
+    music = (ROOT / "assets" / "music").resolve()
+    if music not in f.parents or f.suffix.lower() != ".mp3" or not f.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(f, media_type="audio/mpeg")
+
+
 def _jobs_load() -> None:
     if JOBS_FILE.is_file():
         try:
