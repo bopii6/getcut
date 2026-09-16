@@ -23,10 +23,11 @@ type = "Text"
 globs = ["**/*.html"]
 fallthrough = true
 
-# 自定义域名（Cloudflare 会自动建 DNS 记录 + 签发证书）
-[[routes]]
-pattern = "vg.hellojoy.top"
-custom_domain = true
+# 自定义域名：已改由腾讯云服务器上的 Cloudflare 隧道提供
+# 如需回退到 Worker 托管，取消下面注释并 wrangler deploy
+# [[routes]]
+# pattern = "vg.hellojoy.top"
+# custom_domain = true
 
 [observability]
 enabled = true
