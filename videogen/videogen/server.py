@@ -10,6 +10,7 @@ import argparse
 import json
 import math
 import os
+import shutil
 import threading
 import time
 import uuid
@@ -28,6 +29,7 @@ WORKSPACES = config.WORKSPACES
 UPLOADS = config.UPLOADS
 STATIC = config.STATIC
 OUTPUTS = config.OUTPUTS
+AUTH_TOKEN = config.AUTH_TOKEN
 
 TEMPLATES = config.TEMPLATES                  # 模板 id -> 展示名
 TEMPLATE_ALIAS = config.TEMPLATE_ALIAS
@@ -36,6 +38,7 @@ DEFAULT_TEMPLATE = config.DEFAULT_TEMPLATE
 MAX_UPLOAD_BYTES = 512 * 1024 * 1024          # 单个 zip 上限 512MB
 MAX_EXTRACT_BYTES = 2 * 1024 * 1024 * 1024    # 解压后总上限 2GB（防 zip 炸弹）
 SUPPORTED_FORMATS = set(TEMPLATES) | set(TEMPLATE_ALIAS)
+MAX_JOBS_KEPT = 80                            # jobs.json 只留最近这么多条，防无限膨胀
 
 app = FastAPI(title="videogen studio")
 JOBS: dict[str, dict] = {}
@@ -47,12 +50,35 @@ _LOCK = threading.RLock()
 _RENDER_LOCK = threading.Lock()
 
 
+# ── 鉴权 ─────────────────────────────────────────────
+# 配置了 VIDEOGEN_TOKEN 时，除页面外壳和字体外的所有资源都要带令牌：
+#   请求头 x-auth-token: <token>   （fetch 用）
+#   ?token=<token>                 （<img>/<video>/<a download> 标签用）
+# 页面本身不拦：它是空壳，没有数据；真正的内容都在受保护的接口后面。
+@app.middleware("http")
+async def _auth_gate(request, call_next):
+    if AUTH_TOKEN:
+        p = request.url.path
+        public = (p == "/" or p == "/index.html" or p == "/healthz"
+                  or p.startswith("/fonts/"))
+        if not public:
+            tok = (request.headers.get("x-auth-token")
+                   or request.query_params.get("token") or "")
+            if tok != AUTH_TOKEN:
+                return JSONResponse({"error": "需要访问令牌"}, status_code=401)
+    return await call_next(request)
+
+
 def _jobs_load() -> None:
     if JOBS_FILE.is_file():
         try:
             JOBS.update(json.loads(JOBS_FILE.read_text(encoding="utf-8")))
         except Exception:
             pass
+    if len(JOBS) > MAX_JOBS_KEPT:
+        keep = sorted(JOBS.items(), key=lambda kv: kv[1].get("t0", 0))[-MAX_JOBS_KEPT:]
+        JOBS.clear()
+        JOBS.update(dict(keep))
 
 
 def _jobs_save() -> None:
@@ -308,6 +334,11 @@ def start_build(body: dict):
             {"error": f"模板 '{fmt}' 不存在，可选：{'、'.join(TEMPLATES)}"}, status_code=400)
     if not body.get("bundle"):
         return JSONResponse({"error": "缺少素材包"}, status_code=400)
+    try:
+        _resolve_bundle(body["bundle"])
+        _resolve_bgm(body.get("bgm"))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
     job_id = uuid.uuid4().hex[:12]
     with _LOCK:
         JOBS[job_id] = {"stage": "queued", "stage8": 1, "progress": 3, "error": None, "video": None,
@@ -409,9 +440,43 @@ def _normalize_rate(rate) -> str | None:
         return None
 
 
+def _resolve_bundle(name: str) -> Path:
+    """素材包名只允许是 WORKSPACES 的直接子目录，杜绝目录穿越。"""
+    d = (WORKSPACES / name).resolve()
+    if WORKSPACES.resolve() not in d.parents or not (d / "content.json").is_file():
+        raise ValueError("素材包不存在或路径不合法")
+    return d
+
+
+def _resolve_bgm(rel: str | None) -> Path | None:
+    """BGM 只允许 assets/ 目录下的 mp3，杜绝任意文件读取。"""
+    if not rel:
+        return None
+    f = (ROOT / rel).resolve()
+    assets = (ROOT / "assets").resolve()
+    if assets not in f.parents or f.suffix.lower() != ".mp3" or not f.is_file():
+        raise ValueError("背景音乐不存在（只能选曲库里的 mp3）")
+    return f
+
+
+def _cleanup_work(bundle_name: str) -> None:
+    """成片完成后清掉中间产物（分镜片段/拼接/混音前文件），只留 TTS 缓存。"""
+    d = config.WORK / bundle_name
+    if not d.is_dir():
+        return
+    for p in d.iterdir():
+        if p.name == "tts":
+            continue
+        try:
+            if p.is_dir():
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                p.unlink()
+        except OSError:
+            pass
+
+
 def _worker(job_id: str, body: dict) -> None:
-    import sys
-    sys.path.insert(0, str(ROOT))
     from . import cli
     try:
         def progress(stage: str, pct: int, detail: str | None = None):
@@ -433,12 +498,15 @@ def _worker(job_id: str, body: dict) -> None:
                     j["detail"] = detail
                 _jobs_save()
 
-        out = OUTPUTS / f"{Path(body['bundle']).stem}-{job_id}.mp4"
+        # 入参先过安全校验（素材包目录 / BGM 路径），不合法直接把任务标记失败
+        bundle_dir = _resolve_bundle(body["bundle"])
+        bgm_file = _resolve_bgm(body.get("bgm"))
+        out = OUTPUTS / f"{bundle_dir.name}-{job_id}.mp4"
         with _RENDER_LOCK:
-            cli.build(WORKSPACES / body["bundle"], out,
+            cli.build(bundle_dir, out,
                       voice=body.get("voice") or None,
                       rate=_normalize_rate(body.get("rate")),
-                      bgm=Path(body["bgm"]) if body.get("bgm") else None,
+                      bgm=bgm_file,
                       renderer=body.get("renderer") or "remotion",
                       format=body.get("format") or DEFAULT_TEMPLATE,
                       sfx=bool(body.get("sfx", True)),
@@ -460,6 +528,7 @@ def _worker(job_id: str, body: dict) -> None:
                     p.setdefault("renders", []).append({"id": job_id, "file": str(out),
                         "ts": time.strftime("%Y/%m/%d %H:%M")})
             _reg_save(reg)
+        _cleanup_work(bundle_dir.name)
     except Exception as e:  # noqa: BLE001
         with _LOCK:
             JOBS[job_id].update(stage="failed", stage8=8, error=str(e)[-800:])

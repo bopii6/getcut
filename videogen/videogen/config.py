@@ -43,6 +43,10 @@ PIXABAY_API_KEY = _legacy_key("PIXABAY_API_KEY", "pixabay_key.txt")
 # 工作台扫描素材包的根目录（默认 videogen 的上级目录）
 WORKSPACES = Path(_env("VIDEOGEN_WORKSPACE") or ROOT.parent).resolve()
 
+# 访问令牌：设置后所有数据接口（/api、媒体、成片）都要求携带；
+# 留空 = 不鉴权（仅建议本机自用）。前端会通过 x-auth-token 头或 ?token= 携带。
+AUTH_TOKEN = _env("VIDEOGEN_TOKEN")
+
 # 派生目录
 WORK = ROOT / "work"
 OUTPUTS = ROOT / "outputs"
