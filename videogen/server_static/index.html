@@ -12,6 +12,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#F6F5F2">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23211E1A'/%3E%3Ctext x='30' y='44' font-family='sans-serif' font-size='34' font-weight='900' fill='%23F6F5F2' text-anchor='middle'%3EV%3C/text%3E%3Ccircle cx='49' cy='16' r='6' fill='%23A44231'/%3E%3C/svg%3E">
 <title>videogen · 工作台</title>
 <style>
 @font-face{
@@ -59,6 +61,36 @@ img,video{display:block}
 .brand small{color:var(--ink-3);font-weight:600;font-size:12px;margin-top:2px}
 .top .sp{flex:1}
 .tact{display:flex;align-items:center;gap:10px}
+.tact .who{font-size:13px;color:var(--ink-2);max-width:200px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+
+/* ── 登录 / 初始化 ── */
+.auth{min-height:calc(100vh - 240px);display:grid;place-items:center;padding:32px 0}
+.auth .card{width:min(420px,100%);padding:34px 34px 30px}
+.auth .aw{display:flex;justify-content:center;margin-bottom:14px}
+.auth .mark{width:46px;height:46px;border-radius:13px;background:var(--ink);color:#fff;
+  display:grid;place-items:center;font-family:"Display",var(--sans);font-size:23px;position:relative}
+.auth .mark::after{content:"";position:absolute;right:-3px;top:-3px;width:11px;height:11px;
+  border-radius:50%;background:var(--accent)}
+.auth h1{font-size:19px;font-weight:800;text-align:center;letter-spacing:-.01em}
+.auth .sub{text-align:center;color:var(--ink-2);font-size:13px;margin:6px 0 22px;line-height:1.6}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.fld input{width:100%;border:1px solid var(--line-2);border-radius:8px;padding:11px 12px;
+  font-size:14px;background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.fld input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.fld .d{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.55}
+.aerr{background:var(--err-soft);color:var(--err);font-size:13px;border-radius:8px;
+  padding:9px 12px;margin-bottom:14px;display:none}
+.remember{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);
+  margin:2px 0 18px;cursor:pointer}
+.remember input{accent-color:var(--accent);width:15px;height:15px}
+.auth .btn{width:100%;min-height:46px}
+
+/* ── 骨架屏 ── */
+.skel{border-radius:10px;background:linear-gradient(90deg,var(--sunken) 25%,#E4E1DA 45%,var(--sunken) 65%);
+  background-size:240% 100%;animation:shimmer 1.5s infinite linear}
+@keyframes shimmer{to{background-position:-140% 0}}
 
 .wrap{max-width:1280px;margin:0 auto;padding:28px 24px 96px}
 .view{animation:fade .25s var(--ease)}
@@ -317,7 +349,8 @@ textarea:focus{outline:none;border-color:var(--accent);background:var(--surface)
     <a class="brand" href="#/" id="brand"><span class="mark">V</span>videogen<small>工作台</small></a>
     <span class="sp"></span>
     <div class="tact">
-      <button class="btn sm accent" id="newBtn">新建项目</button>
+      <span id="account" style="display:flex;align-items:center;gap:8px"></span>
+      <button class="btn sm accent hide" id="newBtn">新建项目</button>
     </div>
   </div>
 </header>
@@ -438,25 +471,81 @@ function playDialog(r){
       <div class="cap">${esc(r.title)}${r.ts ? " · " + esc(r.ts) : ""}</div></div>`);
 }
 
-/* 令牌门：401 时弹出输入 */
-function openGate(){
-  if ($("__gate")) return;
-  const m = document.createElement("div"); m.className = "modal"; m.id = "__gate";
-  m.innerHTML = `<div class="box" role="dialog" aria-modal="true">
-    <h3>输入访问令牌</h3>
-    <p>这台工作台开启了访问保护。令牌在服务器 .env 的 VIDEOGEN_TOKEN 里。</p>
-    <input type="password" id="__gtok" placeholder="访问令牌" autocomplete="off">
-    <div class="row"><button class="btn sm accent" data-ok>进入</button></div></div>`;
-  m.querySelector("[data-ok]").onclick = () => {
-    const v = m.querySelector("#__gtok").value.trim();
-    if (!v) return;
-    localStorage.setItem("vg.token", v);
-    m.remove(); route(true);
+/* ================= 账号（邮箱密码登录） ================= */
+let ME = null;            // 当前登录用户 {email}；null = 未登录
+let AUTHST = { setup: false, token_auth: false };
+
+async function showAuth(){
+  stopPoll(); CUR = null;
+  try { AUTHST = await api("/api/auth/status"); } catch (e) {}
+  renderAuth();
+}
+function renderAuth(){
+  const setup = !!AUTHST.setup, needTok = setup && !!AUTHST.token_auth;
+  stopPoll();
+  document.title = (setup ? "初始化" : "登录") + " · videogen";
+  $("main").innerHTML = `<div class="view"><div class="auth"><div class="card">
+    <div class="aw"><span class="mark">V</span></div>
+    <h1>${setup ? "初始化管理员账号" : "登录工作台"}</h1>
+    <p class="sub">${setup
+      ? "第一次使用：设置邮箱和密码，之后用它登录这个工作台。"
+      : "输入你注册时的邮箱和密码。"}</p>
+    <div class="aerr" id="aerr"></div>
+    <div class="fld"><label>邮箱</label>
+      <input id="auEmail" type="email" placeholder="you@example.com" autocomplete="username"></div>
+    <div class="fld"><label>密码</label>
+      <input id="auPass" type="password" placeholder="${setup ? "至少 8 位" : "密码"}"
+        autocomplete="${setup ? "new-password" : "current-password"}"></div>
+    ${setup ? `<div class="fld"><label>确认密码</label>
+      <input id="auPass2" type="password" autocomplete="new-password"></div>` : ""}
+    ${needTok ? `<div class="fld"><label>访问令牌</label>
+      <input id="auTok" type="password" placeholder="部署时配置的 VIDEOGEN_TOKEN">
+      <div class="d">首次初始化需要访问令牌，防止别人抢注管理员；令牌在服务器部署配置里。</div></div>` : ""}
+    ${setup ? "" : `<label class="remember"><input type="checkbox" id="auRemember" checked> 记住我，30 天内免登录</label>`}
+    <button class="btn accent" id="auGo">${setup ? "创建账号并进入" : "登录"}</button>
+  </div></div></div>`;
+  const go = $("auGo");
+  go.onclick = submitAuth;
+  ["auEmail", "auPass", "auPass2", "auTok"].forEach(id => {
+    const el = $(id); if (el) el.onkeydown = (e) => { if (e.key === "Enter") go.click(); };
+  });
+  $("auEmail").focus();
+}
+async function submitAuth(){
+  const setup = !!AUTHST.setup;
+  const email = $("auEmail").value.trim();
+  const pass = $("auPass").value;
+  const err = (m) => { const el = $("aerr"); el.style.display = "block"; el.textContent = m; };
+  if (!email) return err("请输入邮箱");
+  if (!pass) return err("请输入密码");
+  if (setup && pass !== $("auPass2").value) return err("两次输入的密码不一样");
+  const body = { email, password: pass, remember: setup ? true : $("auRemember").checked };
+  if (setup && AUTHST.token_auth) body.token = $("auTok").value.trim();
+  const btn = $("auGo");
+  btn.disabled = true; btn.textContent = setup ? "创建中…" : "登录中…";
+  try {
+    const r = await api(setup ? "/api/auth/setup" : "/api/auth/login",
+      { method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body) });
+    ME = { email: r.email };
+    paintAccount();
+    await loadTemplates();
+    route(true);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = setup ? "创建账号并进入" : "登录";
+    err(e.message || "登录失败");
+  }
+}
+function paintAccount(){
+  const el = $("account"); if (!el) return;
+  if (!ME){ el.innerHTML = ""; return; }
+  el.innerHTML = `<span class="who">${esc(ME.email)}</span>
+    <button class="ghost" id="logoutBtn">退出</button>`;
+  $("logoutBtn").onclick = async () => {
+    try { await api("/api/auth/logout", {method:"POST"}); } catch (e) {}
+    ME = null; paintAccount(); showAuth();
   };
-  m.onclick = (e) => {};
-  document.body.appendChild(m);
-  m.querySelector("#__gtok").focus();
-  m.querySelector("#__gtok").onkeydown = (e) => { if (e.key === "Enter") m.querySelector("[data-ok]").click(); };
 }
 
 /* ================= 路由 ================= */
@@ -471,7 +560,7 @@ async function route(force){
       const ps = await api("/api/projects");
       const p = ps.find(x => x.project_id === m[1]);
       if (p){ CUR = p; return renderProject(); }
-    } catch (e) { if (e.auth) return openGate(); }
+    } catch (e) { if (e.auth) return showAuth(); }
   }
   CUR = null;
   renderHome();
@@ -489,7 +578,7 @@ async function newProject(){
     CUR = {project_id:r.project_id, title:"新建项目", bundle:null, renders:[]};
     setHash("#/project/" + r.project_id);
     renderProject();
-  } catch (e) { if (e.auth) openGate(); else toast("创建失败：" + e.message); }
+  } catch (e) { if (e.auth) showAuth(); else toast("创建失败：" + e.message); }
 }
 
 /* ================= 首页 ================= */
@@ -502,10 +591,11 @@ function allRenders(projects){
 }
 async function renderHome(){
   stopPoll();
-  $("main").innerHTML = `<div class="view"><p style="color:var(--ink-3)">载入中…</p></div>`;
+  document.title = "videogen · 工作台";
+  $("main").innerHTML = SKELETON_HOME;
   let ps = [];
   try { ps = await api("/api/projects"); }
-  catch (e) { if (e.auth) return openGate(); }
+  catch (e) { if (e.auth) return showAuth(); }
   const rs = allRenders(ps).reverse();
   const recent = rs.length ? `<section class="rail-sec">
     <div class="sec-h"><h2>最近成片</h2><span class="n">${rs.length} 条 · 悬停即播</span></div>
@@ -609,7 +699,7 @@ async function heroStart(file){
     toast("已导入");
     setHash("#/project/" + CUR.project_id);
     renderProject();
-  } catch (e) { if (e.auth) openGate(); else toast("导入失败：" + e.message); }
+  } catch (e) { if (e.auth) showAuth(); else toast("导入失败：" + e.message); }
 }
 async function uploadZip(file){
   toast("正在上传并解析…");
@@ -626,11 +716,12 @@ function stopPoll(){ if (timer) clearInterval(timer); timer = null; }
 async function renderProject(){
   if (!CUR) return goHome();
   stopPoll();
-  $("main").innerHTML = `<div class="view"><p style="color:var(--ink-3)">载入中…</p></div>`;
+  document.title = (CUR.title || "项目") + " · videogen";
+  $("main").innerHTML = SKELETON_HOME;
   let b = null;
   if (CUR.bundle){
     try { b = await api("/api/bundle/" + CUR.bundle); }
-    catch (e) { if (e.auth) return openGate(); b = null; }
+    catch (e) { if (e.auth) return showAuth(); b = null; }
   }
   CURB = b;
   $("main").innerHTML = `<div class="view">
@@ -984,7 +1075,7 @@ async function startRender(b){
     paintTaskRunning();
     startPoll();
   } catch (e) {
-    if (e.auth) return openGate();
+    if (e.auth) return showAuth();
     if (btn){ btn.disabled = false; btn.textContent = "开始渲染"; }
     toast("启动失败：" + e.message);
   }
@@ -998,7 +1089,7 @@ function startPoll(){
 }
 async function pollJob(jid){
   let j;
-  try { j = await api("/api/job/" + jid); } catch (e) { if (e.auth) openGate(); return; }
+  try { j = await api("/api/job/" + jid); } catch (e) { if (e.auth) showAuth(); return; }
   const t = taskEl(); if (!t) return;
   if (j.stage === "unknown"){
     if (lastJob !== jid) return;
@@ -1072,7 +1163,28 @@ async function pollJob(jid){
 }
 
 /* ================= 启动 ================= */
-loadTemplates().then(() => route(true));
+const SKELETON_HOME = `<div class="view">
+  <div class="skel" style="height:78px"></div>
+  <div class="skel" style="height:20px;width:18%;margin-top:30px"></div>
+  <div style="display:flex;gap:14px;margin-top:14px;overflow:hidden">
+    ${'<div class="skel" style="flex:none;width:118px;height:228px"></div>'.repeat(8)}
+  </div>
+  <div class="skel" style="height:20px;width:12%;margin-top:30px"></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:16px;margin-top:14px">
+    ${'<div class="skel" style="height:300px"></div>'.repeat(5)}
+  </div>
+</div>`;
+async function boot(){
+  $("main").innerHTML = SKELETON_HOME;
+  try { ME = await api("/api/me"); } catch (e) { ME = null; }
+  try { AUTHST = await api("/api/auth/status"); } catch (e) { AUTHST = {setup:false, token_auth:false}; }
+  paintAccount();
+  if (!ME && (AUTHST.setup || AUTHST.locked)) return renderAuth();
+  $("newBtn").classList.remove("hide");
+  await loadTemplates();
+  route(true);
+}
+boot();
 </script>
 </body>
 </html>

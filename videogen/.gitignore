@@ -33,3 +33,7 @@ Thumbs.db
 registry.json
 renderer/still_test.*
 renderer/props_portrait.json
+
+# 账号体系本地存储（不入库）
+.videogen-users.json
+.videogen-auth-secret

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import hmac as _hmac
 import json
 import math
 import os
@@ -18,10 +19,10 @@ import zipfile
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-from . import config
+from . import auth, config
 from .schemas import Content, Manifest
 
 ROOT = config.ROOT
@@ -51,22 +52,106 @@ _RENDER_LOCK = threading.Lock()
 
 
 # ── 鉴权 ─────────────────────────────────────────────
-# 配置了 VIDEOGEN_TOKEN 时，除页面外壳和字体外的所有资源都要带令牌：
-#   请求头 x-auth-token: <token>   （fetch 用）
-#   ?token=<token>                 （<img>/<video>/<a download> 标签用）
-# 页面本身不拦：它是空壳，没有数据；真正的内容都在受保护的接口后面。
+# 三种放行方式，按优先级：
+#   1. 会话 cookie（邮箱密码登录签发，见 /api/auth/*）
+#   2. 访问令牌（x-auth-token 头或 ?token=，给脚本/老客户端用的主钥匙）
+#   3. 开放模式：既没建过账号也没配令牌 → 本机自用不拦
+# 页面外壳、字体、健康检查、登录接口本身保持公开。
+SESSION_COOKIE = "vg_session"
+_PUBLIC_PATHS = {"/", "/index.html", "/healthz",
+                 "/api/auth/status", "/api/auth/login", "/api/auth/setup"}
+
+
+def _is_public(path: str) -> bool:
+    return path in _PUBLIC_PATHS or path.startswith("/fonts/")
+
+
+def _token_ok(request: Request) -> bool:
+    if not AUTH_TOKEN:
+        return False
+    tok = (request.headers.get("x-auth-token")
+           or request.query_params.get("token") or "")
+    return _hmac.compare_digest(tok, AUTH_TOKEN)
+
+
+def _session_email(request: Request) -> str | None:
+    return auth.read_session(request.cookies.get(SESSION_COOKIE) or "")
+
+
+def _request_authed(request: Request) -> bool:
+    if _token_ok(request) or _session_email(request):
+        return True
+    return not AUTH_TOKEN and not auth.has_users()   # 开放模式
+
+
 @app.middleware("http")
-async def _auth_gate(request, call_next):
-    if AUTH_TOKEN:
-        p = request.url.path
-        public = (p == "/" or p == "/index.html" or p == "/healthz"
-                  or p.startswith("/fonts/"))
-        if not public:
-            tok = (request.headers.get("x-auth-token")
-                   or request.query_params.get("token") or "")
-            if tok != AUTH_TOKEN:
-                return JSONResponse({"error": "需要访问令牌"}, status_code=401)
+async def _auth_gate(request: Request, call_next):
+    if not _is_public(request.url.path) and not _request_authed(request):
+        return JSONResponse({"error": "未登录"}, status_code=401)
     return await call_next(request)
+
+
+def _set_session_cookie(response: Response, request: Request, email: str,
+                        remember: bool) -> None:
+    ttl = auth.SESSION_TTL_LONG if remember else auth.SESSION_TTL_SHORT
+    response.set_cookie(
+        SESSION_COOKIE, auth.make_session(email, ttl), max_age=ttl,
+        httponly=True, samesite="lax",
+        secure=request.headers.get("x-forwarded-proto") == "https",
+        path="/")
+
+
+# ---------- 登录接口 ----------
+
+@app.get("/api/auth/status")
+def auth_status():
+    """登录页初始化用（公开）：要不要初始化管理员、要不要带访问令牌。"""
+    return {"setup": not auth.has_users(), "token_auth": bool(AUTH_TOKEN),
+            "locked": auth.has_users()}
+
+
+@app.post("/api/auth/setup")
+def auth_setup(body: dict, request: Request, response: Response):
+    """首次使用：创建管理员。若配置了访问令牌，必须携带令牌才能初始化，
+    防止公网上被人抢注管理员。只允许在零用户时调用一次。"""
+    if auth.has_users():
+        return JSONResponse({"error": "账号已初始化，请直接登录"}, status_code=400)
+    tok = body.get("token", "")
+    body_tok_ok = isinstance(tok, str) and tok and _hmac.compare_digest(tok, AUTH_TOKEN)
+    if AUTH_TOKEN and not (_token_ok(request) or body_tok_ok):
+        return JSONResponse({"error": "需要访问令牌才能初始化"}, status_code=403)
+    try:
+        user = auth.create_user(body.get("email", ""), body.get("password", ""))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    _set_session_cookie(response, request, user["email"],
+                        bool(body.get("remember", True)))
+    return user
+
+
+@app.post("/api/auth/login")
+def auth_login(body: dict, request: Request, response: Response):
+    email = body.get("email", "")
+    if not auth.verify_login(email, body.get("password", "")):
+        time.sleep(0.6)   # 拖慢暴力尝试
+        return JSONResponse({"error": "邮箱或密码不对"}, status_code=401)
+    email = email.strip().lower()
+    _set_session_cookie(response, request, email, bool(body.get("remember", True)))
+    return {"email": email}
+
+
+@app.post("/api/auth/logout")
+def auth_logout(response: Response):
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return {"ok": True}
+
+
+@app.get("/api/me")
+def me(request: Request):
+    email = _session_email(request)
+    if not email:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    return {"email": email}
 
 
 def _jobs_load() -> None:

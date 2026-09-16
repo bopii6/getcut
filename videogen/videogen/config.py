@@ -47,6 +47,10 @@ WORKSPACES = Path(_env("VIDEOGEN_WORKSPACE") or ROOT.parent).resolve()
 # 留空 = 不鉴权（仅建议本机自用）。前端会通过 x-auth-token 头或 ?token= 携带。
 AUTH_TOKEN = _env("VIDEOGEN_TOKEN")
 
+# 账号体系（邮箱密码登录）存储位置：默认放工作区（云上是持久卷，重启不丢）
+USERS_FILE = _env("VIDEOGEN_USERS_FILE") or str(WORKSPACES / ".videogen-users.json")
+AUTH_SECRET_FILE = _env("VIDEOGEN_AUTH_SECRET") or str(WORKSPACES / ".videogen-auth-secret")
+
 # 派生目录
 WORK = ROOT / "work"
 OUTPUTS = ROOT / "outputs"
