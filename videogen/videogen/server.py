@@ -93,6 +93,8 @@ def _is_adminish(request: Request) -> bool:
 def _project_visible(p: dict, request: Request) -> bool:
     if _is_adminish(request):
         return True
+    if not AUTH_TOKEN and not auth.has_users():
+        return True   # 开放模式（本机自用）：不隔离，全部可见
     email = _session_email(request)
     return bool(email) and p.get("owner") == email
 

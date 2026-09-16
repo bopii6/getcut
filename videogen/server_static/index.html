@@ -149,7 +149,10 @@ img,video{display:block}
   scroll-snap-type:x proximity}
 .posters::-webkit-scrollbar{height:8px}
 .posters::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:4px}
-.poster{flex:none;width:118px;scroll-snap-align:start;text-align:left}
+.poster{flex:none;width:150px;scroll-snap-align:start;text-align:left;position:relative}
+.poster .frame{position:relative;display:block}
+.poster .pdur{position:absolute;right:10px;bottom:10px;background:rgba(8,7,10,.72);color:#fff;
+  font-size:10.5px;padding:1px 6px;border-radius:5px;font-weight:700;z-index:2}
 .poster .frame{background:var(--media);border-radius:10px;padding:5px;
   transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
 .poster:hover .frame{transform:translateY(-3px);box-shadow:var(--sh-2)}
@@ -158,6 +161,10 @@ img,video{display:block}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .poster .d{display:block;color:var(--ink-3);font-size:11px}
 
+.chips{display:flex;gap:6px}
+.chip{min-height:30px;padding:0 13px;border-radius:999px;font-size:12.5px;font-weight:700;
+  color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-2);background:var(--surface)}
+.chip.on{background:var(--ink);color:#fff;box-shadow:none}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:16px;margin-top:14px}
 .pcard{position:relative;text-align:left;border-radius:var(--r-m);overflow:hidden;
   background:var(--surface);border:1px solid var(--line);box-shadow:var(--sh-1);
@@ -167,7 +174,17 @@ img,video{display:block}
 .pcard .cover img,.pcard .cover video{width:100%;height:100%;object-fit:cover;opacity:.94}
 .pcard .cover .letter{position:absolute;inset:0;display:grid;place-items:center;
   color:rgba(244,241,236,.4);font-family:"Display",var(--sans);font-size:40px}
-.pcard .cover .cnt{position:absolute;left:10px;top:10px}
+.pcard .cover .cnt{position:absolute;left:10px;top:10px;z-index:3}
+.pcard .cover .shade{position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(19,17,16,0) 48%,rgba(19,17,16,.78))}
+.pcard .cover .ct{position:absolute;left:12px;right:12px;bottom:10px;z-index:2;color:#fff;
+  font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  text-shadow:0 1px 8px rgba(0,0,0,.45)}
+.pcard .cover .pplay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;
+  width:46px;height:46px;border-radius:50%;background:rgba(19,17,16,.55);backdrop-filter:blur(4px);
+  display:grid;place-items:center;opacity:0;transition:opacity .2s}
+.pcard:hover .cover .pplay{opacity:1}
+.pcard .cover .pplay svg{margin-left:3px}
 .pcard .body{padding:12px 14px}
 .pcard .t{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pcard .m{color:var(--ink-3);font-size:12px;margin-top:3px}
@@ -192,6 +209,13 @@ img,video{display:block}
 .media-frame{background:var(--media);border-radius:12px;padding:7px;flex:none}
 .media-frame video{width:262px;max-width:100%;aspect-ratio:9/16;border-radius:7px;background:#000}
 .stage-side{min-width:0;flex:1;display:flex;flex-direction:column;gap:12px}
+.stage-empty{width:262px;max-width:100%;aspect-ratio:9/16;border:1.5px dashed var(--line-2);
+  border-radius:12px;display:flex;flex-direction:column;gap:6px;align-items:center;
+  justify-content:center;text-align:center;color:var(--ink-3);font-size:12.5px;
+  line-height:1.7;padding:16px;background:repeating-linear-gradient(45deg,
+  rgba(33,30,26,.015) 0 10px,transparent 10px 20px)}
+.stage-empty b{color:var(--ink-2);font-size:14.5px}
+.stage-empty svg{opacity:.5;margin-bottom:2px}
 .stage-side .stats{color:var(--ink-2);font-size:13px;line-height:1.9}
 .hist{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
 .hist .h-item{flex:none;width:56px;text-align:center}
@@ -238,16 +262,20 @@ details.disc .disc-b{padding:0 18px 16px}
 .grp{padding:14px 0;border-top:1px solid var(--line)}
 .grp:first-of-type{border-top:0;padding-top:0}
 .grp .gh{font-size:12px;font-weight:700;color:var(--ink-3);margin-bottom:9px}
-.tpls{display:flex;flex-direction:column;gap:6px}
-.tpl{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;text-align:left;
-  transition:background .15s,box-shadow .15s}
+.tpls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tpl{display:flex;flex-direction:column;gap:8px;padding:8px;border-radius:10px;text-align:left;
+  position:relative;transition:background .15s,box-shadow .15s}
 .tpl:hover{background:var(--sunken)}
 .tpl.on{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
-.tpl .sw{width:30px;height:42px;flex:none;border-radius:6px;position:relative;
+.tpl .sw{width:100%;height:40px;border-radius:6px;position:relative;
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
-.tpl .sw i{position:absolute;left:4px;bottom:4px;width:9px;height:9px;border-radius:50%}
-.tpl b{display:block;font-size:13.5px;line-height:1.35}
-.tpl small{display:block;color:var(--ink-2);font-size:11.5px;line-height:1.45}
+.tpl .sw i{position:absolute;left:5px;bottom:5px;width:10px;height:10px;border-radius:50%}
+.tpl b{display:block;font-size:13px;line-height:1.3}
+.tpl small{display:none}
+.tpl .tick{position:absolute;right:7px;top:7px;width:18px;height:18px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:11px;font-weight:900;display:none;
+  place-items:center;line-height:1}
+.tpl.on .tick{display:grid}
 .pills{display:flex;gap:6px;flex-wrap:wrap}
 .pill{min-height:34px;padding:0 13px;border-radius:999px;font-size:13px;font-weight:600;
   color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-2);background:var(--surface);
@@ -696,9 +724,15 @@ async function renderHome(){
   try { ps = await api("/api/projects"); }
   catch (e) { if (e.auth) return showAuth(); }
   const rs = allRenders(ps).reverse();
+  HOME_PS = ps; HOME_RS = rs;
   const recent = rs.length ? `<section class="rail-sec">
-    <div class="sec-h"><h2>最近成片</h2><span class="n">${rs.length} 条 · 悬停即播</span></div>
+    <div class="sec-h"><h2>最近成片</h2><span class="n">${rs.length} 条 · 悬停即播 · 点开看大屏</span></div>
     <div class="posters" id="posters"></div></section>` : "";
+  const chips = ps.length ? `<div class="chips" id="fchips">
+    <button class="chip on" data-f="all">全部 ${ps.length}</button>
+    <button class="chip" data-f="done">已完成 ${ps.filter(x => (x.renders_count||0) > 0).length}</button>
+    <button class="chip" data-f="todo">待制作 ${ps.length - new Set(rs.map(r=>r.project)).size > 0 ? ps.filter(p=>!(p.renders_count>0)).length : 0}</button>
+  </div>` : "";
   $("main").innerHTML = `<div class="view">
     <button class="import" id="dropstrip" role="button" tabindex="0" aria-label="导入素材包 zip">
       <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -711,50 +745,70 @@ async function renderHome(){
     <input type="file" id="homeZip" accept=".zip" class="hide">
     ${recent}
     <section class="rail-sec">
-      <div class="sec-h"><h2>项目</h2><span class="n">${ps.length} 个</span></div>
+      <div class="sec-h"><h2>作品库</h2>${chips}</div>
       ${ps.length ? `<div class="grid" id="pgrid"></div>`
-        : `<div class="card blank"><b>还没有项目</b>上面拖入一个素材包 zip，或点右上角新建。</div>`}
+        : `<div class="card blank"><b>三步出一条片子</b>① 上面导入素材 → ② 进项目选模板和声音 → ③ 开始渲染，成片回到这里。</div>`}
     </section>
   </div>`;
   wireImport($("dropstrip"), $("homeZip"), heroStart);
   const pw = $("posters");
   if (pw) rs.slice(0, 12).forEach(r => pw.appendChild(poster(r)));
-  const g = $("pgrid");
-  if (g) ps.forEach(p => g.appendChild(pcard(p)));
+  drawGrid();
+  document.querySelectorAll("#fchips .chip").forEach(c => c.onclick = () => {
+    document.querySelectorAll("#fchips .chip").forEach(x => x.classList.remove("on"));
+    c.classList.add("on"); HOME_FILTER = c.dataset.f; drawGrid();
+  });
 }
 function poster(r){
   const el = document.createElement("button");
   el.className = "poster";
   el.innerHTML = `<span class="frame"><video src="${vid(r.id)}#t=0.8" muted loop playsinline
-      preload="metadata"></video></span>
+      preload="metadata"></video><span class="pdur">—</span></span>
     <span class="t">${esc(r.title)}</span><span class="d">${esc(r.ts || "")}</span>`;
   const v = el.querySelector("video");
   frameAt(v, v.duration > 4 ? v.duration * .35 : 1.2);
+  v.addEventListener("loadedmetadata", () => {
+    const d = el.querySelector(".pdur");
+    if (d && isFinite(v.duration)) d.textContent = mmss(v.duration);
+  });
   el.onmouseenter = () => v.play().catch(() => {});
   el.onmouseleave = () => { v.pause(); frameAt(v, 1.2); };
   el.onclick = () => playDialog(r);
   return el;
+}
+let HOME_PS = [], HOME_RS = [], HOME_FILTER = "all";
+function drawGrid(){
+  const g = $("pgrid"); if (!g) return;
+  g.innerHTML = "";
+  HOME_PS.filter(p => {
+    if (HOME_FILTER === "done") return (p.renders_count || 0) > 0;
+    if (HOME_FILTER === "todo") return !(p.renders_count > 0);
+    return true;
+  }).forEach(p => g.appendChild(pcard(p)));
 }
 function pcard(p){
   const el = document.createElement("div");
   el.className = "pcard";
   const n = p.renders_count || 0;
   const last = (p.renders || []).filter(r => r.file).slice(-1)[0];
-  const cover = p.cover
-    ? `<img loading="lazy" alt="" src="${qs(p.cover)}">`
-    : `<span class="letter">${esc((p.title || "?").slice(0, 1))}</span>`;
-  const play = last ? `<video src="${vid(last.id)}#t=0.8" muted preload="metadata" playsinline></video>` : cover;
-  el.innerHTML = `<div class="cover">${last ? `<span class="cnt tag ${n ? "ok" : ""}">${n ? n + " 成片" : ""}</span>` : ""}
-      ${play}</div>
-    <div class="body"><div class="t">${esc(p.title)}</div>
-      <div class="m">${p.assets_count ?? 0} 素材 · ${esc(p.created || "")}</div></div>
+  const status = n ? `<span class="cnt tag ok">${n} 成片</span>`
+    : `<span class="cnt tag">${p.assets_count ? "待渲染" : "空项目"}</span>`;
+  const media = last
+    ? `<video src="${vid(last.id)}#t=0.8" muted preload="metadata" playsinline></video>
+       <span class="shade"></span>
+       <span class="pplay"><svg width="17" height="17" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>`
+    : (p.cover ? `<img loading="lazy" alt="" src="${qs(p.cover)}">`
+       : `<span class="letter">${esc((p.title || "?").slice(0, 1))}</span>`);
+  el.innerHTML = `<div class="cover">${status}${media}
+      <span class="shade"></span><span class="ct">${esc(p.title)}</span></div>
+    <div class="body"><div class="m">${p.assets_count ?? 0} 素材 · ${esc(p.created || "")}</div></div>
     <button class="del" data-del aria-label="删除项目"><svg width="14" height="14" viewBox="0 0 24 24"
       fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
   if (last){
     const v = el.querySelector(".cover video");
-    frameAt(v, 0.8);
-    el.querySelector(".cover").onclick = () => { CUR = p; renderProject(); };
+    if (v) frameAt(v, 0.8);
+    el.querySelector(".cover").onclick = () => playDialog({id: last.id, title: p.title, ts: last.ts});
   } else {
     el.querySelector(".cover").onclick = () => { CUR = p; renderProject(); };
   }
@@ -862,8 +916,15 @@ function renderStageCard(b){
       <div class="sec-h" style="margin-bottom:14px"><h2>成片</h2>
         <span class="n" id="stageMeta">${rs.length ? "最近 " + esc(rs[rs.length-1].ts || "") : "还没有成片"}</span></div>
       <div class="player-row">
-        <div class="media-frame"><video id="mainPlayer" controls playsinline
-          ${rs.length ? `src="${vid(rs[rs.length-1].id)}"` : ""}></video></div>
+        ${rs.length
+          ? `<div class="media-frame"><video id="mainPlayer" controls playsinline src="${vid(rs[rs.length-1].id)}"></video></div>`
+          : `<div class="stage-empty">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="3"/>
+                <path d="M10 9l5 3-5 3z"/></svg>
+              <b>还没有成片</b>
+              <span>右边选好模板和声音，<br>点「开始渲染」，几分钟后片子就出现在这里。<br>渲染期间这页会实时长出剧照。</span>
+            </div>`}
         <div class="stage-side">
           ${rs.length ? `
             <div class="stats">这条片子可以直接预览。渲染新的一版时，这里不会被覆盖。</div>
@@ -897,7 +958,7 @@ function renderStageCard(b){
           <div class="cap">${esc(a.summary || a.file)}</div></div>`).join("")}
       </div></div>
     </details>` : `
-    <section class="card blank"><b>先挂一个素材包</b>在右边选择已有素材包，或上传一个 zip。</section>`}`;
+    <section class="card blank"><b>先给这条片子配上素材</b>在右边「素材」里选用已有的，或上传一个素材 zip。</section>`}`;
   const hist = $("hist");
   if (hist && rs.length){
     rs.slice().reverse().forEach((r, i) => {
@@ -936,7 +997,7 @@ function renderRail(b){
   rail.innerHTML = `
     <section class="card panel" id="bundlePanel"></section>
     <section class="card panel">
-      <div class="ph"><h3>渲染配置</h3><button class="ghost" id="cfgReset" style="padding:4px 8px">恢复默认</button></div>
+      <div class="ph"><h3>呈现方式</h3><button class="ghost" id="cfgReset" style="padding:4px 8px">恢复默认</button></div>
       ${warn}
       <div class="grp"><div class="gh">渲染模板</div><div class="tpls" id="fmt"></div></div>
       <div class="grp"><div class="gh">配音音色</div><div class="pills" id="voiceSeg"></div></div>
@@ -971,10 +1032,10 @@ function renderRail(b){
 function paintBundlePanel(){
   const el = $("bundlePanel"); if (!el) return;
   if (!CUR.bundle){
-    el.innerHTML = `<div class="ph"><h3>素材包</h3></div>
-      <div class="bundle-none"><span>还没挂素材包</span><button class="btn sm line" id="pickBundle">选择</button></div>`;
+    el.innerHTML = `<div class="ph"><h3>素材</h3></div>
+      <div class="bundle-none"><span>这条片子还没有素材</span><button class="btn sm line" id="pickBundle">选用</button></div>`;
   } else {
-    el.innerHTML = `<div class="ph"><h3>素材包</h3></div>
+    el.innerHTML = `<div class="ph"><h3>素材</h3></div>
       <div class="bundle-chip">
         <span class="b-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -993,7 +1054,7 @@ function paintBundlePanel(){
 function openBundleModal(){
   const m = document.createElement("div"); m.className = "modal";
   m.innerHTML = `<div class="box" role="dialog" aria-modal="true">
-    <h3>素材包</h3><p>选服务器上已有的，或上传一个新的 zip。</p>
+    <h3>选用素材</h3><p>选服务器上已有的素材，或上传一个素材 zip（用 Agent 或工具导出的包）。</p>
     <button class="btn line sm" id="bmUpload" style="width:100%">上传 zip 文件</button>
     <input type="file" id="bmZip" accept=".zip" class="hide">
     <div class="sub-h" style="margin-top:14px">已有的素材包</div>
@@ -1013,7 +1074,7 @@ function openBundleModal(){
   };
   api("/api/bundles").then(list => {
     const box = m.querySelector("#bmList");
-    if (!list.length) return void (box.innerHTML = `<p style="color:var(--ink-3);font-size:13px">还没有素材包</p>`);
+    if (!list.length) return void (box.innerHTML = `<p style="color:var(--ink-3);font-size:13px">服务器上还没有素材</p>`);
     box.innerHTML = "";
     list.forEach(x => {
       const btn = document.createElement("button");
@@ -1038,10 +1099,11 @@ function paintConfig(b){
   const fmt = $("fmt");
   fmt.innerHTML = TPLS.map(t => {
     const v = TPL_VIS[t.id] || {};
-    return `<button class="tpl ${t.id === CFG.format ? "on" : ""}" data-v="${esc(t.id)}">
+    return `<button class="tpl ${t.id === CFG.format ? "on" : ""}" data-v="${esc(t.id)}" title="${esc(v.hint || "")}">
       <span class="sw" style="background:linear-gradient(135deg,${v.bg||"#000"} 0 55%,${v.paper||"#777"} 55% 100%)">
         <i style="background:${v.acc||"#999"}"></i></span>
-      <span><b>${esc(t.name)}</b><small>${esc(v.hint || "")}</small></span></button>`;
+      <b>${esc(t.name)}</b><small class="hide">${esc(v.hint || "")}</small>
+      <span class="tick">✓</span></button>`;
   }).join("");
   fmt.querySelectorAll(".tpl").forEach(o => o.onclick = () => {
     fmt.querySelectorAll(".tpl").forEach(x => x.classList.remove("on"));
