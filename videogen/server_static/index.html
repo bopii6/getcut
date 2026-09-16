@@ -146,6 +146,31 @@ img,video{display:block}
 .tag.run{background:var(--acc-soft);color:var(--acc)}
 .tag.err{background:var(--err-soft);color:var(--err)}
 
+/* ── 顶栏任务入口 + 全局任务面板 ── */
+.tasks-btn{position:relative;display:inline-flex;align-items:center;gap:7px;min-height:36px;
+  padding:0 13px;border-radius:999px;color:var(--ink-2);font-size:13px;font-weight:700;
+  box-shadow:inset 0 0 0 1px var(--line2);background:var(--surface)}
+.tasks-btn:hover{color:var(--ink)}
+.tasks-btn .tbadge{min-width:18px;height:18px;padding:0 5px;border-radius:999px;
+  background:var(--acc);color:var(--acc-ink);font-size:11px;font-weight:800;
+  display:grid;place-items:center}
+.tasks-panel{position:fixed;top:64px;right:20px;z-index:65;width:360px;max-width:calc(100vw - 24px);
+  max-height:72vh;overflow:auto;background:var(--surface);border:1px solid var(--line2);
+  border-radius:14px;box-shadow:var(--sh-2);padding:10px}
+.tasks-panel .tk-h{font-size:12px;font-weight:800;color:var(--ink-3);padding:6px 8px 10px}
+.tasks-panel .tk{display:block;width:100%;text-align:left;border-radius:10px;padding:9px 10px;
+  transition:background .15s}
+.tasks-panel .tk:hover{background:var(--sunken)}
+.tasks-panel .tk-t{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.tasks-panel .tk-t b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tasks-panel .tk-t small{color:var(--ink-3);font-size:11.5px;flex:none}
+.tasks-panel .tk-p{display:block;font-family:"Display",var(--sans);font-size:13px;color:var(--acc);
+  margin-top:2px}
+.tasks-panel .tk-bar{display:block;height:3px;border-radius:2px;background:var(--sunken);
+  margin-top:6px;overflow:hidden}
+.tasks-panel .tk-bar i{display:block;height:100%;background:var(--acc);border-radius:2px}
+.tasks-panel .tk-empty{color:var(--ink-3);font-size:13px;padding:8px}
+
 /* ── 首页 · 开放式刊头（不是盒子里的 hero） ── */
 .homehead{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
   flex-wrap:wrap;padding:26px 28px;margin:6px 0 18px;border-radius:18px;
@@ -529,9 +554,14 @@ textarea:focus{outline:none;border-color:var(--acc)}
         <div class="tact">
           <span id="account" style="display:flex;align-items:center;gap:8px"></span>
           <button class="btn sm hide" id="newBtn">＋ 新建项目</button>
+          <button class="tasks-btn" id="tasksBtn" title="渲染任务">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="8" x2="18" y2="8"/><line x1="12" y1="8" x2="6" y2="8"/><line x1="18" y1="16" x2="12" y2="16"/><line x1="8" y1="16" x2="6" y2="16"/><rect x="2" y="4" width="20" height="16" rx="3"/></svg>
+            任务<span class="tbadge hide" id="tasksBadge">0</span>
+          </button>
         </div>
       </div>
     </header>
+    <div class="tasks-panel hide" id="tasksPanel"></div>
     <main class="mainwrap" id="main" tabindex="-1"></main>
   </div>
 </div>
@@ -1547,6 +1577,7 @@ async function startRender(b){
     localStorage.setItem("vg.job." + CUR.project_id, job);
     paintTaskRunning();
     startPoll();
+    toast("已在后台开始渲染，你可以继续做别的项目");
   } catch (e) {
     if (e.auth) return showAuth();
     if (btn){ btn.disabled = false; btn.textContent = "开始渲染"; }
@@ -1564,6 +1595,18 @@ async function pollJob(jid){
   let j;
   try { j = await api("/api/job/" + jid); } catch (e) { if (e.auth) showAuth(); return; }
   const t = taskEl(); if (!t) return;
+  if (j.stage === "queued"){
+    t.className = "card panel task";
+    const ts = $("tstage"); if (ts) ts.textContent = "排队中";
+    const tp = $("tpct"); if (tp) tp.textContent = "--";
+    const tb = $("tbar"); if (tb) tb.style.width = "0%";
+    const td = $("tdetail"); if (td) td.textContent = j.detail || "排队中";
+    const te = $("teta"); if (te) te.textContent = "";
+    const tsp = $("tstep"); if (tsp) tsp.textContent = "";
+    const ti = $("taskId"); if (ti) ti.textContent = jid;
+    markStages(0);
+    return;
+  }
   if (j.stage === "unknown"){
     if (lastJob !== jid) return;
     stopPoll(); localStorage.removeItem("vg.job." + CUR.project_id);
@@ -1653,6 +1696,36 @@ const SKELETON_HOME = `<div class="view">
     ${'<div class="skel" style="height:310px"></div>'.repeat(5)}
   </div>
 </div>`;
+let TASKS_OPEN = false;
+async function refreshTasks(){
+  try {
+    const r = await api("/api/jobs");
+    const n = r.active.length;
+    const b = $("tasksBadge");
+    if (b){ b.textContent = String(n); b.classList.toggle("hide", n === 0); }
+    const panel = $("tasksPanel");
+    if (!panel || panel.classList.contains("hide")) return;
+    const rows = [...r.active, ...r.recent].map(i => {
+      const running = i.stage !== "done" && i.stage !== "failed";
+      const stageTxt = i.stage === "done" ? "成片出炉" : (i.stage === "failed" ? "失败了" : (i.detail || ""));
+      const pct = running ? (i.progress || 0) + "%" : (i.stage === "done" ? "出炉" : "失败");
+      return `<button class="tk" data-p="${i.project_id || ""}">
+        <span class="tk-t"><b>${esc(i.title)}</b><small>${esc(stageTxt)}</small></span>
+        <span class="tk-p">${running ? (i.stage === "queued" ? "排队中" : pct) : pct}</span>
+        ${running && i.stage !== "queued" ? `<span class="tk-bar"><i style="width:${i.progress || 0}%"></i></span>` : ""}
+      </button>`;
+    }).join("");
+    panel.innerHTML = `<div class="tk-h">渲染任务 · 同时渲染 ${r.concurrency} 个</div>`
+      + (rows || '<p class="tk-empty">没有任务。挑一个项目，点「开始渲染」试试。</p>');
+    panel.querySelectorAll(".tk").forEach(el => el.onclick = () => {
+      const pid = el.dataset.p;
+      panel.classList.add("hide");
+      TASKS_OPEN = false;
+      if (pid){ location.hash = "#/project/" + pid; }
+    });
+  } catch (e) {}
+}
+
 async function boot(){
   $("main").innerHTML = SKELETON_HOME;
   try { ME = await api("/api/me"); } catch (e) { ME = null; }
@@ -1664,7 +1737,21 @@ async function boot(){
   $("newBtn").classList.remove("hide");
   await loadTemplates();
   route(true);
+  refreshTasks();
+  setInterval(refreshTasks, 4000);
 }
+$("tasksBtn").onclick = () => {
+  TASKS_OPEN = !TASKS_OPEN;
+  $("tasksPanel").classList.toggle("hide", !TASKS_OPEN);
+  refreshTasks();
+};
+document.addEventListener("click", (e) => {
+  if (!TASKS_OPEN) return;
+  const t = e.target;
+  if (t.closest && (t.closest("#tasksPanel") || t.closest("#tasksBtn"))) return;
+  TASKS_OPEN = false;
+  $("tasksPanel").classList.add("hide");
+});
 boot();
 </script>
 </body>

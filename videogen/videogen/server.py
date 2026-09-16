@@ -12,6 +12,7 @@ import json
 import math
 import os
 import shutil
+import queue
 import threading
 import time
 import uuid
@@ -48,7 +49,12 @@ REG = ROOT / "registry.json"
 # 全局锁：JOBS / registry / 渲染工作目录都是共享可变状态，串行化写操作
 _LOCK = threading.RLock()
 # 渲染串行化：Remotion 共用 renderer/props.json 与 visual_out.mp4，不能并发
-_RENDER_LOCK = threading.Lock()
+_RENDER_LOCK = threading.Lock()  # 兼容保留（不再使用）
+# 渲染队列：FIFO，并发数可用 VIDEOGEN_CONCURRENCY 配置（默认 1；每路渲染约占 1-1.5G 内存）
+_RENDER_QUEUE: "queue.Queue[str]" = queue.Queue()
+_RENDER_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_CONCURRENCY", "1")))
+_QUEUE_HEAD: list = []   # 排队中的 job_id（FIFO 顺序）
+_PENDING: dict = {}      # job_id -> body（入队暂存，开跑时取出）
 
 
 # ── 鉴权 ─────────────────────────────────────────────
@@ -233,6 +239,14 @@ def _jobs_save() -> None:
 
 
 _jobs_load()
+# 启动清理：上次进程没跑完的任务已随进程消亡，标记失败让用户重发（防僵尸任务挡新提交）
+with _LOCK:
+    _stale = [jid for jid, j in JOBS.items() if j.get("stage") not in ("done", "failed")]
+    if _stale:
+        for jid in _stale:
+            JOBS[jid].update(stage="failed", stage8=8,
+                             error="服务重启，任务中断，请重新渲染")
+        _jobs_save()
 
 
 def _reg() -> dict:
@@ -570,12 +584,23 @@ def start_build(body: dict, request: Request):
         _resolve_bgm(body.get("bgm"))
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
-    job_id = uuid.uuid4().hex[:12]
+    pid = body.get("project_id")
     with _LOCK:
+        if pid:
+            for j in JOBS.values():
+                if j.get("project_id") == pid and j.get("stage") not in ("done", "failed"):
+                    return JSONResponse(
+                        {"error": "该项目已有任务在排队/渲染，等它完成再发起新的"},
+                        status_code=409)
+        job_id = uuid.uuid4().hex[:12]
+        ahead = len(_QUEUE_HEAD)
         JOBS[job_id] = {"stage": "queued", "stage8": 1, "progress": 3, "error": None, "video": None,
-                        "project_id": body.get("project_id"), "detail": "排队中", "t0": time.time()}
+                        "project_id": pid, "detail": ("排队中 · 前面还有 %d 个任务" % ahead) if ahead
+                        else "已加入队列", "t0": time.time()}
         _jobs_save()
-    threading.Thread(target=_worker, args=(job_id, body), daemon=True).start()
+        _QUEUE_HEAD.append(job_id)
+        _PENDING[job_id] = body
+    _RENDER_QUEUE.put(job_id)
 
     def _tick():
         # 兜底：真实上报缺位时按渐近曲线缓慢推进，避免进度条看起来卡死
@@ -598,12 +623,50 @@ def start_build(body: dict, request: Request):
     return {"job": job_id}
 
 
+@app.get("/api/jobs")
+def my_jobs(request: Request):
+    """当前用户视角的任务：进行中/排队的在前，最近 8 条已完结随后。"""
+    with _LOCK:
+        reg = _reg()
+        visible = {p["project_id"]: p for p in reg["projects"]
+                   if _project_visible(p, request)}
+        items = []
+        for jid, j in JOBS.items():
+            pj = visible.get(j.get("project_id") or "")
+            if pj is None:
+                continue
+            item = {"job_id": jid, "project_id": j.get("project_id"),
+                    "title": pj.get("title") or "项目",
+                    "stage": j.get("stage"), "stage8": j.get("stage8"),
+                    "progress": j.get("progress"), "detail": j.get("detail"),
+                    "error": j.get("error"), "t0": j.get("t0")}
+            if item["stage"] == "queued":
+                try:
+                    ahead = _QUEUE_HEAD.index(jid)
+                except ValueError:
+                    ahead = 0
+                item["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
+            items.append(item)
+    active = [i for i in items if i["stage"] not in ("done", "failed")]
+    finished = sorted((i for i in items if i["stage"] in ("done", "failed")),
+                      key=lambda x: x.get("t0") or 0, reverse=True)[:8]
+    return {"concurrency": _RENDER_CONCURRENCY, "active": active, "recent": finished}
+
+
 @app.get("/api/job/{job_id}")
 def job_status(job_id: str):
     j = JOBS.get(job_id)
     if j is None:
         return {"stage": "unknown"}
     out = dict(j)
+    if out.get("stage") == "queued":
+        with _LOCK:
+            try:
+                ahead = _QUEUE_HEAD.index(job_id)
+            except ValueError:
+                ahead = 0
+        out["queued_pos"] = ahead
+        out["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
     t0 = out.get("t0")
     out["elapsed"] = int(time.time() - t0) if t0 else None
     # 分镜剧照（渲染开始前先拍好，渲染中陆续可见）
@@ -707,6 +770,24 @@ def _cleanup_work(bundle_name: str) -> None:
             pass
 
 
+def _render_worker() -> None:
+    """渲染队列消费者：同时最多 _RENDER_CONCURRENCY 个在跑。"""
+    while True:
+        job_id = _RENDER_QUEUE.get()
+        try:
+            with _LOCK:
+                if job_id in _QUEUE_HEAD:
+                    _QUEUE_HEAD.remove(job_id)
+                body = _PENDING.pop(job_id, None)
+            if not body:
+                continue
+            _worker(job_id, body)
+        except Exception as exc:  # 队列消费者绝不能死
+            print(f"render worker error: {exc}")
+        finally:
+            _RENDER_QUEUE.task_done()
+
+
 def _worker(job_id: str, body: dict) -> None:
     from . import cli
     try:
@@ -733,7 +814,7 @@ def _worker(job_id: str, body: dict) -> None:
         bundle_dir = _resolve_bundle(body["bundle"])
         bgm_file = _resolve_bgm(body.get("bgm"))
         out = OUTPUTS / f"{bundle_dir.name}-{job_id}.mp4"
-        with _RENDER_LOCK:
+        if True:
             cli.build(bundle_dir, out,
                       voice=body.get("voice") or None,
                       rate=_normalize_rate(body.get("rate")),
@@ -764,6 +845,10 @@ def _worker(job_id: str, body: dict) -> None:
         with _LOCK:
             JOBS[job_id].update(stage="failed", stage8=8, error=str(e)[-800:])
             _jobs_save()
+
+
+for _i in range(_RENDER_CONCURRENCY):
+    threading.Thread(target=_render_worker, daemon=True).start()
 
 
 def main():
