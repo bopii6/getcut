@@ -266,6 +266,22 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     report("mux", 94, "正在封装成片")
     compose.mux(withsubs, audio, out_mp4, work)
 
+    # 落盘剪映草稿清单（供「下载剪映草稿」用）：分镜/字幕时间点 + 配音与配置
+    try:
+        from .jianying_draft import dump_manifest
+        dump_manifest(out_mp4.with_suffix(".draft.json"),
+                      video=str(out_mp4), duration_ms=plan.duration_ms, fps=30,
+                      width=1080, height=1920, title=content.title,
+                      subtitles=show_subtitles, sources=show_sources, fmt=format,
+                      sfx_mode=mode, voice=str(Path(mp3)) if mp3 else None,
+                      bgm=str(bgm) if bgm else None, render_id=job_id,
+                      shots=[{"start_ms": s.start_ms, "end_ms": s.end_ms, "kind": s.kind}
+                             for s in plan.shots],
+                      clauses=[{"text": c.text, "start_ms": c.start_ms, "end_ms": c.end_ms}
+                               for c in plan.clauses])
+    except Exception as exc:  # 清单失败不影响成片
+        print(f"draft manifest skipped: {exc}")
+
     summaries = {a.file: a.summary for a in manifest.assets}
     report("verify", 0, "正在逐镜校验画面")
     vreport = verify.verify(out_mp4, plan, work, vision=True,

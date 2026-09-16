@@ -377,6 +377,67 @@ def create_project(request: Request, body: dict = None):
         return {"project_id": pid}
 
 
+@app.get("/api/projects/{pid}/renders/{rid}/jianying-draft")
+def jianying_draft_zip(pid: str, rid: str, request: Request):
+    """把指定成片打包成剪映专业版草稿 zip（分镜切段 + 可编辑字幕[关字幕渲染时]）。"""
+    import tempfile
+    import zipfile
+    from pathlib import Path as _P
+    from urllib.parse import quote
+    from . import jianying_draft as jyd
+
+    with _LOCK:
+        reg = _reg()
+        target = next((p for p in reg["projects"] if p["project_id"] == pid), None)
+        if not target or not _project_visible(target, request):
+            return JSONResponse({"error": "项目不存在"}, status_code=404)
+        render = next((r for r in target.get("renders", []) if r.get("id") == rid), None)
+        if not render:
+            return JSONResponse({"error": "成片不存在"}, status_code=404)
+        video = _P(render["file"])
+        if not video.is_file():
+            return JSONResponse({"error": "成片文件缺失"}, status_code=404)
+
+    mf = jyd.load_manifest(video)
+    if mf is None:
+        # 旧成片没有清单：整条作为单镜头，时长用 ffprobe 探测
+        dur_ms = 0.0
+        try:
+            import subprocess
+            outp = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "default=noprint_wrappers=1:nokey=1", str(video)],
+                capture_output=True, text=True, timeout=30)
+            dur_ms = float(outp.stdout.strip()) * 1000.0
+        except Exception:
+            dur_ms = 0.0
+        if dur_ms <= 0:
+            return JSONResponse({"error": "无法读取成片时长"}, status_code=500)
+        mf = {"version": 1, "video": str(video), "duration_ms": dur_ms,
+              "fps": 30, "width": 1080, "height": 1920,
+              "title": target.get("title") or "成片", "subtitles": True,
+              "shots": [], "clauses": [], "voice": None, "render_id": rid}
+    mf["render_id"] = rid
+    mf.setdefault("title", target.get("title") or "成片")
+
+    voice = mf.get("voice")
+    title = (mf.get("title") or "成片").replace(" ", "_")[:24]
+    fname = f"videogen-剪映草稿-{title}-{rid[:6]}.zip"
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            zpath = _P(td) / "draft.zip"
+            jyd.build_zip(mf, video, _P(voice) if voice else None, zpath)
+            data = zpath.read_bytes()
+    except Exception as exc:
+        return JSONResponse({"error": f"草稿打包失败: {exc}"}, status_code=500)
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition":
+                 "attachment; filename=jianying-draft-{}.zip; "
+                 "filename*=UTF-8''{}".format(rid[:6], quote(fname))})
+
+
 @app.post("/api/projects/{pid}/delete")
 def delete_project(pid: str, request: Request):
     with _LOCK:

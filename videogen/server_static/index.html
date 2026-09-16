@@ -1188,6 +1188,7 @@ function renderStageCard(b){
             <div class="stats">这条片子可以直接预览。渲染新的一版时，这里不会被覆盖。</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <a class="btn sm line" id="dlBtn" ${rs.length ? `href="${vid(rs[rs.length-1].id)}" download` : ""}>下载成片</a>
+              <a class="btn sm line" id="jyBtn" ${rs.length ? `href="${qs("/api/projects/" + CUR.project_id + "/renders/" + (rs[rs.length-1].id) + "/jianying-draft")}" download` : ""} title="下载剪映专业版草稿包：成片已按分镜切段，可在剪映里逐镜修改；渲染时关闭字幕的话，文案还会以可编辑文本轨进入草稿">剪映草稿</a>
               <button class="btn sm" id="againBtn">再生成一版</button>
             </div>
             <div>
@@ -1237,6 +1238,8 @@ function renderStageCard(b){
       it.onclick = () => {
         $("mainPlayer").src = vid(jid);
         $("dlBtn").href = vid(jid);
+        const jy = $("jyBtn");
+        if (jy) jy.href = qs("/api/projects/" + CUR.project_id + "/renders/" + jid + "/jianying-draft");
         hist.querySelectorAll(".h-item").forEach(x => x.classList.remove("on"));
         it.classList.add("on");
       };
