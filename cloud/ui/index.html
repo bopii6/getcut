@@ -139,8 +139,10 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("sh
 function api(path){ return API.replace(/\/$/,"") + path; }
 function human(n){ return n>1048576 ? (n/1048576).toFixed(1)+" MB" : Math.round(n/1024)+" KB"; }
 
-if (!API) {
-  $("#upErr").textContent = "未配置后端地址：请用 ?api=https://xxx.workers.dev 打开本页（会记住）";
+// 界面由 Worker 同源托管，API 留空即"同源"，无需配置。
+// 只有直接用 file:// 打开本地文件时才需要 ?api=
+if (location.protocol === "file:") {
+  $("#upErr").textContent = "请通过部署地址访问本页（如 https://vg.hellojoy.top），同源 API 才可用";
 }
 
 // ---------- 素材包 ----------
