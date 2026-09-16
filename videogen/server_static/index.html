@@ -1,46 +1,46 @@
 <!DOCTYPE html>
 <!--
-  videogen 工作台 · 亮色纸感工作台
+  videogen 工作台 · 白盒子放映室
   设计立场：
-    · 工具，不是落地页 —— 打开就是项目台，没有营销 Hero
-    · 纸感亮色界面，与成片（纸卡编辑风）同一种气质；媒体一律坐在黑色底座上
-    · 一个砖红强调色（#A44231，与成片模板同源），只用于「进行中 / 选中」
-    · 项目页左右两栏：左边成片与内容，右边常驻配置 + 渲染按钮 + 实时进度
-  字：展示字「思源黑体 Heavy」子集（自托管，与成片同款），正文系统黑体
+    · 亮、轻、简单 —— 近白暖纸底 + 墨黑字，界面退后，用户的片子才是主角
+    · 放映室隐喻：所有视频媒体坐在黑色幕布底座上，空位是"待放映"的暗幕
+    · 一个朱砂红 #C4452B（与成片模板砖红同源），只给「开始渲染 / 进行中 / 选中」
+    · 制作间右栏 = 1 素材 → 2 画面 → 3 声音 → 渲染 的编号步骤流，一眼知道下一步
+    · 模板选择器用纯 CSS 小样海报，每个模板长什么样一眼看懂
+  字：数字/字母用思源黑体 Heavy 子集（36KB 自托管 woff2），中文标题系统黑体 900
 -->
 <html lang="zh">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#F6F5F2">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23211E1A'/%3E%3Ctext x='30' y='44' font-family='sans-serif' font-size='34' font-weight='900' fill='%23F6F5F2' text-anchor='middle'%3EV%3C/text%3E%3Ccircle cx='49' cy='16' r='6' fill='%23A44231'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#F7F6F3">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231A1712'/%3E%3Ctext x='30' y='44' font-family='sans-serif' font-size='34' font-weight='900' fill='%23F7F6F3' text-anchor='middle'%3EV%3C/text%3E%3Ccircle cx='49' cy='16' r='6' fill='%23C4452B'/%3E%3C/svg%3E">
 <title>videogen · 工作台</title>
 <style>
 @font-face{
   font-family:"Display";
-  src:url("/fonts/display-900.ttf") format("truetype");
+  src:url("/fonts/display-subset.woff2") format("woff2");
   font-weight:900;font-display:swap;
 }
 :root{
-  --bg:#0B0E14; --panel:#10141D; --card:#151A24; --card2:#1B2230; --sunken:#1B2230;
-  --line:#222B3C; --line2:#2D3850;
-  --ink:#EAEFF7; --ink-2:#98A3BA; --ink-3:#5F6C85;
-  --acc:#4F7CFF; --acc2:#22C7F5; --acc-deep:#3D66E0; --acc-soft:rgba(79,124,255,.16);
-  --grad:linear-gradient(135deg,#4F7CFF 0%,#22C7F5 100%);
-  --ok:#3DD68C; --ok-soft:rgba(61,214,140,.13);
-  --err:#FF6B6B; --err-soft:rgba(255,107,107,.13);
-  --media:#07090D;
-  --r-s:6px; --r-m:10px; --r-l:16px;
-  --sh-1:0 0 0 1px rgba(255,255,255,.03);
-  --sh-2:0 12px 40px rgba(0,0,0,.5);
-  --sans:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  --paper:#F7F6F3; --surface:#FFFFFF; --sunken:#F0EEE8;
+  --ink:#1A1712; --ink-2:#6E6759; --ink-3:#A69E8E;
+  --line:#EAE7E0; --line2:#DBD6CB;
+  --acc:#C4452B; --acc-deep:#A93A22; --acc-soft:#FAECE7;
+  --ok:#2E7D4F; --ok-soft:#E8F1EA;
+  --err:#C03A2B; --err-soft:#F9EAE7;
+  --media:#12100D;
+  --r-s:7px; --r-m:11px; --r-l:16px;
+  --sh-1:0 1px 2px rgba(26,23,18,.04), 0 4px 16px rgba(26,23,18,.05);
+  --sh-2:0 2px 6px rgba(26,23,18,.06), 0 20px 48px rgba(26,23,18,.14);
+  --sans:"PingFang SC","HarmonyOS Sans SC","MiSans","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Consolas,monospace;
   --ease:cubic-bezier(.25,.6,.3,1);
 }
 *{box-sizing:border-box;margin:0}
 ::selection{background:var(--acc);color:#fff}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);
   font-size:14.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0;padding:0}
@@ -49,121 +49,129 @@ a{color:inherit;text-decoration:none}
 img,video{display:block}
 .hide{display:none!important}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:4px}
-.display{font-family:"Display",var(--sans);font-weight:900;letter-spacing:-.02em}
+.display{font-family:"Display",var(--sans);font-weight:900;letter-spacing:-.01em}
 ::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px;border:2px solid var(--paper)}
 ::-webkit-scrollbar-track{background:transparent}
 
-/* 壳：左侧导航 + 主区 */
+/* ── 壳：左侧导航 + 主区 ── */
 .shell{display:flex;min-height:100vh}
-.side{width:216px;flex:none;background:var(--panel);border-right:1px solid var(--line);
-  display:flex;flex-direction:column;padding:18px 12px 14px;position:sticky;top:0;height:100vh}
-.side .brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px}
-.side .mark{width:34px;height:34px;flex:none;border-radius:10px;background:var(--grad);color:#fff;
-  display:grid;place-items:center;font-family:"Display",var(--sans);font-size:18px;
-  box-shadow:0 4px 16px rgba(79,124,255,.4)}
-.side .bname{font-size:16px;font-weight:800;line-height:1.2}
+.side{width:212px;flex:none;background:var(--paper);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:20px 12px 14px;position:sticky;top:0;height:100vh}
+.side .brand{display:flex;align-items:center;gap:10px;padding:2px 8px 20px}
+.side .mark{width:34px;height:34px;flex:none;border-radius:10px;background:var(--ink);color:var(--paper);
+  display:grid;place-items:center;font-family:"Display",var(--sans);font-size:18px;position:relative}
+.side .mark::after{content:"";position:absolute;right:-2px;top:-2px;width:9px;height:9px;
+  border-radius:50%;background:var(--acc)}
+.side .bname{font-size:16px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
 .side .bname small{display:block;color:var(--ink-3);font-size:10.5px;font-weight:600}
 .nav{display:flex;flex-direction:column;gap:4px}
 .nav a{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;
   color:var(--ink-2);font-size:14px;font-weight:600;transition:background .15s,color .15s}
 .nav a svg{flex:none;opacity:.85}
-.nav a:hover{background:var(--card2);color:var(--ink)}
-.nav a.on{background:var(--grad);color:#fff;box-shadow:0 6px 20px rgba(79,124,255,.35)}
+.nav a:hover{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
+.nav a.on{background:var(--ink);color:#fff}
 .side .sp{flex:1}
-.side .sfoot{color:var(--ink-3);font-size:11px;padding:10px 12px 0;border-top:1px solid var(--line)}
+.side .sfoot{color:var(--ink-3);font-size:11px;line-height:1.7;padding:12px 12px 0;border-top:1px solid var(--line)}
 .maincol{flex:1;min-width:0;display:flex;flex-direction:column}
-.top{position:sticky;top:0;z-index:30;background:rgba(11,14,20,.82);
+.top{position:sticky;top:0;z-index:30;background:rgba(247,246,243,.85);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.top .in{max-width:1280px;margin:0 auto;height:60px;padding:0 28px;
+.top .in{max-width:1240px;margin:0 auto;height:58px;padding:0 28px;
   display:flex;align-items:center;gap:16px}
-.top h1{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.top h1{font-size:15.5px;font-weight:800;letter-spacing:-.01em;max-width:32em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .top .sp{flex:1}
 .tact{display:flex;align-items:center;gap:10px}
 .tact .who{font-size:13px;color:var(--ink-2);max-width:220px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 
-.mainwrap{max-width:1280px;margin:0 auto;width:100%;padding:26px 28px 96px}
+.mainwrap{max-width:1240px;margin:0 auto;width:100%;padding:24px 28px 96px}
 .view{animation:fade .25s var(--ease)}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-/* 按钮 */
+/* ── 按钮 ── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  border-radius:10px;min-height:44px;padding:0 22px;font-size:14.5px;font-weight:700;
-  background:var(--grad);color:#fff;box-shadow:0 4px 18px rgba(79,124,255,.32);
-  transition:filter .2s,transform .2s,box-shadow .2s}
-.btn:hover{filter:brightness(1.1)}
+  border-radius:11px;min-height:44px;padding:0 22px;font-size:14.5px;font-weight:700;
+  background:var(--ink);color:#fff;
+  transition:background .2s,transform .2s,box-shadow .2s}
+.btn:hover{background:#332E26;box-shadow:var(--sh-1)}
 .btn:active{transform:scale(.98)}
-.btn[disabled]{background:var(--card2);color:var(--ink-3);box-shadow:none;cursor:default}
-.btn.line{background:var(--card2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line2)}
-.btn.line:hover{background:#222B3D}
-.btn.sm{min-height:36px;padding:0 14px;font-size:13px;border-radius:8px}
-.ghost{color:var(--ink-2);font-size:14px;font-weight:600;border-radius:7px;
+.btn[disabled]{background:var(--sunken);color:var(--ink-3);box-shadow:none;cursor:default}
+.btn.go{background:var(--acc);box-shadow:0 8px 24px rgba(196,69,43,.26)}
+.btn.go:hover{background:var(--acc-deep)}
+.btn.line{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line2)}
+.btn.line:hover{background:var(--sunken);box-shadow:inset 0 0 0 1px var(--line2)}
+.btn.sm{min-height:36px;padding:0 14px;font-size:13px;border-radius:9px}
+.ghost{color:var(--ink-2);font-size:14px;font-weight:600;border-radius:8px;
   padding:8px 12px;transition:background .2s,color .2s}
-.ghost:hover{background:var(--card2);color:var(--ink)}
+.ghost:hover{background:var(--sunken);color:var(--ink)}
 .ghost.danger:hover{background:var(--err-soft);color:var(--err)}
 
-/* 通用 */
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-l)}
+/* ── 通用 ── */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l)}
 .sec-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-.sec-h h2{font-size:17px;font-weight:800}
+.sec-h h2{font-size:16px;font-weight:800;letter-spacing:-.01em}
 .sec-h .n{color:var(--ink-3);font-size:12.5px}
 .sub-h{font-size:12.5px;font-weight:700;color:var(--ink-2);margin:0 0 8px}
 .tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;
-  padding:3px 9px;border-radius:999px;background:var(--card2);color:var(--ink-2)}
+  padding:3px 9px;border-radius:999px;background:var(--sunken);color:var(--ink-2)}
 .tag.ok{background:var(--ok-soft);color:var(--ok)}
-.tag.run{background:var(--acc-soft);color:var(--acc2)}
+.tag.run{background:var(--acc-soft);color:var(--acc)}
 .tag.err{background:var(--err-soft);color:var(--err)}
 
-/* 首页 hero */
-.hero{display:flex;align-items:center;gap:20px;flex-wrap:wrap;
-  padding:26px 28px;border-radius:var(--r-l);border:1px solid var(--line);
-  background:linear-gradient(115deg,rgba(79,124,255,.2),rgba(34,199,245,.08) 55%,transparent 80%),var(--card)}
-.hero .hL{min-width:0;flex:1}
-.hero .hL h2{font-family:"Display",var(--sans);font-weight:900;font-size:26px;letter-spacing:-.01em}
-.hero .hL p{color:var(--ink-2);font-size:13px;margin-top:4px}
-.hero .hR{display:flex;gap:10px;flex-wrap:wrap}
+/* ── 首页 · 开放式刊头（不是盒子里的 hero） ── */
+.homehead{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
+  flex-wrap:wrap;padding:12px 2px 20px}
+.homehead h2{font-size:31px;font-weight:900;letter-spacing:-.02em;line-height:1.12}
+.homehead .hh-sub{color:var(--ink-2);font-size:13.5px;margin-top:7px}
+.homehead .hh-sub b{color:var(--ink);font-weight:800}
+.homehead .hh-r{display:flex;gap:10px}
 
-.import{display:flex;align-items:center;gap:14px;width:100%;padding:14px 18px;margin-top:14px;
-  border-radius:var(--r-m);background:var(--card);border:1.5px dashed var(--line2);cursor:pointer;
+.import{display:flex;align-items:center;gap:14px;width:100%;padding:13px 16px;text-align:left;
+  border-radius:var(--r-m);background:var(--surface);border:1.5px dashed var(--line2);cursor:pointer;
   transition:border-color .2s,background .2s}
 .import:hover,.import.over{border-color:var(--acc);background:var(--acc-soft)}
-.import .ico{width:38px;height:38px;flex:none;border-radius:9px;background:var(--card2);
+.import .ico{width:38px;height:38px;flex:none;border-radius:10px;background:var(--sunken);
   display:grid;place-items:center;color:var(--ink-2)}
 .import b{display:block;font-size:14px}
 .import span{color:var(--ink-2);font-size:12.5px}
 .import .pick{margin-left:auto}
 
-.rail-sec{margin-top:30px}
-.posters{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity}
+.rail-sec{margin-top:32px}
+.posters{display:flex;gap:16px;overflow-x:auto;padding:4px 2px 12px;scroll-snap-type:x proximity}
 .posters::-webkit-scrollbar{height:8px}
-.poster{flex:none;width:148px;scroll-snap-align:start;text-align:left;position:relative}
-.poster .frame{position:relative;display:block;background:var(--media);border-radius:11px;padding:5px;
-  border:1px solid var(--line);transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
-.poster:hover .frame{transform:translateY(-3px);box-shadow:var(--sh-2),0 0 0 1px var(--acc)}
-.poster video{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:7px;background:#000}
-.poster .pdur{position:absolute;right:11px;bottom:11px;background:rgba(0,0,0,.75);color:#fff;
-  font-size:10.5px;padding:1px 6px;border-radius:5px;font-weight:700;z-index:2}
-.poster .t{display:block;font-size:12px;font-weight:600;margin-top:7px;color:var(--ink);
+.poster{flex:none;width:186px;scroll-snap-align:start;text-align:left;position:relative;
+  animation:rise .45s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.poster .frame{position:relative;display:block;background:var(--media);border-radius:14px;padding:6px;
+  box-shadow:var(--sh-1);transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
+.poster:hover .frame{transform:translateY(-4px);box-shadow:var(--sh-2)}
+.poster video{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:9px;background:#000}
+.poster .pdur{position:absolute;right:13px;bottom:13px;background:rgba(0,0,0,.72);color:#fff;
+  font-family:"Display",var(--sans);font-size:10.5px;padding:1px 7px;border-radius:6px;font-weight:700;z-index:2}
+.poster .t{display:block;font-size:12.5px;font-weight:700;margin-top:8px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .poster .d{display:block;color:var(--ink-3);font-size:11px}
 
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{min-height:30px;padding:0 13px;border-radius:999px;font-size:12.5px;font-weight:700;
-  color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line2);background:var(--card)}
-.chip.on{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(79,124,255,.35)}
+  color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line2);background:var(--surface);
+  transition:all .15s}
+.chip:hover{color:var(--ink)}
+.chip.on{background:var(--ink);color:#fff;box-shadow:none}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(204px,1fr));gap:18px;margin-top:14px}
 .pcard{position:relative;text-align:left;border-radius:var(--r-m);overflow:hidden;
-  background:var(--card);border:1px solid var(--line);transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
+  background:var(--surface);border:1px solid var(--line);
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
 .pcard:hover{transform:translateY(-3px);box-shadow:var(--sh-2)}
 .pcard .cover{aspect-ratio:3/4;background:var(--media);position:relative;overflow:hidden;cursor:pointer}
 .pcard .cover img,.pcard .cover video{width:100%;height:100%;object-fit:cover}
 .pcard .cover .letter{position:absolute;inset:0;display:grid;place-items:center;
-  color:var(--ink-3);font-family:"Display",var(--sans);font-size:44px}
+  color:rgba(247,246,243,.5);font-family:"Display",var(--sans);font-size:44px}
 .pcard .cover .cnt{position:absolute;left:10px;top:10px;z-index:3}
 .pcard .cover .shade{position:absolute;inset:0;z-index:1;
-  background:linear-gradient(180deg,rgba(7,9,13,0) 48%,rgba(7,9,13,.8))}
+  background:linear-gradient(180deg,rgba(7,9,13,0) 48%,rgba(7,9,13,.78))}
 .pcard .cover .ct{position:absolute;left:12px;right:12px;bottom:10px;z-index:2;color:#fff;
   font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   text-shadow:0 1px 8px rgba(0,0,0,.5)}
@@ -179,92 +187,149 @@ img,video{display:block}
   opacity:0;transition:opacity .2s,background .2s;backdrop-filter:blur(4px);z-index:4}
 .pcard:hover .del{opacity:1}
 .pcard .del:hover{background:var(--err)}
-.blank{padding:52px 24px;text-align:center;color:var(--ink-2)}
-.blank b{display:block;font-size:16px;color:var(--ink);margin-bottom:6px}
 
-/* 项目页 */
-.pj{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:22px;align-items:start}
+/* 首次来访的引导卡（空态不稀疏） */
+.firstcard{padding:40px 32px;text-align:center}
+.firstcard .fc-art{display:flex;justify-content:center;gap:10px;margin-bottom:20px}
+.firstcard .fc-art i{width:52px;border-radius:8px;background:var(--media);position:relative;
+  box-shadow:var(--sh-1)}
+.firstcard .fc-art i:nth-child(1){height:88px;transform:rotate(-5deg) translateY(6px)}
+.firstcard .fc-art i:nth-child(2){height:100px}
+.firstcard .fc-art i:nth-child(3){height:88px;transform:rotate(5deg) translateY(6px)}
+.firstcard .fc-art i::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:0;height:0;border-left:7px solid rgba(247,246,243,.85);
+  border-top:4.5px solid transparent;border-bottom:4.5px solid transparent}
+.firstcard b{display:block;font-size:17px;margin-bottom:6px}
+.firstcard .fc-sub{color:var(--ink-2);font-size:13.5px}
+.firstcard ol{display:flex;justify-content:center;gap:26px;flex-wrap:wrap;margin:22px 0 4px;text-align:left}
+.firstcard ol li{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--ink-2);
+  max-width:200px;line-height:1.6}
+.firstcard ol li i{font-style:normal;font-family:"Display",var(--sans);flex:none;width:22px;height:22px;
+  border-radius:50%;background:var(--ink);color:#fff;font-size:12px;display:grid;place-items:center;margin-top:1px}
+.firstcard ol li b{display:block;font-size:13.5px;color:var(--ink);margin:0}
+
+/* ── 项目页（制作间） ── */
+.pj{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:start}
 .crumb{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-.crumb h1{font-size:21px;font-weight:800;letter-spacing:-.01em;max-width:24em;
+.crumb h1{font-size:21px;font-weight:900;letter-spacing:-.01em;max-width:24em;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .colmain{min-width:0;display:flex;flex-direction:column;gap:18px}
 .stage-card{padding:18px}
-.player-row{display:flex;gap:20px;align-items:flex-start}
-.media-frame{background:var(--media);border-radius:12px;padding:7px;flex:none;border:1px solid var(--line)}
-.media-frame video{width:262px;max-width:100%;aspect-ratio:9/16;border-radius:7px;background:#000}
-.stage-empty{width:276px;max-width:100%;aspect-ratio:9/16;border:1.5px dashed var(--line2);
-  border-radius:12px;display:flex;flex-direction:column;gap:6px;align-items:center;
-  justify-content:center;text-align:center;color:var(--ink-3);font-size:12.5px;
-  line-height:1.7;padding:16px;background:repeating-linear-gradient(45deg,
-  rgba(255,255,255,.015) 0 10px,transparent 10px 20px)}
-.stage-empty b{color:var(--ink-2);font-size:14.5px}
-.stage-empty svg{opacity:.6;margin-bottom:2px}
-.stage-side{min-width:0;flex:1;display:flex;flex-direction:column;gap:12px}
+.player-row{display:flex;gap:22px;align-items:flex-start}
+.media-frame{background:var(--media);border-radius:14px;padding:7px;flex:none;box-shadow:var(--sh-1)}
+.media-frame video{width:290px;max-width:100%;aspect-ratio:9/16;border-radius:8px;background:#000}
+
+/* 待放映的暗幕（空态有设计，不是死黑块） */
+.theater{width:304px;max-width:100%;aspect-ratio:9/16;flex:none;border-radius:14px;
+  background:var(--media);position:relative;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;color:#B9B1A2;padding:24px;gap:9px}
+.theater::before{content:"";position:absolute;inset:0;
+  background:radial-gradient(85% 55% at 50% 28%,rgba(255,240,220,.11),transparent 72%)}
+.theater::after{content:"";position:absolute;inset:10px;border:1px dashed rgba(247,246,243,.16);
+  border-radius:9px}
+.theater svg{position:relative;opacity:.75;margin-bottom:2px}
+.theater b{position:relative;color:var(--paper);font-size:15px}
+.theater span{position:relative;font-size:12px;line-height:1.8}
+
+.stage-side{min-width:0;flex:1;display:flex;flex-direction:column;gap:14px}
 .stage-side .stats{color:var(--ink-2);font-size:13px;line-height:1.9}
 .hist{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
-.hist .h-item{flex:none;width:56px;text-align:center}
-.hist .h-item .frame{background:var(--media);border-radius:8px;padding:3px;border:1px solid var(--line);
+.hist .h-item{flex:none;width:58px;text-align:center}
+.hist .h-item .frame{background:var(--media);border-radius:8px;padding:3px;
   transition:box-shadow .2s}
 .hist .h-item.on .frame{box-shadow:0 0 0 2px var(--acc)}
 .hist video{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:6px}
 .hist .h-item span{font-size:10px;color:var(--ink-3)}
-.hookline{padding:18px 20px;display:flex;flex-direction:column;gap:8px}
-.hookline .ln{font-size:20px;font-weight:800;line-height:1.55;letter-spacing:-.01em}
-.hookline .hl{background:var(--grad);color:#fff;padding:1px 8px;border-radius:4px}
-.hookline .cap{color:var(--ink-3);font-size:12px;font-weight:600}
+.hookline{padding:20px 22px;display:flex;flex-direction:column;gap:9px}
+.hookline .ln{font-size:20px;font-weight:900;line-height:1.55;letter-spacing:-.01em}
+.hookline .hl{background:var(--acc);color:#fff;padding:1px 8px;border-radius:5px}
+.hookline .cap{color:var(--ink-3);font-size:12px;font-weight:700}
 .script-box{max-height:240px;overflow:auto;padding:0 20px 16px;font-size:14.5px;
   line-height:1.95;white-space:pre-wrap;color:var(--ink)}
 .assets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
-.assets-grid .a{border-radius:9px;overflow:hidden;background:var(--card2)}
+.assets-grid .a{border-radius:9px;overflow:hidden;background:var(--sunken)}
 .assets-grid img,.assets-grid video{width:100%;aspect-ratio:4/3;object-fit:cover}
 .assets-grid .cap{padding:7px 9px;font-size:11.5px;color:var(--ink-2);line-height:1.5;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-details.disc{border:1px solid var(--line);border-radius:var(--r-m);background:var(--card)}
+details.disc{border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
 details.disc>summary{cursor:pointer;padding:13px 18px;font-size:14px;font-weight:700;
   list-style:none;display:flex;align-items:center;justify-content:space-between}
 details.disc>summary::-webkit-details-marker{display:none}
 details.disc>summary .n{color:var(--ink-3);font-weight:600;font-size:12px}
 details.disc .disc-b{padding:0 18px 16px}
 
-/* 右栏 */
-.railcol{position:sticky;top:84px;display:flex;flex-direction:column;gap:14px}
-.panel{padding:18px}
-.panel .ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.panel .ph h3{font-size:14px;font-weight:800}
-.bundle-chip{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;
-  background:var(--card2);font-size:13px}
-.bundle-chip .b-ico{width:30px;height:30px;flex:none;border-radius:8px;background:var(--card);
+/* ── 右栏：编号步骤流 1 素材 → 2 画面 → 3 声音 → 渲染 ── */
+.railcol{position:sticky;top:82px;display:flex;flex-direction:column;gap:16px}
+.panel{padding:20px}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.panel .ph h3{font-size:15px;font-weight:800}
+.step{display:flex;gap:12px;padding:15px 0;border-top:1px solid var(--line)}
+.step:first-of-type{border-top:0;padding-top:10px}
+.step-n{font-family:"Display",var(--sans);font-size:13px;width:23px;height:23px;flex:none;
+  border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;margin-top:1px}
+.step-b{flex:1;min-width:0}
+.gh{font-size:13px;font-weight:800;margin-bottom:9px}
+.gh .hint{color:var(--ink-3);font-weight:600;font-size:11.5px}
+
+.bundle-chip{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  background:var(--sunken);font-size:13px}
+.bundle-chip .b-ico{width:30px;height:30px;flex:none;border-radius:8px;background:var(--surface);
   display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink-2)}
 .bundle-chip .b-name{min-width:0;flex:1}
 .bundle-chip .b-name b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bundle-chip .b-name span{color:var(--ink-3);font-size:11.5px}
-.bundle-chip button{color:var(--acc2);font-weight:700;font-size:12.5px;flex:none;padding:4px 8px;border-radius:6px}
+.bundle-chip button{color:var(--acc);font-weight:700;font-size:12.5px;flex:none;padding:4px 8px;border-radius:6px}
 .bundle-chip button:hover{background:var(--acc-soft)}
 .bundle-none{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:13px;border:1.5px dashed var(--line2);border-radius:10px;font-size:13px;color:var(--ink-2)}
-.grp{padding:14px 0;border-top:1px solid var(--line)}
-.grp:first-of-type{border-top:0;padding-top:0}
-.grp .gh{font-size:12px;font-weight:700;color:var(--ink-3);margin-bottom:9px}
-.tpls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.tpl{display:flex;flex-direction:column;gap:8px;padding:8px;border-radius:10px;text-align:left;
-  position:relative;transition:background .15s,box-shadow .15s;border:1.5px solid transparent}
-.tpl:hover{background:var(--card2)}
+  padding:12px;border:1.5px dashed var(--line2);border-radius:10px;font-size:13px;color:var(--ink-2)}
+
+/* 模板小样海报（纯 CSS 画出每个模板的样子） */
+.tpls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.tpl{display:flex;flex-direction:column;gap:7px;padding:7px 7px 8px;border-radius:11px;text-align:left;
+  position:relative;transition:background .15s,box-shadow .15s;border:1px solid transparent;min-width:0}
+.tpl:hover{background:var(--sunken)}
 .tpl.on{background:var(--acc-soft);border-color:var(--acc)}
-.tpl .sw{width:100%;height:40px;border-radius:6px;position:relative;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.09)}
-.tpl .sw i{position:absolute;left:5px;bottom:5px;width:10px;height:10px;border-radius:50%}
-.tpl b{display:block;font-size:12.5px;line-height:1.3}
-.tpl small{display:none}
-.tpl .tick{position:absolute;right:7px;top:7px;width:18px;height:18px;border-radius:50%;
-  background:var(--grad);color:#fff;font-size:11px;font-weight:900;display:none;
-  place-items:center;line-height:1}
+.tpl .mock{position:relative;display:block;width:100%;aspect-ratio:9/16;border-radius:7px;
+  overflow:hidden;box-shadow:var(--sh-1)}
+.tpl .mock i{position:absolute;display:block}
+.tpl b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font-size:11px;line-height:1.35;min-height:30px;text-align:center}
+.tpl .tick{position:absolute;right:5px;top:5px;width:17px;height:17px;border-radius:50%;
+  background:var(--acc);color:#fff;font-size:10.5px;font-weight:900;display:none;
+  place-items:center;line-height:1;box-shadow:0 2px 6px rgba(196,69,43,.4)}
 .tpl.on .tick{display:grid}
+/* 小样内部形状 */
+.mk-v{left:7%;top:6%;width:86%;height:32%;border-radius:4px}
+.mk-card{left:6%;right:6%;bottom:6%;height:46%;border-radius:5px}
+.mk-band{top:47%;left:12%;width:48%;height:10%;border-radius:2px}
+.mk-ln{left:12%;width:70%;height:5%;border-radius:2px}
+.mk-ln.s{top:71%;width:52%}
+.mk-ln.d{top:58%;width:66%}
+.mk-grid{inset:0;border-radius:inherit}
+.mk-num{top:12%;left:8%;width:56%;height:9%;border-radius:2px}
+.mk-num2{top:26%;left:8%;width:40%;height:7%;border-radius:2px;opacity:.6}
+.mk-heavy{top:18%;left:10%;width:62%;height:12%;border-radius:2px}
+.mk-heavy.s{top:34%;width:44%}
+.mk-chip{top:10%;left:10%;width:34%;height:8%;border-radius:2px}
+.mk-cap{bottom:10%;left:10%;right:10%;height:6%;border-radius:2px}
+.mk-band.b{top:46%;left:0;right:0;width:auto;height:12%;border-radius:0}
+.mk-vig{inset:0;border-radius:inherit}
+.mk-seal{top:10%;right:10%;width:26%;aspect-ratio:1;border-radius:50%}
+.mk-vidfull{inset:0;border-radius:inherit}
+.mk-play{left:50%;top:44%;width:24%;aspect-ratio:1;transform:translate(-50%,-50%);
+  border-radius:50%;background:rgba(247,246,243,.16)}
+.mk-play::after{content:"";position:absolute;left:55%;top:50%;transform:translate(-50%,-50%);
+  width:0;height:0;border-left:9px solid rgba(247,246,243,.9);
+  border-top:5.5px solid transparent;border-bottom:5.5px solid transparent}
+.tpls .mk-ln{top:62%}
+
 .pills{display:flex;gap:6px;flex-wrap:wrap}
 .pill{min-height:34px;padding:0 13px;border-radius:999px;font-size:13px;font-weight:600;
-  color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line2);background:var(--card);
+  color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line2);background:var(--surface);
   transition:all .15s;display:inline-flex;align-items:center;gap:7px}
 .pill:hover{color:var(--ink)}
-.pill.on{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(79,124,255,.3)}
+.pill.on{background:var(--ink);color:#fff;box-shadow:none}
 .pill .pv{font-style:normal;font-size:9.5px;opacity:.85;border:1px solid currentColor;
   border-radius:999px;padding:0 6px;line-height:1.5}
 .field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0}
@@ -273,42 +338,45 @@ details.disc .disc-b{padding:0 18px 16px}
 .swt{width:42px;height:24px;border-radius:999px;background:var(--line2);position:relative;flex:none;
   transition:background .2s}
 .swt i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;
-  box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s}
-.swt.on{background:var(--grad)}
+  box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
+.swt.on{background:var(--acc)}
 .swt.on i{left:21px}
-select{background:var(--card2);border:1px solid var(--line2);border-radius:8px;
+select{background:var(--surface);border:1px solid var(--line2);border-radius:9px;
   padding:8px 10px;font-size:13px;color:var(--ink);max-width:190px}
-textarea{width:100%;background:var(--card2);border:1px solid transparent;border-radius:8px;
+textarea{width:100%;background:var(--surface);border:1px solid var(--line2);border-radius:9px;
   padding:10px 12px;font-size:13px;resize:vertical;min-height:60px;line-height:1.7;color:var(--ink)}
 textarea:focus{outline:none;border-color:var(--acc)}
-.note-warn{background:rgba(255,197,61,.08);border:1px solid rgba(255,197,61,.25);color:#FFD57A;
+.note-warn{background:#FDF3E0;border:1px solid #F0DCB8;color:#8A6A2F;
   font-size:12.5px;border-radius:9px;padding:10px 12px;line-height:1.6;margin-bottom:10px}
-.render-cta{display:flex;align-items:center;gap:12px}
-.render-cta .est{color:var(--ink-2);font-size:12px;line-height:1.5}
+.render-cta{display:flex;align-items:center;gap:14px;margin-top:16px;padding-top:16px;
+  border-top:1px solid var(--line)}
+.render-cta .est{color:var(--ink-2);font-size:12px;line-height:1.6}
 .render-cta .est b{color:var(--ink)}
-.render-cta .btn{flex:1;min-height:48px;font-size:15px}
+.render-cta .btn{flex:1;min-height:50px;font-size:15.5px;border-radius:12px}
 
-/* 任务卡 */
+/* ── 任务卡 ── */
 .task .th{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}
 .task .th .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
-.task.running .th .dot{background:var(--acc2);animation:blink 1.4s var(--ease) infinite}
+.task.running .th .dot{background:var(--acc);animation:blink 1.4s var(--ease) infinite}
 .task.done .th .dot{background:var(--ok)}
 .task.failed .th .dot{background:var(--err)}
 @keyframes blink{50%{opacity:.25}}
-.task .tpct{margin-left:auto;font-family:"Display",var(--sans);font-size:24px}
-.task .pbar{height:5px;border-radius:3px;background:var(--card2);margin:10px 0 8px;overflow:hidden}
-.task .pbar i{display:block;height:100%;width:0;border-radius:3px;background:var(--grad);
+.task .tpct{margin-left:auto;font-family:"Display",var(--sans);font-size:26px;letter-spacing:0}
+.task .tpct.idle{font-size:13px;font-family:var(--sans);color:var(--ink-3);font-weight:700}
+.task .pbar{height:5px;border-radius:3px;background:var(--sunken);margin:10px 0 8px;overflow:hidden}
+.task .pbar i{display:block;height:100%;width:0;border-radius:3px;background:var(--acc);
   transition:width .5s var(--ease)}
 .task .pdetail{font-size:12.5px;color:var(--ink-2);min-height:20px}
 .task .pmeta{display:flex;justify-content:space-between;color:var(--ink-3);font-size:11.5px;margin-top:4px}
 .stages8{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
 .stages8 li{font-size:11px;font-weight:600;color:var(--ink-3);padding:3px 8px;border-radius:999px;
-  background:var(--card2)}
-.stages8 li.on{background:var(--grad);color:#fff}
+  background:var(--sunken)}
+.stages8 li.on{background:var(--ink);color:#fff}
 .stages8 li.done{background:var(--ok-soft);color:var(--ok)}
-.stills{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
-.stills .shot{aspect-ratio:9/16;border-radius:6px;background:var(--card2);overflow:hidden;
-  display:grid;place-items:center;color:var(--ink-3);font-size:10px;cursor:pointer}
+.stills{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
+.stills .shot{aspect-ratio:9/16;border-radius:8px;background:var(--sunken);overflow:hidden;
+  display:grid;place-items:center;color:var(--ink-3);font-size:10px;cursor:pointer;
+  box-shadow:inset 0 0 0 1px var(--line)}
 .stills img{width:100%;height:100%;object-fit:cover;animation:shotin .5s var(--ease)}
 @keyframes shotin{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:none}}
 .task .terr{margin-top:10px;background:var(--err-soft);color:var(--err);border-radius:8px;
@@ -316,22 +384,23 @@ textarea:focus{outline:none;border-color:var(--acc)}
 .task .tfoot{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--ink-3);font-size:11.5px}
 .task .tfoot code{font-family:var(--mono)}
 
-/* 登录/注册 */
+/* ── 登录 / 注册 ── */
 .auth{min-height:calc(100vh - 220px);display:grid;place-items:center;padding:32px 0}
-.auth .card{width:min(420px,100%);padding:34px 34px 30px;background:var(--panel)}
-.auth .aw{display:flex;justify-content:center;margin-bottom:14px}
-.auth .mark{width:46px;height:46px;border-radius:13px;background:var(--grad);color:#fff;
-  display:grid;place-items:center;font-family:"Display",var(--sans);font-size:23px;
-  box-shadow:0 8px 24px rgba(79,124,255,.4)}
-.auth h1{font-size:19px;font-weight:800;text-align:center}
-.auth .sub{text-align:center;color:var(--ink-2);font-size:13px;margin:6px 0 22px;line-height:1.6}
-.atabs{display:flex;gap:4px;background:var(--card2);border-radius:9px;padding:4px;margin-bottom:18px}
-.atabs button{flex:1;min-height:36px;border-radius:7px;font-size:14px;font-weight:700;
-  color:var(--ink-2);transition:background .15s,color .15s}
-.atabs button.on{background:var(--grad);color:#fff}
+.auth .card{width:min(420px,100%);padding:36px 34px 30px;box-shadow:var(--sh-1)}
+.auth .aw{display:flex;justify-content:center;margin-bottom:16px}
+.auth .mark{width:48px;height:48px;border-radius:14px;background:var(--ink);color:var(--paper);
+  display:grid;place-items:center;font-family:"Display",var(--sans);font-size:24px;position:relative}
+.auth .mark::after{content:"";position:absolute;right:-3px;top:-3px;width:12px;height:12px;
+  border-radius:50%;background:var(--acc)}
+.auth h1{font-size:20px;font-weight:900;text-align:center;letter-spacing:-.01em}
+.auth .sub{text-align:center;color:var(--ink-2);font-size:13px;margin:6px 0 22px;line-height:1.7}
+.atabs{display:flex;gap:4px;background:var(--sunken);border-radius:10px;padding:4px;margin-bottom:20px}
+.atabs button{flex:1;min-height:36px;border-radius:8px;font-size:14px;font-weight:700;
+  color:var(--ink-2);transition:background .15s,color .15s,box-shadow .15s}
+.atabs button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
 .fld{margin-bottom:14px}
 .fld label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
-.fld input{width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:8px;
+.fld input{width:100%;background:var(--surface);border:1px solid var(--line2);border-radius:9px;
   padding:11px 12px;font-size:14px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
 .fld input::placeholder{color:var(--ink-3)}
 .fld input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
@@ -345,56 +414,60 @@ textarea:focus{outline:none;border-color:var(--acc)}
   margin:2px 0 18px;cursor:pointer}
 .remember input{accent-color:var(--acc);width:15px;height:15px}
 .auth .btn{width:100%;min-height:46px}
+.auth .row2 .btn.sm{width:auto}
 
-/* 骨架屏 */
-.skel{border-radius:12px;background:linear-gradient(90deg,var(--card2) 25%,#232C3E 45%,var(--card2) 65%);
+/* ── 骨架屏 ── */
+.skel{border-radius:12px;background:linear-gradient(90deg,var(--sunken) 25%,#E6E2D9 45%,var(--sunken) 65%);
   background-size:240% 100%;animation:shimmer 1.5s infinite linear}
 @keyframes shimmer{to{background-position:-140% 0}}
 
-/* 浮层 */
+/* ── 浮层 ── */
 .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,8px);z-index:80;
-  background:var(--card2);color:var(--ink);padding:11px 20px;font-size:14px;border-radius:10px;
-  box-shadow:var(--sh-2),0 0 0 1px var(--line2);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+  background:var(--ink);color:var(--paper);padding:11px 20px;font-size:14px;border-radius:10px;
+  box-shadow:var(--sh-2);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
 .toast.on{opacity:1;transform:translate(-50%,0)}
-.modal{position:fixed;inset:0;background:rgba(4,6,10,.6);z-index:70;
+.modal{position:fixed;inset:0;background:rgba(26,23,18,.4);z-index:70;
   backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:20px}
-.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;width:min(440px,100%);
-  max-height:92vh;overflow:auto;box-shadow:var(--sh-2);animation:pop .25s var(--ease)}
+.modal .box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;
+  width:min(440px,100%);max-height:92vh;overflow:auto;box-shadow:var(--sh-2);animation:pop .25s var(--ease)}
 @keyframes pop{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}
 .modal .box h3{font-size:17px;font-weight:800}
 .modal .box p{font-size:13.5px;color:var(--ink-2);margin:8px 0 16px}
 .modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
-.modal input[type=text],.modal input[type=password]{width:100%;background:var(--card2);
-  border:1px solid var(--line2);border-radius:8px;padding:11px 12px;font-size:14px;color:var(--ink)}
+.modal input[type=text],.modal input[type=password]{width:100%;background:var(--surface);
+  border:1px solid var(--line2);border-radius:9px;padding:11px 12px;font-size:14px;color:var(--ink)}
 .modal input:focus{outline:none;border-color:var(--acc)}
 .modal .play{background:var(--media);border-radius:12px;padding:7px;width:min(340px,80vw)}
-.modal .play video{width:100%;border-radius:7px;background:#000}
-.modal .play .cap{color:rgba(234,239,247,.55);font-size:12px;padding:8px 3px 1px}
+.modal .play video{width:100%;border-radius:8px;background:#000}
+.modal .play .cap{color:rgba(247,246,243,.6);font-size:12px;padding:8px 3px 1px}
 .mlist{max-height:280px;overflow:auto;margin-top:4px}
 .mlist button{width:100%;display:flex;justify-content:space-between;gap:10px;text-align:left;
   padding:11px 10px;border-radius:8px;font-size:13.5px;transition:background .15s}
-.mlist button:hover{background:var(--card2)}
+.mlist button:hover{background:var(--sunken)}
 .mlist .m{color:var(--ink-3);font-size:12px;white-space:nowrap}
 .spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
   border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .skip{position:absolute;left:-9999px}
-.skip:focus{left:16px;top:14px;background:var(--grad);color:#fff;padding:10px 16px;border-radius:8px;z-index:99}
+.skip:focus{left:16px;top:14px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;z-index:99}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:1020px){
-  .side{width:64px;padding:18px 8px}
+  .side{width:64px;padding:20px 8px 14px}
   .side .bname,.nav a .lb,.side .sfoot{display:none}
   .nav a{justify-content:center;padding:11px}
   .pj{grid-template-columns:1fr}
   .railcol{position:static}
+  .homehead h2{font-size:25px}
 }
 @media (max-width:640px){
   .mainwrap{padding:18px 14px 96px}
   .top .in{padding:0 14px}
   .player-row{flex-direction:column}
-  .media-frame{align-self:flex-start}
+  .media-frame,.theater{align-self:flex-start}
+  .theater{width:100%}
   .import .pick{display:none}
+  .tpls{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 </style>
 </head>
@@ -411,7 +484,7 @@ textarea:focus{outline:none;border-color:var(--acc)}
         <span class="lb">新建项目</span></a>
     </nav>
     <div class="sp"></div>
-    <div class="sfoot">videogen · 本机渲染<br>素材不出你的服务器</div>
+    <div class="sfoot">素材和渲染都在你自己的服务器上完成</div>
   </aside>
   <div class="maincol">
     <header class="top">
@@ -420,7 +493,7 @@ textarea:focus{outline:none;border-color:var(--acc)}
         <span class="sp"></span>
         <div class="tact">
           <span id="account" style="display:flex;align-items:center;gap:8px"></span>
-          <button class="btn sm hide" id="newBtn">新建项目</button>
+          <button class="btn sm hide" id="newBtn">＋ 新建项目</button>
         </div>
       </div>
     </header>
@@ -473,6 +546,49 @@ const TPL_VIS = {
   retro:    {bg:"#2a231a", paper:"#ece0c9", acc:"#b3542e", hint:"米黄纸 + 颗粒暗角，适合人物、历史"},
   portrait: {bg:"#000000", paper:"#1a1817", acc:"#a44231", hint:"9:16 满屏，素材直接铺满"},
 };
+/* 每个模板画一张 CSS 小样海报，选模板时一眼看懂长相 */
+function tplMock(id, v){
+  const ink = (a) => `rgba(26,23,18,${a})`;
+  const pap = (a) => `rgba(247,246,243,${a})`;
+  switch(id){
+    case "editorial": return `
+      <i class="mk-v" style="background:${pap(.12)}"></i>
+      <i class="mk-card" style="background:${v.paper}"></i>
+      <i class="mk-band" style="background:${v.acc}"></i>
+      <i class="mk-ln" style="background:${ink(.35)}"></i>
+      <i class="mk-ln s" style="background:${ink(.2)}"></i>`;
+    case "finance": return `
+      <i class="mk-grid" style="background-image:linear-gradient(${v.acc}2e 1px,transparent 1px),linear-gradient(90deg,${v.acc}2e 1px,transparent 1px);background-size:22% 14%"></i>
+      <i class="mk-num" style="background:${v.acc}"></i>
+      <i class="mk-num2" style="background:${pap(.5)}"></i>
+      <i class="mk-ln" style="background:${pap(.4)}"></i>`;
+    case "minimal": return `
+      <i class="mk-heavy" style="background:${v.acc}"></i>
+      <i class="mk-heavy s" style="background:${v.acc}"></i>
+      <i class="mk-ln" style="background:${ink(.16)};top:56%;left:10%;width:58%;height:4%"></i>`;
+    case "bleed": return `
+      <i class="mk-vidfull" style="background:linear-gradient(160deg,${pap(.15)},${pap(.04)})"></i>
+      <i class="mk-chip" style="background:${v.acc}"></i>
+      <i class="mk-cap" style="background:${pap(.55)}"></i>`;
+    case "news": return `
+      <i class="mk-v" style="background:${pap(.13)};height:30%"></i>
+      <i class="mk-band b" style="background:${v.acc}"></i>
+      <i class="mk-ln" style="background:${pap(.45)};top:64%"></i>
+      <i class="mk-ln s" style="background:${pap(.25)};left:8%"></i>`;
+    case "retro": return `
+      <i class="mk-vig" style="background:radial-gradient(120% 90% at 50% 35%,transparent 52%,${ink(.4)})"></i>
+      <i class="mk-seal" style="background:${v.acc}"></i>
+      <i class="mk-ln d" style="background:${ink(.55)}"></i>
+      <i class="mk-ln s" style="background:${ink(.3)};left:10%"></i>`;
+    case "portrait": return `
+      <i class="mk-vidfull" style="background:linear-gradient(200deg,${pap(.17)},${pap(.03)})"></i>
+      <i class="mk-play"></i>
+      <i class="mk-ln" style="background:${pap(.35)};left:22%;width:56%;bottom:8%;top:auto"></i>`;
+    default: return `
+      <i class="mk-card" style="background:${v.paper || "#eee"};height:60%"></i>
+      <i class="mk-band" style="background:${v.acc || "#999"}"></i>`;
+  }
+}
 let TPLS = Object.keys(TPL_VIS).map(id => ({id, name:id}));
 async function loadTemplates(){
   try{
@@ -559,9 +675,6 @@ let codeTimer = null;
 async function showAuth(){
   stopPoll(); CUR = null;
   try { AUTHST = await api("/api/auth/status"); } catch (e) {}
-  if (!AUTHST.smtp && !AUTHST.dev_email && !AUTHST.locked){
-    // 既没配邮箱也没建过账号：开放模式其实进得去（本机自用），但仍给出提示页
-  }
   renderAuth();
 }
 function renderAuth(mode){
@@ -570,13 +683,14 @@ function renderAuth(mode){
   if (!AUTHMODE && (AUTHST.locked)) AUTHMODE = "login";
   const reg = AUTHMODE === "register";
   const canRegister = AUTHST.smtp || AUTHST.dev_email;
-  if (!reg && !canRegister && !AUTHST.locked) { /* 开放模式不该到这 */ }
   stopPoll();
   clearInterval(codeTimer);
   document.title = (reg ? "注册" : "登录") + " · videogen";
   $("newBtn").classList.add("hide");
   $("main").innerHTML = `<div class="view"><div class="auth"><div class="card">
     <div class="aw"><span class="mark">V</span></div>
+    <h1>${reg ? "注册 videogen" : "欢迎回来"}</h1>
+    <p class="sub">${reg ? "把一篇文案变成能发的竖屏短片" : "登录后继续做你的片子"}</p>
     <div class="atabs">
       <button class="${reg ? "on" : ""}" data-m="register">注册</button>
       <button class="${reg ? "" : "on"}" data-m="login">登录</button>
@@ -593,7 +707,7 @@ function renderAuth(mode){
         <input id="auPass" type="password" placeholder="至少 8 位" autocomplete="new-password"></div>
       <div class="fld"><label>确认密码</label>
         <input id="auPass2" type="password" autocomplete="new-password"></div>
-      <button class="btn accent" id="auGo">注册并进入</button>`
+      <button class="btn" id="auGo">注册并进入</button>`
       : `<p class="sub" style="margin-bottom:0">注册功能需要先在服务器配置发信邮箱（SMTP）。<br>配置好之后，这里就是「输邮箱 → 收验证码 → 设密码」。</p>
          <button class="btn line" id="auToLogin" style="width:100%;margin-top:14px">我有账号，去登录</button>`}
     </div>
@@ -603,7 +717,7 @@ function renderAuth(mode){
       <div class="fld"><label>密码</label>
         <input id="liPass" type="password" placeholder="密码" autocomplete="current-password"></div>
       <label class="remember"><input type="checkbox" id="liRemember" checked> 记住我，30 天内免登录</label>
-      <button class="btn accent" id="liGo">登录</button>
+      <button class="btn" id="liGo">登录</button>
     </div>
     <p class="sub" style="margin:14px 0 0;font-size:12px">${AUTHST.dev_email && reg && canRegister
       ? "（本机开发模式：验证码会直接显示在提示里）" : ""}</p>
@@ -772,6 +886,7 @@ async function renderHome(){
   stopPoll();
   paintNav("home", "作品库");
   document.title = "作品库 · videogen";
+  $("newBtn").classList.add("hide");   // 刊头上已有新建按钮，顶栏的收起避免重复
   $("main").innerHTML = SKELETON_HOME;
   let ps = [];
   try { ps = await api("/api/projects"); }
@@ -784,38 +899,49 @@ async function renderHome(){
   const chips = ps.length ? `<div class="chips" id="fchips">
     <button class="chip on" data-f="all">全部 ${ps.length}</button>
     <button class="chip" data-f="done">已完成 ${ps.filter(x => (x.renders_count||0) > 0).length}</button>
-    <button class="chip" data-f="todo">待制作 ${ps.length - new Set(rs.map(r=>r.project)).size > 0 ? ps.filter(p=>!(p.renders_count>0)).length : 0}</button>
+    <button class="chip" data-f="todo">待制作 ${ps.filter(p => !(p.renders_count > 0)).length}</button>
+  </div>` : "";
+  const empty = !ps.length ? `<div class="card firstcard">
+    <div class="fc-art"><i></i><i></i><i></i></div>
+    <b>第一条片子从这里开始</b>
+    <p class="fc-sub">三步，几分钟出一条能发的竖屏短片</p>
+    <ol>
+      <li><i>1</i><span><b>导入素材</b>上面拖入素材包 zip，自动建项目</span></li>
+      <li><i>2</i><span><b>选画面和声音</b>制作间里挑模板、配音音色</span></li>
+      <li><i>3</i><span><b>开始渲染</b>成片出炉，回到这个作品库</span></li>
+    </ol>
   </div>` : "";
   $("main").innerHTML = `<div class="view">
-    <section class="hero">
-      <div class="hL"><h2>作品库</h2>
-        <p>${ps.length} 个项目 · ${rs.length} 条成片 · 导入素材就能开做下一条</p></div>
-      <div class="hR">
-        <button class="btn" id="heroNew">＋ 新建项目</button>
-        <button class="btn line" id="heroImp">导入素材</button>
+    <header class="homehead">
+      <div class="hh-l">
+        <h2>作品库</h2>
+        <p class="hh-sub">${ps.length ? `<b>${ps.length}</b> 个项目 · <b>${rs.length}</b> 条成片 · 导入素材就能开做下一条` : "导入素材，几分钟出一条能发的短片"}</p>
       </div>
-    </section>
+      <div class="hh-r"><button class="btn" id="heroNew">＋ 新建项目</button></div>
+    </header>
     <button class="import" id="dropstrip" role="button" tabindex="0" aria-label="导入素材包 zip">
       <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
         <line x1="12" y1="15" x2="12" y2="3"/></svg></span>
-      <span><b>导入素材包</b><span>拖入 zip（content.json + manifest.json + 素材），自动建项目</span></span>
+      <span><b>导入素材包</b><span>拖入 zip（用 Agent 导出的那种），会自动建一个项目</span></span>
       <span class="pick btn sm line">选择文件</span>
     </button>
     <input type="file" id="homeZip" accept=".zip" class="hide">
     ${recent}
     <section class="rail-sec">
-      <div class="sec-h"><h2>作品库</h2>${chips}</div>
-      ${ps.length ? `<div class="grid" id="pgrid"></div>`
-        : `<div class="card blank"><b>三步出一条片子</b>① 上面导入素材 → ② 进项目选模板和声音 → ③ 开始渲染，成片回到这里。</div>`}
+      <div class="sec-h"><h2>全部项目</h2>${chips}</div>
+      ${ps.length ? `<div class="grid" id="pgrid"></div>` : empty}
     </section>
   </div>`;
   wireImport($("dropstrip"), $("homeZip"), heroStart);
   $("heroNew").onclick = newProject;
-  $("heroImp").onclick = () => $("homeZip").click();
   const pw = $("posters");
-  if (pw) rs.slice(0, 12).forEach(r => pw.appendChild(poster(r)));
+  if (pw) rs.slice(0, 12).forEach((r, i) => {
+    const el = poster(r);
+    el.style.animationDelay = (i * 45) + "ms";
+    pw.appendChild(el);
+  });
   drawGrid();
   document.querySelectorAll("#fchips .chip").forEach(c => c.onclick = () => {
     document.querySelectorAll("#fchips .chip").forEach(x => x.classList.remove("on"));
@@ -855,7 +981,7 @@ function pcard(p){
   const n = p.renders_count || 0;
   const last = (p.renders || []).filter(r => r.file).slice(-1)[0];
   const status = n ? `<span class="cnt tag ok">${n} 成片</span>`
-    : `<span class="cnt tag">${p.assets_count ? "待渲染" : "空项目"}</span>`;
+    : `<span class="cnt tag">${p.assets_count ? "待制作" : "空项目"}</span>`;
   const media = last
     ? `<video src="${vid(last.id)}#t=0.8" muted preload="metadata" playsinline></video>
        <span class="shade"></span>
@@ -868,14 +994,15 @@ function pcard(p){
     <button class="del" data-del aria-label="删除项目"><svg width="14" height="14" viewBox="0 0 24 24"
       fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  const open = () => { CUR = p; setHash("#/project/" + p.project_id); renderProject(); };
   if (last){
     const v = el.querySelector(".cover video");
     if (v) frameAt(v, 0.8);
     el.querySelector(".cover").onclick = () => playDialog({id: last.id, title: p.title, ts: last.ts});
   } else {
-    el.querySelector(".cover").onclick = () => { CUR = p; renderProject(); };
+    el.querySelector(".cover").onclick = open;
   }
-  el.querySelector(".body").onclick = () => { CUR = p; renderProject(); };
+  el.querySelector(".body").onclick = open;
   el.querySelector("[data-del]").onclick = (e) => {
     e.stopPropagation();
     dialog("删除「" + p.title + "」", "项目与渲染记录会一起删除，成片文件保留在服务器 outputs/。", async () => {
@@ -934,6 +1061,7 @@ async function renderProject(){
   stopPoll();
   paintNav("home", CUR.title || "项目");
   document.title = (CUR.title || "项目") + " · videogen";
+  $("newBtn").classList.remove("hide");
   $("main").innerHTML = SKELETON_HOME;
   let b = null;
   if (CUR.bundle){
@@ -949,7 +1077,7 @@ async function renderProject(){
     </div>
     <div class="pj">
       <div class="colmain" id="colmain"></div>
-      <div class="rail" id="rail"></div>
+      <div class="railcol" id="rail"></div>
     </div>
   </div>`;
   $("back").onclick = goHome;
@@ -982,31 +1110,31 @@ function renderStageCard(b){
       <div class="player-row">
         ${rs.length
           ? `<div class="media-frame"><video id="mainPlayer" controls playsinline src="${vid(rs[rs.length-1].id)}"></video></div>`
-          : `<div class="stage-empty">
+          : `<div class="theater">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="1.6" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="3"/>
                 <path d="M10 9l5 3-5 3z"/></svg>
-              <b>还没有成片</b>
-              <span>右边选好模板和声音，<br>点「开始渲染」，几分钟后片子就出现在这里。<br>渲染期间这页会实时长出剧照。</span>
+              <b>成片会在这里放映</b>
+              <span>右边按 1 → 2 → 3 配好素材、画面和声音，<br>点「开始渲染」。<br>渲染时剧照会先一张张长出来，几分钟后成片出炉。</span>
             </div>`}
         <div class="stage-side">
           ${rs.length ? `
             <div class="stats">这条片子可以直接预览。渲染新的一版时，这里不会被覆盖。</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <a class="btn sm line" id="dlBtn" ${rs.length ? `href="${vid(rs[rs.length-1].id)}" download` : ""}>下载成片</a>
-              <button class="btn sm line" id="againBtn">再生成一版</button>
+              <button class="btn sm" id="againBtn">再生成一版</button>
             </div>
             <div>
               <div class="sub-h" style="margin-bottom:6px">历史版本</div>
               <div class="hist" id="hist"></div>
             </div>`
-          : `<div class="stats">右边配好模板和声音，点「开始渲染」，成片会出现在这里。渲染期间可以随时回来看进度。</div>`}
+          : `<div class="stats">渲染期间可以随时离开这页，回来进度还在。</div>`}
         </div>
       </div>
     </section>
     ${b ? `
     <section class="card hookline">
-      <span class="cap">标题 / 钩子</span>${hooks || `<div class="ln">${esc(b.title)}</div>`}
+      <span class="cap">开场钩子</span>${hooks || `<div class="ln">${esc(b.title)}</div>`}
     </section>
     <section class="card">
       <div class="sec-h" style="padding:14px 20px 0;margin-bottom:8px"><h2>口播文案</h2>
@@ -1022,7 +1150,8 @@ function renderStageCard(b){
           <div class="cap">${esc(a.summary || a.file)}</div></div>`).join("")}
       </div></div>
     </details>` : `
-    <section class="card blank"><b>先给这条片子配上素材</b>在右边「素材」里选用已有的，或上传一个素材 zip。</section>`}`;
+    <section class="card firstcard"><b>先给这条片子配上素材</b>
+      <p class="fc-sub" style="margin-top:4px">在右边第 1 步「素材」里选用已有的，或上传一个素材 zip。</p></section>`}`;
   const hist = $("hist");
   if (hist && rs.length){
     rs.slice().reverse().forEach((r, i) => {
@@ -1053,40 +1182,48 @@ function refreshStageCard(){
   }).catch(() => {});
 }
 
-/* —— 右栏：素材包 + 配置 + 渲染 —— */
+/* —— 右栏：编号步骤流 —— */
 function renderRail(b){
   const rail = $("rail"); if (!rail) return;
   const warn = b && (b.notes || "").includes("横构图")
-    ? `<div class="note-warn">素材按横构图收集，建议选「竖屏信息版」；「竖屏满屏」可能裁掉主体。</div>` : "";
+    ? `<div class="note-warn">素材按横构图收集，建议选「竖屏信息版 · 杂志编辑」；「竖屏满屏」可能裁掉主体。</div>` : "";
   rail.innerHTML = `
-    <section class="card panel" id="bundlePanel"></section>
     <section class="card panel">
-      <div class="ph"><h3>呈现方式</h3><button class="ghost" id="cfgReset" style="padding:4px 8px">恢复默认</button></div>
+      <div class="ph"><h3>呈现方式</h3><button class="ghost" id="cfgReset" style="padding:4px 8px;font-size:12.5px">恢复默认</button></div>
       ${warn}
-      <div class="grp"><div class="gh">渲染模板</div><div class="tpls" id="fmt"></div></div>
-      <div class="grp"><div class="gh">配音音色</div><div class="pills" id="voiceSeg"></div></div>
-      <div class="grp"><div class="gh">语速 <span id="rateTxt" style="color:var(--ink);font-weight:800">${(CFG.rate/100).toFixed(2)}×</span>
-        <span style="float:right" id="estTxt"></span></div>
-        <div class="pills" id="rateSeg"></div></div>
-      <details class="disc" style="margin-top:12px"><summary>音乐、音效与画面信息<i class="n">更多设置</i></summary>
+      <div class="step"><span class="step-n">1</span><div class="step-b">
+        <div class="gh">素材</div><div id="bundlePanel"></div>
+      </div></div>
+      <div class="step"><span class="step-n">2</span><div class="step-b">
+        <div class="gh">画面 <span class="hint">选一个模板，就是成片的样子</span></div>
+        <div class="tpls" id="fmt"></div>
+      </div></div>
+      <div class="step"><span class="step-n">3</span><div class="step-b">
+        <div class="gh">声音 <span class="hint">点 ▶ 试听</span></div>
+        <div class="pills" id="voiceSeg"></div>
+        <div class="gh" style="margin-top:13px">语速 <span id="rateTxt" style="color:var(--ink)">${(CFG.rate/100).toFixed(2)}×</span>
+          <span style="float:right;font-weight:600" id="estTxt"></span></div>
+        <div class="pills" id="rateSeg"></div>
+      </div></div>
+      <details class="disc" style="margin-top:14px"><summary>音乐、音效与画面信息<i class="n">更多设置</i></summary>
         <div class="disc-b">
           <div class="grp"><div class="gh">背景音乐</div>
             <div class="row2"><select id="bgm" aria-label="背景音乐" style="flex:1;max-width:none;min-width:0"></select>
             <button class="btn sm line" id="bgmPrev" title="试听当前选中的曲子">▶ 试听</button></div></div>
-          <div class="grp"><div class="gh">智能音效</div><div class="pills" id="sfxSeg"></div></div>
-          <div class="grp"><div class="field"><span class="t">字幕</span>
+          <div class="grp" style="margin-top:12px"><div class="gh">智能音效</div><div class="pills" id="sfxSeg"></div></div>
+          <div class="grp" style="margin-top:8px"><div class="field"><span class="t">字幕</span>
             <button class="swt ${CFG.subtitles ? "on" : ""}" data-k="subtitles" role="switch"
               aria-checked="${CFG.subtitles}" aria-label="字幕"><i></i></button></div>
           <div class="field"><span><span class="t">资料来源</span>
             <span class="d" style="display:block">画面底部露出引用来源</span></span>
             <button class="swt ${CFG.sources ? "on" : ""}" data-k="sources" role="switch"
-              aria-checked="${CFG.sources}" aria-label="资料来源"><i></i></button></div>
-          <div class="grp"><div class="gh">免责声明</div>
+              aria-checked="${CFG.sources}" aria-label="资料来源"><i></i></button></div></div>
+          <div class="grp" style="margin-top:12px"><div class="gh">免责声明</div>
             <textarea id="disclaimer">本片内容基于公开报道与公开资料整理，观点仅供参考，不构成任何投资建议</textarea></div>
         </div></details>
-      <div class="render-cta" style="margin-top:14px">
+      <div class="render-cta">
         <div class="est">成片 <b id="est2">—</b><br>渲染 <b id="render2">—</b></div>
-        <button class="btn accent" id="go">开始渲染</button>
+        <button class="btn go" id="go">开始渲染</button>
       </div>
     </section>
     <section class="card panel task" id="taskCard"></section>`;
@@ -1097,11 +1234,9 @@ function renderRail(b){
 function paintBundlePanel(){
   const el = $("bundlePanel"); if (!el) return;
   if (!CUR.bundle){
-    el.innerHTML = `<div class="ph"><h3>素材</h3></div>
-      <div class="bundle-none"><span>这条片子还没有素材</span><button class="btn sm line" id="pickBundle">选用</button></div>`;
+    el.innerHTML = `<div class="bundle-none"><span>还没有素材</span><button class="btn sm line" id="pickBundle">选用</button></div>`;
   } else {
-    el.innerHTML = `<div class="ph"><h3>素材</h3></div>
-      <div class="bundle-chip">
+    el.innerHTML = `<div class="bundle-chip">
         <span class="b-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></span>
@@ -1165,9 +1300,8 @@ function paintConfig(b){
   fmt.innerHTML = TPLS.map(t => {
     const v = TPL_VIS[t.id] || {};
     return `<button class="tpl ${t.id === CFG.format ? "on" : ""}" data-v="${esc(t.id)}" title="${esc(v.hint || "")}">
-      <span class="sw" style="background:linear-gradient(135deg,${v.bg||"#000"} 0 55%,${v.paper||"#777"} 55% 100%)">
-        <i style="background:${v.acc||"#999"}"></i></span>
-      <b>${esc(t.name)}</b><small class="hide">${esc(v.hint || "")}</small>
+      <span class="mock" style="background:${v.bg || "#e8e5df"}">${tplMock(t.id, v)}</span>
+      <b>${esc(t.name)}</b>
       <span class="tick">✓</span></button>`;
   }).join("");
   fmt.querySelectorAll(".tpl").forEach(o => o.onclick = () => {
@@ -1241,14 +1375,14 @@ function taskEl(){ return $("taskCard"); }
 function paintTaskIdle(){
   const t = taskEl(); if (!t) return;
   t.className = "card panel task";
-  t.innerHTML = `<div class="th"><span class="dot"></span>任务<span class="tpct" style="font-size:15px;color:var(--ink-3)">待机</span></div>
-    <div class="pdetail" style="margin-top:8px">还没有在跑的任务。点上面的「开始渲染」开工。</div>
+  t.innerHTML = `<div class="th"><span class="dot"></span>渲染器<span class="tpct idle">待机</span></div>
+    <div class="pdetail" style="margin-top:8px">还没有在跑的任务。点上面的「开始渲染」开工，进度和剧照会出现在这里。</div>
     <div class="tfoot"><code id="taskId">—</code></div>`;
 }
 function paintTaskRunning(){
   const t = taskEl(); if (!t) return;
   t.className = "card panel task running";
-  t.innerHTML = `<div class="th"><span class="dot"></span><span id="tstage">正在生成</span>
+  t.innerHTML = `<div class="th"><span class="dot"></span><span id="tstage">正在制作</span>
       <span class="tpct" id="tpct">0%</span></div>
     <div class="pbar"><i id="tbar"></i></div>
     <div class="pdetail" id="tdetail">连接中…</div>
@@ -1294,7 +1428,7 @@ function wireRenderPane(b){
   if (saved){ job = lastJob = saved; paintTaskRunning(); startPoll(); }
 }
 async function startRender(b){
-  if (!CUR.bundle){ toast("先挂一个素材包"); return openBundleModal(); }
+  if (!CUR.bundle){ toast("先在第 1 步选一个素材包"); return openBundleModal(); }
   const btn = $("go");
   if (btn){ btn.disabled = true; btn.innerHTML = `<span class="spin"></span>启动中`; }
   try {
@@ -1377,6 +1511,7 @@ async function pollJob(jid){
     stopPoll(); localStorage.removeItem("vg.job." + CUR.project_id);
     t.className = "card panel task failed";
     t.querySelector(".tpct").textContent = "失败";
+    t.querySelector(".tpct").classList.add("idle");
     $("tstage").textContent = "没有生成成功";
     const er = $("terr");
     er.classList.remove("hide");
@@ -1394,20 +1529,22 @@ async function pollJob(jid){
     lastJob = jid;
     t.className = "card panel task done";
     t.querySelector(".tpct").textContent = "完成";
+    t.querySelector(".tpct").classList.add("idle");
+    $("tstage").textContent = "成片出炉";
     refreshStageCard();
   }
 }
 
 /* ================= 启动 ================= */
 const SKELETON_HOME = `<div class="view">
-  <div class="skel" style="height:78px"></div>
-  <div class="skel" style="height:20px;width:18%;margin-top:30px"></div>
-  <div style="display:flex;gap:14px;margin-top:14px;overflow:hidden">
-    ${'<div class="skel" style="flex:none;width:118px;height:228px"></div>'.repeat(8)}
+  <div class="skel" style="height:64px;width:70%;margin:16px 2px 8px"></div>
+  <div class="skel" style="height:58px;margin-top:18px"></div>
+  <div style="display:flex;gap:16px;margin-top:32px;overflow:hidden">
+    ${'<div class="skel" style="flex:none;width:186px;height:330px;border-radius:14px"></div>'.repeat(6)}
   </div>
-  <div class="skel" style="height:20px;width:12%;margin-top:30px"></div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:16px;margin-top:14px">
-    ${'<div class="skel" style="height:300px"></div>'.repeat(5)}
+  <div class="skel" style="height:20px;width:12%;margin-top:32px"></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(204px,1fr));gap:18px;margin-top:14px">
+    ${'<div class="skel" style="height:310px"></div>'.repeat(5)}
   </div>
 </div>`;
 async function boot(){
