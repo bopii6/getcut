@@ -13,6 +13,26 @@ python -m videogen build <素材包目录> -o 成片.mp4 --bgm assets/bgm_upbeat
 
 依赖：Python 3.12+、ffmpeg（PATH 内）、`pip install edge-tts pillow`。
 
+## 工作台
+
+```bash
+python -m videogen.server     # http://localhost:8600
+```
+
+四块：项目台（成片架 + 项目卡）→ 项目页左栏（成片/文案/素材）右栏（模板/音色/语速/渲染按钮 + 实时任务卡）。
+
+## 部署（腾讯云 / 任意云主机）
+
+```bash
+bash deploy.sh          # 自动生成 .env 与访问令牌，拉取或构建镜像，docker compose up
+```
+
+- 密钥放 `.env`（从 `.env.example` 复制）；`DEEPSEEK_API_KEY` 必填。
+- `VIDEOGEN_TOKEN` 设置后工作台所有数据接口需要令牌（首次打开页面输入一次）；
+  留空 = 不鉴权，仅限本机自用。
+- 渲染全部在容器内本机完成（Remotion + ffmpeg），没有外部渲染依赖。
+
+
 ## 流水线（与 Niwo 8 阶段对齐）
 
 | 阶段 | 模块 | 说明 |

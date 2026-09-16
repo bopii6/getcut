@@ -33,6 +33,15 @@ if [[ ! -f .env ]]; then
 fi
 grep -q '^DEEPSEEK_API_KEY=..*' .env || die ".env 里 DEEPSEEK_API_KEY 为空（没有它无法做分镜/文案）"
 
+# 访问令牌：没有就自动生成一份。工作台首次打开时会要你输入一次。
+if ! grep -q '^VIDEOGEN_TOKEN=..*' .env; then
+  TOKEN="vg-$(od -An -N8 -tx4 /dev/urandom | tr -d ' \n')"
+  # 删除旧行（可能是空值）再追加
+  sed -i '/^VIDEOGEN_TOKEN=/d' .env
+  printf '\n# 工作台访问令牌（自动生成，打开页面时输入一次即可）\nVIDEOGEN_TOKEN=%s\n' "$TOKEN" >> .env
+  log "已生成访问令牌 VIDEOGEN_TOKEN=$TOKEN"
+fi
+
 # ---------- 3. 取镜像 ----------
 pull_image() {
   log "拉取镜像 $IMAGE"
