@@ -28,3 +28,8 @@ jobs.json
 Thumbs.db
 .idea/
 .vscode/
+
+# ================= 运行时状态（不入库） =================
+registry.json
+renderer/still_test.*
+renderer/props_portrait.json
