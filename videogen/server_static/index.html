@@ -1,19 +1,18 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!--
-  方向：黑场 · 电影感（client 指定：炫酷）
-  舞台而不是落地页：纯黑底 + 单色朱红氛围光 + 胶片颗粒；视频是舞台上唯一的光源。
-  记忆点（每屏一个）：
-    · 首页   —— 三层景深视频舞台（鼠标视差）+ 片名以遮罩揭幕 + 底部无限胶片带
-    · 成片页 —— 分镜剧照墙：渲染一开始先拍下关键画面，一张张闪入，等待变成看片
-    · 进度   —— 帧数滚动 + REC 呼吸灯 + 进度线扫光
-  字：展示字「思源黑体 Heavy」子集（14KB 自托管，与成片同款）；正文系统黑体
-  色：黑 #08070A / 纸白 #F4F1EC / 朱红 #E0452A（成片主色的高饱和版）
+  videogen 工作台 · 亮色纸感工作台
+  设计立场：
+    · 工具，不是落地页 —— 打开就是项目台，没有营销 Hero
+    · 纸感亮色界面，与成片（纸卡编辑风）同一种气质；媒体一律坐在黑色底座上
+    · 一个砖红强调色（#A44231，与成片模板同源），只用于「进行中 / 选中」
+    · 项目页左右两栏：左边成片与内容，右边常驻配置 + 渲染按钮 + 实时进度
+  字：展示字「思源黑体 Heavy」子集（自托管，与成片同款），正文系统黑体
 -->
 <html lang="zh">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>videogen · 短视频工作台</title>
+<title>videogen · 工作台</title>
 <style>
 @font-face{
   font-family:"Display";
@@ -21,449 +20,354 @@
   font-weight:900;font-display:swap;
 }
 :root{
-  --void:#08070A; --void-2:#100E13; --card:#17151B; --mount:#E6E3DD;
-  --ink:#F4F1EC; --ink-2:rgba(244,241,236,.60); --ink-3:rgba(244,241,236,.34);
-  --rule:rgba(244,241,236,.12); --hover:rgba(244,241,236,.06);
-  --accent:#E0452A; --accent-soft:rgba(224,69,42,.16); --ok:#6FA87A;
-  --t-13:13px; --t-15:15px; --t-17:17px; --t-20:20px; --t-26:26px; --t-72:72px;
-  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s10:40px; --s16:64px; --s24:96px;
+  --paper:#F6F5F2; --surface:#FFFFFF; --sunken:#EFEDE8;
+  --ink:#211E1A; --ink-2:#6D6860; --ink-3:#A19A8F;
+  --line:#E7E4DD; --line-2:#D9D5CC;
+  --accent:#A44231; --accent-deep:#8A3526; --accent-soft:#F5E7E2;
+  --ok:#3D7A50; --ok-soft:#E7F0E9;
+  --err:#B3261E; --err-soft:#F8E9E7;
+  --media:#131110;
+  --r-s:6px; --r-m:10px; --r-l:16px;
+  --sh-1:0 1px 2px rgba(33,30,26,.05), 0 3px 14px rgba(33,30,26,.05);
+  --sh-2:0 2px 8px rgba(33,30,26,.08), 0 18px 44px rgba(33,30,26,.12);
   --sans:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
-  --ease:cubic-bezier(.22,.61,.36,1);
+  --mono:ui-monospace,"SF Mono",Consolas,monospace;
+  --ease:cubic-bezier(.25,.6,.3,1);
 }
 *{box-sizing:border-box;margin:0}
 ::selection{background:var(--accent);color:#fff}
 html{scroll-behavior:smooth}
-body{background:var(--void);color:var(--ink);font-family:var(--sans);
-  font-size:var(--t-17);line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0;padding:0}
-ul{margin:0;padding:0;list-style:none}
+ul,ol{margin:0;padding:0;list-style:none}
 a{color:inherit;text-decoration:none}
-p{color:var(--ink-2)}
+img,video{display:block}
 .hide{display:none!important}
-:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.display{font-family:"Display",var(--sans);font-weight:900;letter-spacing:-.035em;line-height:1.06}
-
-/* 电影质感：颗粒 + 氛围光（只用品牌色，不用蓝紫渐变球） */
-.grain,.glow{position:fixed;inset:0;pointer-events:none;z-index:1}
-.grain{opacity:.05;mix-blend-mode:overlay;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>")}
-.glow{background:radial-gradient(60% 45% at 68% 22%,rgba(224,69,42,.22),transparent 70%),
-  radial-gradient(40% 40% at 12% 80%,rgba(224,69,42,.10),transparent 72%)}
-main,.top{position:relative;z-index:2}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.display{font-family:"Display",var(--sans);font-weight:900;letter-spacing:-.02em}
 
 /* ── 顶栏 ── */
-.top{position:sticky;top:0;z-index:20;background:linear-gradient(rgba(8,7,10,.86),rgba(8,7,10,.4))}
-.top .in{max-width:1320px;margin:0 auto;padding:0 var(--s6);height:72px;
-  display:flex;align-items:center;gap:var(--s4)}
-.brand{display:flex;align-items:center;gap:10px;font-size:var(--t-15);font-weight:800;
-  letter-spacing:.02em}
-.brand i{width:8px;height:8px;background:var(--accent);
-  box-shadow:0 0 16px var(--accent);animation:rec 2.4s var(--ease) infinite}
-@keyframes rec{0%,100%{opacity:1}50%{opacity:.35}}
+.top{position:sticky;top:0;z-index:30;background:rgba(246,245,242,.86);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.top .in{max-width:1280px;margin:0 auto;height:60px;padding:0 24px;
+  display:flex;align-items:center;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;letter-spacing:-.01em}
+.brand .mark{width:26px;height:26px;border-radius:7px;background:var(--ink);color:#fff;
+  display:grid;place-items:center;font-family:"Display",var(--sans);font-size:14px}
+.brand small{color:var(--ink-3);font-weight:600;font-size:12px;margin-top:2px}
 .top .sp{flex:1}
-.quiet{color:var(--ink-2);font-size:var(--t-15);min-height:40px;display:inline-flex;
-  align-items:center;transition:color .3s var(--ease)}
-.quiet:hover{color:var(--ink)}
+.tact{display:flex;align-items:center;gap:10px}
 
-.wrap{max-width:1320px;margin:0 auto;padding:0 var(--s6) var(--s24)}
-.view{animation:fade .4s var(--ease)}
-@keyframes fade{from{opacity:0}to{opacity:1}}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 24px 96px}
+.view{animation:fade .25s var(--ease)}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
+/* ── 按钮 ── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  background:var(--accent);color:#fff;border-radius:2px;padding:0 28px;min-height:52px;
-  font-size:var(--t-15);font-weight:700;letter-spacing:.01em;position:relative;
-  box-shadow:0 8px 30px rgba(224,69,42,.32);transition:box-shadow .35s var(--ease),transform .35s var(--ease)}
-.btn:hover{box-shadow:0 12px 44px rgba(224,69,42,.5);transform:translateY(-1px)}
-.btn[disabled]{background:var(--card);color:var(--ink-3);box-shadow:none;transform:none}
-.btn.line{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
-.btn.line:hover{box-shadow:inset 0 0 0 1px var(--ink-2);transform:none}
-.btn.sm{min-height:42px;padding:0 20px;font-size:var(--t-13);font-weight:600;box-shadow:none}
+  border-radius:8px;min-height:44px;padding:0 22px;font-size:15px;font-weight:700;
+  background:var(--ink);color:#fff;transition:background .2s var(--ease),transform .2s var(--ease),box-shadow .2s var(--ease)}
+.btn:hover{background:#37322C}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{background:var(--sunken);color:var(--ink-3);cursor:default}
+.btn.accent{background:var(--accent)}
+.btn.accent:hover{background:var(--accent-deep)}
+.btn.line{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+.btn.line:hover{background:var(--sunken)}
+.btn.sm{min-height:36px;padding:0 14px;font-size:13px;border-radius:7px}
+.ghost{color:var(--ink-2);font-size:14px;font-weight:600;border-radius:7px;
+  padding:8px 12px;transition:background .2s,color .2s}
+.ghost:hover{background:var(--sunken);color:var(--ink)}
+.ghost.danger:hover{background:var(--err-soft);color:var(--err)}
 
-/* ── 首页舞台 ── */
-.hero{display:grid;grid-template-columns:minmax(0,43fr) minmax(0,57fr);
-  gap:var(--s10);align-items:center;min-height:min(84vh,760px);padding:var(--s10) 0 var(--s16)}
-.kicker{display:inline-flex;align-items:center;gap:10px;color:var(--accent);
-  font-size:var(--t-13);font-weight:700;letter-spacing:.16em;margin-bottom:var(--s6)}
-.kicker s{text-decoration:none;display:block;width:26px;height:1px;background:var(--accent);
-  box-shadow:0 0 12px var(--accent)}
-h1.mask{font-size:56px;max-width:9.2em}
-.mask .ln{display:block;overflow:hidden}
-.mask .ln > span{display:block;transform:translateY(105%);
-  animation:rise .9s var(--ease) forwards}
-@keyframes rise{to{transform:none}}
-.rule{height:2px;background:var(--accent);width:0;margin:var(--s6) 0 0;
-  box-shadow:0 0 18px var(--accent);animation:draw .9s .45s var(--ease) forwards}
-@keyframes draw{to{width:88px}}
-.hero .lede{margin-top:var(--s6);font-size:var(--t-20);line-height:1.6;max-width:24em;
-  animation:fade .8s .5s var(--ease) both}
-.facts{margin-top:var(--s6);color:var(--ink-3);font-size:var(--t-13);
-  display:flex;gap:var(--s3);flex-wrap:wrap;animation:fade .8s .6s var(--ease) both}
-.facts s{text-decoration:none;color:rgba(244,241,236,.18)}
-.act{display:flex;align-items:center;gap:var(--s6);margin-top:var(--s10);
-  animation:fade .8s .7s var(--ease) both}
-.dropbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);
-  margin-top:var(--s4);max-width:420px;padding:var(--s3) var(--s4);border-radius:2px;
-  box-shadow:inset 0 0 0 1px var(--rule);color:var(--ink-2);font-size:var(--t-15);
-  transition:background .3s var(--ease),box-shadow .3s var(--ease);
-  animation:fade .8s .8s var(--ease) both}
-.dropbar:hover,.dropbar.over{background:var(--hover);box-shadow:inset 0 0 0 1px var(--accent);
-  color:var(--ink)}
-.dropbar .pick{color:var(--accent);font-weight:700;white-space:nowrap}
+/* ── 通用组件 ── */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--sh-1)}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.sec-h h2{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.sec-h .n{color:var(--ink-3);font-size:13px}
+.sub-h{font-size:13px;font-weight:700;color:var(--ink-2);margin:0 0 8px}
+.kbd{font-family:var(--mono);font-size:12px;background:var(--sunken);
+  border-radius:5px;padding:2px 7px;color:var(--ink-2)}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
+  padding:3px 9px;border-radius:999px;background:var(--sunken);color:var(--ink-2)}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.run{background:var(--accent-soft);color:var(--accent-deep)}
+.tag.err{background:var(--err-soft);color:var(--err)}
 
-/* 舞台：三层景深 + 视差 + 揭幕 */
-.stage{position:relative;height:600px;perspective:1400px}
-.layer{position:absolute;transform-style:preserve-3d;will-change:transform;
-  transform:translate3d(calc(var(--px,0) * var(--depth)),calc(var(--py,0) * var(--depth)),0)}
-.screen{background:var(--mount);padding:9px;border-radius:2px;
-  box-shadow:0 40px 120px rgba(0,0,0,.85),0 0 0 1px rgba(244,241,236,.08)}
-.screen video{display:block;background:#000}
-.screen .cap{display:block;padding:8px 2px 0;color:rgba(26,24,21,.5);font-size:11px;
-  letter-spacing:.04em}
-.l-main{left:6%;top:8%;z-index:3}
-.l-main .screen{width:296px}
-.l-main video{width:278px;height:494px}
-.l-back{right:8%;top:0;z-index:2;opacity:.66;filter:saturate(.8) brightness(.75)}
-.l-back .screen{width:212px}
-.l-back video{width:194px;height:345px}
-.l-far{right:2%;bottom:2%;z-index:1;opacity:.4;filter:saturate(.6) brightness(.6) blur(.6px)}
-.l-far .screen{width:158px}
-.l-far video{width:140px;height:249px}
-.reveal{clip-path:inset(100% 0 0 0);animation:wipe 1s var(--ease) forwards}
-@keyframes wipe{to{clip-path:inset(0 0 0 0)}}
-.l-main .reveal{animation-delay:.15s}
-.l-back .reveal{animation-delay:.3s}
-.l-far .reveal{animation-delay:.45s}
-.sheet{background:var(--mount);display:flex;flex-direction:column;align-items:center;
-  justify-content:center;text-align:center;color:rgba(26,24,21,.5);font-size:var(--t-13);
-  gap:8px;line-height:1.7}
-
-/* 胶片带 */
-.film{margin-top:var(--s16);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
-  overflow:hidden;position:relative;padding:var(--s3) 0;
-  mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
-.film .track{display:flex;gap:var(--s3);width:max-content;animation:roll 46s linear infinite}
-.film:hover .track{animation-play-state:paused}
-@keyframes roll{to{transform:translateX(-50%)}}
-.film .f{flex:none;background:var(--mount);padding:4px;border-radius:1px}
-.film .f video,.film .f img{display:block;width:92px;height:164px;object-fit:cover;background:#000}
-.film .f.punch{display:grid;place-items:center;width:92px;height:172px;
-  box-shadow:inset 0 0 0 1px var(--rule);background:transparent;color:var(--ink-3);font-size:11px}
-
-/* ── 片架 ── */
-.shelf{margin-top:var(--s16)}
-.shelf .head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s4)}
-.shelf .head h2{font-family:"Display",var(--sans);font-weight:900;font-size:var(--t-26)}
-.shelf .head .n{color:var(--ink-3);font-size:var(--t-13)}
-.plates{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
-  gap:var(--s6);margin-top:var(--s6)}
-.plate{position:relative;text-align:left}
-.plate .holder{background:var(--mount);padding:7px;border-radius:2px;
-  transition:transform .45s var(--ease),box-shadow .45s var(--ease);
-  box-shadow:0 10px 30px rgba(0,0,0,.5)}
-.plate:hover .holder{transform:translateY(-6px) scale(1.015);
-  box-shadow:0 26px 60px rgba(0,0,0,.7),0 0 0 1px var(--accent)}
-.plate video{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;background:#000}
-.plate .meta{display:block;padding:9px 2px 0}
-.plate .t{display:block;font-size:var(--t-15);font-weight:700;
+/* ── 首页 ── */
+.import{display:flex;align-items:center;gap:16px;width:100%;padding:18px 20px;border-radius:var(--r-l);
+  background:var(--surface);border:1.5px dashed var(--line-2);cursor:pointer;
+  transition:border-color .2s,background .2s}
+.import:hover,.import.over{border-color:var(--accent);background:var(--accent-soft)}
+.import .ico{width:42px;height:42px;flex:none;border-radius:10px;background:var(--sunken);
+  display:grid;place-items:center}
+.import b{display:block;font-size:15px}
+.import span{color:var(--ink-2);font-size:13px}
+.import .pick{margin-left:auto}
+.rail-sec{margin-top:32px}
+.posters{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 10px;
+  scroll-snap-type:x proximity}
+.posters::-webkit-scrollbar{height:8px}
+.posters::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:4px}
+.poster{flex:none;width:118px;scroll-snap-align:start;text-align:left}
+.poster .frame{background:var(--media);border-radius:10px;padding:5px;
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
+.poster:hover .frame{transform:translateY(-3px);box-shadow:var(--sh-2)}
+.poster video{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:6px;background:#000}
+.poster .t{display:block;font-size:12px;font-weight:600;margin-top:7px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.plate .d{display:block;color:var(--ink-3);font-size:var(--t-13);margin-top:2px}
-.plate .tags{position:absolute;left:14px;top:14px;display:flex;gap:6px;z-index:2}
-.tag{font-size:11px;padding:3px 7px;border-radius:2px;background:rgba(8,7,10,.72);
-  color:var(--ink);backdrop-filter:blur(6px);font-weight:600}
-.tag.on{background:var(--accent);color:#fff}
-.tag.play{display:flex;align-items:center;gap:5px}
-.tag.play::before{content:"";width:0;height:0;border-left:6px solid currentColor;
-  border-top:4px solid transparent;border-bottom:4px solid transparent}
-.empty-shelf{color:var(--ink-3);font-size:var(--t-15);padding:var(--s10) 0}
+.poster .d{display:block;color:var(--ink-3);font-size:11px}
 
-/* ── 项目行 ── */
-.rows{margin-top:var(--s16)}
-.rows .head{display:flex;align-items:baseline;gap:var(--s3);
-  border-bottom:1px solid var(--rule);padding-bottom:var(--s3);color:var(--ink-2);
-  font-size:var(--t-13);letter-spacing:.1em}
-.rw{display:grid;grid-template-columns:auto 1fr auto;gap:var(--s4) var(--s6);
-  align-items:center;padding:var(--s3) var(--s2);border-bottom:1px solid var(--rule);
-  min-height:72px;position:relative;transition:background .3s var(--ease)}
-.rw::after{content:"";position:absolute;left:0;bottom:-1px;height:1px;width:0;
-  background:var(--accent);transition:width .45s var(--ease);box-shadow:0 0 12px var(--accent)}
-.rw:hover{background:var(--hover)}
-.rw:hover::after{width:100%}
-.rw .mini{width:34px;height:60px;background:var(--card);border-radius:2px;overflow:hidden;
-  display:grid;place-items:center;font-family:"Display",var(--sans);font-weight:900;
-  color:var(--ink-3);font-size:var(--t-15)}
-.rw .mini video{width:100%;height:100%;object-fit:cover;display:block}
-.rw .t{font-size:var(--t-17);font-weight:700;text-align:left;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap}
-.rw:hover .t{color:var(--accent)}
-.rw .m{color:var(--ink-3);font-size:var(--t-13);text-align:right;white-space:nowrap}
-.rw .m .del{margin-left:var(--s4);color:var(--ink-3)}
-.rw .m .del:hover{color:var(--accent)}
-.blank{border:1px dashed var(--rule);border-radius:2px;padding:var(--s16) var(--s10);
-  text-align:center;color:var(--ink-2)}
-.blank b{display:block;font-family:"Display",var(--sans);font-weight:900;font-size:var(--t-26);
-  color:var(--ink);margin-bottom:var(--s2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:16px;margin-top:14px}
+.pcard{position:relative;text-align:left;border-radius:var(--r-m);overflow:hidden;
+  background:var(--surface);border:1px solid var(--line);box-shadow:var(--sh-1);
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
+.pcard:hover{transform:translateY(-3px);box-shadow:var(--sh-2)}
+.pcard .cover{aspect-ratio:3/4;background:var(--media);position:relative;overflow:hidden}
+.pcard .cover img,.pcard .cover video{width:100%;height:100%;object-fit:cover;opacity:.94}
+.pcard .cover .letter{position:absolute;inset:0;display:grid;place-items:center;
+  color:rgba(244,241,236,.4);font-family:"Display",var(--sans);font-size:40px}
+.pcard .cover .cnt{position:absolute;left:10px;top:10px}
+.pcard .body{padding:12px 14px}
+.pcard .t{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .m{color:var(--ink-3);font-size:12px;margin-top:3px}
+.pcard .del{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:8px;
+  background:rgba(19,17,16,.55);color:#fff;display:grid;place-items:center;
+  opacity:0;transition:opacity .2s,background .2s;backdrop-filter:blur(4px)}
+.pcard:hover .del{opacity:1}
+.pcard .del:hover{background:var(--err)}
+.blank{padding:56px 24px;text-align:center;color:var(--ink-2)}
+.blank b{display:block;font-size:17px;color:var(--ink);margin-bottom:6px}
 
-/* ── 项目内 ── */
-.sbar{display:flex;align-items:baseline;gap:var(--s4);flex-wrap:wrap;padding-top:var(--s10)}
-.sbar h2{font-family:"Display",var(--sans);font-weight:900;font-size:var(--t-26)}
-.sbar .who{color:var(--ink-3);font-size:var(--t-13)}
-.rail{display:flex;gap:var(--s10);flex-wrap:wrap;margin:var(--s10) 0 0;
-  border-bottom:1px solid var(--rule);padding-bottom:var(--s3)}
-.rail button{display:flex;align-items:baseline;gap:7px;color:var(--ink-3);font-size:var(--t-15);
-  min-height:40px;padding-bottom:6px;border-bottom:2px solid transparent;
-  margin-bottom:calc(-1 * var(--s3) - 1px);
-  transition:color .3s var(--ease),border-color .3s var(--ease),text-shadow .3s var(--ease)}
-.rail button .n{font-size:var(--t-13);font-weight:800}
-.rail button.done{color:var(--ink-2)}
-.rail button.on{color:var(--ink);border-bottom-color:var(--accent);text-shadow:0 0 18px rgba(224,69,42,.5)}
-.rail button.on .n{color:var(--accent)}
-.rail button:not([disabled]):hover{color:var(--ink)}
-.rail button[disabled]{cursor:default;opacity:.4}
-.body{padding-top:var(--s10)}
-.lead{font-size:var(--t-17);color:var(--ink-2);max-width:32em;margin-bottom:var(--s10)}
+/* ── 项目页 ── */
+.pj{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:24px;align-items:start}
+.pj .crumb{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.pj .crumb h1{font-size:20px;font-weight:800;letter-spacing:-.01em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:24em}
+.colmain{min-width:0;display:flex;flex-direction:column;gap:20px}
 
-.drop{display:block;width:100%;text-align:center;padding:var(--s24) var(--s6);
-  border:1px dashed var(--rule);border-radius:2px;transition:border-color .3s var(--ease),background .3s var(--ease)}
-.drop:hover{border-color:var(--accent);background:var(--hover)}
-.drop b{display:block;font-family:"Display",var(--sans);font-weight:900;font-size:var(--t-26);
-  color:var(--ink);margin-bottom:var(--s2)}
-.drop span{color:var(--ink-2);font-size:var(--t-15)}
-.sub{color:var(--ink-3);font-size:var(--t-13);margin:var(--s10) 0 var(--s2);
-  padding-bottom:var(--s2);border-bottom:1px solid var(--rule);letter-spacing:.08em}
-.blist button{width:100%;display:flex;justify-content:space-between;align-items:baseline;
-  gap:var(--s4);padding:var(--s4) var(--s2);text-align:left;font-size:var(--t-17);
-  border-bottom:1px solid var(--rule);min-height:56px;transition:background .3s var(--ease),padding-left .3s var(--ease)}
-.blist button:hover{background:var(--hover);padding-left:var(--s4)}
-.blist .m{color:var(--ink-3);font-size:var(--t-13)}
+/* 成片播放 */
+.stage-card{padding:18px}
+.player-row{display:flex;gap:20px;align-items:flex-start}
+.media-frame{background:var(--media);border-radius:12px;padding:7px;flex:none}
+.media-frame video{width:262px;max-width:100%;aspect-ratio:9/16;border-radius:7px;background:#000}
+.stage-side{min-width:0;flex:1;display:flex;flex-direction:column;gap:12px}
+.stage-side .stats{color:var(--ink-2);font-size:13px;line-height:1.9}
+.hist{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.hist .h-item{flex:none;width:56px;text-align:center}
+.hist .h-item .frame{background:var(--media);border-radius:8px;padding:3px;transition:box-shadow .2s}
+.hist .h-item.on .frame{box-shadow:0 0 0 2px var(--accent)}
+.hist video{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:6px}
+.hist .h-item span{font-size:10px;color:var(--ink-3)}
 
-.ctitle{font-family:"Display",var(--sans);font-weight:900;font-size:var(--t-26);
-  max-width:24em;margin-bottom:var(--s3)}
-.stats{color:var(--ink-3);font-size:var(--t-13)}
-.hook{background:var(--void-2);border:1px solid var(--rule);padding:var(--s10) var(--s10) var(--s6);
-  margin:var(--s10) 0 var(--s16);position:relative;overflow:hidden}
-.hook::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;
-  background:var(--accent);box-shadow:0 0 24px var(--accent)}
-.hook .ln{font-family:"Display",var(--sans);font-weight:900;font-size:34px;line-height:1.5;
-  letter-spacing:-.03em}
-.hook .hl{background:var(--accent);color:#fff;padding:2px 10px;box-shadow:0 0 26px var(--accent-soft)}
-.script{background:var(--void-2);border:1px solid var(--rule);padding:var(--s10);
-  max-height:320px;overflow:auto;font-size:var(--t-17);line-height:1.9;white-space:pre-wrap}
-.assets{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));
-  gap:var(--s4);margin-top:var(--s4)}
-.a img,.a video{width:100%;height:96px;object-fit:cover;display:block;background:var(--card);
-  transition:transform .4s var(--ease),box-shadow .4s var(--ease)}
-.a{overflow:hidden;border-radius:2px}
-.a:hover img,.a:hover video{transform:scale(1.06);box-shadow:0 0 0 1px var(--accent)}
-.a .cap{color:var(--ink-3);font-size:var(--t-13);margin-top:var(--s2);
+/* 内容 */
+.hookline{padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+.hookline .ln{font-size:21px;font-weight:800;line-height:1.55;letter-spacing:-.01em}
+.hookline .hl{background:var(--accent);color:#fff;padding:1px 7px;border-radius:4px}
+.hookline .cap{color:var(--ink-3);font-size:12px;font-weight:600}
+.script-box{max-height:260px;overflow:auto;padding:16px 20px;font-size:15px;
+  line-height:1.95;white-space:pre-wrap;color:var(--ink)}
+.assets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
+.assets-grid .a{border-radius:8px;overflow:hidden;background:var(--sunken)}
+.assets-grid img,.assets-grid video{width:100%;aspect-ratio:4/3;object-fit:cover}
+.assets-grid .cap{padding:7px 9px;font-size:11.5px;color:var(--ink-2);line-height:1.5;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.actbar{display:flex;justify-content:flex-end;margin-top:var(--s16)}
+details.disc{border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface)}
+details.disc>summary{cursor:pointer;padding:13px 18px;font-size:14px;font-weight:700;
+  list-style:none;display:flex;align-items:center;justify-content:space-between;color:var(--ink)}
+details.disc>summary::-webkit-details-marker{display:none}
+details.disc>summary .n{color:var(--ink-3);font-weight:600;font-size:12px}
+details.disc .disc-b{padding:0 18px 16px}
 
-.grp{margin-bottom:var(--s16)}
-.grp .h{font-size:var(--t-13);color:var(--ink-2);padding-bottom:var(--s2);
-  border-bottom:1px solid var(--rule);margin-bottom:var(--s4);letter-spacing:.1em}
-.opt{display:flex;gap:var(--s3);flex-wrap:wrap}
-.opt button{text-align:left;padding:var(--s4) var(--s6);min-height:78px;min-width:186px;
-  border-radius:2px;background:var(--void-2);box-shadow:inset 0 0 0 1px var(--rule);
-  transition:box-shadow .35s var(--ease),transform .35s var(--ease),background .35s var(--ease)}
-.opt button:hover{transform:translateY(-2px)}
-.opt button.on{box-shadow:inset 0 0 0 1px var(--accent),0 0 30px var(--accent-soft)}
-.opt b{display:block;font-size:var(--t-17);font-weight:700}
-.opt small{color:var(--ink-3);font-size:var(--t-13)}
-/* 模板选择器：左侧一块配色缩略，右侧名称 + 说明 */
-.opt.tpl button{display:grid;grid-template-columns:auto 1fr;align-items:center;
-  gap:2px var(--s4);min-width:238px;min-height:88px}
-.opt.tpl .sw{grid-row:1 / 3;width:36px;height:56px;border-radius:3px;position:relative;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 4px 14px rgba(0,0,0,.45)}
-.opt.tpl .sw i{position:absolute;left:6px;bottom:6px;width:12px;height:12px;border-radius:50%;
-  box-shadow:0 0 0 1px rgba(0,0,0,.35)}
-.opt.tpl b{grid-column:2}
-.opt.tpl small{grid-column:2;line-height:1.35}
-.field{display:flex;align-items:center;justify-content:space-between;gap:var(--s10);
-  padding:var(--s4) 0;border-bottom:1px solid var(--rule)}
-.field .t{font-size:var(--t-17)}
-.field .d{color:var(--ink-3);font-size:var(--t-13);margin-top:2px;max-width:44em}
-.pills{display:flex;gap:var(--s2);flex-wrap:wrap}
-.pill{min-height:40px;padding:0 16px;border-radius:999px;font-size:var(--t-15);
-  color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--rule);transition:all .3s var(--ease)}
-.pill:hover{color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink-3)}
-.pill.on{background:var(--accent);color:#fff;box-shadow:0 0 24px var(--accent-soft);font-weight:700}
-textarea{width:100%;background:transparent;border:0;border-bottom:1px solid var(--rule);
-  padding:var(--s3) 0;font-size:var(--t-15);resize:vertical;min-height:64px;line-height:1.7}
-textarea:focus{outline:none;border-bottom-color:var(--accent)}
-select{background:transparent;border:0;border-bottom:1px solid var(--rule);
-  padding:var(--s2) 0;font-size:var(--t-15);min-width:210px;text-align:right}
-select:focus{outline:none;border-bottom-color:var(--accent)}
-select option{background:var(--void-2);color:var(--ink)}
-.sw{width:46px;height:24px;border-radius:999px;background:var(--rule);position:relative;
-  flex:none;transition:background .3s var(--ease)}
-.sw i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
-  background:var(--ink);transition:left .3s var(--ease)}
-.sw.on{background:var(--accent);box-shadow:0 0 22px var(--accent-soft)}
-.sw.on i{left:25px}
-.go{display:flex;align-items:center;justify-content:flex-end;gap:var(--s10);
-  margin-top:var(--s16);padding:var(--s4) 0;position:sticky;bottom:0;
-  background:linear-gradient(transparent,var(--void) 45%)}
-.go .est{color:var(--ink-2);font-size:var(--t-13)}
-.go .est b{color:var(--ink);font-weight:700}
-.note{background:var(--void-2);border-left:2px solid var(--accent);padding:var(--s4) var(--s6);
-  color:var(--ink-2);font-size:var(--t-15);margin-bottom:var(--s10)}
+/* 右栏 */
+.rail{position:sticky;top:84px;display:flex;flex-direction:column;gap:14px}
+.panel{padding:18px}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.panel .ph h3{font-size:14px;font-weight:800}
+.bundle-chip{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;
+  background:var(--sunken);font-size:13px}
+.bundle-chip .b-ico{width:30px;height:30px;flex:none;border-radius:8px;background:var(--surface);
+  display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--line)}
+.bundle-chip .b-name{min-width:0;flex:1}
+.bundle-chip .b-name b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bundle-chip .b-name span{color:var(--ink-3);font-size:11.5px}
+.bundle-chip button{color:var(--accent-deep);font-weight:700;font-size:12.5px;flex:none;padding:4px 6px;border-radius:6px}
+.bundle-chip button:hover{background:var(--accent-soft)}
+.bundle-none{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:13px;border:1.5px dashed var(--line-2);border-radius:10px;font-size:13px;color:var(--ink-2)}
+.grp{padding:14px 0;border-top:1px solid var(--line)}
+.grp:first-of-type{border-top:0;padding-top:0}
+.grp .gh{font-size:12px;font-weight:700;color:var(--ink-3);margin-bottom:9px}
+.tpls{display:flex;flex-direction:column;gap:6px}
+.tpl{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;text-align:left;
+  transition:background .15s,box-shadow .15s}
+.tpl:hover{background:var(--sunken)}
+.tpl.on{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.tpl .sw{width:30px;height:42px;flex:none;border-radius:6px;position:relative;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.tpl .sw i{position:absolute;left:4px;bottom:4px;width:9px;height:9px;border-radius:50%}
+.tpl b{display:block;font-size:13.5px;line-height:1.35}
+.tpl small{display:block;color:var(--ink-2);font-size:11.5px;line-height:1.45}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{min-height:34px;padding:0 13px;border-radius:999px;font-size:13px;font-weight:600;
+  color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-2);background:var(--surface);
+  transition:all .15s}
+.pill:hover{color:var(--ink)}
+.pill.on{background:var(--ink);color:#fff;box-shadow:none}
+.field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0}
+.field .t{font-size:13.5px;font-weight:600}
+.field .d{color:var(--ink-3);font-size:11.5px;margin-top:1px}
+.sw{width:42px;height:24px;border-radius:999px;background:var(--line-2);position:relative;flex:none;
+  transition:background .2s}
+.sw i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}
+.sw.on{background:var(--ok)}
+.sw.on i{left:21px}
+select{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;
+  padding:8px 10px;font-size:13px;max-width:190px}
+textarea{width:100%;background:var(--sunken);border:1px solid transparent;border-radius:8px;
+  padding:10px 12px;font-size:13px;resize:vertical;min-height:60px;line-height:1.7}
+textarea:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.note-warn{background:#FBF3E4;border:1px solid #EAD9B8;color:#7A5A10;font-size:12.5px;
+  border-radius:9px;padding:10px 12px;line-height:1.6}
+.render-cta{display:flex;align-items:center;gap:12px}
+.render-cta .est{color:var(--ink-2);font-size:12px;line-height:1.5}
+.render-cta .est b{color:var(--ink)}
+.render-cta .btn{flex:1;min-height:48px;font-size:15px}
 
-/* ── 任务控制台 ── */
-.console{position:relative;border:1px solid var(--rule);border-radius:2px;padding:var(--s10);
-  background:linear-gradient(180deg,rgba(224,69,42,.055),transparent 60%)}
-.recline{display:flex;align-items:center;gap:10px;color:var(--accent);font-size:var(--t-13);
-  font-weight:800;letter-spacing:.18em}
-.recline i{width:8px;height:8px;border-radius:50%;background:var(--accent);
-  box-shadow:0 0 14px var(--accent);animation:rec 1.8s var(--ease) infinite}
-.count{font-family:"Display",var(--sans);font-weight:900;font-size:var(--t-72);
-  line-height:1;letter-spacing:-.04em;margin-top:var(--s6);
-  text-shadow:0 0 60px rgba(224,69,42,.28);font-variant-numeric:tabular-nums}
-.count em{font-style:normal;color:var(--ink-3)}
-.count .u{font-size:var(--t-20);color:var(--ink-2);margin-left:var(--s3);font-weight:800}
-.stage-line{font-size:var(--t-20);font-weight:800;margin-top:var(--s4)}
-.detail{color:var(--ink-2);font-size:var(--t-15);margin-top:var(--s2)}
-.track{height:2px;background:var(--rule);margin:var(--s6) 0 var(--s3);position:relative;overflow:hidden}
-.track i{display:block;height:100%;width:0;background:var(--accent);
-  box-shadow:0 0 20px var(--accent);transition:width .6s var(--ease)}
-.track::after{content:"";position:absolute;top:0;left:-30%;width:30%;height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);
-  animation:sweep 2.6s linear infinite}
-@keyframes sweep{to{left:110%}}
-.meta{display:flex;justify-content:space-between;gap:var(--s4);color:var(--ink-3);font-size:var(--t-13)}
-
-/* 分镜剧照墙 */
-.shots{margin-top:var(--s10)}
-.shots .h{font-size:var(--t-13);color:var(--ink-3);letter-spacing:.1em;margin-bottom:var(--s3)}
-.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:var(--s3)}
-.shot{position:relative;aspect-ratio:9/16;background:var(--void-2);border-radius:2px;
-  overflow:hidden;box-shadow:inset 0 0 0 1px var(--rule);padding:5px}
-.shot img{width:100%;height:100%;object-fit:cover;display:block;border-radius:1px;
-  animation:flash .6s var(--ease) both}
-@keyframes flash{from{opacity:0;transform:scale(1.06);filter:brightness(2.2)}to{opacity:1;transform:none;filter:none}}
-.shot .idx{position:absolute;left:9px;bottom:7px;font-size:10px;font-weight:800;
-  color:#fff;background:rgba(8,7,10,.6);padding:2px 6px;border-radius:2px}
-.shot.wait{display:grid;place-items:center;color:var(--ink-3);font-size:11px;
-  background-image:repeating-linear-gradient(45deg,rgba(244,241,236,.03) 0 8px,transparent 8px 16px)}
-
-.steps{margin-top:var(--s10);columns:2;column-gap:var(--s16)}
-.steps li{display:flex;align-items:baseline;gap:var(--s3);font-size:var(--t-15);
-  color:var(--ink-3);padding:var(--s2) 0;break-inside:avoid}
-.steps li .n{width:24px;flex:none;font-size:var(--t-13);font-weight:800}
-.steps li .t{flex:1}
-.steps li .d{font-size:var(--t-13);color:var(--ink-3)}
-.steps li.on{color:var(--ink);text-shadow:0 0 18px rgba(224,69,42,.35)}
-.steps li.on .n{color:var(--accent)}
-.steps li.done{color:var(--ink-2)}
-.tip{color:var(--ink-2);font-size:var(--t-15);margin-top:var(--s10);max-width:38em}
-.foot{margin-top:var(--s10);display:flex;align-items:center;gap:var(--s4);
-  color:var(--ink-3);font-size:var(--t-13);flex-wrap:wrap}
-.foot code{color:var(--ink-2)}
-.err{color:var(--accent);font-size:var(--t-15);margin-top:var(--s10);max-width:44em}
-.err pre{font-family:var(--sans);color:var(--ink-2);font-size:var(--t-13);
-  white-space:pre-wrap;margin-top:var(--s2);max-height:140px;overflow:auto}
-.result{margin-top:var(--s16);padding-top:var(--s10);border-top:1px solid var(--rule)}
-.frame{display:inline-block;padding:9px;background:var(--mount);border-radius:2px;margin:var(--s6) 0;
-  box-shadow:0 30px 90px rgba(0,0,0,.8)}
-video.res{display:block;width:300px;max-width:100%;background:#000}
-.rrow{display:flex;align-items:center;gap:var(--s6);margin-top:var(--s4)}
-.hist{margin-top:var(--s16)}
-.hist .h{font-size:var(--t-13);color:var(--ink-3);letter-spacing:.1em;
-  border-bottom:1px solid var(--rule);padding-bottom:var(--s2)}
-.hist li{display:flex;align-items:baseline;gap:var(--s10);padding:var(--s3) 0;
-  border-bottom:1px solid var(--rule);color:var(--ink-2);font-size:var(--t-15)}
-.hist li .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hist li .d{color:var(--ink-3);font-size:var(--t-13)}
+/* 任务卡 */
+.task .th{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}
+.task .th .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
+.task.running .th .dot{background:var(--accent);animation:blink 1.4s var(--ease) infinite}
+.task.done .th .dot{background:var(--ok)}
+.task.failed .th .dot{background:var(--err)}
+@keyframes blink{50%{opacity:.25}}
+.task .tpct{margin-left:auto;font-family:"Display",var(--sans);font-size:26px;letter-spacing:0}
+.task .pbar{height:5px;border-radius:3px;background:var(--sunken);margin:10px 0 8px;overflow:hidden}
+.task .pbar i{display:block;height:100%;width:0;border-radius:3px;background:var(--accent);
+  transition:width .5s var(--ease)}
+.task .pdetail{font-size:12.5px;color:var(--ink-2);min-height:20px}
+.task .pmeta{display:flex;justify-content:space-between;color:var(--ink-3);font-size:11.5px;margin-top:4px}
+.stages8{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.stages8 li{font-size:11px;font-weight:600;color:var(--ink-3);padding:3px 8px;border-radius:999px;
+  background:var(--sunken)}
+.stages8 li.on{background:var(--accent);color:#fff}
+.stages8 li.done{background:var(--ok-soft);color:var(--ok)}
+.stills{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.stills .shot{aspect-ratio:9/16;border-radius:6px;background:var(--sunken);overflow:hidden;
+  display:grid;place-items:center;color:var(--ink-3);font-size:10px;cursor:pointer}
+.stills img{width:100%;height:100%;object-fit:cover;animation:shotin .5s var(--ease)}
+@keyframes shotin{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:none}}
+.task .terr{margin-top:10px;background:var(--err-soft);color:var(--err);border-radius:8px;
+  padding:10px 12px;font-size:12.5px;white-space:pre-wrap;max-height:130px;overflow:auto}
+.task .tfoot{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--ink-3);font-size:11.5px}
+.task .tfoot code{font-family:var(--mono)}
 
 /* ── 浮层 ── */
-.toast{position:fixed;left:50%;bottom:var(--s10);transform:translate(-50%,10px);
-  background:var(--void-2);color:var(--ink);padding:13px 24px;font-size:var(--t-15);
-  border-radius:2px;box-shadow:0 0 0 1px var(--accent),0 12px 40px rgba(0,0,0,.7);
-  opacity:0;pointer-events:none;z-index:60;transition:opacity .3s var(--ease),transform .3s var(--ease)}
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,8px);z-index:80;
+  background:var(--ink);color:#fff;padding:11px 20px;font-size:14px;border-radius:10px;
+  box-shadow:var(--sh-2);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
 .toast.on{opacity:1;transform:translate(-50%,0)}
-.modal{position:fixed;inset:0;background:rgba(4,3,6,.86);z-index:58;backdrop-filter:blur(6px);
-  display:flex;align-items:center;justify-content:center;padding:var(--s6)}
-.modal .box{background:var(--void-2);padding:var(--s10);width:min(460px,100%);border-radius:2px;
-  max-height:92vh;overflow:auto;box-shadow:0 0 0 1px var(--rule),0 40px 120px rgba(0,0,0,.9);
-  animation:pop .4s var(--ease) both}
-@keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
-.modal .box h3{font-family:"Display",var(--sans);font-weight:900;font-size:var(--t-26)}
-.modal .box p{font-size:var(--t-15);margin:var(--s3) 0 var(--s10)}
-.modal .row{display:flex;gap:var(--s4);justify-content:flex-end}
-.modal .play{width:min(380px,86vw);background:var(--mount);padding:9px;border-radius:2px}
-.modal .play video{width:100%;display:block;background:#000}
-.modal .play .cap{color:rgba(26,24,21,.55);font-size:var(--t-13);padding:8px 2px 0}
-.skip{position:absolute;left:-9999px}
-.skip:focus{left:16px;top:16px;background:var(--accent);color:#fff;padding:10px 16px;z-index:99}
-.spin{width:13px;height:13px;border:1.5px solid rgba(255,255,255,.35);border-top-color:#fff;
+.modal{position:fixed;inset:0;background:rgba(33,30,26,.45);z-index:70;
+  backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal .box{background:var(--surface);border-radius:16px;padding:24px;width:min(440px,100%);
+  max-height:92vh;overflow:auto;box-shadow:var(--sh-2);animation:pop .25s var(--ease)}
+@keyframes pop{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}
+.modal .box h3{font-size:17px;font-weight:800}
+.modal .box p{font-size:13.5px;color:var(--ink-2);margin:8px 0 16px}
+.modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.modal input[type=text],.modal input[type=password]{width:100%;border:1px solid var(--line-2);
+  border-radius:8px;padding:11px 12px;font-size:14px}
+.modal input:focus{outline:none;border-color:var(--accent)}
+.modal .play{background:var(--media);border-radius:12px;padding:7px;width:min(340px,80vw)}
+.modal .play video{width:100%;border-radius:7px;background:#000}
+.modal .play .cap{color:rgba(244,241,236,.55);font-size:12px;padding:8px 3px 1px}
+.mlist{max-height:280px;overflow:auto;margin-top:4px}
+.mlist button{width:100%;display:flex;justify-content:space-between;gap:10px;text-align:left;
+  padding:11px 10px;border-radius:8px;font-size:13.5px;transition:background .15s}
+.mlist button:hover{background:var(--sunken)}
+.mlist .m{color:var(--ink-3);font-size:12px;white-space:nowrap}
+.spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
   border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:16px;top:14px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;z-index:99}
+
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
-  .mask .ln > span{transform:none}.reveal{clip-path:none}.rule{width:88px}
 }
-@media (max-width:1100px){
-  .hero{grid-template-columns:1fr;min-height:0;padding-top:var(--s6)}
-  h1.mask{font-size:46px}
-  .stage{height:auto;display:flex;gap:var(--s4);overflow-x:auto;padding-bottom:var(--s3)}
-  .layer{position:static;transform:none!important;opacity:1!important;filter:none!important}
-  .layer .screen{width:auto}
-  .l-main video{width:220px;height:391px}
-  .l-back video{width:170px;height:302px}
-  .l-far video{width:140px;height:249px}
+@media (max-width:960px){
+  .pj{grid-template-columns:1fr}
+  .rail{position:static}
 }
-@media (max-width:720px){
-  .wrap{padding:0 var(--s4) var(--s16)}
-  .top .in{padding:0 var(--s4);height:62px}
-  h1.mask{font-size:34px}
-  .hero .lede{font-size:var(--t-17)}
-  .count{font-size:46px}
-  .hook .ln{font-size:24px}
-  .steps{columns:1}
-  .rw{grid-template-columns:auto 1fr;gap:var(--s3)}
-  .rw .m{grid-column:2;text-align:left}
-  .plates{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+@media (max-width:640px){
+  .wrap{padding:18px 14px 96px}
+  .top .in{padding:0 14px}
+  .player-row{flex-direction:column}
+  .media-frame{align-self:flex-start}
+  .media-frame video{width:min(262px,70vw)}
+  .import .pick{display:none}
 }
 </style>
 </head>
 <body>
-<div class="glow" aria-hidden="true"></div>
-<div class="grain" aria-hidden="true"></div>
 <header class="top">
   <div class="in">
-    <a class="brand" href="#/" id="brand"><i></i>videogen</a>
+    <a class="brand" href="#/" id="brand"><span class="mark">V</span>videogen<small>工作台</small></a>
     <span class="sp"></span>
-    <button class="quiet hide" id="newBtn">新建项目</button>
+    <div class="tact">
+      <button class="btn sm accent" id="newBtn">新建项目</button>
+    </div>
   </div>
 </header>
 <a class="skip" href="#main">跳到主内容</a>
 <main class="wrap" id="main" tabindex="-1"></main>
 
 <script>
+/* ================= 基础 ================= */
 const $ = (id) => document.getElementById(id);
-const api = (u, o) => fetch(u, o).then(r => r.json());
-let CUR = null;
-let CFG = { voice:"zh-CN-YunxiNeural", rate:100, bgm:"assets/bgm_upbeat.mp3",
-            sfxMode:"hook", subtitles:true, sources:true, format:"editorial" };
+const TOK = () => localStorage.getItem("vg.token") || "";
+const qs = (u) => u + (u.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOK());
+async function api(u, o) {
+  o = o || {};
+  o.headers = Object.assign({"x-auth-token": TOK()}, o.headers || {});
+  const r = await fetch(u, o);
+  let d = null;
+  try { d = await r.json(); } catch (e) { d = {}; }
+  if (r.status === 401) { const err = new Error("需要访问令牌"); err.auth = true; throw err; }
+  if (!r.ok) { const err = new Error((d && d.error) || ("HTTP " + r.status)); err.data = d; throw err; }
+  return d;
+}
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const mmss = (s) => { s = Math.max(0, Math.round(s || 0));
+  return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
+const num = (n) => { const v = Number(String(n == null ? 0 : n).replace(/,/g, ""));
+  return isFinite(v) ? v.toLocaleString("en-US") : "0"; };
+const vid = (id) => qs("/video/" + encodeURIComponent(id));
+const mediaUrl = (bundle, file) =>
+  qs("/media/" + encodeURIComponent(bundle) + "/" + file.split("/").map(encodeURIComponent).join("/"));
 
-// ── 渲染模板 ──
-// 缩略图与说明写在前端；模板清单以 /api/templates 为准（服务端按同一份注册表校验）
+let CUR = null;                                    // 当前项目
+let CURB = null;                                   // 当前项目的素材包详情
+let CFG = null;                                    // 渲染配置（跨项目记忆）
+const CFG_DEF = { voice:"zh-CN-YunxiNeural", rate:100, bgm:"", sfxMode:"hook",
+                  subtitles:true, sources:true, format:"editorial" };
+function loadCfg(){ try { CFG = Object.assign({}, CFG_DEF, JSON.parse(localStorage.getItem("vg.cfg") || "{}")); }
+  catch (e) { CFG = Object.assign({}, CFG_DEF); } }
+function saveCfg(){ localStorage.setItem("vg.cfg", JSON.stringify(CFG)); }
+loadCfg();
+
+/* 模板缩略与说明（模板清单以 /api/templates 为准） */
 const TPL_VIS = {
-  editorial:{bg:"#1c1a18", paper:"#e4e2e0", acc:"#a44231",
-             hint:"纸卡 + 顶部标题带 + 信息卡，信息量最足"},
-  finance:  {bg:"#0b1622", paper:"#12202f", acc:"#2ea8d8",
-             hint:"深蓝终端感 + 网格，适合行情、财报、数据"},
-  minimal:  {bg:"#f1f1ef", paper:"#ffffff", acc:"#111111",
-             hint:"纯白极简大字，留白多，适合深度观点"},
-  bleed:    {bg:"#000000", paper:"#111111", acc:"#f0b429",
-             hint:"素材铺满全屏，沉浸感强，适合情绪片、Vlog"},
-  news:     {bg:"#07101f", paper:"#eef2f7", acc:"#c8102e",
-             hint:"深蓝正红 + 底部信息条，适合时政、突发"},
-  retro:    {bg:"#2a231a", paper:"#ece0c9", acc:"#b3542e",
-             hint:"米黄纸 + 颗粒暗角，适合人物、历史"},
-  portrait: {bg:"#000000", paper:"#1a1817", acc:"#a44231",
-             hint:"9:16 满屏，素材直接铺满"},
+  editorial:{bg:"#1c1a18", paper:"#e4e2e0", acc:"#a44231", hint:"纸卡 + 标题带 + 信息卡，信息量最足"},
+  finance:  {bg:"#0b1622", paper:"#12202f", acc:"#2ea8d8", hint:"深蓝终端感 + 网格，适合行情、财报"},
+  minimal:  {bg:"#f1f1ef", paper:"#ffffff", acc:"#111111", hint:"纯白极简大字，留白多"},
+  bleed:    {bg:"#000000", paper:"#111111", acc:"#f0b429", hint:"素材铺满全屏，沉浸感强"},
+  news:     {bg:"#07101f", paper:"#eef2f7", acc:"#c8102e", hint:"深蓝正红 + 信息条，适合时政、突发"},
+  retro:    {bg:"#2a231a", paper:"#ece0c9", acc:"#b3542e", hint:"米黄纸 + 颗粒暗角，适合人物、历史"},
+  portrait: {bg:"#000000", paper:"#1a1817", acc:"#a44231", hint:"9:16 满屏，素材直接铺满"},
 };
 let TPLS = Object.keys(TPL_VIS).map(id => ({id, name:id}));
 async function loadTemplates(){
@@ -473,66 +377,40 @@ async function loadTemplates(){
       TPLS = r.templates;
       if (!TPLS.some(t => t.id === CFG.format) && r.default) CFG.format = r.default;
     }
-  }catch(e){ /* 接口不可用时用内置清单兜底 */ }
+  }catch(e){}
 }
-let timer = null, job = null, lastJob = null;
-let JD = { lastPct:-1, lastChange:0, stages:{}, localT0:0, samples:[], shownStills:0 };
+const VOICE = {"zh-CN-YunxiNeural":"云希 · 清爽男声","zh-CN-YunjianNeural":"云健 · 浑厚男声",
+  "zh-CN-YunyangNeural":"云扬 · 新闻男声","zh-CN-XiaoxiaoNeural":"晓晓 · 女声"};
+const voiceLabel = () => VOICE[CFG.voice] || CFG.voice;
 
 const STAGE8 = ["读取素材","AI 配音","分镜规划","画面设计","画面渲染","音效混音","画面校验","完成"];
 const TIP = {
-  tts: "正在把文案合成配音，通常 30–90 秒。",
-  plan: "AI 导演正在读全篇文案、排分镜。",
-  props: "正在拍分镜剧照，下面这张墙会一张张亮起来。",
-  render: "画面渲染是最耗时的一步，通常 3–8 分钟。剧照已经在上面了，片子正在长出来。",
-  audio: "正在混合配音、音乐和音效，通常 1–3 分钟。",
-  verify: "正在逐镜抽帧校验画面，通常 1–2 分钟。",
+  tts:"正在合成配音，通常 30–90 秒。", plan:"AI 导演正在读文案、排分镜。",
+  props:"正在拍分镜剧照，下面会一张张亮起来。",
+  render:"画面渲染最耗时，通常 3–8 分钟。剧照已经在上面了，片子正在长出来。",
+  audio:"正在混合配音、音乐和音效，通常 1–3 分钟。", verify:"正在逐镜抽帧校验画面，通常 1–2 分钟。",
 };
-const QUOTE = {
-  tts: "配音通常 30–90 秒", plan: "分镜规划通常几十秒", props: "分镜剧照通常 10–30 秒",
-  render: "画面渲染通常 3–8 分钟", audio: "混音通常 1–3 分钟", verify: "校验通常 1–2 分钟",
-};
-const VOICE = {"zh-CN-YunxiNeural":"云希 · 清爽男声","zh-CN-YunjianNeural":"云健 · 浑厚男声",
-  "zh-CN-YunyangNeural":"云扬 · 新闻男声","zh-CN-XiaoxiaoNeural":"晓晓 · 女声"};
+const QUOTE = { tts:"配音约 30–90 秒", plan:"分镜约几十秒", props:"剧照约 10–30 秒",
+  render:"渲染约 3–8 分钟", audio:"混音约 1–3 分钟", verify:"校验约 1–2 分钟" };
 
-const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
-  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const voiceLabel = () => VOICE[CFG.voice] || CFG.voice;
-const mmss = (s) => { s = Math.max(0, Math.round(s || 0));
-  return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
-const num = (n) => {
-  const v = Number(String(n == null ? 0 : n).replace(/,/g, ""));
-  return isFinite(v) ? v.toLocaleString("en-US") : "0";
-};
-const vid = (id) => "/video/" + encodeURIComponent(id);
 function renderEstimate(sec){
   const base = Math.max(.5, (sec||0)/60*4.4 + 1.2);
   const lo = Math.max(1, Math.round(base*.9)), hi = Math.round(base*1.25);
-  return lo === hi ? "约 " + lo + " 分钟" : "约 " + lo + "–" + hi + " 分钟";
+  return lo === hi ? "约 " + lo + " 分钟" : lo + "–" + hi + " 分钟";
 }
-function allRenders(projects){
-  const out = [];
-  projects.forEach(p => (p.renders || []).forEach(r => {
-    if (r.file) out.push({id: r.id, ts: r.ts, title: p.title, project: p.project_id});
-  }));
-  return out;
+function frameAt(v, t){
+  if (!v) return;
+  const seek = () => { try { if (v.currentTime < t) v.currentTime = t; } catch (e) {} };
+  if (v.readyState >= 1) seek();
+  else v.addEventListener("loadedmetadata", seek, {once:true});
 }
-// 揭幕动画期间元素被裁掉，Chrome 会跳过 autoplay；所以显式补一次播放
 function kickPlay(v){
   if (!v) return;
   v.muted = true;
   const go = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
   go();
   v.addEventListener("canplay", go, {once:true});
-  setTimeout(go, 700);
-  setTimeout(go, 1600);
-  setTimeout(go, 3000);
-}
-// 取首帧：只 preload=metadata 时不会画出画面，需要显式 seek 一次
-function frameAt(v, t){
-  if (!v) return;
-  const seek = () => { try { if (v.currentTime < t) v.currentTime = t; } catch (e) {} };
-  if (v.readyState >= 1) seek();
-  else v.addEventListener("loadedmetadata", seek, {once:true});
+  setTimeout(go, 800);
 }
 function toast(m){
   let t = $("__t");
@@ -545,569 +423,553 @@ function dialog(title, desc, onOk, okText, readonly, extraHTML){
   const m = document.createElement("div"); m.className = "modal";
   m.innerHTML = `<div class="box" role="dialog" aria-modal="true">
     <h3>${esc(title)}</h3>${desc ? `<p>${esc(desc)}</p>` : ""}${extraHTML || ""}
-    <div class="row">${readonly ? `<button class="btn sm" data-c>知道了</button>`
-      : `<button class="btn line sm" data-c>取消</button>
-         <button class="btn sm" data-k>${esc(okText||"删除")}</button>`}</div></div>`;
+    <div class="row">${readonly ? `<button class="btn sm line" data-c>关闭</button>`
+      : `<button class="btn sm line" data-c>取消</button>
+         <button class="btn sm" data-k style="background:var(--err)">${esc(okText||"删除")}</button>`}</div></div>`;
   m.querySelectorAll("[data-c]").forEach(b => b.onclick = () => m.remove());
   const k = m.querySelector("[data-k]");
-  if (k) k.onclick = () => { m.remove(); onOk(); };
+  if (k) k.onclick = () => { m.remove(); onOk && onOk(); };
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   document.body.appendChild(m); (k || m.querySelector("[data-c]")).focus();
 }
 function playDialog(r){
-  dialog("看一下这条成片", "", () => {}, "", true,
+  dialog("成片预览", "", null, "", true,
     `<div class="play"><video src="${vid(r.id)}" controls autoplay playsinline></video>
-      <div class="cap">${esc(r.title)} · ${esc(r.ts || "")}</div></div>`);
+      <div class="cap">${esc(r.title)}${r.ts ? " · " + esc(r.ts) : ""}</div></div>`);
 }
 
-/* ── 路由 ── */
+/* 令牌门：401 时弹出输入 */
+function openGate(){
+  if ($("__gate")) return;
+  const m = document.createElement("div"); m.className = "modal"; m.id = "__gate";
+  m.innerHTML = `<div class="box" role="dialog" aria-modal="true">
+    <h3>输入访问令牌</h3>
+    <p>这台工作台开启了访问保护。令牌在服务器 .env 的 VIDEOGEN_TOKEN 里。</p>
+    <input type="password" id="__gtok" placeholder="访问令牌" autocomplete="off">
+    <div class="row"><button class="btn sm accent" data-ok>进入</button></div></div>`;
+  m.querySelector("[data-ok]").onclick = () => {
+    const v = m.querySelector("#__gtok").value.trim();
+    if (!v) return;
+    localStorage.setItem("vg.token", v);
+    m.remove(); route(true);
+  };
+  m.onclick = (e) => {};
+  document.body.appendChild(m);
+  m.querySelector("#__gtok").focus();
+  m.querySelector("#__gtok").onkeydown = (e) => { if (e.key === "Enter") m.querySelector("[data-ok]").click(); };
+}
+
+/* ================= 路由 ================= */
 let lock = null;
 const setHash = (h) => { lock = h; if (location.hash !== h) location.hash = h; };
-async function route(){
-  if (location.hash === lock) return;
+async function route(force){
+  if (!force && location.hash === lock) return;
   lock = location.hash;
-  const m = location.hash.match(/#\/project\/([a-f0-9]+)(?:\/(\d))?/);
+  const m = location.hash.match(/#\/project\/([a-f0-9]+)/);
   if (m){
-    const ps = await api("/api/projects");
-    const p = ps.find(x => x.project_id === m[1]);
-    if (p){ CUR = p; return renderStudio(parseInt(m[2] || "1", 10)); }
+    try {
+      const ps = await api("/api/projects");
+      const p = ps.find(x => x.project_id === m[1]);
+      if (p){ CUR = p; return renderProject(); }
+    } catch (e) { if (e.auth) return openGate(); }
   }
+  CUR = null;
   renderHome();
 }
 function goHome(){ CUR = null; stopPoll(); setHash("#/"); renderHome(); }
-window.addEventListener("hashchange", route);
-window.addEventListener("DOMContentLoaded", route);
+window.addEventListener("hashchange", () => route());
 $("brand").onclick = (e) => { e.preventDefault(); goHome(); };
 $("newBtn").onclick = newProject;
 
-/* ── 首页 ── */
+async function newProject(){
+  try {
+    const r = await api("/api/projects/create", {method:"POST",
+      headers:{"Content-Type":"application/json"}, body:"{}"});
+    if (!r || !r.project_id) return toast("创建失败");
+    CUR = {project_id:r.project_id, title:"新建项目", bundle:null, renders:[]};
+    setHash("#/project/" + r.project_id);
+    renderProject();
+  } catch (e) { if (e.auth) openGate(); else toast("创建失败：" + e.message); }
+}
+
+/* ================= 首页 ================= */
+function allRenders(projects){
+  const out = [];
+  projects.forEach(p => (p.renders || []).forEach(r => {
+    if (r.file) out.push({id:r.id, ts:r.ts, title:p.title, project:p.project_id});
+  }));
+  return out;
+}
 async function renderHome(){
   stopPoll();
-  $("newBtn").classList.add("hide");
-  $("main").innerHTML = `<div class="view"><p class="lead">载入中…</p></div>`;
-  const ps = await api("/api/projects");
+  $("main").innerHTML = `<div class="view"><p style="color:var(--ink-3)">载入中…</p></div>`;
+  let ps = [];
+  try { ps = await api("/api/projects"); }
+  catch (e) { if (e.auth) return openGate(); }
   const rs = allRenders(ps).reverse();
-  const hero = rs.length ? `
-    <div class="layer l-main" style="--depth:-14px">
-      <div class="screen reveal"><video src="${vid(rs[0].id)}" muted loop autoplay
-        playsinline preload="auto"></video>
-        <span class="cap">${esc(rs[0].title)} · ${esc((rs[0].ts||"").slice(-5))}</span></div>
-    </div>
-    ${rs[1] ? `<div class="layer l-back" style="--depth:-26px">
-      <div class="screen reveal"><video src="${vid(rs[1].id)}#t=1.4" muted playsinline
-        preload="metadata"></video></div></div>` : ""}
-    ${rs[2] ? `<div class="layer l-far" style="--depth:-38px">
-      <div class="screen reveal"><video src="${vid(rs[2].id)}#t=2.2" muted playsinline
-        preload="metadata"></video></div></div>` : ""}`
-    : `<div class="layer l-main" style="--depth:-14px"><div class="screen reveal">
-        <div class="sheet" style="width:278px;height:494px">
-          <span style="font-family:Display,sans-serif;font-weight:900;font-size:26px;
-            color:rgba(26,24,21,.7)">还没有成片</span>
-          <span>渲染第一条，这里就会亮起来</span></div></div></div>`;
-  const film = rs.length ? `<div class="film"><div class="track">
-      ${[...rs, ...rs].map(r => `<span class="f"><video src="${vid(r.id)}#t=1.6" muted
-        preload="metadata" playsinline></video></span>`).join("")}
-    </div></div>` : "";
+  const recent = rs.length ? `<section class="rail-sec">
+    <div class="sec-h"><h2>最近成片</h2><span class="n">${rs.length} 条 · 悬停即播</span></div>
+    <div class="posters" id="posters"></div></section>` : "";
   $("main").innerHTML = `<div class="view">
-    <section class="hero">
-      <div>
-        <div class="kicker"><s></s>短视频生成工作台</div>
-        <h1 class="display mask">
-          <span class="ln"><span>把文案和素材，</span></span>
-          <span class="ln"><span style="animation-delay:.12s">做成能发的短视频</span></span>
-        </h1>
-        <div class="rule"></div>
-        <p class="lede">导入素材包，AI 导演排分镜、配音、画面与音效，本机渲染出片。</p>
-        <div class="facts"><span>1080×1920 竖屏</span><s>/</s><span>本机渲染</span><s>/</s>
-          <span>素材不出服务器</span><s>/</s><span>${renderEstimate(96)}出片</span></div>
-        <div class="act">
-          <button class="btn" id="new2">新建项目</button>
-          ${rs.length ? `<button class="quiet" id="watch">看一条成片</button>` : ""}
-        </div>
-        <div class="dropbar" id="dropbar" role="button" tabindex="0"
-          aria-label="拖入素材包 zip 直接开始">
-          <span>拖入素材包 zip，直接开工</span><span class="pick">选择文件</span>
-        </div>
-        <input type="file" id="heroZip" accept=".zip" class="hide">
-      </div>
-      <div class="stage" id="stage">${hero}</div>
-    </section>
-    ${film}
-    <section class="shelf">
-      <div class="head">
-        <h2>成片</h2><span class="n">${rs.length} 条 · 点开即播</span>
-      </div>
-      ${rs.length ? `<div class="plates" id="plates"></div>`
-        : `<div class="empty-shelf">还没有成片。渲染第一条之后，这里会摆满你的片子。</div>`}
-    </section>
-    <section class="rows">
-      <div class="head">项目 · ${ps.length}</div>
-      ${ps.length ? `<ul id="list"></ul>` : `<div class="blank" style="margin-top:var(--s6)">
-        <b>还没有项目</b>新建一个，把素材包 zip 拖进来就能开始。</div>`}
+    <button class="import" id="dropstrip" role="button" tabindex="0" aria-label="导入素材包 zip">
+      <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+      <span><b>导入素材包</b><span>拖入 zip（content.json + manifest.json + 素材），自动建项目</span></span>
+      <span class="pick btn sm line">选择文件</span>
+    </button>
+    <input type="file" id="homeZip" accept=".zip" class="hide">
+    ${recent}
+    <section class="rail-sec">
+      <div class="sec-h"><h2>项目</h2><span class="n">${ps.length} 个</span></div>
+      ${ps.length ? `<div class="grid" id="pgrid"></div>`
+        : `<div class="card blank"><b>还没有项目</b>上面拖入一个素材包 zip，或点右上角新建。</div>`}
     </section>
   </div>`;
-  $("new2").onclick = newProject;
-  if (rs.length) $("watch").onclick = () => playDialog(rs[0]);
-  wireHeroDrop();
-  wireParallax();
-  // 舞台大屏：强制播放；其余层与胶片带：取首帧
-  const main = document.querySelector(".l-main video");
-  kickPlay(main);
-  document.querySelectorAll(".l-back video,.l-far video").forEach(v => frameAt(v, 1.4));
-  document.querySelectorAll(".film .f video").forEach(v => frameAt(v, 1.6));
-  const plates = $("plates");
-  if (plates) rs.forEach(r => plates.appendChild(plate(r)));
-  const list = $("list");
-  if (list) ps.forEach(p => list.appendChild(entry(p)));
+  wireImport($("dropstrip"), $("homeZip"), heroStart);
+  const pw = $("posters");
+  if (pw) rs.slice(0, 12).forEach(r => pw.appendChild(poster(r)));
+  const g = $("pgrid");
+  if (g) ps.forEach(p => g.appendChild(pcard(p)));
 }
-// 片架：悬停自动播放，移开回到首帧
-function plate(r){
-  const el = document.createElement("article");
-  el.className = "plate";
-  el.innerHTML = `<div class="tags"><span class="tag on">成片</span>
-      <span class="tag play">悬停即播</span></div>
-    <div class="holder"><video src="${vid(r.id)}#t=0.8" muted loop playsinline
-      preload="metadata"></video></div>
-    <span class="meta"><span class="t">${esc(r.title)}</span>
-      <span class="d">${esc(r.ts || "")} · <b data-dur>—</b></span></span>`;
+function poster(r){
+  const el = document.createElement("button");
+  el.className = "poster";
+  el.innerHTML = `<span class="frame"><video src="${vid(r.id)}#t=0.8" muted loop playsinline
+      preload="metadata"></video></span>
+    <span class="t">${esc(r.title)}</span><span class="d">${esc(r.ts || "")}</span>`;
   const v = el.querySelector("video");
-  // 取片长 35% 处的一帧：展示内容本身，而不是千篇一律的片头
-  const seekMid = () => {
-    try {
-      const t = isFinite(v.duration) && v.duration > 4 ? v.duration * 0.35 : 1.4;
-      v.currentTime = t;
-    } catch (e) {}
-  };
-  if (v.readyState >= 1) seekMid();
-  else v.addEventListener("loadedmetadata", seekMid, {once:true});
-  v.addEventListener("loadedmetadata", () => {
-    const d = el.querySelector("[data-dur]");
-    if (d && isFinite(v.duration)) d.textContent = mmss(v.duration);
-  });
-  el.onmouseenter = () => { v.play().catch(() => {}); };
-  el.onmouseleave = () => { v.pause(); seekMid(); };
+  frameAt(v, v.duration > 4 ? v.duration * .35 : 1.2);
+  el.onmouseenter = () => v.play().catch(() => {});
+  el.onmouseleave = () => { v.pause(); frameAt(v, 1.2); };
   el.onclick = () => playDialog(r);
   return el;
 }
-// 舞台视差：鼠标移动时三层按景深反向位移
-function wireParallax(){
-  const stage = $("stage"); if (!stage) return;
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  if (matchMedia("(hover: none)").matches) return;
-  const kick = (e) => {
-    const r = stage.getBoundingClientRect();
-    const x = (e.clientX - (r.left + r.width / 2)) / r.width;
-    const y = (e.clientY - (r.top + r.height / 2)) / r.height;
-    stage.style.setProperty("--px", x.toFixed(3));
-    stage.style.setProperty("--py", y.toFixed(3));
+function pcard(p){
+  const el = document.createElement("div");
+  el.className = "pcard";
+  const n = p.renders_count || 0;
+  const last = (p.renders || []).filter(r => r.file).slice(-1)[0];
+  const cover = p.cover
+    ? `<img loading="lazy" alt="" src="${qs(p.cover)}">`
+    : `<span class="letter">${esc((p.title || "?").slice(0, 1))}</span>`;
+  const play = last ? `<video src="${vid(last.id)}#t=0.8" muted preload="metadata" playsinline></video>` : cover;
+  el.innerHTML = `<div class="cover">${last ? `<span class="cnt tag ${n ? "ok" : ""}">${n ? n + " 成片" : ""}</span>` : ""}
+      ${play}</div>
+    <div class="body"><div class="t">${esc(p.title)}</div>
+      <div class="m">${p.assets_count ?? 0} 素材 · ${esc(p.created || "")}</div></div>
+    <button class="del" data-del aria-label="删除项目"><svg width="14" height="14" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  if (last){
+    const v = el.querySelector(".cover video");
+    frameAt(v, 0.8);
+    el.querySelector(".cover").onclick = () => { CUR = p; renderProject(); };
+  } else {
+    el.querySelector(".cover").onclick = () => { CUR = p; renderProject(); };
+  }
+  el.querySelector(".body").onclick = () => { CUR = p; renderProject(); };
+  el.querySelector("[data-del]").onclick = (e) => {
+    e.stopPropagation();
+    dialog("删除「" + p.title + "」", "项目与渲染记录会一起删除，成片文件保留在服务器 outputs/。", async () => {
+      try {
+        await api(`/api/projects/${p.project_id}/delete`, {method:"POST"});
+        toast("已删除"); renderHome();
+      } catch (err) { toast("删除失败：" + err.message); }
+    });
   };
-  window.addEventListener("mousemove", kick, {passive:true});
+  return el;
+}
+function wireImport(drop, input, onFile){
+  if (!drop) return;
+  input.onchange = (e) => onFile(e.target.files[0]);
+  drop.onclick = () => input.click();
+  drop.onkeydown = (e) => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); input.click(); } };
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault(); drop.classList.remove("over");
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) onFile(f);
+  });
 }
 async function heroStart(file){
   if (!file) return;
-  const r = await api("/api/projects/create", {method:"POST",
-    headers:{"Content-Type":"application/json"}, body:"{}"});
-  if (!r || !r.project_id) return toast("创建失败");
-  CUR = {project_id:r.project_id, title:file.name.replace(/\.zip$/i,""), bundle:null};
+  try {
+    const r = await api("/api/projects/create", {method:"POST",
+      headers:{"Content-Type":"application/json"}, body:"{}"});
+    if (!r || !r.project_id) return toast("创建失败");
+    CUR = {project_id:r.project_id, title:file.name.replace(/\.zip$/i,""), bundle:null, renders:[]};
+    const up = await uploadZip(file);
+    CUR.bundle = up.name; CUR.title = up.name;
+    await api(`/api/projects/${CUR.project_id}/mount`, {method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({bundle:up.name, title:up.name})});
+    toast("已导入");
+    setHash("#/project/" + CUR.project_id);
+    renderProject();
+  } catch (e) { if (e.auth) openGate(); else toast("导入失败：" + e.message); }
+}
+async function uploadZip(file){
   toast("正在上传并解析…");
   const fd = new FormData(); fd.append("file", file);
-  const up = await api("/api/upload", {method:"POST", body:fd});
-  if (up.error) return toast(up.error);
-  CUR.bundle = up.name; CUR.title = up.name;
-  await api(`/api/projects/${CUR.project_id}/mount`, {method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({bundle:up.name, title:up.name})});
-  toast("已导入");
-  setHash(`#/project/${CUR.project_id}/2`);
-  renderStudio(2);
-}
-function wireHeroDrop(){
-  const dz = $("dropbar"); if (!dz) return;
-  $("heroZip").onchange = (e) => heroStart(e.target.files[0]);
-  dz.onclick = () => $("heroZip").click();
-  dz.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault(); $("heroZip").click(); } };
-  dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("over"); });
-  dz.addEventListener("dragleave", () => dz.classList.remove("over"));
-  dz.addEventListener("drop", (e) => {
-    e.preventDefault(); dz.classList.remove("over");
-    const f = e.dataTransfer?.files?.[0]; if (f) heroStart(f);
-  });
-}
-function entry(p){
-  const li = document.createElement("li");
-  const n = p.renders_count || 0;
-  const last = (p.renders || []).filter(r => r.file).slice(-1)[0];
-  const mini = last
-    ? `<span class="mini"><video src="${vid(last.id)}#t=0.8" muted preload="metadata"
-         playsinline></video></span>`
-    : `<span class="mini">${esc((p.title||"?").slice(0,1))}</span>`;
-  li.className = "rw";
-  li.innerHTML = `${mini}
-    <button class="t" aria-label="打开 ${esc(p.title)}">${esc(p.title)}</button>
-    <span class="m">${p.assets_count ?? 0} 素材 · ${n ? n + " 个成片" : "未生成"} · ${esc(p.created||"")}
-      <button class="del" data-del>删除</button></span>`;
-  frameAt(li.querySelector(".mini video"), 0.8);
-  li.querySelector(".t").onclick = () => { CUR = p; renderStudio(2); };
-  li.querySelector("[data-del]").onclick = () => dialog(
-    "删除「" + p.title + "」", "项目与渲染记录会一起删除，不可恢复。", async () => {
-      await api(`/api/projects/${p.project_id}/delete`, {method:"POST"});
-      toast("已删除"); renderHome();
-    });
-  return li;
-}
-async function newProject(){
-  const r = await api("/api/projects/create", {method:"POST",
-    headers:{"Content-Type":"application/json"}, body:"{}"});
-  if (!r || !r.project_id) return toast("创建失败");
-  CUR = {project_id:r.project_id, title:"新建项目", bundle:null};
-  setHash(`#/project/${r.project_id}/1`);
-  renderStudio(1);
+  return api("/api/upload", {method:"POST", body:fd});
 }
 
-/* ── 项目内 ── */
+/* ================= 项目页 ================= */
+let timer = null, job = null, lastJob = null;
+let JD = null;
+function newJD(){ return { lastPct:-1, lastChange:0, stages:{}, localT0:Date.now(), samples:[], firstPoll:true, watchFrom:1 }; }
 function stopPoll(){ if (timer) clearInterval(timer); timer = null; }
-async function renderStudio(step){
+
+async function renderProject(){
   if (!CUR) return goHome();
-  $("newBtn").classList.remove("hide");
-  setHash(`#/project/${CUR.project_id}/${step}`);
-  if (step === 1 && CUR.bundle) step = 2;
-  const b = CUR.bundle ? await api("/api/bundle/" + CUR.bundle) : null;
-  const names = ["选择素材","内容确认","渲染配置","生成与成片"];
-  const can = [true, !!CUR.bundle, !!CUR.bundle, !!CUR.bundle];
+  stopPoll();
+  $("main").innerHTML = `<div class="view"><p style="color:var(--ink-3)">载入中…</p></div>`;
+  let b = null;
+  if (CUR.bundle){
+    try { b = await api("/api/bundle/" + CUR.bundle); }
+    catch (e) { if (e.auth) return openGate(); b = null; }
+  }
+  CURB = b;
   $("main").innerHTML = `<div class="view">
-    <div class="sbar">
-      <button class="quiet" id="back">← 全部项目</button>
-      <h2>${esc(CUR.title)}</h2>
-      ${b ? `<span class="who">${b.assets.length} 个素材</span>` : ""}
+    <div class="crumb">
+      <button class="ghost" id="back">← 全部项目</button>
+      <h1>${esc(CUR.title)}</h1>
+      ${b ? `<span class="tag">${b.assets.length} 素材 · ${mmss(b.estSeconds)}</span>` : `<span class="tag">未挂素材包</span>`}
     </div>
-    <nav class="rail">
-      ${names.map((t,i) => `<button class="${i+1===step?"on":i+1<step?"done":""}"
-        data-n="${i+1}" ${can[i]?"":"disabled"}><span class="n">0${i+1}</span><span>${t}</span></button>`).join("")}
-    </nav>
-    <div class="body" id="body"></div>
+    <div class="pj">
+      <div class="colmain" id="colmain"></div>
+      <div class="rail" id="rail"></div>
+    </div>
   </div>`;
   $("back").onclick = goHome;
-  $("main").querySelectorAll(".rail button").forEach(btn => {
-    btn.onclick = () => { if (!btn.disabled) renderStudio(+btn.dataset.n); };
-  });
-  $("body").innerHTML = step===1 ? vChoose() : step===2 ? vConfirm(b)
-    : step===3 ? vConfig(b) : vRender();
-  if (step===1) wireChoose();
-  if (step===2) $("next2").onclick = () => renderStudio(3);
-  if (step===3) wireConfig(b);
-  if (step===4) wireRender();
-}
-function vChoose(){
-  return `<p class="lead">给这个项目挂一个素材包，系统会校验结构，并把文案与素材解析出来。</p>
-  <button class="drop" id="drop"><b>拖入 zip，或点击选择文件</b>
-    <span>需要 content.json + manifest.json + images/ + videos/</span></button>
-  <input type="file" id="zip" accept=".zip" class="hide">
-  <div class="sub">服务器上已有的素材包</div>
-  <ul class="blist" id="bundles"><li class="quiet" style="padding:16px 0">读取中…</li></ul>`;
-}
-function wireChoose(){
-  const up = async (f) => {
-    if (!f) return;
-    toast("正在上传并解析…");
-    const fd = new FormData(); fd.append("file", f);
-    const r = await api("/api/upload", {method:"POST", body:fd});
-    if (r.error) return toast(r.error);
-    CUR.bundle = r.name; CUR.title = r.name;
-    await api(`/api/projects/${CUR.project_id}/mount`, {method:"POST",
-      headers:{"Content-Type":"application/json"}, body:JSON.stringify({bundle:r.name, title:r.name})});
-    toast("已导入"); renderStudio(2);
+  renderStageCard(b);
+  renderRail(b);
+  $("cfgReset").onclick = () => {
+    CFG = Object.assign({}, CFG_DEF); saveCfg();
+    paintConfig(CURB);
+    toast("已恢复默认配置");
   };
-  const dz = $("drop");
-  $("zip").onchange = (e) => up(e.target.files[0]);
-  dz.onclick = () => $("zip").click();
-  dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.style.background = "var(--hover)"; });
-  dz.addEventListener("dragleave", () => { dz.style.background = ""; });
-  dz.addEventListener("drop", (e) => {
-    e.preventDefault(); dz.style.background = "";
-    const f = e.dataTransfer?.files?.[0]; if (f) up(f);
-  });
-  api("/api/bundles").then(list => {
-    const ul = $("bundles");
-    if (!list.length) return void (ul.innerHTML = `<li class="quiet" style="padding:16px 0">还没有素材包</li>`);
-    ul.innerHTML = "";
-    list.forEach(x => {
-      const li = document.createElement("li");
-      li.innerHTML = `<button><span>${esc(x.name)}</span><span class="m">${x.assets} 个素材 · ${esc(x.updated)}</span></button>`;
-      li.querySelector("button").onclick = async () => {
-        CUR.bundle = x.name; CUR.title = x.name;
-        await api(`/api/projects/${CUR.project_id}/mount`, {method:"POST",
-          headers:{"Content-Type":"application/json"}, body:JSON.stringify({bundle:x.name, title:x.name})});
-        renderStudio(2);
-      };
-      ul.appendChild(li);
-    });
-  });
+  wireRenderPane(b);
 }
-function vConfirm(b){
-  const hooks = (b.hookLines || []).map(l => {
+
+/* —— 左栏：成片 + 内容 —— */
+function renderStageCard(b){
+  const box = $("colmain"); if (!box) return;
+  const rs = (CUR.renders || []).filter(r => r.file);
+  const hooks = b && (b.hookLines || []).map(l => {
     const i = l.text.indexOf(l.highlight || "");
     if (!l.highlight || i < 0) return `<div class="ln">${esc(l.text)}</div>`;
     return `<div class="ln">${esc(l.text.slice(0,i))}<span class="hl">${esc(l.highlight)}</span>${esc(l.text.slice(i+l.highlight.length))}</div>`;
   }).join("");
-  const imgs = b.assets.filter(a => a.kind === "image").length;
-  const vids = b.assets.filter(a => a.kind === "video").length;
-  const src = (a) => `/media/${encodeURIComponent(b.name)}/${a.file.split("/").map(encodeURIComponent).join("/")}`;
-  return `<p class="lead">核对文案与素材。确认后进入渲染配置，这一步不会改动素材。</p>
-  <h2 class="ctitle">${esc(b.title)}</h2>
-  <div class="stats">${b.script.length} 字 · 图片 ${imgs} · 视频 ${vids} · 预计成片 ${mmss(b.estSeconds)}</div>
-  ${hooks ? `<div class="hook">${hooks}</div>` : ""}
-  <div class="sub">口播文案</div>
-  <div class="script">${esc(b.script)}</div>
-  <div class="sub">素材 ${b.assets.length}</div>
-  <ul class="assets">${b.assets.map(a => `<li class="a">
-    ${a.kind === "video" ? `<video src="${src(a)}" muted preload="none"></video>`
-      : `<img loading="lazy" alt="" src="${src(a)}">`}
-    <div class="cap">${esc(a.summary || a.file)}</div></li>`).join("")}</ul>
-  <div class="actbar"><button class="btn" id="next2">下一步：渲染配置</button></div>`;
+  const assets = b ? b.assets : [];
+  const imgs = assets.filter(a => a.kind === "image").length;
+  const vids = assets.length - imgs;
+  box.innerHTML = `
+    <section class="card stage-card" id="stageCard">
+      <div class="sec-h" style="margin-bottom:14px"><h2>成片</h2>
+        <span class="n" id="stageMeta">${rs.length ? "最近 " + esc(rs[rs.length-1].ts || "") : "还没有成片"}</span></div>
+      <div class="player-row">
+        <div class="media-frame"><video id="mainPlayer" controls playsinline
+          ${rs.length ? `src="${vid(rs[rs.length-1].id)}"` : ""}></video></div>
+        <div class="stage-side">
+          ${rs.length ? `
+            <div class="stats">这条片子可以直接预览。渲染新的一版时，这里不会被覆盖。</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <a class="btn sm line" id="dlBtn" ${rs.length ? `href="${vid(rs[rs.length-1].id)}" download` : ""}>下载成片</a>
+              <button class="btn sm line" id="againBtn">再生成一版</button>
+            </div>
+            <div>
+              <div class="sub-h" style="margin-bottom:6px">历史版本</div>
+              <div class="hist" id="hist"></div>
+            </div>`
+          : `<div class="stats">右边配好模板和声音，点「开始渲染」，成片会出现在这里。渲染期间可以随时回来看进度。</div>`}
+        </div>
+      </div>
+    </section>
+    ${b ? `
+    <section class="card hookline">
+      <span class="cap">标题 / 钩子</span>${hooks || `<div class="ln">${esc(b.title)}</div>`}
+    </section>
+    <section class="card">
+      <div class="sec-h" style="padding:14px 20px 0;margin-bottom:8px"><h2>口播文案</h2>
+        <span class="n">${b.script.length} 字 · 图片 ${imgs} · 视频 ${vids}</span></div>
+      <div style="max-height:240px;overflow:auto;padding:0 20px 16px" class="script">${esc(b.script)}</div>
+    </section>
+    <details class="disc">
+      <summary>素材<i class="n">${assets.length} 个 · 点开查看</i></summary>
+      <div class="disc-b"><div class="assets-grid">
+        ${assets.map(a => `<div class="a">
+          ${a.kind === "video" ? `<video src="${mediaUrl(b.name, a.file)}" muted preload="none"></video>`
+            : `<img loading="lazy" alt="" src="${mediaUrl(b.name, a.file)}">`}
+          <div class="cap">${esc(a.summary || a.file)}</div></div>`).join("")}
+      </div></div>
+    </details>` : `
+    <section class="card blank"><b>先挂一个素材包</b>在右边选择已有素材包，或上传一个 zip。</section>`}`;
+  const hist = $("hist");
+  if (hist && rs.length){
+    rs.slice().reverse().forEach((r, i) => {
+      const jid = r.id || String(r.file).split("-").pop().replace(".mp4","");
+      const it = document.createElement("button");
+      it.className = "h-item" + (i === 0 ? " on" : "");
+      it.innerHTML = `<span class="frame"><video src="${vid(jid)}#t=0.8" muted preload="metadata" playsinline></video></span>
+        <span>${esc((r.ts || "").slice(-5))}</span>`;
+      const v = it.querySelector("video"); frameAt(v, 0.8);
+      it.onclick = () => {
+        $("mainPlayer").src = vid(jid);
+        $("dlBtn").href = vid(jid);
+        hist.querySelectorAll(".h-item").forEach(x => x.classList.remove("on"));
+        it.classList.add("on");
+      };
+      hist.appendChild(it);
+    });
+  }
 }
-function vConfig(b){
-  const est = Math.round(b.estSeconds / (CFG.rate/100));
-  const warn = (b.notes || "").includes("横构图")
-    ? `<div class="note">素材按横构图收集，建议选「竖屏信息版」；选竖屏满屏可能裁掉主体。</div>` : "";
-  return `<p class="lead">设置形态、配音与画面信息。可以先按默认来，改参数不影响已有成片。</p>
-  ${warn}
-  <div class="grp"><div class="h">渲染模板</div>
-    <div class="opt tpl" id="fmt">
-      ${TPLS.map(t => {
-        const v = TPL_VIS[t.id] || {};
-        return `<button class="${t.id === CFG.format ? "on" : ""}" data-v="${esc(t.id)}">
-          <span class="sw" style="background:linear-gradient(135deg,${v.bg||"#000000"} 0 55%,${v.paper||"#777777"} 55% 100%)"><i style="background:${v.acc||"#999999"}"></i></span>
-          <b>${esc(t.name)}</b><small>${esc(v.hint || "")}</small></button>`;
-      }).join("")}
-    </div></div>
-  <div class="grp"><div class="h">声音</div>
-    <div class="field"><div><div class="t">配音音色</div>
-      <div class="d" id="voiceName">${esc(voiceLabel())}</div></div>
-      <div class="pills" id="voiceSeg">
-        ${Object.keys(VOICE).map(v => `<button class="pill ${v===CFG.voice?"on":""}" data-v="${v}">${esc(VOICE[v].split(" · ")[0])}</button>`).join("")}
-      </div></div>
-    <div class="field"><div><div class="t">语速 <b id="rateTxt" style="font-weight:700">${(CFG.rate/100).toFixed(2)}×</b></div>
-      <div class="d">成片预计 <span id="estTxt">${mmss(est)}</span></div></div>
-      <div class="pills" id="rateSeg">
-        ${[80,90,100,110,125].map(r => `<button class="pill ${r===CFG.rate?"on":""}" data-r="${r}">${(r/100).toFixed(2)}×</button>`).join("")}
-      </div></div>
-  </div>
-  <div class="grp"><div class="h">音乐与音效</div>
-    <div class="field"><div><div class="t">背景音乐</div>
-      <div class="d">曲库在 assets/music/，放入 mp3 刷新即生效</div></div>
-      <div><select id="bgm" aria-label="背景音乐"></select></div></div>
-    <div class="field"><div><div class="t">智能音效</div>
-      <div class="d">在设计卡出现处加点缀音</div></div>
-      <div class="pills" id="sfxSeg">
-        <button class="pill" data-v="off">关闭</button>
-        <button class="pill on" data-v="hook">仅开场</button>
-        <button class="pill" data-v="accent">开场 + 卡片</button>
-        <button class="pill" data-v="full">全片</button>
-      </div></div>
-  </div>
-  <div class="grp"><div class="h">画面信息</div>
-    <div class="field"><div class="t">字幕</div>
-      <button class="sw ${CFG.subtitles?"on":""}" data-k="subtitles" role="switch"
-        aria-checked="${CFG.subtitles}" aria-label="字幕"><i></i></button></div>
-    <div class="field"><div><div class="t">资料来源</div>
-      <div class="d">画面底部露出文案引用来源</div></div>
-      <button class="sw ${CFG.sources?"on":""}" data-k="sources" role="switch"
-        aria-checked="${CFG.sources}" aria-label="资料来源"><i></i></button></div>
-    <div class="field" style="display:block"><div class="t" style="margin-bottom:6px">免责声明</div>
-      <textarea id="disclaimer">本片内容基于公开报道与公开资料整理，观点仅供参考，不构成任何投资建议</textarea></div>
-  </div>
-  <div class="go">
-    <span class="est">成片 <b id="est2">${mmss(est)}</b> · 渲染 <b id="render2">${renderEstimate(b.estSeconds)}</b></span>
-    <button class="btn" id="go">开始渲染</button>
-  </div>`;
-}
-function wireConfig(b){
-  document.querySelectorAll("#fmt button").forEach(o => o.onclick = () => {
-    document.querySelectorAll("#fmt button").forEach(x => x.classList.remove("on"));
-    o.classList.add("on"); CFG.format = o.dataset.v;
-  });
-  document.querySelectorAll("#voiceSeg .pill").forEach(p => p.onclick = () => {
-    document.querySelectorAll("#voiceSeg .pill").forEach(x => x.classList.remove("on"));
-    p.classList.add("on"); CFG.voice = p.dataset.v;
-    $("voiceName").textContent = voiceLabel();
-  });
-  const setRate = (r, sync) => {
-    r = Math.max(60, Math.min(200, r)); CFG.rate = r;
-    $("rateTxt").textContent = (r/100).toFixed(2) + "×";
-    const e = Math.round(b.estSeconds / (r/100));
-    $("estTxt").textContent = mmss(e); $("est2").textContent = mmss(e);
-    const re = $("render2"); if (re) re.textContent = renderEstimate(e);
-    if (sync) document.querySelectorAll("#rateSeg .pill").forEach(x =>
-      x.classList.toggle("on", +x.dataset.r === r));
-  };
-  document.querySelectorAll("#rateSeg .pill").forEach(p => p.onclick = () => {
-    document.querySelectorAll("#rateSeg .pill").forEach(x => x.classList.remove("on"));
-    p.classList.add("on"); setRate(+p.dataset.r, false);
-  });
-  document.querySelectorAll("#sfxSeg .pill").forEach(p => p.onclick = () => {
-    document.querySelectorAll("#sfxSeg .pill").forEach(x => x.classList.remove("on"));
-    p.classList.add("on"); CFG.sfxMode = p.dataset.v;
-  });
-  document.querySelectorAll(".sw[data-k]").forEach(s => s.onclick = () => {
-    s.classList.toggle("on"); CFG[s.dataset.k] = s.classList.contains("on");
-    s.setAttribute("aria-checked", CFG[s.dataset.k]);
-  });
-  $("go").onclick = startRender;
-  api("/api/music").then(list => {
-    const sel = $("bgm"); if (!sel) return;
-    sel.innerHTML = "<option value=\"\">不用背景音乐</option>" +
-      list.map(m => `<option value="${esc(m.file)}">${esc(m.name)}${m.mood ? " · " + esc(m.mood) : ""}</option>`).join("");
-    const want = CFG.bgm && list.some(m => m.file === CFG.bgm) ? CFG.bgm : (list[0]?.file || "");
-    sel.value = want; CFG.bgm = want;
-    sel.onchange = () => { CFG.bgm = sel.value; };
+function refreshStageCard(){
+  api("/api/projects").then(ps => {
+    const me = ps.find(x => x.project_id === CUR.project_id);
+    if (!me) return;
+    CUR = Object.assign(CUR, me);
+    let b = null;
+    if (CUR.bundle) api("/api/bundle/" + CUR.bundle).then(x => renderStageCard(x)).catch(() => renderStageCard(null));
+    else renderStageCard(null);
   }).catch(() => {});
 }
-function vRender(){
-  return `<div class="console">
-    <div class="recline"><i></i><span id="pmode">STAND BY</span></div>
-    <div class="count" id="pcount"><em>0</em><span class="u">帧</span></div>
-    <div class="stage-line" id="pstage">准备好了，可以开始</div>
-    <div class="detail" id="pdetail">点下面的按钮开始渲染，这里会显示每一步的进度。</div>
-    <div class="track" role="progressbar" aria-label="生成进度" aria-valuemin="0"
-      aria-valuemax="100" aria-valuenow="0" id="pbarBox"><i id="pbar"></i></div>
-    <div class="meta"><span id="ppct"></span><span id="peta"></span></div>
-    <div class="shots" id="shotsBox">
-      <div class="h">分镜剧照</div>
-      <div class="strip" id="strip">
-        ${[1,2,3,4].map(() => `<div class="shot wait">取景中…</div>`).join("")}
+
+/* —— 右栏：素材包 + 配置 + 渲染 —— */
+function renderRail(b){
+  const rail = $("rail"); if (!rail) return;
+  const warn = b && (b.notes || "").includes("横构图")
+    ? `<div class="note-warn">素材按横构图收集，建议选「竖屏信息版」；「竖屏满屏」可能裁掉主体。</div>` : "";
+  rail.innerHTML = `
+    <section class="card panel" id="bundlePanel"></section>
+    <section class="card panel">
+      <div class="ph"><h3>渲染配置</h3><button class="ghost" id="cfgReset" style="padding:4px 8px">恢复默认</button></div>
+      ${warn}
+      <div class="grp"><div class="gh">渲染模板</div><div class="tpls" id="fmt"></div></div>
+      <div class="grp"><div class="gh">配音音色</div><div class="pills" id="voiceSeg"></div></div>
+      <div class="grp"><div class="gh">语速 <span id="rateTxt" style="color:var(--ink);font-weight:800">${(CFG.rate/100).toFixed(2)}×</span>
+        <span style="float:right" id="estTxt"></span></div>
+        <div class="pills" id="rateSeg"></div></div>
+      <details class="disc" style="margin-top:12px"><summary>音乐、音效与画面信息<i class="n">更多设置</i></summary>
+        <div class="disc-b">
+          <div class="grp"><div class="gh">背景音乐</div>
+            <select id="bgm" aria-label="背景音乐" style="max-width:100%"></select></div>
+          <div class="grp"><div class="gh">智能音效</div><div class="pills" id="sfxSeg"></div></div>
+          <div class="grp"><div class="field"><span class="t">字幕</span>
+            <button class="sw ${CFG.subtitles ? "on" : ""}" data-k="subtitles" role="switch"
+              aria-checked="${CFG.subtitles}" aria-label="字幕"><i></i></button></div>
+          <div class="field"><span><span class="t">资料来源</span>
+            <span class="d" style="display:block">画面底部露出引用来源</span></span>
+            <button class="sw ${CFG.sources ? "on" : ""}" data-k="sources" role="switch"
+              aria-checked="${CFG.sources}" aria-label="资料来源"><i></i></button></div>
+          <div class="grp"><div class="gh">免责声明</div>
+            <textarea id="disclaimer">本片内容基于公开报道与公开资料整理，观点仅供参考，不构成任何投资建议</textarea></div>
+        </div></details>
+      <div class="render-cta" style="margin-top:14px">
+        <div class="est">成片 <b id="est2">—</b><br>渲染 <b id="render2">—</b></div>
+        <button class="btn accent" id="go">开始渲染</button>
       </div>
-    </div>
-    <ol class="steps" id="stages">
-      ${STAGE8.map((t,i) => `<li data-i="${i+1}"><span class="n">0${i+1}</span>
-        <span class="t">${t}</span><span class="d" data-dur="${i+1}"></span></li>`).join("")}
-    </ol>
-    <p class="tip" id="tip"></p>
-    <div class="err hide" id="perr"></div>
-    <div class="foot"><span>任务</span><code id="taskId">—</code>
-      <button class="quiet" id="copyId">复制</button></div>
-  </div>
-  <div class="result hide" id="result">
-    <h3 class="display" style="font-size:var(--t-26)">成片</h3>
-    <div class="frame"><video class="res" id="player" controls playsinline></video></div>
-    <div class="rrow">
-      <a class="btn sm" id="dl" download>下载成片</a>
-      <button class="quiet" id="again">再生成一版</button>
-      <span class="quiet" id="rmeta"></span>
-    </div>
-  </div>
-  <section class="hist hide" id="hist">
-    <div class="h">渲染记录</div>
-    <ul id="histList"></ul>
-  </section>`;
+    </section>
+    <section class="card panel task" id="taskCard"></section>`;
+  paintBundlePanel();
+  paintConfig(b);
+  paintTaskIdle();
 }
-function tweenCount(to){
-  const el = $("pcount"); if (!el) return;
-  const from = Number(el.dataset.v || 0);
-  const toN = Number(String(to).replace(/,/g, "")) || 0;
-  if (!isFinite(toN) || toN === from) return;
-  el.dataset.v = String(toN);
-  const t0 = performance.now(), dur = 520;
-  const step = (t) => {
-    const k = Math.min(1, (t - t0) / dur);
-    const e = 1 - Math.pow(1 - k, 3);
-    const val = Math.round(from + (toN - from) * e);
-    const parts = el.innerHTML.split("<em>");
-    el.innerHTML = num(val) + (parts[1] ? "<em>" + parts[1] : "");
-    if (k < 1) requestAnimationFrame(step);
+function paintBundlePanel(){
+  const el = $("bundlePanel"); if (!el) return;
+  if (!CUR.bundle){
+    el.innerHTML = `<div class="ph"><h3>素材包</h3></div>
+      <div class="bundle-none"><span>还没挂素材包</span><button class="btn sm line" id="pickBundle">选择</button></div>`;
+  } else {
+    el.innerHTML = `<div class="ph"><h3>素材包</h3></div>
+      <div class="bundle-chip">
+        <span class="b-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></span>
+        <span class="b-name"><b>${esc(CUR.bundle)}</b><span id="bundleMeta"></span></span>
+        <button id="pickBundle">更换</button>
+      </div>`;
+    api("/api/bundles").then(list => {
+      const m = $("bundleMeta");
+      const hit = list.find(x => x.name === CUR.bundle);
+      if (m && hit) m.textContent = hit.assets + " 素材";
+    }).catch(() => {});
+  }
+  $("pickBundle").onclick = openBundleModal;
+}
+function openBundleModal(){
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="box" role="dialog" aria-modal="true">
+    <h3>素材包</h3><p>选服务器上已有的，或上传一个新的 zip。</p>
+    <button class="btn line sm" id="bmUpload" style="width:100%">上传 zip 文件</button>
+    <input type="file" id="bmZip" accept=".zip" class="hide">
+    <div class="sub-h" style="margin-top:14px">已有的素材包</div>
+    <div class="mlist" id="bmList"><p style="color:var(--ink-3);font-size:13px">读取中…</p></div>
+    <div class="row"><button class="btn sm line" data-c>关闭</button></div></div>`;
+  m.querySelector("[data-c]").onclick = () => m.remove();
+  m.onclick = (e) => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
+  m.querySelector("#bmUpload").onclick = () => m.querySelector("#bmZip").click();
+  m.querySelector("#bmZip").onchange = async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const up = await uploadZip(f);
+      await mountBundle(up.name, up.name);
+      m.remove();
+    } catch (err) { toast("上传失败：" + err.message); }
   };
-  requestAnimationFrame(step);
+  api("/api/bundles").then(list => {
+    const box = m.querySelector("#bmList");
+    if (!list.length) return void (box.innerHTML = `<p style="color:var(--ink-3);font-size:13px">还没有素材包</p>`);
+    box.innerHTML = "";
+    list.forEach(x => {
+      const btn = document.createElement("button");
+      btn.innerHTML = `<span>${esc(x.name)}</span><span class="m">${x.assets} 素材 · ${esc(x.updated)}</span>`;
+      btn.onclick = async () => { await mountBundle(x.name, x.name); m.remove(); };
+      box.appendChild(btn);
+    });
+  }).catch(() => {});
 }
-function setCount(done, total){
-  const el = $("pcount"); if (!el) return;
-  if (total == null){ el.innerHTML = "<em>0</em><span class=\"u\">帧</span>"; el.dataset.v = "0"; return; }
-  const parts = el.innerHTML.split("<em>");
-  const tail = (parts[1] || "0</em><span class=\"u\">帧</span>");
-  el.innerHTML = num(done) + "<em> ⁄ " + num(total) + "</em>" + tail.split("</em>")[1];
-  tweenCount(String(done).replace(/,/g, ""));
+async function mountBundle(name, title){
+  try {
+    await api(`/api/projects/${CUR.project_id}/mount`, {method:"POST",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify({bundle:name, title})});
+    CUR.bundle = name; if (title) CUR.title = title;
+    toast("已挂载 " + name);
+    renderProject();
+  } catch (e) { toast("挂载失败：" + e.message); }
+}
+
+function paintConfig(b){
+  // 模板
+  const fmt = $("fmt");
+  fmt.innerHTML = TPLS.map(t => {
+    const v = TPL_VIS[t.id] || {};
+    return `<button class="tpl ${t.id === CFG.format ? "on" : ""}" data-v="${esc(t.id)}">
+      <span class="sw" style="background:linear-gradient(135deg,${v.bg||"#000"} 0 55%,${v.paper||"#777"} 55% 100%)">
+        <i style="background:${v.acc||"#999"}"></i></span>
+      <span><b>${esc(t.name)}</b><small>${esc(v.hint || "")}</small></span></button>`;
+  }).join("");
+  fmt.querySelectorAll(".tpl").forEach(o => o.onclick = () => {
+    fmt.querySelectorAll(".tpl").forEach(x => x.classList.remove("on"));
+    o.classList.add("on"); CFG.format = o.dataset.v; saveCfg();
+  });
+  // 音色
+  const vs = $("voiceSeg");
+  vs.innerHTML = Object.keys(VOICE).map(v =>
+    `<button class="pill ${v === CFG.voice ? "on" : ""}" data-v="${v}">${esc(VOICE[v].split(" · ")[0])}</button>`).join("");
+  vs.querySelectorAll(".pill").forEach(p => p.onclick = () => {
+    vs.querySelectorAll(".pill").forEach(x => x.classList.remove("on"));
+    p.classList.add("on"); CFG.voice = p.dataset.v; saveCfg();
+  });
+  // 语速
+  const setRate = (r) => {
+    r = Math.max(60, Math.min(200, r)); CFG.rate = r; saveCfg();
+    $("rateTxt").textContent = (r/100).toFixed(2) + "×";
+    updateEst(b);
+    $("rateSeg").querySelectorAll(".pill").forEach(x => x.classList.toggle("on", +x.dataset.r === r));
+  };
+  const rs = $("rateSeg");
+  rs.innerHTML = [80,90,100,110,125].map(r =>
+    `<button class="pill ${r === CFG.rate ? "on" : ""}" data-r="${r}">${(r/100).toFixed(2)}×</button>`).join("");
+  rs.querySelectorAll(".pill").forEach(p => p.onclick = () => setRate(+p.dataset.r));
+  // 音效档位
+  const sfxSeg = $("sfxSeg");
+  const SFX = [["off","关闭"],["hook","仅开场"],["accent","开场+卡片"],["full","全片"]];
+  sfxSeg.innerHTML = SFX.map(([v, t]) =>
+    `<button class="pill ${CFG.sfxMode === v ? "on" : ""}" data-v="${v}">${t}</button>`).join("");
+  sfxSeg.querySelectorAll(".pill").forEach(p => p.onclick = () => {
+    sfxSeg.querySelectorAll(".pill").forEach(x => x.classList.remove("on"));
+    p.classList.add("on"); CFG.sfxMode = p.dataset.v; saveCfg();
+  });
+  // 开关
+  document.querySelectorAll(".sw[data-k]").forEach(s => s.onclick = () => {
+    s.classList.toggle("on"); CFG[s.dataset.k] = s.classList.contains("on");
+    s.setAttribute("aria-checked", CFG[s.dataset.k]); saveCfg();
+  });
+  // BGM
+  api("/api/music").then(list => {
+    const sel = $("bgm"); if (!sel) return;
+    sel.innerHTML = `<option value="">不用背景音乐</option>` +
+      list.map(m => `<option value="${esc(m.file)}">${esc(m.name)}${m.mood ? " · " + esc(m.mood) : ""}</option>`).join("");
+    const want = CFG.bgm && list.some(m => m.file === CFG.bgm) ? CFG.bgm : (list[0] ? list[0].file : "");
+    sel.value = want; CFG.bgm = want; saveCfg();
+    sel.onchange = () => { CFG.bgm = sel.value; saveCfg(); };
+  }).catch(() => {});
+  updateEst(b);
+}
+function updateEst(b){
+  if (!b) { $("est2").textContent = "—"; $("render2").textContent = "—"; return; }
+  const est = Math.round(b.estSeconds / (CFG.rate/100));
+  $("estTxt").textContent = "成片约 " + mmss(est);
+  $("est2").textContent = mmss(est);
+  $("render2").textContent = renderEstimate(est);
+}
+
+/* —— 任务卡 —— */
+function taskEl(){ return $("taskCard"); }
+function paintTaskIdle(){
+  const t = taskEl(); if (!t) return;
+  t.className = "card panel task";
+  t.innerHTML = `<div class="th"><span class="dot"></span>任务<span class="tpct" style="font-size:15px;color:var(--ink-3)">待机</span></div>
+    <div class="pdetail" style="margin-top:8px">还没有在跑的任务。点上面的「开始渲染」开工。</div>
+    <div class="tfoot"><code id="taskId">—</code></div>`;
+}
+function paintTaskRunning(){
+  const t = taskEl(); if (!t) return;
+  t.className = "card panel task running";
+  t.innerHTML = `<div class="th"><span class="dot"></span><span id="tstage">正在生成</span>
+      <span class="tpct" id="tpct">0%</span></div>
+    <div class="pbar"><i id="tbar"></i></div>
+    <div class="pdetail" id="tdetail">连接中…</div>
+    <div class="pmeta"><span id="teta"></span><span id="tstep"></span></div>
+    <ul class="stages8" id="tstages">${STAGE8.map(s => `<li>${s}</li>`).join("")}</ul>
+    <div class="stills" id="tstills">
+      ${[1,2,3,4].map(() => `<div class="shot">取景中</div>`).join("")}
+    </div>
+    <div class="terr hide" id="terr"></div>
+    <div class="tfoot"><span>任务</span><code id="taskId">—</code>
+      <button class="ghost" id="copyId" style="margin-left:auto;padding:2px 8px">复制</button></div>`;
+  $("copyId").onclick = () => {
+    const txt = $("taskId").textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(txt).then(() => toast("已复制"), () => toast("复制失败"));
+    else toast("当前环境不支持复制");
+  };
 }
 function paintStills(stills){
-  const strip = $("strip"); if (!strip || !stills) return;
+  const strip = $("tstills"); if (!strip || !stills) return;
   const have = strip.querySelectorAll("img").length;
   if (stills.length <= have) return;
   stills.forEach((url, i) => {
     if (i < have) return;
     const cell = strip.children[i] || strip.appendChild(document.createElement("div"));
     cell.className = "shot";
-    cell.innerHTML = `<img src="${url}" alt="分镜剧照 ${i+1}"><span class="idx">0${i+1}</span>`;
-    cell.onclick = () => window.open(url, "_blank");
+    cell.innerHTML = `<img src="${qs(url)}" alt="分镜剧照 ${i+1}">`;
+    cell.onclick = () => window.open(qs(url), "_blank");
   });
-  JD.shownStills = stills.length;
 }
-function wireRender(){
-  $("copyId").onclick = () => {
-    const t = $("taskId").textContent;
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(t)
-      .then(() => toast("已复制"), () => toast("复制失败"));
-    else toast("当前环境不支持复制");
-  };
-  $("again").onclick = startRender;
-  renderHistory();
+function markStages(idx){
+  const lis = $("tstages"); if (!lis) return;
+  [...lis.children].forEach((li, i) => {
+    li.className = i + 1 < idx ? "done" : (i + 1 === idx ? "on" : "");
+  });
+}
+function wireRenderPane(b){
+  $("go").onclick = () => startRender(CURB);
+  const again = $("againBtn");
+  if (again) again.onclick = () => startRender(CURB);
+  // 恢复未完成的任务
   const saved = localStorage.getItem("vg.job." + CUR.project_id);
-  if (saved && !lastJob){ job = saved; lastJob = saved; }
-  if (job){
-    JD = { lastPct:-1, lastChange:Date.now(), stages:{}, localT0:Date.now(), samples:[], firstPoll:true, shownStills:0 };
-    startPoll();
-  } else {
-    const rs = (CUR.renders || []).filter(r => r.file);
-    if (rs.length){
-      const last = rs[rs.length - 1];
-      const jid = last.id || String(last.file).split("-").pop().replace(".mp4","");
-      lastJob = jid; showDone(jid, last.ts);
-    } else setIdle();
-  }
+  if (saved){ job = lastJob = saved; paintTaskRunning(); startPoll(); }
 }
-function setIdle(){
-  $("pmode").textContent = "STAND BY";
-  $("pstage").textContent = "准备好了，可以开始";
-  $("pdetail").textContent = "点下面的按钮开始渲染，这里会显示每一步的进度。";
-  setCount(0, null);
-  $("ppct").textContent = ""; $("peta").textContent = ""; $("tip").textContent = "";
-  $("stages").querySelectorAll("li").forEach(li => {
-    li.className = ""; li.querySelector("[data-dur]").textContent = ""; });
-}
-function showDone(jid, ts){
-  $("pmode").textContent = "DONE";
-  $("pstage").textContent = "生成完成";
-  $("pdetail").textContent = ts ? "最近一次生成于 " + ts : "成片已生成";
-  $("pbar").style.width = "100%";
-  $("pbarBox").setAttribute("aria-valuenow", 100);
-  $("ppct").textContent = "100%"; $("peta").textContent = ""; $("tip").textContent = "";
-  $("taskId").textContent = jid;
-  $("stages").querySelectorAll("li").forEach(li => {
-    li.className = "done"; li.querySelector("[data-dur]").textContent = ""; });
-  showResult(jid);
-}
-function showResult(jid){
-  const box = $("result"); if (!box) return;
-  box.classList.remove("hide");
-  $("player").src = vid(jid);
-  $("dl").href = vid(jid);
-  $("rmeta").textContent = "任务 " + jid;
-}
-function renderHistory(){
-  const rs = (CUR.renders || []).filter(r => r.file);
-  const sec = $("hist"), ul = $("histList");
-  if (!rs.length || !sec) return;
-  sec.classList.remove("hide");
-  ul.innerHTML = "";
-  rs.slice().reverse().forEach(r => {
-    const jid = r.id || String(r.file).split("-").pop().replace(".mp4","");
-    const li = document.createElement("li");
-    li.innerHTML = `<span class="d">${esc(r.ts || "")}</span>
-      <span class="t">${esc(String(r.file).split(/[\\/]/).pop())}</span>
-      <a class="quiet" href="${vid(jid)}" download>下载</a>`;
-    ul.appendChild(li);
-  });
-}
-async function startRender(){
+async function startRender(b){
+  if (!CUR.bundle){ toast("先挂一个素材包"); return openBundleModal(); }
   const btn = $("go");
-  if (btn){ btn.disabled = true; btn.innerHTML = "<span class=\"spin\"></span>启动中"; }
+  if (btn){ btn.disabled = true; btn.innerHTML = `<span class="spin"></span>启动中`; }
   try {
     const r = await api("/api/build", {method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({project_id: CUR.project_id, bundle: CUR.bundle,
@@ -1115,44 +977,41 @@ async function startRender(){
         sfx: CFG.sfxMode !== "off", sfxMode: CFG.sfxMode,
         subtitles: CFG.subtitles !== false, sources: CFG.sources !== false,
         format: CFG.format,
-        disclaimer: ($("disclaimer")?.value || "").trim() || undefined, useLlm:true})});
+        disclaimer: (($("disclaimer") || {}).value || "").trim() || undefined, useLlm: true})});
     if (!r || !r.job) throw new Error((r && r.error) || "启动失败");
     job = lastJob = r.job;
     localStorage.setItem("vg.job." + CUR.project_id, job);
-    await renderStudio(4);
-  } catch (e){
+    paintTaskRunning();
+    startPoll();
+  } catch (e) {
+    if (e.auth) return openGate();
     if (btn){ btn.disabled = false; btn.textContent = "开始渲染"; }
     toast("启动失败：" + e.message);
   }
 }
 function startPoll(){
   stopPoll();
-  $("pmode").textContent = "REC";
-  $("pstage").textContent = "正在生成";
+  JD = newJD();
   JD.lastChange = Date.now();
   pollJob(job);
   timer = setInterval(() => pollJob(job), 1500);
 }
 async function pollJob(jid){
   let j;
-  try { j = await api("/api/job/" + jid); } catch (e){ return; }
+  try { j = await api("/api/job/" + jid); } catch (e) { if (e.auth) openGate(); return; }
+  const t = taskEl(); if (!t) return;
   if (j.stage === "unknown"){
     if (lastJob !== jid) return;
-    const l = await api("/api/latest");
     stopPoll(); localStorage.removeItem("vg.job." + CUR.project_id);
-    if (l && l.video){
-      lastJob = l.job;
-      $("pbar").style.width = "100%";
-      $("pmode").textContent = "DONE";
-      $("pstage").textContent = "生成完成";
-      $("pdetail").textContent = "服务重启，已找回最近一次成片。";
-      showResult(l.job); renderHistory();
-    } else {
-      $("pmode").textContent = "LOST";
-      $("pstage").textContent = "任务中断";
-      $("pdetail").textContent = "服务重启导致这次任务丢失，可以重新渲染。";
-      fail("", "重新渲染");
-    }
+    try {
+      const l = await api("/api/latest");
+      if (l && l.video){
+        t.className = "card panel task done";
+        t.querySelector(".tpct").textContent = "完成";
+        t.querySelector("#tdetail").textContent = "服务重启过，已找回最近一次成片。";
+        refreshStageCard();
+      } else paintTaskIdle();
+    } catch (e) { paintTaskIdle(); }
     return;
   }
   const idx = Math.min(j.stage8 || 1, 8);
@@ -1160,83 +1019,60 @@ async function pollJob(jid){
   const now = Date.now();
   if (pct !== JD.lastPct){ JD.lastPct = pct; JD.lastChange = now; }
   const el = j.elapsed != null ? j.elapsed : Math.round((now - JD.localT0)/1000);
+  const firstPoll = JD.firstPoll !== false;
+  JD.firstPoll = false;
+  if (firstPoll && el > 5) JD.localT0 = now - el*1000;
 
-  const fr = /(\d[\d,]*)\s*\/\s*(\d[\d,]*)\s*帧/.exec(j.detail || "");
-  setCount(fr ? fr[1] : null, fr ? fr[2] : null);
-  paintStills(j.stills);
-  $("pbar").style.width = pct + "%";
-  $("pbarBox").setAttribute("aria-valuenow", pct);
-  $("pstage").textContent = j.stage === "done" ? "全部完成" : STAGE8[idx-1];
-  if (j.detail) $("pdetail").textContent = j.detail;
-  $("ppct").textContent = j.stage === "done" ? "100%" : pct + "% · 第 " + idx + " 步，共 8 步";
+  $("tpct").textContent = pct + "%";
+  $("tbar").style.width = pct + "%";
+  $("tstage").textContent = j.stage === "done" ? "全部完成" : STAGE8[idx-1];
+  if (j.detail) $("tdetail").textContent = j.detail;
+  $("tstep").textContent = j.stage === "done" ? "" : "第 " + idx + " / 8 步";
   $("taskId").textContent = jid;
+  markStages(j.stage === "done" ? 9 : idx);
+  paintStills(j.stills);
 
-  JD.samples.push({t:now, p:pct});
+  JD.samples.push({t: now, p: pct});
   JD.samples = JD.samples.filter(s => now - s.t < 90000);
   const s0 = JD.samples[0], sN = JD.samples[JD.samples.length - 1];
   const dt = (sN.t - s0.t)/1000, dp = sN.p - s0.p;
   const rate = dt > 20 ? dp/dt : 0;
-  const peta = $("peta");
-  if (j.stage === "done") peta.textContent = "";
+  const eta = $("teta");
+  if (j.stage === "done") eta.textContent = "";
   else if (pct >= 85 && rate > .02)
-    peta.textContent = "已用 " + mmss(el) + " · 还需约 " + mmss(Math.max(5, Math.round((100-pct)/rate)));
-  else peta.textContent = "已用 " + mmss(el) + (QUOTE[j.stage] ? " · " + QUOTE[j.stage] : "");
-
-  const firstPoll = JD.firstPoll !== false;
-  JD.firstPoll = false;
-  if (firstPoll){ JD.watchFrom = idx; if (el > 5) JD.localT0 = now - el*1000; }
-  const from = JD.watchFrom || 1;
-  const lis = $("stages").children;
-  for (let i = 1; i <= 8; i++){
-    if (i < idx && i >= from && !JD.stages[i]?.doneAt) JD.stages[i] = {doneAt: now};
-  }
-  let prev = null;
-  for (let i = 1; i <= 8; i++){
-    const li = lis[i-1]; if (!li) continue;
-    li.className = i < idx ? "done" : (i === idx ? "on" : "");
-    const d = li.querySelector("[data-dur]");
-    const st = JD.stages[i];
-    if (i < idx && st?.doneAt) d.textContent = mmss((st.doneAt - (prev || JD.localT0))/1000);
-    else if (i === idx && j.stage !== "done") d.textContent = mmss((now - (prev || JD.localT0))/1000);
-    else d.textContent = "";
-    if (i < idx) prev = st?.doneAt || prev;
-  }
-  const quiet = (now - JD.lastChange)/1000;
-  if (j.stage === "done") $("tip").textContent = "成片已经生成。";
-  else $("tip").textContent = (quiet > 25 ? "仍在处理中，没有卡住。" : "") + (TIP[j.stage] || "");
+    eta.textContent = "已用 " + mmss(el) + " · 还需约 " + mmss(Math.max(5, Math.round((100-pct)/rate)));
+  else eta.textContent = "已用 " + mmss(el) + (QUOTE[j.stage] ? " · " + QUOTE[j.stage] : "");
+  $("tdetail").textContent = (j.detail || "") + ((now - JD.lastChange)/1000 > 25 && j.stage !== "done"
+    ? "（仍在处理中，没有卡住）" : "");
+  if (j.stage === "done") $("tdetail").textContent = "成片已经生成，左侧可以直接预览。";
 
   if (j.stage === "failed"){
     stopPoll(); localStorage.removeItem("vg.job." + CUR.project_id);
-    fail(j.error, "重试渲染");
+    t.className = "card panel task failed";
+    t.querySelector(".tpct").textContent = "失败";
+    $("tstage").textContent = "没有生成成功";
+    const er = $("terr");
+    er.classList.remove("hide");
+    er.textContent = (j.error || "未知错误").slice(0, 400);
+    const foot = t.querySelector(".tfoot");
+    const retry = document.createElement("button");
+    retry.className = "btn sm"; retry.style.marginLeft = "auto";
+    retry.textContent = "重试渲染";
+    retry.onclick = () => startRender(CURB);
+    foot.appendChild(retry);
     return;
   }
   if (j.stage === "done"){
     stopPoll(); localStorage.removeItem("vg.job." + CUR.project_id);
     lastJob = jid;
-    $("pbar").style.width = "100%";
-    $("pmode").textContent = "DONE";
-    $("pstage").textContent = "生成完成";
-    $("ppct").textContent = "100%"; $("peta").textContent = "";
-    $("stages").querySelectorAll("li").forEach(li => {
-      li.className = "done"; li.querySelector("[data-dur]").textContent = ""; });
-    showResult(jid);
-    const ps = await api("/api/projects");
-    const me = ps.find(x => x.project_id === CUR.project_id);
-    if (me) CUR = Object.assign(CUR, {renders: me.renders || CUR.renders});
-    renderHistory();
+    t.className = "card panel task done";
+    t.querySelector(".tpct").textContent = "完成";
+    refreshStageCard();
   }
 }
-function fail(detail, btnText){
-  $("pmode").textContent = "ERROR";
-  $("pstage").textContent = "没有生成成功";
-  $("pdetail").textContent = "常见原因：素材路径失效、配音接口网络异常、模型额度不足。";
-  const e = $("perr");
-  e.classList.remove("hide");
-  e.innerHTML = esc((detail || "未知错误").slice(0, 400)) +
-    `<div style="margin-top:16px"><button class="btn line sm" id="retry">${esc(btnText)}</button></div>`;
-  $("retry").onclick = startRender;
-}
-loadTemplates().then(route);
+
+/* ================= 启动 ================= */
+loadTemplates().then(() => route(true));
 </script>
 </body>
 </html>
