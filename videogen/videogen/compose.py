@@ -1,6 +1,7 @@
 """Stage 7: ffmpeg composition — segments, concat, ASS burn, audio mix."""
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -239,6 +240,7 @@ def mix_audio(tts_mp3: Path, duration_s: float, work: Path, bgm: Path | None = N
 
 
 def mux(video: Path, audio: Path, out_mp4: Path, work: Path) -> Path:
+    # 输出路径转绝对：ffmpeg 的 cwd 在 work/，相对路径会落到工作目录里去
     _run(["ffmpeg", "-y", "-v", "error", "-i", video.name, "-i", audio.name,
-          "-c:v", "copy", "-c:a", "copy", "-shortest", str(out_mp4)], work)
+          "-c:v", "copy", "-c:a", "copy", "-shortest", str(Path(out_mp4).resolve())], work)
     return out_mp4
