@@ -808,19 +808,35 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
         const idx = line.text.indexOf(line.highlight);
         const before = idx > 0 ? line.text.slice(0, idx) : '';
         const after = idx >= 0 ? line.text.slice(idx + line.highlight.length) : line.text;
+        // 高亮块「顶到卡片右缘」是参考片的招牌样式，但只有它后面没有文字时才成立；
+        // 后面还有字时若仍 flex:1，会把后半句挤出画面。这种情况改为按内容排布并整体居中，
+        // 同时按整行可见宽度缩字号，保证再长的标题也放得下。
+        const stretch = !after;
+        const budget = 840;
+        const totalW = estW(before, 88) + estW(line.highlight, 88) + estW(after, 88) + (stretch ? 0 : 48);
+        const fs = stretch ? 88 : Math.min(88, Math.max(46, (budget / Math.max(totalW, 1)) * 88));
         return (
-          <div key={i} style={{display: 'flex', alignItems: 'center', marginTop: 14, paddingLeft: 115}}>
+          <div
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: stretch ? 'flex-start' : 'center',
+              marginTop: 14,
+              paddingLeft: stretch ? 115 : 40,
+              paddingRight: 22,
+            }}
+          >
             {before ? (
-              <span style={{...heavy, fontSize: 88, color: T.ink, whiteSpace: 'pre'}}>{before}</span>
+              <span style={{...heavy, fontSize: fs, color: T.ink, whiteSpace: 'pre'}}>{before}</span>
             ) : null}
             <div
               style={{
-                flex: 1,
+                flex: stretch ? 1 : '0 0 auto',
                 marginLeft: 8,
-                marginRight: 22,
                 background: T.highlightBg,
                 borderRadius: T.panelRadius - 4,
-                padding: '2px 0 6px 0',
+                padding: stretch ? '2px 0 6px 0' : '2px 18px 6px 18px',
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
@@ -829,10 +845,10 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
               }}
             >
               <div style={{position: 'absolute', left: 2, top: 0, bottom: 0, width: 10, background: T.red}} />
-              <span style={{...heavy, fontSize: 88, color: T.highlightInk}}>{line.highlight}</span>
+              <span style={{...heavy, fontSize: fs, color: T.highlightInk}}>{line.highlight}</span>
             </div>
             {after ? (
-              <span style={{...heavy, fontSize: 88, color: T.ink}}>{after}</span>
+              <span style={{...heavy, fontSize: fs, color: T.ink, whiteSpace: 'pre'}}>{after}</span>
             ) : null}
           </div>
         );
