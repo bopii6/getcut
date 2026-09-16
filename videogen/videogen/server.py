@@ -64,7 +64,8 @@ _PUBLIC_PATHS = {"/", "/index.html", "/healthz",
 
 
 def _is_public(path: str) -> bool:
-    return path in _PUBLIC_PATHS or path.startswith("/fonts/")
+    return (path in _PUBLIC_PATHS or path.startswith("/fonts/")
+            or path.startswith("/templates/"))
 
 
 def _token_ok(request: Request) -> bool:
@@ -276,6 +277,16 @@ def _find_bundles() -> list[dict]:
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
     return (STATIC / "index.html").read_text(encoding="utf-8")
+
+
+@app.get("/templates/{name}")
+def template_thumb(name: str):
+    """渲染模板的真实静帧缩略图（工作台模板选择器用）。"""
+    root = (STATIC / "templates").resolve()
+    f = (root / name).resolve()
+    if not f.is_file() or root not in f.parents:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(f, media_type="image/png")
 
 
 @app.get("/fonts/{name}")
