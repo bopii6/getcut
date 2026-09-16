@@ -97,9 +97,9 @@ def build_props(bundle: Path, plan: Plan, content: Content,
                                              "body": o.get("left_body", "")}
                 right_raw = o.get("right") or {"head": o.get("right_head", ""),
                                                "body": o.get("right_body", "")}
-                s["overlay"] = {"variant": "compare", "label": o.get("label") or s.get("chapterLabel", "") or "技术封锁",
-                                "title": o.get("title") or "芯片变筹码",
-                                "subtitle": o.get("subtitle") or "中美反应开始对撞",
+                s["overlay"] = {"variant": "compare", "label": o.get("label") or s.get("chapterLabel", "") or "双方对比",
+                                "title": o.get("title") or "对峙格局",
+                                "subtitle": o.get("subtitle") or "两边的反应开始分化",
                                 "badge": o.get("badge", ""),
                                 "left": _side(left_raw),
                                 "right": _side(right_raw)}
@@ -108,7 +108,7 @@ def build_props(bundle: Path, plan: Plan, content: Content,
                                 "card": {"title": o.get("card_title", ""), "body": o.get("card_body", "")},
                                 "badge": o.get("badge", "")}
             else:
-                s["overlay"] = {"variant": "statement", "label": o.get("label") or "媒体困局",
+                s["overlay"] = {"variant": "statement", "label": o.get("label") or "核心观点",
                                 "title": o.get("title", ""), "subtitle": o.get("subtitle", ""),
                                 "badge": o.get("badge", ""), "rightNote": o.get("rightNote", ""),
                                 "rows": o.get("rows", [])}
@@ -117,7 +117,7 @@ def build_props(bundle: Path, plan: Plan, content: Content,
             s["overlay"] = {**shot.overlay}
         else:
             s["chapterLabel"] = shot.chapter_label or ""
-            s["code"] = f"{idx:02d} / RACE"
+            s["code"] = f"SHOT {idx:02d}"
         shots.append(s)
     props_out = {
         "durationInFrames": max(int(plan.duration_ms / 1000 * 30) + 21, 30),

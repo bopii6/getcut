@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 from pathlib import Path
 
 from . import compose, llm, overlays, remotion_render, subtitle, tts, verify
@@ -21,8 +20,15 @@ WORK = Path(__file__).resolve().parent.parent / "work"
 # 模板注册表见 config.TEMPLATES（与 renderer/src/skin.ts 的 SKINS 一一对应）
 
 
+# 标题卡关键词兜底：命中脚本里的事件性强动词就用；都没命中退回标题前几字。
+# 关键词列表保持通用，不能只覆盖某一类选题。
+_HOT_WORDS = ("宣布", "推出", "发布", "引发", "突破", "升级", "暴跌", "暴涨", "扩张",
+              "停摆", "放缓", "减产", "裁员", "收购", "起诉", "警告", "曝光",
+              "紧急", "首次", "转向", "回归", "签约", "停产", "断供", "涨价", "降价")
+
+
 def _keyword_of(script: str, fallback: str) -> str:
-    for kw in ("踩刹车", "喊停", "放缓", "暂停", "减速"):
+    for kw in _HOT_WORDS:
         if kw in script:
             return kw
     return fallback
@@ -62,11 +68,18 @@ def _apply_refined_copy(plan, refined: dict) -> None:
 
 
 def _quote_of(script: str) -> tuple[str, str]:
-    m = re.search(r"建议你(盯紧)点，(这场戏[^。]*?)。", script)
-    tail = script[-60:]
-    if "九月中旬" in tail:
-        return "九月中旬", "盯紧这场对话"
-    return "划重点", tail[:6]
+    """金句卡兜底：从结尾句里提炼（≤8 字），任何选题都适用。
+
+    LLM 正常时这里不会被用到；这条只是保证兜底不再是单选题特供。
+    """
+    tail = script.rstrip("。！？!?,， ")        # 去掉句尾标点后的最后一段
+    for sep in ("。", "！", "？", "；"):
+        if sep in tail:
+            tail = tail.rsplit(sep, 1)[-1]
+    for sep in ("，", ","):
+        tail = tail.rsplit(sep, 1)[-1]
+    quote = tail.strip()[:8] or "值得盯紧"
+    return "划重点", quote
 
 
 def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,

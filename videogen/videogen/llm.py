@@ -161,8 +161,8 @@ def design_shots(script: str, sentences: list[dict], assets: list[dict],
             "相邻镜头不要连续用设计卡",
             "card=callout 只用于句子里有明确数字的（number 用阿拉伯数字+单位，"
             "如 3800字 / 6个月；caption ≤12字说明这个数字是什么）",
-            "card=compare 只用于句子同时提到美国/白宫/美方和中国/中方（"
-            "left=美方做法 head≤4字 body≤12字；right=中方做法）",
+            "card=compare 只用于句子明确出现对立双方时（两个国家、两家公司、两个阵营等，"
+            "left/right 分别概括双方的做法，head≤4字 body≤12字）",
             "card=fact 用于单个关键事实句（title≤8字 观点化提炼，body≤14字）",
             "card=statement 用于有意象短句的镜头（title 3-7字 如'抢方向盘'，"
             "subtitle ≤12字，badge 2字，rows 可选最多2条，每条 text ≤10字）",
