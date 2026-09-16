@@ -773,23 +773,23 @@ function renderAuth(mode){
     <div class="aerr" id="aerr"></div>
     <div id="regBox" class="${reg ? "" : "hide"}">
       ${canRegister ? `
-      <div class="fld"><label>邮箱</label>
+      <div class="fld"><label for="auEmail">邮箱</label>
         <div class="row2"><input id="auEmail" type="email" placeholder="you@example.com" autocomplete="username">
         <button class="btn sm line" id="auSend">获取验证码</button></div></div>
-      <div class="fld"><label>验证码</label>
+      <div class="fld"><label for="auCode">验证码</label>
         <input id="auCode" type="text" placeholder="6 位数字" maxlength="6" inputmode="numeric"></div>
-      <div class="fld"><label>设置密码</label>
+      <div class="fld"><label for="auPass">设置密码</label>
         <input id="auPass" type="password" placeholder="至少 8 位" autocomplete="new-password"></div>
-      <div class="fld"><label>确认密码</label>
+      <div class="fld"><label for="auPass2">确认密码</label>
         <input id="auPass2" type="password" autocomplete="new-password"></div>
       <button class="btn" id="auGo">注册并进入</button>`
       : `<p class="sub" style="margin-bottom:0">注册功能需要先在服务器配置发信邮箱（SMTP）。<br>配置好之后，这里就是「输邮箱 → 收验证码 → 设密码」。</p>
          <button class="btn line" id="auToLogin" style="width:100%;margin-top:14px">我有账号，去登录</button>`}
     </div>
     <div id="loginBox" class="${reg ? "hide" : ""}">
-      <div class="fld"><label>邮箱</label>
+      <div class="fld"><label for="liEmail">邮箱</label>
         <input id="liEmail" type="email" placeholder="you@example.com" autocomplete="username"></div>
-      <div class="fld"><label>密码</label>
+      <div class="fld"><label for="liPass">密码</label>
         <input id="liPass" type="password" placeholder="密码" autocomplete="current-password"></div>
       <label class="remember"><input type="checkbox" id="liRemember" checked> 记住我，30 天内免登录</label>
       <button class="btn" id="liGo">登录</button>
