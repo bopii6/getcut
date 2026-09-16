@@ -12,6 +12,9 @@
  *   REPO          可选，默认 bopii6/videogen
  */
 
+// 界面直接打进 Worker 返回（不启用 Cloudflare 静态资源，避免它消费请求体）
+import uiHtml from "./ui.html";
+
 const GH = "https://api.github.com";
 const UPLOADS = "https://uploads.github.com";
 
@@ -38,6 +41,16 @@ export default {
       "access-control-max-age": "86400",
     };
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
+
+    // ---------- 工作台界面（直接由 Worker 返回）----------
+    if (!url.pathname.startsWith("/api/")) {
+      if (url.pathname === "/" || url.pathname === "/index.html") {
+        return new Response(uiHtml, {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" },
+        });
+      }
+      return new Response("not found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+    }
 
     const repo = env.REPO || "bopii6/videogen";
     const token = env.GITHUB_TOKEN;

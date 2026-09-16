@@ -5,8 +5,10 @@ compatibility_date = "2026-09-01"
 # 部署：wrangler deploy
 # 配置密钥：wrangler secret put GITHUB_TOKEN
 #
-# 同一个 Worker 同时提供：静态界面（[assets]）+ /api/* 网关
-# 好处：一个自定义域名搞定，前后端同源，没有 CORS
+# 说明：界面(ui.html)不用 Cloudflare 的静态资源功能，而是直接打进 Worker 里返回。
+# 原因：一旦启用 [assets]，Cloudflare 的资源层会先碰请求体，
+# 在 HTTP/2 / HTTP/3 下会让 /api/upload 报 "Body has already been used"。
+# 打进来就没有这一层，浏览器走什么协议都不会出问题。
 
 # 保留 workers.dev 兜底入口（国内 DNS 被污染，仅作备用）
 workers_dev = true
@@ -14,18 +16,14 @@ preview_urls = false
 
 [vars]
 REPO = "bopii6/videogen"
-BUNDLE_TAG = "bundles"
 
-# 工作台界面（cloud/ui）由 Worker 直接托管
-[assets]
-directory = "../ui"
-# 关键：/api/* 必须先交给 Worker 处理。
-# 否则静态资源层会先消费请求体，HTTP/2 下的 POST 会报
-# "Body has already been used"（HTTP/1.1 不触发，所以只有浏览器上传会挂）
-run_worker_first = ["/api/*"]
+# 让 wrangler 把 .html 当纯文本打进包里，供 Worker 直接返回
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
 
 # 自定义域名（Cloudflare 会自动建 DNS 记录 + 签发证书）
-# 注意：video.hellojoy.top 已被现有服务占用，改用独立子域，避免冲突
 [[routes]]
 pattern = "vg.hellojoy.top"
 custom_domain = true
