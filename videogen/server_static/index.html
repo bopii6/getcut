@@ -97,6 +97,7 @@ img,video{display:block}
 .btn:hover{background:#332E26;box-shadow:var(--sh-1)}
 .btn:active{transform:scale(.98)}
 .btn[disabled]{background:var(--sunken);color:var(--ink-3);box-shadow:none;cursor:default}
+.btn[disabled] .spin{border-color:rgba(26,23,18,.15);border-top-color:var(--ink-2)}
 .btn.go{background:var(--acc);box-shadow:0 8px 24px rgba(196,69,43,.26)}
 .btn.go:hover{background:var(--acc-deep)}
 .btn.line{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line2)}
@@ -248,7 +249,13 @@ img,video{display:block}
 .script-box{max-height:240px;overflow:auto;padding:0 20px 16px;font-size:14.5px;
   line-height:1.95;white-space:pre-wrap;color:var(--ink)}
 .assets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
+.assetscard .assets-grid{padding:0 20px}
 .assets-grid .a{border-radius:9px;overflow:hidden;background:var(--sunken)}
+.assets-grid .a.more{aspect-ratio:4/3;display:grid;place-items:center;cursor:pointer;
+  font-family:"Display",var(--sans);font-size:15px;color:var(--ink-2);
+  background:var(--sunken);box-shadow:inset 0 0 0 1.5px var(--line2);
+  transition:color .15s,box-shadow .15s}
+.assets-grid .a.more:hover{color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--acc)}
 .assets-grid img,.assets-grid video{width:100%;aspect-ratio:4/3;object-fit:cover}
 .assets-grid .cap{padding:7px 9px;font-size:11.5px;color:var(--ink-2);line-height:1.5;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -285,7 +292,7 @@ details.disc .disc-b{padding:0 18px 16px}
   padding:12px;border:1.5px dashed var(--line2);border-radius:10px;font-size:13px;color:var(--ink-2)}
 
 /* 模板小样海报（纯 CSS 画出每个模板的样子） */
-.tpls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.tpls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .tpl{display:flex;flex-direction:column;gap:7px;padding:7px 7px 8px;border-radius:11px;text-align:left;
   position:relative;transition:background .15s,box-shadow .15s;border:1px solid transparent;min-width:0}
 .tpl:hover{background:var(--sunken)}
@@ -467,7 +474,6 @@ textarea:focus{outline:none;border-color:var(--acc)}
   .media-frame,.theater{align-self:flex-start}
   .theater{width:100%}
   .import .pick{display:none}
-  .tpls{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 </style>
 </head>
@@ -623,6 +629,14 @@ function frameAt(v, t){
   const seek = () => { try { if (v.currentTime < t) v.currentTime = t; } catch (e) {} };
   if (v.readyState >= 1) seek();
   else v.addEventListener("loadedmetadata", seek, {once:true});
+}
+/* 预览取帧：先快速落到 fallback，元数据就绪后再跳到正片 35% 处，避开片头黑场 */
+function previewSeek(v, fallback){
+  if (!v) return;
+  frameAt(v, fallback);
+  v.addEventListener("loadedmetadata", () => {
+    frameAt(v, isFinite(v.duration) && v.duration > 4 ? v.duration * .35 : fallback);
+  }, {once:true});
 }
 function kickPlay(v){
   if (!v) return;
@@ -837,7 +851,8 @@ function paintAccount(){
 function paintNav(page, title){
   document.querySelectorAll(".nav a").forEach(a =>
     a.classList.toggle("on", a.dataset.nav === page));
-  const pt = $("pageTitle"); if (pt) pt.textContent = title || "videogen";
+  const pt = $("pageTitle");
+  if (pt){ pt.textContent = title || "videogen"; pt.classList.toggle("hide", page === "home"); }
 }
 
 /* ================= 路由 ================= */
@@ -955,7 +970,7 @@ function poster(r){
       preload="metadata"></video><span class="pdur">—</span></span>
     <span class="t">${esc(r.title)}</span><span class="d">${esc(r.ts || "")}</span>`;
   const v = el.querySelector("video");
-  frameAt(v, v.duration > 4 ? v.duration * .35 : 1.2);
+  previewSeek(v, 1.2);
   v.addEventListener("loadedmetadata", () => {
     const d = el.querySelector(".pdur");
     if (d && isFinite(v.duration)) d.textContent = mmss(v.duration);
@@ -997,7 +1012,7 @@ function pcard(p){
   const open = () => { CUR = p; setHash("#/project/" + p.project_id); renderProject(); };
   if (last){
     const v = el.querySelector(".cover video");
-    if (v) frameAt(v, 0.8);
+    previewSeek(v, 0.8);
     el.querySelector(".cover").onclick = () => playDialog({id: last.id, title: p.title, ts: last.ts});
   } else {
     el.querySelector(".cover").onclick = open;
@@ -1103,6 +1118,10 @@ function renderStageCard(b){
   const assets = b ? b.assets : [];
   const imgs = assets.filter(a => a.kind === "image").length;
   const vids = assets.length - imgs;
+  const assetCell = (a) => `<div class="a">
+      ${a.kind === "video" ? `<video src="${mediaUrl(b.name, a.file)}" muted preload="none"></video>`
+        : `<img loading="lazy" alt="" src="${mediaUrl(b.name, a.file)}">`}
+      <div class="cap">${esc(a.summary || a.file)}</div></div>`;
   box.innerHTML = `
     <section class="card stage-card" id="stageCard">
       <div class="sec-h" style="margin-bottom:14px"><h2>成片</h2>
@@ -1141,17 +1160,24 @@ function renderStageCard(b){
         <span class="n">${b.script.length} 字 · 图片 ${imgs} · 视频 ${vids}</span></div>
       <div style="max-height:240px;overflow:auto;padding:0 20px 16px" class="script">${esc(b.script)}</div>
     </section>
-    <details class="disc">
-      <summary>素材<i class="n">${assets.length} 个 · 点开查看</i></summary>
-      <div class="disc-b"><div class="assets-grid">
-        ${assets.map(a => `<div class="a">
-          ${a.kind === "video" ? `<video src="${mediaUrl(b.name, a.file)}" muted preload="none"></video>`
-            : `<img loading="lazy" alt="" src="${mediaUrl(b.name, a.file)}">`}
-          <div class="cap">${esc(a.summary || a.file)}</div></div>`).join("")}
-      </div></div>
-    </details>` : `
+    <section class="card assetscard">
+      <div class="sec-h" style="padding:14px 20px 0;margin-bottom:12px"><h2>素材</h2>
+        <span class="n">${assets.length} 个 · 图片 ${imgs} · 视频 ${vids}</span></div>
+      <div class="assets-grid">
+        ${assets.slice(0, 8).map(assetCell).join("")}
+        ${assets.length > 8 ? `<button class="a more" id="assetMore" aria-label="展开全部素材">+${assets.length - 8}</button>` : ""}
+      </div>
+      ${assets.length > 8 ? `
+      <div class="assets-grid hide" id="assetAll">${assets.map(assetCell).join("")}</div>
+      <div style="padding:12px 20px 16px"><button class="btn sm line" id="assetToggle">展开全部 ${assets.length} 个</button></div>`
+      : `<div style="padding:12px 20px 16px"></div>`}
+    </section>` : `
     <section class="card firstcard"><b>先给这条片子配上素材</b>
-      <p class="fc-sub" style="margin-top:4px">在右边第 1 步「素材」里选用已有的，或上传一个素材 zip。</p></section>`}`;
+      <p class="fc-sub" style="margin-top:4px">在右边第 1 步「素材」里选用已有的，或上传一个素材 zip。</p></section>
+    <section class="card" style="padding:16px 20px">
+      <div class="sub-h" style="margin-bottom:10px">服务器上已有的素材包，点一下就能用</div>
+      <div class="chips" id="quickBundles"><span style="color:var(--ink-3);font-size:13px">读取中…</span></div>
+    </section>`}`;
   const hist = $("hist");
   if (hist && rs.length){
     rs.slice().reverse().forEach((r, i) => {
@@ -1160,7 +1186,7 @@ function renderStageCard(b){
       it.className = "h-item" + (i === 0 ? " on" : "");
       it.innerHTML = `<span class="frame"><video src="${vid(jid)}#t=0.8" muted preload="metadata" playsinline></video></span>
         <span>${esc((r.ts || "").slice(-5))}</span>`;
-      const v = it.querySelector("video"); frameAt(v, 0.8);
+      const v = it.querySelector("video"); previewSeek(v, 0.8);
       it.onclick = () => {
         $("mainPlayer").src = vid(jid);
         $("dlBtn").href = vid(jid);
@@ -1169,6 +1195,26 @@ function renderStageCard(b){
       };
       hist.appendChild(it);
     });
+  }
+  const more = $("assetMore"), tg = $("assetToggle");
+  const toggleAssets = () => {
+    const all = $("assetAll"); if (!all) return;
+    const hidden = all.classList.toggle("hide");
+    if (tg) tg.textContent = hidden ? `展开全部 ${assets.length} 个` : "收起";
+  };
+  if (more) more.onclick = toggleAssets;
+  if (tg) tg.onclick = toggleAssets;
+  if (!b){
+    api("/api/bundles").then(list => {
+      const q = $("quickBundles"); if (!q) return;
+      if (!list.length){
+        q.innerHTML = `<span style="color:var(--ink-3);font-size:13px">服务器上还没有素材包，在右侧第 1 步「选用」里上传一个 zip</span>`;
+        return;
+      }
+      q.innerHTML = list.map(x =>
+        `<button class="chip" data-b="${esc(x.name)}">${esc(x.name)}<span style="color:var(--ink-3);font-weight:600">· ${x.assets} 素材</span></button>`).join("");
+      q.querySelectorAll(".chip").forEach(c => c.onclick = () => mountBundle(c.dataset.b, c.dataset.b));
+    }).catch(() => { const q = $("quickBundles"); if (q) q.innerHTML = ""; });
   }
 }
 function refreshStageCard(){
@@ -1255,7 +1301,7 @@ function openBundleModal(){
   const m = document.createElement("div"); m.className = "modal";
   m.innerHTML = `<div class="box" role="dialog" aria-modal="true">
     <h3>选用素材</h3><p>选服务器上已有的素材，或上传一个素材 zip（用 Agent 或工具导出的包）。</p>
-    <button class="btn line sm" id="bmUpload" style="width:100%">上传 zip 文件</button>
+    <button class="btn sm" id="bmUpload" style="width:100%">上传 zip 文件</button>
     <input type="file" id="bmZip" accept=".zip" class="hide">
     <div class="sub-h" style="margin-top:14px">已有的素材包</div>
     <div class="mlist" id="bmList"><p style="color:var(--ink-3);font-size:13px">读取中…</p></div>
@@ -1372,12 +1418,16 @@ function updateEst(b){
 
 /* —— 任务卡 —— */
 function taskEl(){ return $("taskCard"); }
+function enableRenderBtn(){
+  const g = $("go"); if (!g) return;
+  g.disabled = false; g.textContent = "开始渲染";
+}
 function paintTaskIdle(){
   const t = taskEl(); if (!t) return;
   t.className = "card panel task";
   t.innerHTML = `<div class="th"><span class="dot"></span>渲染器<span class="tpct idle">待机</span></div>
-    <div class="pdetail" style="margin-top:8px">还没有在跑的任务。点上面的「开始渲染」开工，进度和剧照会出现在这里。</div>
-    <div class="tfoot"><code id="taskId">—</code></div>`;
+    <div class="pdetail" style="margin-top:8px">还没有在跑的任务。点上面的「开始渲染」开工，进度和剧照会出现在这里。</div>`;
+  enableRenderBtn();
 }
 function paintTaskRunning(){
   const t = taskEl(); if (!t) return;
@@ -1394,6 +1444,8 @@ function paintTaskRunning(){
     <div class="terr hide" id="terr"></div>
     <div class="tfoot"><span>任务</span><code id="taskId">—</code>
       <button class="ghost" id="copyId" style="margin-left:auto;padding:2px 8px">复制</button></div>`;
+  const g = $("go");
+  if (g){ g.disabled = true; g.innerHTML = `<span class="spin"></span>制作中`; }
   $("copyId").onclick = () => {
     const txt = $("taskId").textContent;
     if (navigator.clipboard && navigator.clipboard.writeText)
@@ -1470,6 +1522,7 @@ async function pollJob(jid){
         t.className = "card panel task done";
         t.querySelector(".tpct").textContent = "完成";
         t.querySelector("#tdetail").textContent = "服务重启过，已找回最近一次成片。";
+        enableRenderBtn();
         refreshStageCard();
       } else paintTaskIdle();
     } catch (e) { paintTaskIdle(); }
@@ -1521,6 +1574,7 @@ async function pollJob(jid){
     retry.className = "btn sm"; retry.style.marginLeft = "auto";
     retry.textContent = "重试渲染";
     retry.onclick = () => startRender(CURB);
+    enableRenderBtn();
     foot.appendChild(retry);
     return;
   }
@@ -1531,6 +1585,7 @@ async function pollJob(jid){
     t.querySelector(".tpct").textContent = "完成";
     t.querySelector(".tpct").classList.add("idle");
     $("tstage").textContent = "成片出炉";
+    enableRenderBtn();
     refreshStageCard();
   }
 }
