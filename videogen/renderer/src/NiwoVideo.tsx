@@ -12,42 +12,43 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
+import {T, resolveSkin, applySkin, type Skin} from './skin';
 
-// ---------------- tokens (sampled from the reference video) ----------------
+// ---------------- tokens ----------------
+// T 与皮肤定义在 ./skin，渲染入口按 props.template 调 applySkin 赋值。
+
+/**
+ * 字体清单。weight 写成区间（100 900）表示「这个字面覆盖所有字重」，
+ * 这样组件里沿用 fontWeight:900 也不会触发浏览器伪粗体，细体字面能保持细。
+ */
+const FONTS: {family: string; file: string; weight: string; loadWeight: string}[] = [
+  {family: 'SSH', file: 'fonts/SourceHanSansCN-Heavy.otf', weight: '900', loadWeight: '900'},
+  {family: 'SSHSerif', file: 'fonts/NotoSerifSC-Bold.otf', weight: '100 900', loadWeight: '400'},
+  {family: 'SSHLight', file: 'fonts/NotoSansSC-Light.otf', weight: '100 900', loadWeight: '300'},
+];
 
 const FontFace: React.FC = () => {
   const [handle] = React.useState(() => delayRender('loading font'));
+  // 只等当前皮肤真正用到的那一款，避免每次渲染都拖三份 CJK 字体
+  const used = FONTS.filter((f) => (T.font || '').includes(f.family));
   React.useEffect(() => {
-    document.fonts.load('900 100px SSH').then(() => continueRender(handle)).catch(() => continueRender(handle));
+    const list = used.length ? used : [FONTS[0]];
+    Promise.all(list.map((f) => document.fonts.load(`${f.loadWeight} 64px '${f.family}'`)))
+      .then(() => continueRender(handle))
+      .catch(() => continueRender(handle));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-  <style
-    dangerouslySetInnerHTML={{
-      __html: `@font-face { font-family: 'SSH'; src: url('${staticFile(
-        'fonts/SourceHanSansCN-Heavy.otf',
-      )}') format('opentype'); font-weight: 900; }`,
-    }}
-  />
+    <style
+      dangerouslySetInnerHTML={{
+        __html: FONTS.map(
+          (f) =>
+            `@font-face { font-family: '${f.family}'; src: url('${staticFile(f.file)}') ` +
+            `format('opentype'); font-weight: ${f.weight}; font-display: block; }`,
+        ).join('\n'),
+      }}
+    />
   );
-};
-
-export const T = {
-  accent: '#a44231',
-  accentSoft: '#c14f35',
-  bgTop: '#1c1a18',
-  bgBottom: '#171411',
-  paper: '#e4e2e0',
-  paperGrain: 'rgba(120,115,110,0.05)',
-  ink: '#1c1a18',
-  panel: '#1a1817',
-  red: '#a44231',
-  redBright: '#c14f35',
-  teal: '#7fd4c9',
-  white: '#f5f3f0',
-  cardWhite: '#eee9e2',
-  gray: '#999590',
-  grayDim: '#76706a',
-  font: "'SSH','Source Han Sans CN','Microsoft YaHei',sans-serif",
 };
 
 // ---------------- props types ----------------
@@ -85,7 +86,8 @@ export type NiwoProps = {
   sources: string[];
   disclaimer: string;
   showSubtitles?: boolean;
-  template?: 'editorial' | 'portrait';
+  /** 模板 id：editorial / finance / minimal / bleed / news / retro / portrait */
+  template?: string;
   shots: Shot[];
   clauses: Clause[];
 };
@@ -100,14 +102,34 @@ const fitSize = (text: string, maxSize: number, maxW: number) =>
 
 const msToF = (ms: number, fps: number) => Math.round((ms / 1000) * fps);
 
-const heavy: React.CSSProperties = {fontFamily: T.font, fontWeight: 900};
+// 注意：这两个是模块级常量，但 T 是在渲染时才被 applySkin 改写的。
+// 用 getter 而不是普通属性，保证每次展开/读取时取到当前皮肤的值，
+// 否则它们会永久固化成 import 那一刻的 editorial 配色与字体。
+const heavy: React.CSSProperties = {
+  get fontFamily() {
+    return T.font;
+  },
+  get fontWeight() {
+    return 900;
+  },
+};
 
 const Tick: React.CSSProperties = {
-  display: 'inline-block',
-  width: 8,
-  height: 30,
-  background: T.accent,
-  marginRight: 14,
+  get display() {
+    return 'inline-block';
+  },
+  get width() {
+    return 8;
+  },
+  get height() {
+    return 30;
+  },
+  get background() {
+    return T.accent;
+  },
+  get marginRight() {
+    return 14;
+  },
 };
 
 const Label: React.FC<{text: string; delay?: number}> = ({text, delay = 0}) => {
@@ -134,7 +156,7 @@ const Badge: React.FC<{text: string; delay?: number}> = ({text, delay = 0}) => {
         top: 30,
         right: 28,
         background: T.accent,
-        color: '#f7f2ec',
+        color: T.onAccent,
         fontSize: 24,
         padding: '6px 20px',
         borderRadius: 22,
@@ -221,9 +243,9 @@ const TitleCard: React.FC<{spec: ShotOverlay; fps: number}> = ({spec, fps}) => {
           bottom: 148,
           opacity: codeO,
           fontSize: 26,
-          color: '#d2cdc6',
+          color: T.codeInk,
           letterSpacing: 2,
-          fontFamily: 'Consolas, monospace',
+          fontFamily: T.fontMono,
         }}
       >
         {spec.code}
@@ -266,10 +288,10 @@ const QuoteCard: React.FC<{spec: ShotOverlay}> = ({spec}) => {
           position: 'absolute',
           left: 52,
           top: 250,
-          opacity: o * 0.38,
+          opacity: o * 0.55,
           ...heavy,
           fontSize: 96,
-          color: '#c9c3bc',
+          color: T.mutedInk,
         }}
       >
         {spec.quote}
@@ -292,7 +314,7 @@ const NumberCallout: React.FC<{spec: ShotOverlay}> = ({spec}) => {
         right: 0,
         bottom: 0,
         width: '46%',
-        background: 'linear-gradient(to left, rgba(16,12,9,0.94) 55%, rgba(16,12,9,0.55) 80%, rgba(16,12,9,0))',
+        background: T.calloutScrim,
       }}
     >
       <div
@@ -319,7 +341,7 @@ const NumberCallout: React.FC<{spec: ShotOverlay}> = ({spec}) => {
         >
           {spec.number}
         </div>
-        <div style={{fontSize: 26, color: '#c9c3bc', opacity: capO, marginTop: 6}}>
+        <div style={{fontSize: 26, color: T.mutedInk, opacity: capO, marginTop: 6}}>
           — {spec.caption}
         </div>
       </div>
@@ -335,10 +357,10 @@ const PacePanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
   const lineW = interpolate(f, [26, 44], [0, 640], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const check = interpolate(f, [46, 56], [0, 1], {extrapolateRight: 'clamp'});
   return (
-    <div style={{position: 'absolute', inset: 0, background: 'rgba(18,14,11,0.55)'}}>
+    <div style={{position: 'absolute', inset: 0, background: T.scrim}}>
       <div style={{position: 'absolute', left: 36, top: 30, opacity: tO}}>
         <div style={{...heavy, fontSize: 72, color: T.white}}>{spec.title}</div>
-        <div style={{fontSize: 30, color: '#b7b1aa', marginTop: 8}}>{spec.subtitle}</div>
+        <div style={{fontSize: 30, color: T.mutedInk, marginTop: 8}}>{spec.subtitle}</div>
       </div>
       <div
         style={{
@@ -354,14 +376,14 @@ const PacePanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
         }}
       >
         <div style={{display: 'flex', gap: 16}}>
-          <span style={{...heavy, fontSize: 26, color: T.cardWhite, background: T.accent, padding: '6px 20px', borderRadius: 20}}>
+          <span style={{...heavy, fontSize: 26, color: T.onAccent, background: T.accent, padding: '6px 20px', borderRadius: 20}}>
             {spec.pillA}
           </span>
-          <span style={{...heavy, fontSize: 26, color: '#6a655f', border: '2px solid #b7b1aa', padding: '4px 18px', borderRadius: 20}}>
+          <span style={{...heavy, fontSize: 26, color: T.cardMuted, border: `2px solid ${T.cardLine}`, padding: '4px 18px', borderRadius: 20}}>
             {spec.pillB}
           </span>
         </div>
-        <div style={{marginTop: 22, height: 12, width: 420, background: '#d4d0ca', borderRadius: 6}} />
+        <div style={{marginTop: 22, height: 12, width: 420, background: T.cardLine, borderRadius: 6}} />
         <div style={{position: 'relative', marginTop: 20}}>
           <div style={{height: 4, width: lineW, background: T.accent, borderRadius: 2}} />
           <div
@@ -396,7 +418,7 @@ const ComparePanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
   const colO = interpolate(f, [24, 36], [0, 1], {extrapolateRight: 'clamp'});
   const ruleW = interpolate(f, [34, 50], [0, 320], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   return (
-    <div style={{position: 'absolute', inset: 0, background: 'rgba(18,14,11,0.55)'}}>
+    <div style={{position: 'absolute', inset: 0, background: T.scrim}}>
       <div style={{position: 'absolute', left: 36, top: 30, display: 'flex', alignItems: 'center', opacity: tO}}>
         <span style={Tick} />
         <span style={{...heavy, fontSize: 30, color: T.accentSoft}}>{spec.label}</span>
@@ -420,7 +442,7 @@ const ComparePanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
             top: 218,
             width: 334,
             height: 190,
-            background: 'rgba(32,17,10,0.82)',
+            background: T.slotBg,
             border: `2px solid ${T.accentSoft}`,
             borderRadius: 10,
             opacity: colO,
@@ -452,7 +474,7 @@ const FactPanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
   const cardY = interpolate(f, [10, 22], [36, 0], {extrapolateRight: 'clamp'});
   const cardO = interpolate(f, [10, 22], [0, 1], {extrapolateRight: 'clamp'});
   return (
-    <div style={{position: 'absolute', inset: 0, background: 'rgba(18,14,11,0.45)'}}>
+    <div style={{position: 'absolute', inset: 0, background: T.scrim}}>
       <div style={{position: 'absolute', left: 36, top: 30, display: 'flex', alignItems: 'center'}}>
         <span style={Tick} />
         <span style={{...heavy, fontSize: 30, color: T.accentSoft}}>{spec.label}</span>
@@ -469,8 +491,8 @@ const FactPanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
           padding: '26px 30px',
         }}
       >
-        <div style={{...heavy, fontSize: 40, color: T.ink}}>{spec.card?.title}</div>
-        <div style={{fontSize: 26, color: '#5a5651', marginTop: 14, lineHeight: 1.4}}>
+        <div style={{...heavy, fontSize: 40, color: T.cardInk}}>{spec.card?.title}</div>
+        <div style={{fontSize: 26, color: T.cardMuted, marginTop: 14, lineHeight: 1.4}}>
           {spec.card?.body}
         </div>
       </div>
@@ -482,10 +504,10 @@ const StatementPanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
   const f = useCurrentFrame();
   const tO = interpolate(f, [4, 14], [0, 1], {extrapolateRight: 'clamp'});
   return (
-    <div style={{position: 'absolute', inset: 0, background: 'rgba(18,14,11,0.55)'}}>
+    <div style={{position: 'absolute', inset: 0, background: T.scrim}}>
       <div style={{position: 'absolute', left: 36, top: 30, opacity: tO}}>
         <div style={{...heavy, fontSize: 64, color: T.white}}>{spec.title}</div>
-        <div style={{fontSize: 28, color: '#b7b1aa', marginTop: 10}}>{spec.subtitle}</div>
+        <div style={{fontSize: 28, color: T.mutedInk, marginTop: 10}}>{spec.subtitle}</div>
       </div>
       {spec.rightNote ? (
         <div style={{position: 'absolute', right: 40, top: 190, ...heavy, fontSize: 30, color: T.accentSoft}}>
@@ -499,7 +521,7 @@ const StatementPanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
         return (
           <div key={i} style={{position: 'absolute', left: 40, top: 250 + i * 92, opacity: o, width: 600}}>
             <div style={{display: 'flex', alignItems: 'baseline', gap: 16}}>
-              <span style={{fontSize: 24, color: T.accentSoft, fontFamily: 'Consolas, monospace'}}>{row.code}</span>
+              <span style={{fontSize: 24, color: T.accentSoft, fontFamily: T.fontMono}}>{row.code}</span>
               <span style={{...heavy, fontSize: 32, color: T.white}}>{row.text}</span>
             </div>
             <div style={{marginTop: 12, height: 2, width: w, background: T.red}} />
@@ -678,8 +700,8 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
                   left: 24,
                   top: 14,
                   fontSize: 22,
-                  color: 'rgba(240,236,230,0.85)',
-                  fontFamily: 'Consolas, monospace',
+                  color: T.codeInk,
+                  fontFamily: T.fontMono,
                   letterSpacing: 2,
                 }}
               >
@@ -694,7 +716,7 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
                   bottom: 18,
                   width: 220,
                   height: 2,
-                  background: 'rgba(196,79,53,0.85)',
+                  background: T.accent,
                 }}
               />
             ) : null}
@@ -712,18 +734,54 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
 };
 
 // ---------------- global layers ----------------
+
+/** #rrggbb -> rgba(...)，用于给皮肤色加透明度 */
+function hexA(hex: string, a: number): string {
+  const s = String(hex).replace('#', '');
+  if (s.length !== 6) return hex;
+  const r = parseInt(s.slice(0, 2), 16);
+  const g = parseInt(s.slice(2, 4), 16);
+  const b = parseInt(s.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return hex;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/** 装饰层：颗粒 / 网格 / 无 */
+function decorLayer(kind: Skin['decor'], tint: string, strength = 1): React.CSSProperties {
+  if (kind === 'grid') {
+    const c = hexA(tint, 0.075 * strength);
+    return {
+      backgroundImage:
+        `repeating-linear-gradient(0deg, ${c} 0 1px, transparent 1px 92px),` +
+        `repeating-linear-gradient(90deg, ${c} 0 1px, transparent 1px 92px)`,
+    };
+  }
+  if (kind === 'grain') {
+    const a = 0.05 * strength;
+    return {
+      backgroundImage:
+        "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.02' numOctaves='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.5 0 0 0 0 0.48 0 0 0 0 0.45 0 0 0 " +
+        a.toFixed(3) +
+        " 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>\")",
+    };
+  }
+  return {};
+}
+
 const Background: React.FC = () => (
   <AbsoluteFill
     style={{
-      background: `radial-gradient(120% 90% at 50% 30%, ${T.bgTop} 0%, ${T.bgBottom} 78%, #100e0c 100%)`,
+      background: `radial-gradient(120% 90% at 50% 30%, ${T.bgTop} 0%, ${T.bgBottom} 78%, ${T.bgBottom} 100%)`,
     }}
   >
-    <AbsoluteFill
-      style={{
-        backgroundImage:
-          "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.02' numOctaves='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.5 0 0 0 0 0.48 0 0 0 0 0.45 0 0 0 0.05 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>\")",
-      }}
-    />
+    <AbsoluteFill style={decorLayer(T.decor, T.decor === 'grid' ? T.accent : '#78736e')} />
+    {T.vignette ? (
+      <AbsoluteFill
+        style={{
+          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.78) 100%)',
+        }}
+      />
+    ) : null}
   </AbsoluteFill>
 );
 
@@ -760,8 +818,8 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
                 flex: 1,
                 marginLeft: 8,
                 marginRight: 22,
-                background: '#16110e',
-                borderRadius: 10,
+                background: T.highlightBg,
+                borderRadius: T.panelRadius - 4,
                 padding: '2px 0 6px 0',
                 position: 'relative',
                 display: 'flex',
@@ -771,7 +829,7 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
               }}
             >
               <div style={{position: 'absolute', left: 2, top: 0, bottom: 0, width: 10, background: T.red}} />
-              <span style={{...heavy, fontSize: 88, color: T.white}}>{line.highlight}</span>
+              <span style={{...heavy, fontSize: 88, color: T.highlightInk}}>{line.highlight}</span>
             </div>
             {after ? (
               <span style={{...heavy, fontSize: 88, color: T.ink}}>{after}</span>
@@ -932,19 +990,19 @@ const PortraitCard: React.FC<{spec: Record<string, any>}> = ({spec}) => {
   const showCompare = spec.left || spec.right;
   return (
     <div style={{position: 'absolute', left: 110, right: 110, top: '40%', transform: `translateY(${y}px)`,
-      opacity: o, background: 'rgba(14,11,9,0.74)', border: `2px solid ${T.red}`, borderRadius: 16,
+      opacity: o, background: T.cardWhite, border: `2px solid ${T.red}`, borderRadius: T.cardRadius,
       padding: '30px 34px', boxShadow: '0 18px 50px rgba(0,0,0,0.5)'}}>
       {spec.label ? (
         <div style={{...heavy, fontSize: 26, color: T.redBright, marginBottom: 12, letterSpacing: 1}}>{spec.label}</div>
       ) : null}
       {main ? <div style={{...heavy, fontSize: 54, color: T.white, lineHeight: 1.15}}>{main}</div> : null}
-      {sub ? <div style={{fontSize: 30, color: '#d8d3cd', marginTop: 10}}>{sub}</div> : null}
+      {sub ? <div style={{fontSize: 30, color: T.cardMuted, marginTop: 10}}>{sub}</div> : null}
       {showCompare ? (
         <div style={{display: 'flex', gap: 22, marginTop: 18}}>
           {[spec.left, spec.right].map((side, i) => side ? (
-            <div key={i} style={{flex: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px'}}>
-              <div style={{...heavy, fontSize: 28, color: i === 0 ? T.redBright : '#7fd4c9'}}>{side.head}</div>
-              <div style={{fontSize: 28, color: '#eae5df', marginTop: 6}}>{side.body}</div>
+            <div key={i} style={{flex: 1, background: hexA(T.cardInk, 0.08), borderRadius: T.cardRadius, padding: '16px 18px'}}>
+              <div style={{...heavy, fontSize: 28, color: i === 0 ? T.redBright : T.teal}}>{side.head}</div>
+              <div style={{fontSize: 28, color: T.cardInk, marginTop: 6}}>{side.body}</div>
             </div>
           ) : null)}
         </div>
@@ -953,15 +1011,25 @@ const PortraitCard: React.FC<{spec: Record<string, any>}> = ({spec}) => {
   );
 };
 
-const PortraitBigText: React.FC<{label?: string; main?: string; sub?: string}> = ({label, main, sub}) => {
+const PortraitBigText: React.FC<{label?: string; main?: string; sub?: string; centerY?: number}> = ({
+  label,
+  main,
+  sub,
+  centerY,
+}) => {
   const f = useCurrentFrame();
   const o = interpolate(f, [0, 12], [0, 1], {extrapolateRight: 'clamp'});
+  // centerY：在带底部信息条的骨架里，大标题要居中到上半区，避免压住信息条
+  const box: React.CSSProperties =
+    centerY === undefined
+      ? {position: 'absolute', inset: 0}
+      : {position: 'absolute', left: 0, right: 0, top: centerY - 420, height: 840};
   return (
-    <AbsoluteFill style={{justifyContent: 'center', alignItems: 'center', opacity: o, padding: '0 110px'}}>
+    <AbsoluteFill style={{...box, justifyContent: 'center', alignItems: 'center', opacity: o, padding: '0 110px'}}>
       {label ? <div style={{...heavy, fontSize: 30, color: T.redBright, marginBottom: 22, letterSpacing: 2}}>{label}</div> : null}
       {main ? <div style={{...heavy, fontSize: 108, color: T.white, textAlign: 'center', lineHeight: 1.1,
         textShadow: '0 4px 22px rgba(0,0,0,0.7)'}}>{main}</div> : null}
-      {sub ? <div style={{fontSize: 34, color: '#e6e1db', marginTop: 22, textAlign: 'center'}}>{sub}</div> : null}
+      {sub ? <div style={{fontSize: 34, color: T.onMedia, marginTop: 22, textAlign: 'center'}}>{sub}</div> : null}
     </AbsoluteFill>
   );
 };
@@ -975,8 +1043,7 @@ const PortraitShot: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
     <Sequence from={from} durationInFrames={dur}>
       <AbsoluteFill style={{overflow: 'hidden'}}>
         <PortraitMedia shot={shot} index={index} />
-        <AbsoluteFill style={{background:
-          'linear-gradient(180deg, rgba(0,0,0,0.68) 0%, rgba(0,0,0,0.12) 30%, rgba(0,0,0,0.18) 56%, rgba(0,0,0,0.82) 100%)'}} />
+        <AbsoluteFill style={{background: T.scrim}} />
         {shot.kind === 'title_card'
           ? <PortraitBigText label={shot.overlay?.label} main={shot.overlay?.number || shot.overlay?.keyword || shot.overlay?.title} />
           : null}
@@ -993,20 +1060,20 @@ const PortraitShot: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
 const PortraitFooter: React.FC<{sources: string[]; disclaimer: string}> = ({sources, disclaimer}) => (
   <div style={{position: 'absolute', left: 0, top: 1690, width: '100%', textAlign: 'center'}}>
     {sources.length ? (
-      <div style={{fontSize: fitSize('资料来源：' + sources.join(' ｜ '), 24, 980), color: 'rgba(230,225,219,0.72)',
+      <div style={{fontSize: fitSize('资料来源：' + sources.join(' ｜ '), 24, 980), color: T.gray,
         marginBottom: 10, whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.8)'}}>
         资料来源：{sources.join(' ｜ ')}
       </div>
     ) : null}
     {disclaimer ? (
-      <div style={{fontSize: fitSize(disclaimer, 24, 980), color: 'rgba(230,225,219,0.6)',
+      <div style={{fontSize: fitSize(disclaimer, 24, 980), color: T.grayDim,
         whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.8)'}}>{disclaimer}</div>
     ) : null}
   </div>
 );
 
 const PortraitVideo: React.FC<NiwoProps> = (props) => (
-  <AbsoluteFill style={{background: '#0e0c0b', fontFamily: T.font}}>
+  <AbsoluteFill style={{background: T.bgTop, fontFamily: T.font}}>
     <FontFace />
     {props.shots.map((shot, i) => (
       <PortraitShot key={i} shot={shot} index={i} />
@@ -1019,71 +1086,181 @@ const PortraitVideo: React.FC<NiwoProps> = (props) => (
 
 // ---------------- root video ----------------
 export const NiwoVideo: React.FC<NiwoProps> = (props) => {
-  // 风格包：不同形态不同默认色系 + 动效强度
-  const PACK_DEFAULTS: Record<string, [string, string]> = {
-    data: ["#3a5a8c", "#5b82bb"],
-    profile: ["#a44231", "#c96b5a"],
-    investigation: ["#2e6f6a", "#4d9c96"],
-    opinion: ["#a44231", "#d4623f"],
-  };
-  const pack = props.stylePack || "";
-  if (!props.accent && PACK_DEFAULTS[pack]) {
-    T.red = PACK_DEFAULTS[pack][0];
-    T.redBright = PACK_DEFAULTS[pack][1];
-  }
-  if (props.accent) T.red = props.accent;
-  if (props.accentSoft) T.redBright = props.accentSoft;
-  // 动效强度：data/opinion 快节奏（入场 5 帧），profile/investigation 稳重（9 帧）
-  (globalThis as any).__motionFrames = (pack === "data" || pack === "opinion") ? 5 : 9;
-  if ((props.template || 'editorial') === 'portrait') {
-    return <PortraitVideo {...props} />;
-  }
-  return (
-    <AbsoluteFill style={{background: T.bgTop, fontFamily: T.font}}>
-      <FontFace />
-      <Background />
-      {/* paper card */}
+  // 模板决定整套配色 / 字体 / 装饰 / 动效节奏。必须在子组件渲染前赋值。
+  // 配色由模板独家控制：LLM 的 stylePack 从此只影响「用哪些信息卡」，
+  // 不再影响画面颜色（否则每个模板都会被同一套主题色染色，等于没换模板）。
+  const skin = resolveSkin(props.template);
+  applySkin(skin);
+  if (skin.layout === 'bleed') return <PortraitVideo {...props} />;
+  if (skin.layout === 'lower') return <LowerVideo {...props} />;
+  return <EditorialVideo props={props} />;
+};
+
+// ---------------- editorial layout（纸卡 + 顶标题带 + 内嵌媒体窗） ----------------
+const EditorialVideo: React.FC<{props: NiwoProps}> = ({props}) => (
+  <AbsoluteFill style={{background: T.bgTop, fontFamily: T.font}}>
+    <FontFace />
+    <Background />
+    {/* paper card */}
+    <div
+      style={{
+        position: 'absolute',
+        left: 91,
+        top: 124,
+        width: 892,
+        height: 1432,
+        borderRadius: 26,
+        background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)`,
+        boxShadow: T.paperShadow,
+        overflow: 'hidden',
+      }}
+    >
       <div
         style={{
           position: 'absolute',
-          left: 91,
-          top: 124,
-          width: 892,
-          height: 1432,
-          borderRadius: 26,
-          background: `linear-gradient(160deg, #e8e6e5 0%, ${T.paper} 55%, #dcd9d6 100%)`,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.55)',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage:
-              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='0.15' numOctaves='2'/><feColorMatrix type='matrix' values='0 0 0 0 0.45 0 0 0 0 0.44 0 0 0 0 0.42 0 0 0 0.045 0'/></filter><rect width='160' height='160' filter='url(%23p)'/></svg>\")",
-          }}
-        />
-      </div>
-      <HeadlineBand lines={props.headline.lines} />
-      {/* dark inner panel */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 115,
-          top: 596,
-          width: 849,
-          height: 844,
-          borderRadius: 16,
-          background: T.panel,
+          inset: 0,
+          ...decorLayer(T.paperTexture, T.paperTexture === 'grid' ? T.accent : '#78736e', 1.4),
         }}
       />
-      {props.shots.map((shot, i) => (
-        <ShotView key={i} shot={shot} index={i} />
-      ))}
-      {props.showSubtitles !== false ? <Subtitles clauses={props.clauses} /> : null}
-      <Footer sources={props.sources} disclaimer={props.disclaimer} />
-    </AbsoluteFill>
+    </div>
+    <HeadlineBand lines={props.headline.lines} />
+    {/* inner panel */}
+    <div
+      style={{
+        position: 'absolute',
+        left: 115,
+        top: 596,
+        width: 849,
+        height: 844,
+        borderRadius: T.panelRadius,
+        background: T.panel,
+      }}
+    />
+    {props.shots.map((shot, i) => (
+      <ShotView key={i} shot={shot} index={i} />
+    ))}
+    {props.showSubtitles !== false ? <Subtitles clauses={props.clauses} /> : null}
+    <Footer sources={props.sources} disclaimer={props.disclaimer} />
+  </AbsoluteFill>
+);
+
+// ---------------- lower layout（满屏素材 + 底部实色信息条） ----------------
+const LowerVideo: React.FC<{props: NiwoProps}> = (props) => (
+  <AbsoluteFill style={{background: '#000', fontFamily: T.font}}>
+    <FontFace />
+    {props.shots.map((shot, i) => (
+      <LowerShot key={i} shot={shot} index={i} />
+    ))}
+    <LowerBar lines={props.headline.lines} />
+    {props.showSubtitles !== false ? <LowerSubtitles clauses={props.clauses} /> : null}
+    <Footer sources={props.sources} disclaimer={props.disclaimer} />
+  </AbsoluteFill>
+);
+
+const LowerShot: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
+  const fps = useVideoConfig().fps;
+  const from = msToF(shot.startMs, fps);
+  const dur = msToF(shot.endMs - shot.startMs, fps) + 1;
+  const card = shot.kind === 'panel' || shot.kind === 'callout';
+  return (
+    <Sequence from={from} durationInFrames={dur}>
+      <AbsoluteFill style={{overflow: 'hidden'}}>
+        <PortraitMedia shot={shot} index={index} />
+        <AbsoluteFill style={{background: T.scrim}} />
+        {shot.kind === 'title_card' ? (
+          <PortraitBigText
+            centerY={560}
+            label={shot.overlay?.label}
+            main={shot.overlay?.number || shot.overlay?.keyword || shot.overlay?.title}
+          />
+        ) : null}
+        {shot.kind === 'quote_card' ? (
+          <PortraitBigText
+            centerY={560}
+            label={shot.overlay?.label}
+            main={shot.overlay?.quote || shot.overlay?.title}
+          />
+        ) : null}
+        {card ? <PortraitCard spec={(shot.overlay ?? {}) as Record<string, any>} /> : null}
+      </AbsoluteFill>
+    </Sequence>
+  );
+};
+
+/** 底部实色信息条：播报式 lower third */
+const LowerBar: React.FC<{lines: {text: string; highlight?: string}[]}> = ({lines}) => (
+  <div
+    style={{
+      position: 'absolute',
+      left: 0,
+      top: 1160,
+      width: '100%',
+      background: 'rgba(3,8,16,0.94)',
+      borderTop: `6px solid ${T.accent}`,
+      padding: '26px 0 30px 0',
+    }}
+  >
+    {lines.map((l, i) => {
+      const parts = l.highlight && l.text.includes(l.highlight) ? l.text.split(l.highlight) : null;
+      return (
+        <div
+          key={i}
+          style={{
+            ...heavy,
+            fontSize: i === 0 ? 68 : 60,
+            color: i === 0 ? T.white : T.highlightInk,
+            textAlign: 'left',
+            paddingLeft: 64,
+            paddingRight: 64,
+            marginTop: i === 0 ? 0 : 10,
+          }}
+        >
+          {parts ? (
+            <>
+              {parts[0]}
+              <span
+                style={{
+                  background: i === 0 ? T.accent : T.highlightBg,
+                  color: T.onAccent,
+                  padding: '0 12px 4px',
+                  marginLeft: 6,
+                }}
+              >
+                {l.highlight}
+              </span>
+              {parts[1]}
+            </>
+          ) : (
+            l.text
+          )}
+        </div>
+      );
+    })}
+  </div>
+);
+
+const LowerSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
+  const frame = useCurrentFrame();
+  const fps = useVideoConfig().fps;
+  const t = (frame / fps) * 1000;
+  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  if (!active) return null;
+  return (
+    <div style={{position: 'absolute', left: 70, right: 70, bottom: 800, textAlign: 'center'}}>
+      <span
+        style={{
+          ...heavy,
+          fontSize: 58,
+          color: T.white,
+          background: 'rgba(3,8,16,0.74)',
+          padding: '6px 22px 12px 22px',
+          borderRadius: 8,
+          lineHeight: 1.3,
+        }}
+      >
+        {active.text}
+      </span>
+    </div>
   );
 };
 
@@ -1096,9 +1273,9 @@ const StatCard: React.FC<{spec: any}> = ({spec}) => {
   const numO = interpolate(f, [12, 24], [0, 1], {extrapolateRight: 'clamp'});
   const numY = interpolate(f, [12, 24], [24, 0], {extrapolateRight: 'clamp'});
   return (
-    <div style={{position: 'absolute', inset: 0, background: 'rgba(14,11,9,0.5)'}}>
+    <div style={{position: 'absolute', inset: 0, background: T.scrim}}>
       {spec.year ? (
-        <div style={{position: 'absolute', top: 26, right: 28, background: T.accent, color: '#f7f2ec',
+        <div style={{position: 'absolute', top: 26, right: 28, background: T.accent, color: T.onAccent,
                      fontSize: 24, padding: '5px 18px', borderRadius: 20, ...heavy}}>{spec.year}</div>
       ) : null}
       <div style={{position: 'absolute', left: 36, top: 30, display: 'flex', alignItems: 'center', opacity: o}}>
@@ -1109,7 +1286,7 @@ const StatCard: React.FC<{spec: any}> = ({spec}) => {
                    fontSize: 96, color: T.white, transform: `translateY(${numY}px)`}}>
         {spec.amount}
       </div>
-      <div style={{position: 'absolute', left: 42, top: 236, fontSize: 26, color: '#c9c3bc', opacity: numO}}>
+      <div style={{position: 'absolute', left: 42, top: 236, fontSize: 26, color: T.mutedInk, opacity: numO}}>
         {spec.desc}
       </div>
     </div>
@@ -1121,13 +1298,13 @@ const Branches: React.FC<{spec: any}> = ({spec}) => {
   const srcO = interpolate(f, [4, 12], [0, 1], {extrapolateRight: 'clamp'});
   const targets = spec.targets ?? [];
   return (
-    <div style={{position: 'absolute', inset: 0, background: 'rgba(16,12,9,0.55)'}}>
+    <div style={{position: 'absolute', inset: 0, background: T.scrim}}>
       <div style={{position: 'absolute', left: 30, top: 30, display: 'flex', alignItems: 'center'}}>
         <span style={Tick} />
         <span style={{...heavy, fontSize: 28, color: T.accentSoft}}>{spec.label}</span>
       </div>
       <div style={{position: 'absolute', left: 30, top: 150, opacity: srcO}}>
-        <div style={{...heavy, fontSize: 40, color: T.white, background: 'rgba(120,40,20,0.75)',
+        <div style={{...heavy, fontSize: 40, color: T.white, background: T.chipBg,
                      padding: '12px 26px', borderRadius: 10, display: 'inline-block'}}>
           {spec.source}
         </div>
@@ -1146,7 +1323,7 @@ const Branches: React.FC<{spec: any}> = ({spec}) => {
         const y2 = 210 + i * ((440 - 230) / Math.max(targets.length - 1, 1));
         return (
           <div key={i} style={{position: 'absolute', left: 430, top: y2 - 24, opacity: o2}}>
-            <div style={{background: 'rgba(120,40,20,0.85)', color: T.white, ...heavy,
+            <div style={{background: T.chipBg, color: T.white, ...heavy,
                          fontSize: 26, padding: '8px 20px', borderRadius: 8, display: 'inline-block'}}>
               {t.text ?? t}
             </div>
@@ -1171,10 +1348,10 @@ const PersonCard: React.FC<{spec: any}> = ({spec}) => {
         {spec.title}
       </div>
       <div style={{position: 'absolute', right: 24, bottom: 20, width: 460, opacity: o,
-                   transform: `translateX(${cardX * -0.4}px)`, background: '#eef4f8', borderRadius: 12,
+                   transform: `translateX(${cardX * -0.4}px)`, background: T.cardWhite, borderRadius: T.cardRadius,
                    padding: '22px 28px'}}>
-        <div style={{...heavy, fontSize: 30, color: '#101820'}}>{spec.name}</div>
-        <div style={{fontSize: 24, color: '#3c4650', marginTop: 10, lineHeight: 1.45}}>{spec.caption}</div>
+        <div style={{...heavy, fontSize: 30, color: T.cardInk}}>{spec.name}</div>
+        <div style={{fontSize: 24, color: T.cardMuted, marginTop: 10, lineHeight: 1.45}}>{spec.caption}</div>
       </div>
     </div>
   );
@@ -1184,20 +1361,20 @@ const Timeline3: React.FC<{spec: any}> = ({spec}) => {
   const f = useCurrentFrame();
   const cols = spec.cols ?? [];
   return (
-    <div style={{position: 'absolute', inset: 0, background: 'rgba(16,12,9,0.55)'}}>
+    <div style={{position: 'absolute', inset: 0, background: T.scrim}}>
       <div style={{position: 'absolute', left: 36, top: 30, ...heavy, fontSize: 48, color: T.white}}>
         {spec.title}
       </div>
       {spec.subtitle ? (
-        <div style={{position: 'absolute', left: 38, top: 104, fontSize: 26, color: '#b7b1aa'}}>{spec.subtitle}</div>
+        <div style={{position: 'absolute', left: 38, top: 104, fontSize: 26, color: T.mutedInk}}>{spec.subtitle}</div>
       ) : null}
       <div style={{position: 'absolute', left: 30, right: 30, top: 180, display: 'flex', gap: 18}}>
         {cols.map((col: any, i: number) => {
           const o = interpolate(f, [16 + i * 10, 28 + i * 10], [0, 1], {extrapolateRight: 'clamp', extrapolateLeft: 'clamp'});
           return (
-            <div key={i} style={{flex: 1, background: 'rgba(40,30,14,0.85)', borderRadius: 10,
+            <div key={i} style={{flex: 1, background: T.timelineBg, borderRadius: T.cardRadius,
                                  border: `2px solid ${T.accent}66`, opacity: o, padding: '16px 18px'}}>
-              <div style={{display: 'inline-block', background: T.accent, color: '#f7f2ec', fontSize: 22,
+              <div style={{display: 'inline-block', background: T.accent, color: T.onAccent, fontSize: 22,
                            padding: '3px 14px', borderRadius: 6, ...heavy}}>{col.year}</div>
               <div style={{fontSize: 24, color: T.white, marginTop: 12, lineHeight: 1.45}}>{col.text}</div>
             </div>

@@ -36,9 +36,19 @@ def _frame_at(video: Path, t: float, tmp: Path) -> Path | None:
 
 
 def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
-           summaries: dict | None = None, bundle: Path | None = None) -> dict:
+           summaries: dict | None = None, bundle: Path | None = None,
+           progress=None) -> dict:
     errors: list[str] = []
     warnings: list[str] = []
+
+    def report(pct: int, detail: str | None = None) -> None:
+        if progress:
+            try:
+                progress(pct, detail)
+            except TypeError:
+                progress(pct)
+            except Exception:
+                pass
 
     dur = _probe_duration(video)
     if dur <= 0:
@@ -48,6 +58,7 @@ def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
 
     tmp = Path(tempfile.mkdtemp(prefix="vg_verify_"))
     # 1. media shots: media region must have detail (not black/blank)
+    shots_total = len(plan.shots) or 1
     for i, shot in enumerate(plan.shots):
         if shot.asset_path is None:
             continue
@@ -65,6 +76,7 @@ def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
             errors.append(f"镜头 {i} ({shot.asset_path}): 媒体区域近乎全黑，素材可能加载失败")
         elif extrema < 4:
             warnings.append(f"镜头 {i}: 媒体区域内容过于单一")
+        report(int((i + 1) / shots_total * 70), f"抽检画面 {i + 1} / {shots_total} 镜")
 
     # 2. subtitle timing sanity
     if not plan.clauses:
@@ -90,6 +102,7 @@ def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
             if f is None:
                 continue
             desc = summaries.get(shot.asset_path, "")[:60]
+            report(70 + int(checked / 4 * 28), f"AI 视觉复核第 {checked + 1} / 4 镜")
             res = llm_vision(f, f"这是竖屏短视频的一个镜头画面。请检查：1画面是否正常显示"
                              f"（无黑屏、无破图、无乱码）；2画面内容是否与描述相符。画面描述：{desc}")
             checked += 1
@@ -106,9 +119,9 @@ def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
     if not r.stdout.strip():
         errors.append("成片缺少音频流")
 
-    report = {"ok": not errors, "errors": errors, "warnings": warnings,
+    result = {"ok": not errors, "errors": errors, "warnings": warnings,
               "duration_s": round(dur, 2), "shots": len(plan.shots),
               "clauses": len(plan.clauses)}
     (work / "verify_report.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
-    return report
+        json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    return result

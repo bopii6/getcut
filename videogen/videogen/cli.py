@@ -10,11 +10,15 @@ import re
 from pathlib import Path
 
 from . import compose, llm, overlays, remotion_render, subtitle, tts, verify
+from .config import DEFAULT_TEMPLATE, TEMPLATE_ALIAS, TEMPLATES
+from .config import OUTPUTS as _OUTPUTS
 from .planner import (align_timeline, build_plan, build_plan_clone, build_plan_llm,
                       clause_units, split_clauses, sentence_spans, unit_spans)
 from .schemas import Content, Manifest, HIGHLIGHT
 
 WORK = Path(__file__).resolve().parent.parent / "work"
+
+# 模板注册表见 config.TEMPLATES（与 renderer/src/skin.ts 的 SKINS 一一对应）
 
 
 def _keyword_of(script: str, fallback: str) -> str:
@@ -69,30 +73,32 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
           voice: str | None = None, rate: str | None = None,
           bgm: Path | None = None, renderer: str = "remotion",
           progress=None, clone: Path | None = None,
-          format: str = "portrait_editorial", sfx: bool = True,
+          format: str = DEFAULT_TEMPLATE, sfx: bool = True,
           sfx_mode: str = "full",
           show_subtitles: bool = True, show_sources: bool = True,
           theme: str = "auto", disclaimer: str | None = None,
-          use_llm: bool = True) -> Path:
-    def report(stage: str, pct: int) -> None:
+          use_llm: bool = True, job_id: str | None = None) -> Path:
+    def report(stage: str, pct: int, detail: str | None = None) -> None:
         if progress:
             try:
+                progress(stage, pct, detail)
+            except TypeError:
                 progress(stage, pct)
             except Exception:
                 pass
     bundle = Path(bundle_dir)
     work = Path(work_dir) if work_dir else WORK / bundle.name
     work.mkdir(parents=True, exist_ok=True)
-    if format not in ("portrait_editorial", "portrait"):
+    template = TEMPLATE_ALIAS.get(format, format)
+    if template not in TEMPLATES:
         raise NotImplementedError(
-            f"成片形态 '{format}' 尚未实现，当前支持竖屏信息版(portrait_editorial)与竖屏满版(portrait)")
-    template = "portrait" if format == "portrait" else "editorial"
+            f"模板 '{format}' 不存在，可选：{'、'.join(TEMPLATES)}")
 
     content = Content.load(bundle / "content.json")
     manifest = Manifest.load(bundle / "manifest.json")
 
     # 1) TTS + timeline
-    report("tts", 8)
+    report("tts", 8, "正在合成配音（通常 30–90 秒）")
     mp3, events = tts.synthesize(content.script, content.pronunciations,
                                  work / "tts", voice=voice or tts.VOICE,
                                  rate=rate or tts.RATE)
@@ -110,7 +116,7 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     sent_payload = [{"index": u["index"], "text": u["text"]} for u in units if u["sent"] not in skip_sents]
     asset_payload = [{"index": i, "kind": a.kind, "tags": a.tags, "summary": a.summary}
                      for i, a in enumerate(manifest.assets)]
-    report("plan", 18)
+    report("plan", 18, "AI 导演正在规划分镜与设计卡")
     spec = None
     if clone:
         plan = build_plan_clone(content, clauses,
@@ -157,7 +163,7 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
 
     if renderer == "remotion":
         # Remotion renders the full visual track (layout, subs, overlays)
-        report("props", 26)
+        report("props", 26, "正在设计画面版式")
         props = remotion_render.build_props(
             bundle, plan, content,
             title_card={"label": title_label, "keyword": title_kw},
@@ -165,10 +171,19 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
             theme=getattr(plan, "theme", {}),
             show_subtitles=show_subtitles, show_sources=show_sources,
             disclaimer=disclaimer, template=template)
-        report("render", 0)
+        # 分镜剧照：先把几张关键画面拍出来，等待期间用户能看到片子长什么样
+        if job_id:
+            report("props", 32, "正在拍分镜剧照")
+            try:
+                stills = remotion_render.render_stills(props, _OUTPUTS, job_id)
+                if stills:
+                    report("props", 38, f"分镜剧照 {len(stills)} 张已就绪")
+            except Exception:
+                pass
+        report("render", 0, "启动渲染引擎")
         visual = remotion_render.render_visual(
             props, work / "visual.mp4",
-            progress=lambda p: report("render", max(0, min(p, 100))))
+            progress=lambda p, d=None: report("render", max(0, min(p, 100)), d))
         withsubs = visual
     else:
         # legacy PIL compositor (fallback)
@@ -218,7 +233,7 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
         quote = next((q for q in plan.shots if q.kind == "quote_card"), None)
         if quote and "emphasis" in sfx_bank:
             sfx_events.append((quote.start_ms / 1000.0 + 0.05, sfx_bank["emphasis"], 0.45))
-    report("audio", 88)
+    report("audio", 88, "正在合成音效与背景音乐")
     # 风格包 -> 默认 BGM（用户没指定时按形态气质自动配）
     if bgm is None:
         pack_bgm = {"data": "bgm-electronic", "opinion": "bgm-trap",
@@ -229,17 +244,20 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
             hit = next((f for f in sorted(music_dir.glob("*.mp3")) if f.stem.startswith(want)), None)
             if hit:
                 bgm = hit
-                report("audio", 85)
+                report("audio", 85, f"自动配乐：{bgm.stem}")
 
-    audio = compose.mix_audio(mp3, duration_s, work, bgm=bgm, sfx_events=sfx_events)
+    audio = compose.mix_audio(mp3, duration_s, work, bgm=bgm, sfx_events=sfx_events,
+                              progress=lambda p, d=None: report("audio", p, d))
     out_mp4 = Path(out_mp4)
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
-    report("mux", 94)
+    report("mux", 94, "正在封装成片")
     compose.mux(withsubs, audio, out_mp4, work)
 
     summaries = {a.file: a.summary for a in manifest.assets}
+    report("verify", 0, "正在逐镜校验画面")
     vreport = verify.verify(out_mp4, plan, work, vision=True,
-                            summaries=summaries, bundle=bundle)
+                            summaries=summaries, bundle=bundle,
+                            progress=lambda p, d=None: report("verify", p, d))
     print(f"renderer: {renderer} | director: {'llm' if llm_used else 'rules'} | shots: {len(plan.shots)} | clauses: {len(plan.clauses)} | "
           f"duration: {duration_s:.1f}s -> {out_mp4}")
     print("verify:", "OK" if vreport["ok"] else "FAILED", vreport["errors"], vreport["warnings"])
@@ -258,8 +276,10 @@ def main() -> None:
     b.add_argument("--bgm", type=Path, default=None)
     b.add_argument("--renderer", default="remotion", choices=["remotion", "pil"])
     b.add_argument("--clone", type=Path, default=None)
-    b.add_argument("--format", default="portrait_editorial",
-                   choices=["portrait_editorial", "portrait", "landscape"])
+    b.add_argument("--format", default=DEFAULT_TEMPLATE,
+                   choices=list(TEMPLATES) + list(TEMPLATE_ALIAS),
+                   help="模板：editorial 杂志 / finance 财经 / minimal 极简白 / "
+                        "bleed 全出血 / news 新闻 / retro 复古 / portrait 竖屏满屏")
     b.add_argument("--no-sfx", action="store_true", help="关闭音效")
     b.add_argument("--no-subtitles", action="store_true", help="关闭字幕")
     b.add_argument("--no-sources", action="store_true", help="关闭来源行")

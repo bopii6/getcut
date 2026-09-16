@@ -4,6 +4,8 @@ Architecture parity with niwo: Python produces structured props (script timing,
 shots, designed-overlay copy), Remotion renders the editorial TSX template.
 """
 from __future__ import annotations
+import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -15,6 +17,19 @@ RENDERER = Path(__file__).resolve().parent.parent / "renderer"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 DISCLAIMER = "本片内容基于公开报道与公开资料整理，观点仅供参考，不构成任何投资建议"
+
+
+def _report(fn, pct: int, detail: str | None = None) -> None:
+    """调用进度回调，兼容只接受 (pct) 的旧签名。"""
+    try:
+        fn(pct, detail)
+    except TypeError:
+        try:
+            fn(pct)
+        except Exception:
+            pass
+    except Exception:
+        pass
 
 
 def _headline_props(content: Content) -> dict:
@@ -130,9 +145,41 @@ def build_props(bundle: Path, plan: Plan, content: Content,
     return props_out
 
 
+def render_stills(props: dict, out_dir: Path, prefix: str,
+                  ratios=(0.06, 0.30, 0.55, 0.82), quality: int = 82) -> list[Path]:
+    """先拍几张关键剧照（分镜预览）：让等待的人看到片子正在长什么样。
+
+    每张 still 由 Remotion 单独渲染，单张约 1–3 秒；失败不影响正式渲染。
+    """
+    props_path = RENDERER / "props.json"
+    props_path.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
+    cli_js = RENDERER / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"
+    node = shutil.which("node")
+    if not cli_js.is_file() or not node:
+        return []
+    total = int(props.get("durationInFrames") or 0)
+    if total <= 1:
+        return []
+    out_dir.mkdir(parents=True, exist_ok=True)
+    made: list[Path] = []
+    for i, ratio in enumerate(ratios, start=1):
+        frame = max(0, min(total - 1, int(total * ratio)))
+        out = out_dir / f"{prefix}-still-{i}.jpg"
+        cmd = [node, str(cli_js), "still", "main", str(out),
+               "--frame", str(frame), "--props=props.json",
+               "--image-format=jpeg", "--jpeg-quality", str(quality), "--log=error"]
+        try:
+            p = subprocess.run(cmd, cwd=str(RENDERER), capture_output=True,
+                               text=True, timeout=120)
+            if p.returncode == 0 and out.is_file() and out.stat().st_size > 0:
+                made.append(out)
+        except Exception:
+            pass
+    return made
+
+
 def render_visual(props: dict, out_path: Path, timeout: int = 1800,
                   progress=None) -> Path:
-    import json
     props_path = RENDERER / "props.json"
     props_path.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
     cli_js = RENDERER / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"
@@ -142,8 +189,15 @@ def render_visual(props: dict, out_path: Path, timeout: int = 1800,
     # relative output inside the renderer dir: avoids cmd-shim mangling of
     # non-ASCII absolute paths when forwarding args
     rel_out = "visual_out.mp4"
+    # 渲染参数（实测于 4 核云主机，画质不变、只影响编码与并行度）：
+    #   image-format=jpeg + q95 —— 逐帧截图的编码开销远低于 png，肉眼无差
+    #   x264-preset=veryfast    —— 同画质，文件略大
+    #   concurrency             —— 默认只吃一半核；用满核数（Remotion 上限=核数），实测 4 核最快
+    conc = max(2, min(4, os.cpu_count() or 2))
     cmd = [node, str(cli_js), "render", "main", rel_out,
-           "--props=props.json"]
+           "--props=props.json",
+           "--image-format=jpeg", "--jpeg-quality=95",
+           "--x264-preset=veryfast", f"--concurrency={conc}"]
     import re as _re
     import time as _time
     # stdout 重定向到文件而非管道：Remotion 的 Chrome 子进程会继承管道句柄，
@@ -174,16 +228,20 @@ def render_visual(props: dict, out_path: Path, timeout: int = 1800,
                             continue
                         m = _re.search(r"Rendered\s+(\d+)\s*/\s*(\d+)", line)
                         if m and int(m.group(2)) > 0:
-                            pct = int(int(m.group(1)) / int(m.group(2)) * 100)
-                        else:
-                            m2 = _re.search(r"(\d{1,3})%", line)
-                            pct = int(m2.group(1)) if m2 else -1
-                        if pct >= 0 and pct > last_pct:
-                            last_pct = pct
-                            try:
-                                progress(pct)
-                            except Exception:
-                                pass
+                            done_f, total_f = int(m.group(1)), int(m.group(2))
+                            pct = int(done_f / total_f * 100)
+                            if pct > last_pct:
+                                last_pct = pct
+                                _report(progress, pct,
+                                        f"正在渲染画面 {done_f:,} / {total_f:,} 帧")
+                            elif done_f >= total_f:
+                                # 帧已渲染完，Remotion 在做编码/合轨收尾
+                                _report(progress, last_pct, "画面渲染完成，正在编码成片")
+                        elif _re.search(r"Bundling|Copying public|Bundled|Packaging", line):
+                            # 打包/拷贝阶段：不推进百分比，只更新实况文案
+                            _report(progress, max(last_pct, 0), "正在打包渲染工程")
+                        elif "time remaining" in line and last_pct >= 0:
+                            _report(progress, last_pct, None)
                     pos = rf.tell()
             except OSError:
                 pass

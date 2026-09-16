@@ -17,6 +17,40 @@ def _run(cmd: list[str], cwd: Path) -> None:
         raise RuntimeError("ffmpeg failed:\n" + (p.stderr or "")[-3000:])
 
 
+def _run_progress(cmd: list[str], cwd: Path, total_s: float, progress=None,
+                  detail: str | None = None) -> None:
+    """跑一次 ffmpeg，并把 -progress 的输出换算成百分比上报。
+
+    total_s 是这步的预期时长（同一时间轴），用 out_time_us 对齐。抽不到进度
+    时静默降级为普通执行，不影响渲染。
+    """
+    full = [cmd[0], "-progress", "pipe:1", "-nostats", *cmd[1:]]
+    tail: list[str] = []
+    p = subprocess.Popen(full, cwd=str(cwd), stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+    if p.stdout is not None:
+        for line in p.stdout:
+            tail.append(line)
+            if len(tail) > 120:
+                tail = tail[-120:]
+            if progress is None or total_s <= 0:
+                continue
+            k, _, v = line.strip().partition("=")
+            if k in ("out_time_us", "out_time_ms") and v.isdigit():
+                done = int(v) / 1_000_000.0
+                pct = max(0, min(100, int(done / total_s * 100)))
+                try:
+                    progress(pct, detail)
+                except TypeError:
+                    progress(pct)
+                except Exception:
+                    pass
+    err = p.stderr.read() if p.stderr is not None else ""
+    p.wait()
+    if p.returncode != 0:
+        raise RuntimeError("ffmpeg failed:\n" + (err or "".join(tail))[-3000:])
+
+
 def _chapter_label_png(text: str, out: Path) -> Path:
     w, h = PANEL[2] - PANEL[0], PANEL[3] - PANEL[1]
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -176,7 +210,8 @@ def _synth_sfx(work: Path) -> dict[str, Path]:
 
 
 def mix_audio(tts_mp3: Path, duration_s: float, work: Path, bgm: Path | None = None,
-              sfx_events: list[tuple[float, Path, float]] | None = None) -> Path:
+              sfx_events: list[tuple[float, Path, float]] | None = None,
+              progress=None) -> Path:
     out = work / "audio.m4a"
     fade_start = max(duration_s - 3.0, 0)
     inputs = ["-i", str(tts_mp3.resolve())]
@@ -199,7 +234,7 @@ def mix_audio(tts_mp3: Path, duration_s: float, work: Path, bgm: Path | None = N
     cmd = ["ffmpeg", "-y", "-v", "error", *inputs,
            "-filter_complex", fc, "-map", "[a]",
            "-t", f"{duration_s:.3f}", "-c:a", "aac", "-b:a", "192k", out.name]
-    _run(cmd, work)
+    _run_progress(cmd, work, duration_s, progress=progress, detail="正在混合配音与音轨")
     return out
 
 

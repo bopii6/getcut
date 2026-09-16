@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import threading
 import time
@@ -28,9 +29,13 @@ UPLOADS = config.UPLOADS
 STATIC = config.STATIC
 OUTPUTS = config.OUTPUTS
 
+TEMPLATES = config.TEMPLATES                  # 模板 id -> 展示名
+TEMPLATE_ALIAS = config.TEMPLATE_ALIAS
+DEFAULT_TEMPLATE = config.DEFAULT_TEMPLATE
+
 MAX_UPLOAD_BYTES = 512 * 1024 * 1024          # 单个 zip 上限 512MB
 MAX_EXTRACT_BYTES = 2 * 1024 * 1024 * 1024    # 解压后总上限 2GB（防 zip 炸弹）
-SUPPORTED_FORMATS = {"portrait_editorial", "portrait"}
+SUPPORTED_FORMATS = set(TEMPLATES) | set(TEMPLATE_ALIAS)
 
 app = FastAPI(title="videogen studio")
 JOBS: dict[str, dict] = {}
@@ -70,12 +75,17 @@ def _reg_save(reg: dict) -> None:
     REG.write_text(json.dumps(reg, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-# 渲染阶段映射到 niwo 的 8 阶段
-STAGE8 = ["素材准备", "分镜规划", "TTS 配音", "画面设计",
-          "画面校验", "预览帧", "最终合成", "上传成片"]
-_STAGE_MAP = {"queued": (0, 3), "tts": (2, 22), "plan": (1, 12), "props": (3, 35),
-              "render": (6, 55), "audio": (6, 82), "mux": (7, 92), "verify": (4, 88),
+# 渲染阶段：与真实流水线执行顺序一致（前端 timeline 直接照此渲染）
+STAGE8 = ["读取素材", "AI 配音", "分镜规划", "画面设计",
+          "画面渲染", "音效混音", "画面校验", "完成"]
+# idx 从 0 开始；base 是该阶段起点的总进度
+_STAGE_MAP = {"queued": (0, 3), "tts": (1, 6), "plan": (2, 16), "props": (3, 30),
+              "render": (4, 40), "audio": (5, 78), "mux": (5, 88), "verify": (6, 93),
               "done": (7, 100)}
+# 各长阶段的进度区间（真实上报缺位时，用渐近曲线兜底爬升，既不冻住也不会跑飞）
+_STAGE_SPAN = {"tts": (6, 16), "plan": (16, 30), "props": (30, 40),
+               "render": (40, 78), "audio": (78, 88), "mux": (88, 93), "verify": (93, 99)}
+_TICK_TAU = 130.0        # 时间常数（秒）：约 2 分钟后走完该阶段 60%，之后越来越慢
 
 
 def _find_bundles() -> list[dict]:
@@ -99,9 +109,26 @@ def index() -> str:
     return (STATIC / "index.html").read_text(encoding="utf-8")
 
 
+@app.get("/fonts/{name}")
+def font(name: str):
+    """前端自托管的字体子集（展示字，与成片同款）。"""
+    root = (STATIC / "fonts").resolve()
+    f = (root / name).resolve()
+    if not f.is_file() or root not in f.parents:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(f, media_type="font/ttf")
+
+
 @app.get("/api/bundles")
 def bundles():
     return _find_bundles()
+
+
+@app.get("/api/templates")
+def templates():
+    """可选渲染模板（前端配置页据此渲染选择器）。"""
+    return {"default": DEFAULT_TEMPLATE,
+            "templates": [{"id": k, "name": v} for k, v in TEMPLATES.items()]}
 
 
 @app.get("/healthz")
@@ -275,35 +302,60 @@ def media(name: str, path: str):
 
 @app.post("/api/build")
 def start_build(body: dict):
-    fmt = body.get("format") or "portrait_editorial"
+    fmt = body.get("format") or DEFAULT_TEMPLATE
     if fmt not in SUPPORTED_FORMATS:
-        return JSONResponse({"error": f"成片形态 '{fmt}' 尚未实现，当前仅支持竖屏信息版"}, status_code=400)
+        return JSONResponse(
+            {"error": f"模板 '{fmt}' 不存在，可选：{'、'.join(TEMPLATES)}"}, status_code=400)
     if not body.get("bundle"):
         return JSONResponse({"error": "缺少素材包"}, status_code=400)
     job_id = uuid.uuid4().hex[:12]
     with _LOCK:
         JOBS[job_id] = {"stage": "queued", "stage8": 1, "progress": 3, "error": None, "video": None,
-                        "project_id": body.get("project_id")}
+                        "project_id": body.get("project_id"), "detail": "排队中", "t0": time.time()}
         _jobs_save()
     threading.Thread(target=_worker, args=(job_id, body), daemon=True).start()
 
     def _tick():
-        # 兜底平滑：render 阶段每 2.5s +1%（真实进度上报会让它跳得更快）
+        # 兜底：真实上报缺位时按渐近曲线缓慢推进，避免进度条看起来卡死
         while True:
+            time.sleep(3)
             with _LOCK:
                 j = JOBS.get(job_id)
                 if j is None or j["stage"] in ("done", "failed"):
                     return
-                if j["stage"] == "render" and j["progress"] < 88:
-                    j["progress"] += 1
-            time.sleep(2.5)
+                span = _STAGE_SPAN.get(j["stage"])
+                if not span:
+                    continue
+                base, cap = span
+                el = time.time() - j.get("t_stage", time.time())
+                target = int(base + (cap - base) * (1 - math.exp(-el / _TICK_TAU)))
+                if target > j["progress"]:
+                    j["progress"] = target
+                    _jobs_save()
     threading.Thread(target=_tick, daemon=True).start()
     return {"job": job_id}
 
 
 @app.get("/api/job/{job_id}")
 def job_status(job_id: str):
-    return JOBS.get(job_id, {"stage": "unknown"})
+    j = JOBS.get(job_id)
+    if j is None:
+        return {"stage": "unknown"}
+    out = dict(j)
+    t0 = out.get("t0")
+    out["elapsed"] = int(time.time() - t0) if t0 else None
+    # 分镜剧照（渲染开始前先拍好，渲染中陆续可见）
+    stills = sorted(OUTPUTS.glob(f"{job_id}-still-*.jpg")) if OUTPUTS.is_dir() else []
+    out["stills"] = [f"/still/{p.name}" for p in stills]
+    return out
+
+
+@app.get("/still/{name}")
+def still(name: str):
+    f = (OUTPUTS / name).resolve()
+    if not f.is_file() or OUTPUTS.resolve() not in f.parents:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(f, media_type="image/jpeg")
 
 
 @app.get("/api/music")
@@ -362,20 +414,23 @@ def _worker(job_id: str, body: dict) -> None:
     sys.path.insert(0, str(ROOT))
     from . import cli
     try:
-        def progress(stage: str, pct: int):
+        def progress(stage: str, pct: int, detail: str | None = None):
             idx, base = _STAGE_MAP.get(stage, (0, 0))
-            span = {"tts": 14, "plan": 10, "props": 12, "render": 30}.get(stage, 8)
+            span = {"tts": 14, "plan": 10, "props": 12, "render": 27, "audio": 10, "verify": 6}.get(stage, 8)
             val = min(base + int(pct / 100 * span), 98)
             with _LOCK:
                 j = JOBS.get(job_id)
                 if j is None:
                     return
                 if stage != j["stage"]:
-                    j.update(stage=stage, stage8=idx + 1, progress=max(val, j["progress"] + 1))
+                    j.update(stage=stage, stage8=idx + 1, progress=max(val, j["progress"] + 1),
+                             t_stage=time.time())
                 elif val > j["progress"]:
                     j.update(stage8=idx + 1, progress=val)
                 else:
                     j["stage8"] = idx + 1
+                if detail:
+                    j["detail"] = detail
                 _jobs_save()
 
         out = OUTPUTS / f"{Path(body['bundle']).stem}-{job_id}.mp4"
@@ -385,7 +440,7 @@ def _worker(job_id: str, body: dict) -> None:
                       rate=_normalize_rate(body.get("rate")),
                       bgm=Path(body["bgm"]) if body.get("bgm") else None,
                       renderer=body.get("renderer") or "remotion",
-                      format=body.get("format") or "portrait_editorial",
+                      format=body.get("format") or DEFAULT_TEMPLATE,
                       sfx=bool(body.get("sfx", True)),
                       sfx_mode=body.get("sfxMode") or ("full" if body.get("sfx", True) else "off"),
                       show_subtitles=bool(body.get("subtitles", True)),
@@ -393,9 +448,11 @@ def _worker(job_id: str, body: dict) -> None:
                       theme=body.get("theme") or "auto",
                       disclaimer=body.get("disclaimer"),
                       use_llm=bool(body.get("useLlm", True)),
+                      job_id=job_id,
                       progress=progress)
         with _LOCK:
-            JOBS[job_id].update(stage="done", stage8=8, progress=100, video=str(out))
+            JOBS[job_id].update(stage="done", stage8=8, progress=100, video=str(out),
+                                detail="成片已生成")
             _jobs_save()
             reg = _reg()
             for p in reg["projects"]:

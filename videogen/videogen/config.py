@@ -50,3 +50,21 @@ UPLOADS = ROOT / "uploads"
 ASSETS = ROOT / "assets"
 STATIC = ROOT / "server_static"
 RENDERER = ROOT / "renderer"
+
+# ---------- 渲染模板 ----------
+# id 与 renderer/src/skin.ts 的 SKINS 一一对应：一个模板 = 骨架(layout) × 皮肤(配色/字体/装饰/动效)。
+TEMPLATES: dict[str, str] = {
+    "editorial": "竖屏信息版 · 杂志编辑",
+    "finance": "财经数据版",
+    "minimal": "极简白版",
+    "bleed": "全出血沉浸版",
+    "news": "新闻播报版",
+    "retro": "复古人文版",
+    "portrait": "竖屏满屏",
+}
+# 旧 format 取值 → 新模板 id（兼容早前发出的请求）
+TEMPLATE_ALIAS: dict[str, str] = {
+    "portrait_editorial": "editorial",
+    "portrait_full": "portrait",
+}
+DEFAULT_TEMPLATE = "editorial"
