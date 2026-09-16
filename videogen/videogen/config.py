@@ -51,6 +51,18 @@ AUTH_TOKEN = _env("VIDEOGEN_TOKEN")
 USERS_FILE = _env("VIDEOGEN_USERS_FILE") or str(WORKSPACES / ".videogen-users.json")
 AUTH_SECRET_FILE = _env("VIDEOGEN_AUTH_SECRET") or str(WORKSPACES / ".videogen-auth-secret")
 
+# 发信邮箱（注册验证码）。任意支持 SMTP 的邮箱均可（QQ/163/企业邮箱）：
+#   EMAIL_SMTP_HOST=smtp.qq.com  EMAIL_SMTP_PORT=465（SSL）
+#   EMAIL_SMTP_USER=你的邮箱     EMAIL_SMTP_PASS=授权码（不是登录密码）
+# 未配置时的行为见 auth.issue_code：默认拒绝注册；VIDEOGEN_DEV_EMAIL=1 时
+# 验证码直接回给前端（仅限本机开发，公网千万别开）。
+EMAIL_SMTP_HOST = _env("EMAIL_SMTP_HOST")
+EMAIL_SMTP_PORT = _env("EMAIL_SMTP_PORT") or "465"
+EMAIL_SMTP_USER = _env("EMAIL_SMTP_USER")
+EMAIL_SMTP_PASS = _env("EMAIL_SMTP_PASS")
+EMAIL_FROM = _env("EMAIL_FROM") or _env("EMAIL_SMTP_USER")
+DEV_EMAIL_FALLBACK = _env("VIDEOGEN_DEV_EMAIL") == "1"
+
 # 派生目录
 WORK = ROOT / "work"
 OUTPUTS = ROOT / "outputs"

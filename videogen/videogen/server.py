@@ -59,7 +59,8 @@ _RENDER_LOCK = threading.Lock()
 # 页面外壳、字体、健康检查、登录接口本身保持公开。
 SESSION_COOKIE = "vg_session"
 _PUBLIC_PATHS = {"/", "/index.html", "/healthz",
-                 "/api/auth/status", "/api/auth/login", "/api/auth/setup"}
+                 "/api/auth/status", "/api/auth/login", "/api/auth/register",
+                 "/api/auth/send-code"}
 
 
 def _is_public(path: str) -> bool:
@@ -76,6 +77,24 @@ def _token_ok(request: Request) -> bool:
 
 def _session_email(request: Request) -> str | None:
     return auth.read_session(request.cookies.get(SESSION_COOKIE) or "")
+
+
+# ---------- 多用户归属 ----------
+# 注册开放后工作台是多用户的：普通用户只看自己的项目；
+# 管理员（第一个注册的）和持访问令牌的脚本可见全部。素材包目录仍是共享的。
+
+def _is_adminish(request: Request) -> bool:
+    email = _session_email(request)
+    if email and auth.is_admin(email):
+        return True
+    return not email and _token_ok(request)
+
+
+def _project_visible(p: dict, request: Request) -> bool:
+    if _is_adminish(request):
+        return True
+    email = _session_email(request)
+    return bool(email) and p.get("owner") == email
 
 
 def _request_authed(request: Request) -> bool:
@@ -105,23 +124,29 @@ def _set_session_cookie(response: Response, request: Request, email: str,
 
 @app.get("/api/auth/status")
 def auth_status():
-    """登录页初始化用（公开）：要不要初始化管理员、要不要带访问令牌。"""
-    return {"setup": not auth.has_users(), "token_auth": bool(AUTH_TOKEN),
-            "locked": auth.has_users()}
+    """登录/注册页初始化用（公开）。"""
+    return {"smtp": auth.smtp_ready(), "dev_email": config.DEV_EMAIL_FALLBACK,
+            "token_auth": bool(AUTH_TOKEN), "locked": auth.has_users()}
 
 
-@app.post("/api/auth/setup")
-def auth_setup(body: dict, request: Request, response: Response):
-    """首次使用：创建管理员。若配置了访问令牌，必须携带令牌才能初始化，
-    防止公网上被人抢注管理员。只允许在零用户时调用一次。"""
-    if auth.has_users():
-        return JSONResponse({"error": "账号已初始化，请直接登录"}, status_code=400)
-    tok = body.get("token", "")
-    body_tok_ok = isinstance(tok, str) and tok and _hmac.compare_digest(tok, AUTH_TOKEN)
-    if AUTH_TOKEN and not (_token_ok(request) or body_tok_ok):
-        return JSONResponse({"error": "需要访问令牌才能初始化"}, status_code=403)
+@app.post("/api/auth/send-code")
+def auth_send_code(body: dict):
+    """注册第一步：给邮箱发验证码。60 秒冷却，10 分钟有效。"""
+    ok, msg = auth.issue_code(body.get("email", ""))
+    if not ok:
+        return JSONResponse({"error": msg}, status_code=400)
+    return {"ok": True, "message": msg}
+
+
+@app.post("/api/auth/register")
+def auth_register(body: dict, request: Request, response: Response):
+    """注册第二步：邮箱 + 验证码 + 密码。第一个注册的用户自动成为管理员。"""
+    email = body.get("email", "")
+    if not auth.check_code(email, body.get("code", "")):
+        return JSONResponse({"error": "验证码不对或已过期"}, status_code=400)
+    role = "admin" if not auth.has_users() else "user"
     try:
-        user = auth.create_user(body.get("email", ""), body.get("password", ""))
+        user = auth.create_user(email, body.get("password", ""), role=role)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     _set_session_cookie(response, request, user["email"],
@@ -269,22 +294,25 @@ def _bundle_meta(bundle: str | None) -> dict:
 
 
 @app.get("/api/projects")
-def list_projects():
+def list_projects(request: Request):
     with _LOCK:
         reg = _reg()
-        # 自动登记：工作区里出现的新素材包自动成为项目（已有 bundle 不重复登记）
+        # 自动登记：工作区里出现的新素材包自动成为项目（归属管理员；无管理员则暂挂空）
         known = {p.get("bundle") for p in reg["projects"]}
         added = False
         for b in _find_bundles():
             if b["name"] not in known:
                 reg["projects"].append({"project_id": uuid.uuid4().hex[:12], "title": b["name"],
-                                        "bundle": b["name"], "created": b["updated"], "renders": []})
+                                        "bundle": b["name"], "created": b["updated"], "renders": [],
+                                        "owner": auth.admin_email()})
                 added = True
         if added or not reg.get("seeded"):
             reg["seeded"] = True
             _reg_save(reg)
         out = []
         for p in reg["projects"]:
+            if not _project_visible(p, request):
+                continue
             p = dict(p)
             p["renders_count"] = len(p.get("renders", []))
             p.update(_bundle_meta(p.get("bundle")))
@@ -293,30 +321,37 @@ def list_projects():
 
 
 @app.post("/api/projects/create")
-def create_project(body: dict = None):
+def create_project(request: Request, body: dict = None):
     with _LOCK:
         reg = _reg()
         pid = uuid.uuid4().hex[:12]
         reg["projects"].append({"project_id": pid, "title": body.get("title", "新建项目") if body else "新建项目",
                                 "bundle": body.get("bundle") if body else None,
-                                "created": time.strftime("%Y/%m/%d"), "renders": []})
+                                "created": time.strftime("%Y/%m/%d"), "renders": [],
+                                "owner": _session_email(request)})
         _reg_save(reg)
         return {"project_id": pid}
 
 
 @app.post("/api/projects/{pid}/delete")
-def delete_project(pid: str):
+def delete_project(pid: str, request: Request):
     with _LOCK:
         reg = _reg()
+        target = next((p for p in reg["projects"] if p["project_id"] == pid), None)
+        if not target or not _project_visible(target, request):
+            return JSONResponse({"error": "项目不存在"}, status_code=404)
         reg["projects"] = [p for p in reg["projects"] if p["project_id"] != pid]
         _reg_save(reg)
         return {"ok": True}
 
 
 @app.post("/api/projects/{pid}/mount")
-def mount_bundle(pid: str, body: dict):
+def mount_bundle(pid: str, body: dict, request: Request):
     with _LOCK:
         reg = _reg()
+        target = next((p for p in reg["projects"] if p["project_id"] == pid), None)
+        if not target or not _project_visible(target, request):
+            return JSONResponse({"error": "项目不存在"}, status_code=404)
         for p in reg["projects"]:
             if p["project_id"] == pid:
                 p["bundle"] = body.get("bundle")
@@ -412,13 +447,19 @@ def media(name: str, path: str):
 
 
 @app.post("/api/build")
-def start_build(body: dict):
+def start_build(body: dict, request: Request):
     fmt = body.get("format") or DEFAULT_TEMPLATE
     if fmt not in SUPPORTED_FORMATS:
         return JSONResponse(
             {"error": f"模板 '{fmt}' 不存在，可选：{'、'.join(TEMPLATES)}"}, status_code=400)
     if not body.get("bundle"):
         return JSONResponse({"error": "缺少素材包"}, status_code=400)
+    if body.get("project_id"):
+        with _LOCK:
+            target = next((p for p in _reg()["projects"]
+                           if p["project_id"] == body["project_id"]), None)
+            if target and not _project_visible(target, request):
+                return JSONResponse({"error": "项目不存在"}, status_code=403)
     try:
         _resolve_bundle(body["bundle"])
         _resolve_bgm(body.get("bgm"))

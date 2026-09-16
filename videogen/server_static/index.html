@@ -73,6 +73,13 @@ img,video{display:block}
 .auth .mark::after{content:"";position:absolute;right:-3px;top:-3px;width:11px;height:11px;
   border-radius:50%;background:var(--accent)}
 .auth h1{font-size:19px;font-weight:800;text-align:center;letter-spacing:-.01em}
+.atabs{display:flex;gap:4px;background:var(--sunken);border-radius:9px;padding:4px;margin-bottom:18px}
+.atabs button{flex:1;min-height:36px;border-radius:7px;font-size:14px;font-weight:700;
+  color:var(--ink-2);transition:background .15s,color .15s}
+.atabs button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
+.row2{display:flex;gap:8px}
+.row2 input{flex:1;min-width:0}
+.auth .row2 .btn{flex:none;width:auto;min-height:36px}
 .auth .sub{text-align:center;color:var(--ink-2);font-size:13px;margin:6px 0 22px;line-height:1.6}
 .fld{margin-bottom:14px}
 .fld label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
@@ -471,69 +478,161 @@ function playDialog(r){
       <div class="cap">${esc(r.title)}${r.ts ? " · " + esc(r.ts) : ""}</div></div>`);
 }
 
-/* ================= 账号（邮箱密码登录） ================= */
+/* ================= 账号（邮箱注册 + 密码登录） ================= */
 let ME = null;            // 当前登录用户 {email}；null = 未登录
-let AUTHST = { setup: false, token_auth: false };
+let AUTHST = { smtp: false, dev_email: false };
+let AUTHMODE = "register";               // "register" | "login"
+let codeTimer = null;
 
 async function showAuth(){
   stopPoll(); CUR = null;
   try { AUTHST = await api("/api/auth/status"); } catch (e) {}
+  if (!AUTHST.smtp && !AUTHST.dev_email && !AUTHST.locked){
+    // 既没配邮箱也没建过账号：开放模式其实进得去（本机自用），但仍给出提示页
+  }
   renderAuth();
 }
-function renderAuth(){
-  const setup = !!AUTHST.setup, needTok = setup && !!AUTHST.token_auth;
+function renderAuth(mode){
+  if (mode) AUTHMODE = mode;
+  if (!AUTHMODE && (AUTHST.locked)) AUTHMODE = "login";
+  const reg = AUTHMODE === "register";
+  const canRegister = AUTHST.smtp || AUTHST.dev_email;
+  if (!reg && !canRegister && !AUTHST.locked) { /* 开放模式不该到这 */ }
   stopPoll();
-  document.title = (setup ? "初始化" : "登录") + " · videogen";
+  clearInterval(codeTimer);
+  document.title = (reg ? "注册" : "登录") + " · videogen";
+  $("newBtn").classList.add("hide");
   $("main").innerHTML = `<div class="view"><div class="auth"><div class="card">
     <div class="aw"><span class="mark">V</span></div>
-    <h1>${setup ? "初始化管理员账号" : "登录工作台"}</h1>
-    <p class="sub">${setup
-      ? "第一次使用：设置邮箱和密码，之后用它登录这个工作台。"
-      : "输入你注册时的邮箱和密码。"}</p>
+    <div class="atabs">
+      <button class="${reg ? "on" : ""}" data-m="register">注册</button>
+      <button class="${reg ? "" : "on"}" data-m="login">登录</button>
+    </div>
     <div class="aerr" id="aerr"></div>
-    <div class="fld"><label>邮箱</label>
-      <input id="auEmail" type="email" placeholder="you@example.com" autocomplete="username"></div>
-    <div class="fld"><label>密码</label>
-      <input id="auPass" type="password" placeholder="${setup ? "至少 8 位" : "密码"}"
-        autocomplete="${setup ? "new-password" : "current-password"}"></div>
-    ${setup ? `<div class="fld"><label>确认密码</label>
-      <input id="auPass2" type="password" autocomplete="new-password"></div>` : ""}
-    ${needTok ? `<div class="fld"><label>访问令牌</label>
-      <input id="auTok" type="password" placeholder="部署时配置的 VIDEOGEN_TOKEN">
-      <div class="d">首次初始化需要访问令牌，防止别人抢注管理员；令牌在服务器部署配置里。</div></div>` : ""}
-    ${setup ? "" : `<label class="remember"><input type="checkbox" id="auRemember" checked> 记住我，30 天内免登录</label>`}
-    <button class="btn accent" id="auGo">${setup ? "创建账号并进入" : "登录"}</button>
+    <div id="regBox" class="${reg ? "" : "hide"}">
+      ${canRegister ? `
+      <div class="fld"><label>邮箱</label>
+        <div class="row2"><input id="auEmail" type="email" placeholder="you@example.com" autocomplete="username">
+        <button class="btn sm line" id="auSend">获取验证码</button></div></div>
+      <div class="fld"><label>验证码</label>
+        <input id="auCode" type="text" placeholder="6 位数字" maxlength="6" inputmode="numeric"></div>
+      <div class="fld"><label>设置密码</label>
+        <input id="auPass" type="password" placeholder="至少 8 位" autocomplete="new-password"></div>
+      <div class="fld"><label>确认密码</label>
+        <input id="auPass2" type="password" autocomplete="new-password"></div>
+      <button class="btn accent" id="auGo">注册并进入</button>`
+      : `<p class="sub" style="margin-bottom:0">注册功能需要先在服务器配置发信邮箱（SMTP）。<br>配置好之后，这里就是「输邮箱 → 收验证码 → 设密码」。</p>
+         <button class="btn line" id="auToLogin" style="width:100%;margin-top:14px">我有账号，去登录</button>`}
+    </div>
+    <div id="loginBox" class="${reg ? "hide" : ""}">
+      <div class="fld"><label>邮箱</label>
+        <input id="liEmail" type="email" placeholder="you@example.com" autocomplete="username"></div>
+      <div class="fld"><label>密码</label>
+        <input id="liPass" type="password" placeholder="密码" autocomplete="current-password"></div>
+      <label class="remember"><input type="checkbox" id="liRemember" checked> 记住我，30 天内免登录</label>
+      <button class="btn accent" id="liGo">登录</button>
+    </div>
+    <p class="sub" style="margin:14px 0 0;font-size:12px">${AUTHST.dev_email && reg && canRegister
+      ? "（本机开发模式：验证码会直接显示在提示里）" : ""}</p>
   </div></div></div>`;
+  // tab 切换
+  document.querySelectorAll(".atabs button").forEach(b => b.onclick = () => renderAuth(b.dataset.m));
+  const toLogin = $("auToLogin");
+  if (toLogin) toLogin.onclick = () => renderAuth("login");
+  // 注册
+  const send = $("auSend");
+  if (send) send.onclick = sendCode;
   const go = $("auGo");
-  go.onclick = submitAuth;
-  ["auEmail", "auPass", "auPass2", "auTok"].forEach(id => {
-    const el = $(id); if (el) el.onkeydown = (e) => { if (e.key === "Enter") go.click(); };
-  });
-  $("auEmail").focus();
+  if (go){
+    go.onclick = submitRegister;
+    ["auCode", "auPass", "auPass2"].forEach(id => {
+      const el = $(id); if (el) el.onkeydown = (e) => { if (e.key === "Enter") go.click(); };
+    });
+    $("auEmail").focus();
+  }
+  // 登录
+  const li = $("liGo");
+  if (li){
+    li.onclick = submitLogin;
+    $("liPass").onkeydown = (e) => { if (e.key === "Enter") li.click(); };
+    if (!reg) $("liEmail").focus();
+  }
 }
-async function submitAuth(){
-  const setup = !!AUTHST.setup;
+let lastSentAt = 0;
+async function sendCode(){
   const email = $("auEmail").value.trim();
-  const pass = $("auPass").value;
   const err = (m) => { const el = $("aerr"); el.style.display = "block"; el.textContent = m; };
-  if (!email) return err("请输入邮箱");
-  if (!pass) return err("请输入密码");
-  if (setup && pass !== $("auPass2").value) return err("两次输入的密码不一样");
-  const body = { email, password: pass, remember: setup ? true : $("auRemember").checked };
-  if (setup && AUTHST.token_auth) body.token = $("auTok").value.trim();
-  const btn = $("auGo");
-  btn.disabled = true; btn.textContent = setup ? "创建中…" : "登录中…";
+  const ok = (m) => { const el = $("aerr"); el.style.display = "block"; el.style.color = "var(--ok)";
+    el.style.background = "var(--ok-soft)"; el.textContent = m; };
+  const reset = () => { const el = $("aerr"); el.style.color = ""; el.style.background = ""; };
+  if (!email) return err("请先输入邮箱");
+  const btn = $("auSend");
+  btn.disabled = true;
   try {
-    const r = await api(setup ? "/api/auth/setup" : "/api/auth/login",
-      { method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(body) });
+    const r = await api("/api/auth/send-code", { method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ email }) });
+    reset(); ok(r.message || "验证码已发送");
+    lastSentAt = Date.now();
+    let left = 60;
+    btn.textContent = left + " 秒后重发";
+    clearInterval(codeTimer);
+    codeTimer = setInterval(() => {
+      left -= 1;
+      if (left <= 0){ clearInterval(codeTimer); btn.disabled = false; btn.textContent = "获取验证码"; }
+      else btn.textContent = left + " 秒后重发";
+    }, 1000);
+  } catch (e) {
+    btn.disabled = false;
+    err(e.message || "发送失败");
+  }
+}
+async function submitRegister(){
+  const err = (m) => { const el = $("aerr"); el.style.display = "block";
+    el.style.color = ""; el.style.background = ""; el.textContent = m; };
+  const email = $("auEmail").value.trim();
+  const code = $("auCode").value.trim();
+  const pass = $("auPass").value;
+  if (!email) return err("请输入邮箱");
+  if (!/^\d{6}$/.test(code)) return err("请输入 6 位验证码");
+  if (pass.length < 8) return err("密码至少 8 位");
+  if (pass !== $("auPass2").value) return err("两次输入的密码不一样");
+  const btn = $("auGo");
+  btn.disabled = true; btn.textContent = "注册中…";
+  try {
+    const r = await api("/api/auth/register", { method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ email, code, password: pass, remember: true }) });
     ME = { email: r.email };
+    $("newBtn").classList.remove("hide");
     paintAccount();
     await loadTemplates();
     route(true);
   } catch (e) {
-    btn.disabled = false;
-    btn.textContent = setup ? "创建账号并进入" : "登录";
+    btn.disabled = false; btn.textContent = "注册并进入";
+    err(e.message || "注册失败");
+  }
+}
+async function submitLogin(){
+  const err = (m) => { const el = $("aerr"); el.style.display = "block";
+    el.style.color = ""; el.style.background = ""; el.textContent = m; };
+  const email = $("liEmail").value.trim();
+  const pass = $("liPass").value;
+  if (!email) return err("请输入邮箱");
+  if (!pass) return err("请输入密码");
+  const btn = $("liGo");
+  btn.disabled = true; btn.textContent = "登录中…";
+  try {
+    const r = await api("/api/auth/login", { method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ email, password: pass, remember: $("liRemember").checked }) });
+    ME = { email: r.email };
+    $("newBtn").classList.remove("hide");
+    paintAccount();
+    await loadTemplates();
+    route(true);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "登录";
     err(e.message || "登录失败");
   }
 }
@@ -1177,9 +1276,11 @@ const SKELETON_HOME = `<div class="view">
 async function boot(){
   $("main").innerHTML = SKELETON_HOME;
   try { ME = await api("/api/me"); } catch (e) { ME = null; }
-  try { AUTHST = await api("/api/auth/status"); } catch (e) { AUTHST = {setup:false, token_auth:false}; }
+  try { AUTHST = await api("/api/auth/status"); } catch (e) { AUTHST = {smtp:false, dev_email:false}; }
   paintAccount();
-  if (!ME && (AUTHST.setup || AUTHST.locked)) return renderAuth();
+  // 开放模式（没账号、没令牌、没邮箱服务）= 本机自用，不拦；其余都要登录/注册
+  const gated = AUTHST.locked || AUTHST.smtp || AUTHST.dev_email || AUTHST.token_auth;
+  if (!ME && gated) return showAuth();
   $("newBtn").classList.remove("hide");
   await loadTemplates();
   route(true);
