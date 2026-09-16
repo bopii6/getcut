@@ -261,9 +261,23 @@ README = """videogen 剪映草稿 · 使用说明
 """
 
 
+def make_cover(final_mp4: Path, out_jpg: Path) -> bool:
+    """从成片取一帧做草稿封面（列表里显示真实画面而非黑块）。失败返回 False。"""
+    import subprocess
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-ss", "3", "-i", str(final_mp4),
+             "-frames:v", "1", "-vf", "scale=540:-2", str(out_jpg)],
+            capture_output=True, timeout=60)
+        return r.returncode == 0 and Path(out_jpg).is_file()
+    except Exception:
+        return False
+
+
 def build_zip(manifest: dict, final_mp4: Path, voice_mp3: Path | None,
               out_zip: Path) -> Path:
     """打包剪映草稿 zip。"""
+    import tempfile
     import zipfile
 
     rid = (manifest.get("render_id") or "draft")[:6]
@@ -275,15 +289,24 @@ def build_zip(manifest: dict, final_mp4: Path, voice_mp3: Path | None,
                                   draft_dir_placeholder=PLACEHOLDER)
     meta = build_meta_info(draft_name, manifest["duration_ms"])
 
-    out_zip.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr(f"{folder}/draft_content.json",
-                   json.dumps(content, ensure_ascii=False, indent=1))
-        z.writestr(f"{folder}/draft_meta_info.json",
-                   json.dumps(meta, ensure_ascii=False, indent=1))
-        z.write(final_mp4, f"{folder}/media/final.mp4")
-        if voice_mp3 and Path(voice_mp3).is_file():
-            z.write(voice_mp3, f"{folder}/media/voice.mp3")
-        z.writestr("一键导入剪映.bat", build_bat(folder).replace("\n", "\r\n"))
-        z.writestr("使用说明.txt", README.replace("\n", "\r\n"))
+    with tempfile.TemporaryDirectory() as td:
+        cover = Path(td) / "draft_cover.jpg"
+        has_cover = make_cover(final_mp4, cover)
+        if has_cover:
+            meta["draft_cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
+            content["cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
+
+        out_zip.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr(f"{folder}/draft_content.json",
+                       json.dumps(content, ensure_ascii=False, indent=1))
+            z.writestr(f"{folder}/draft_meta_info.json",
+                       json.dumps(meta, ensure_ascii=False, indent=1))
+            z.write(final_mp4, f"{folder}/media/final.mp4")
+            if voice_mp3 and Path(voice_mp3).is_file():
+                z.write(voice_mp3, f"{folder}/media/voice.mp3")
+            if has_cover:
+                z.write(cover, f"{folder}/draft_cover.jpg")
+            z.writestr("一键导入剪映.bat", build_bat(folder).replace("\n", "\r\n"))
+            z.writestr("使用说明.txt", README.replace("\n", "\r\n"))
     return out_zip
