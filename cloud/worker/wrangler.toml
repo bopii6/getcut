@@ -19,6 +19,10 @@ BUNDLE_TAG = "bundles"
 # 工作台界面（cloud/ui）由 Worker 直接托管
 [assets]
 directory = "../ui"
+# 关键：/api/* 必须先交给 Worker 处理。
+# 否则静态资源层会先消费请求体，HTTP/2 下的 POST 会报
+# "Body has already been used"（HTTP/1.1 不触发，所以只有浏览器上传会挂）
+run_worker_first = ["/api/*"]
 
 # 自定义域名（Cloudflare 会自动建 DNS 记录 + 签发证书）
 # 注意：video.hellojoy.top 已被现有服务占用，改用独立子域，避免冲突
