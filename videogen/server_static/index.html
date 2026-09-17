@@ -529,6 +529,43 @@ textarea:focus{outline:none;border-color:var(--acc)}
   .switcher{display:none}
   .steps4 .st span{display:none}
 }
+/* Production flow: all new selectors are scoped; existing library/auth styles stay intact. */
+body.vg-production{background:#14161b;--bg:#14161b;--surface:#1c1f26;--surface2:#262b35;--sunken:#242933;--line:#333945;--line2:#424957;--acc:#b7aaff;--acc-ink:#191725;--acc-soft:#b7aaff16}
+body.vg-production .top{background:#14161be8}
+.vg-flow,.vg-dialog{--bg:#14161b;--surface:#1c1f26;--surface2:#262b35;--sunken:#242933;--line:#333945;--line2:#424957;--ink:#eef0f5;--ink-2:#aab3c1;--ink-3:#a1adbf;--acc:#b7aaff;--acc-ink:#191725;--acc-soft:#b7aaff16;color:var(--ink);color-scheme:dark}
+.vg-flow{background:var(--bg);padding:0 10px 112px;min-height:calc(100vh - 180px)}
+.vg-flow .btn,.vg-dialog .btn{box-shadow:none;border-radius:7px;font-size:13px}
+.vg-steps{display:flex;gap:14px;align-items:center;padding:0 0 22px;border-bottom:1px solid var(--line)}
+.vg-steps button{display:flex;align-items:center;gap:9px;color:var(--ink-2);font-size:13px;text-align:left}
+.vg-steps button:disabled{cursor:default;opacity:.5}.vg-steps i{font-style:normal;display:grid;place-items:center;border:1px solid var(--line2);border-radius:50%;width:25px;height:25px;font-size:11px}
+.vg-steps [aria-current=step]{color:var(--ink)}.vg-steps [aria-current=step] i{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.vg-steps em{width:38px;height:1px;background:var(--line2)}
+.vg-context{display:flex;align-items:start;justify-content:space-between;gap:20px;margin:26px 0 24px}.vg-context h1{font-size:27px;font-weight:650;line-height:1.5;overflow-wrap:anywhere}.vg-sub{font-size:13px;color:var(--ink-2);margin-top:7px}.vg-eyeline{font-size:12px;color:var(--ink-2);margin-bottom:6px;overflow-wrap:anywhere}
+.vg-columns{display:grid;grid-template-columns:1.06fr 1fr;gap:36px}.vg-columns>section{min-width:0}.vg-sectionhead{display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:13px;margin-bottom:18px}.vg-sectionhead h2{font-size:15px;font-weight:600}.vg-sectionhead button{margin-left:auto;color:var(--acc);font-size:12px}.vg-sectionhead small{color:var(--ink-2);font-size:11px}
+.vg-script{background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden}.vg-hook{padding:20px 24px;border-bottom:1px solid var(--line)}.vg-hook small{color:var(--ink-2);font-size:11px}.vg-hook h2{font-size:24px;font-weight:600;line-height:1.5;margin-top:7px}.vg-hook mark{background:none;color:#d0c7ff}.vg-reader{padding:18px 24px;max-height:370px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:2;color:#ced4df}.vg-scriptfoot{padding:11px 24px;color:var(--ink-2);font-size:11px;border-top:1px solid var(--line)}
+.vg-gallery{display:grid;grid-template-columns:1.4fr 1fr;grid-auto-rows:142px;gap:8px}.vg-gallery .vg-asset:first-child{grid-row:span 2}.vg-asset{position:relative;border-radius:6px;overflow:hidden;background:var(--sunken);text-align:left;min-width:0}.vg-asset img,.vg-asset video{width:100%;height:100%;object-fit:cover}.vg-asset span{position:absolute;bottom:0;left:0;right:0;padding:30px 11px 9px;background:linear-gradient(transparent,#0000 4%,#000d 62%);color:#fff;font-size:12px;text-shadow:0 1px 3px #000b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-asset small{display:grid;place-items:center;height:100%;color:var(--ink-2)}
+.vg-assets-all{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.vg-assets-all .vg-asset{height:155px}.vg-notes{color:var(--ink-2);font-size:12px;border-top:1px solid var(--line);margin-top:17px;padding-top:13px;white-space:pre-wrap;overflow-wrap:anywhere}.vg-notes button{color:var(--acc);padding:6px 0;text-decoration:underline;text-underline-offset:4px}.vg-empty{min-height:230px;background:var(--surface);border:1px dashed var(--line2);border-radius:9px;padding:32px;display:flex;flex-direction:column;justify-content:center;gap:12px}.vg-empty h3{font-size:19px;font-weight:600}.vg-empty p{font-size:13px;color:var(--ink-2);line-height:1.9;max-width:56em;white-space:pre-wrap;overflow-wrap:anywhere}
+.vg-dropwrap{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:36px;align-items:start}
+.vg-drop{display:flex;flex-direction:column;align-items:center;gap:9px;width:100%;padding:46px 24px;border:1px dashed var(--line2);border-radius:11px;background:var(--surface);text-align:center}
+.vg-drop:hover,.vg-drop.over{border-color:var(--acc);background:#232131}
+.vg-drop[disabled]{opacity:.55;cursor:default}.vg-drop[disabled]:hover{border-color:var(--line2);background:var(--surface)}
+.vg-drop .vg-zip{display:grid;place-items:center;width:74px;height:74px;border:1px dashed var(--line2);border-radius:12px;background:var(--sunken);color:var(--acc);font-weight:650;letter-spacing:.5px;margin-bottom:8px}
+.vg-drop b{font-size:19px;font-weight:600}.vg-drop span{font-size:13px;color:var(--ink-2)}
+.vg-drop .vg-pick{margin-top:8px;padding:11px 22px;border-radius:7px;background:var(--acc);color:var(--acc-ink);font-size:13px;font-weight:600}
+.vg-drop small{font-size:11px;color:var(--ink-2);margin-top:4px}
+.vg-importer{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.vg-current{color:var(--ink-2);font-size:12px;overflow-wrap:anywhere}
+.vg-dropnote h2{font-size:16px;font-weight:600;margin-bottom:18px}
+.vg-dropnote ol{list-style:none;display:flex;flex-direction:column;gap:17px}
+.vg-dropnote li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:12px}
+.vg-dropnote i{font-style:normal;display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--line);border-radius:7px;background:var(--sunken);color:var(--acc);font-size:12px}
+.vg-dropnote b{display:block;font-size:13.5px;font-weight:600}.vg-dropnote span{font-size:12.5px;color:var(--ink-2)}
+.vg-dropnote>p{margin-top:18px;font-size:12px;color:var(--ink-2)}.vg-import-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;align-items:center}.vg-footer{position:fixed;bottom:0;left:90px;right:0;z-index:35;background:#1d2028;border-top:1px solid #3b414e;box-shadow:0 -12px 30px #14161b55}.vg-footer-in{max-width:1240px;margin:auto;padding:16px 28px;display:flex;align-items:center;gap:20px}.vg-setting{text-align:left;border-right:1px solid #3c424e;padding-right:20px;max-width:240px}.vg-setting small{display:block;font-size:10px;color:var(--ink-2)}.vg-setting b{display:block;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-setting:disabled{opacity:.6;cursor:default}.vg-footer-status{margin-left:auto;color:var(--ink-2);font-size:11px;max-width:250px}.vg-footer-actions{display:flex;gap:8px;flex-wrap:wrap}.vg-footer .btn{min-height:42px;padding:0 16px}
+.vg-dialog{margin:auto;border:1px solid var(--line2);background:var(--surface);border-radius:13px;padding:0;width:780px;max-width:calc(100vw - 32px);max-height:88vh;box-shadow:0 22px 90px #0008}.vg-dialog::backdrop{background:#080b11bd;backdrop-filter:blur(5px)}.vg-dialog-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line)}.vg-dialog-head h2{font-size:17px}.vg-dialog-body{padding:23px 24px;max-height:65vh;overflow:auto}.vg-dialog-foot{padding:14px 24px;border-top:1px solid var(--line);text-align:right}.vg-dialog .panel{padding:0;border:0;background:none;box-shadow:none}.vg-dialog .tpls{grid-template-columns:repeat(4,minmax(0,1fr))}.vg-dialog .tpl .mock{max-height:210px}.vg-dialog .vg-fulltext{white-space:pre-wrap;line-height:2;overflow-wrap:anywhere}.vg-lightbox{width:100%;max-height:52vh;object-fit:contain;background:#101217}.vg-dialog select{max-width:100%}
+.vg-runlayout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:36px}.vg-runrail{border-right:1px solid var(--line);padding-right:20px}.vg-stage{width:100%;display:flex;gap:11px;align-items:center;text-align:left;padding:11px 9px;border-radius:6px;margin-bottom:6px;font-size:13px}.vg-stage i{font-style:normal;border:1px solid var(--line2);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;flex:none;font-size:11px}.vg-stage small{display:block;font-size:10px;color:var(--ink-2)}.vg-stage[aria-pressed=true]{background:#2c283e;color:#e0dafa}.vg-stage[aria-pressed=true] i{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}.vg-stage.vg-current{box-shadow:inset 3px 0 var(--acc)}.vg-stage.vg-reached i{border-color:#49695d;color:#9bceb8}.vg-runhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.vg-runhead h2{font-size:22px;font-weight:600}.vg-runhead small{color:var(--ink-2);font-size:12px}.vg-progress{margin:20px 0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px}.vg-progress p{font-size:12px;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}.vg-progress progress{width:100%;height:5px;accent-color:var(--acc);margin:10px 0}.vg-stills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.vg-stills button{min-width:0;text-align:left}.vg-stills img{width:100%;aspect-ratio:9/16;object-fit:contain;background:#101217;border-radius:6px}.vg-stills span{display:block;color:var(--ink-2);font-size:11px;margin-top:6px}.vg-error{color:#ffb2b2!important}.vg-export{display:grid;grid-template-columns:minmax(240px,360px) minmax(0,1fr);gap:36px}.vg-export-player{width:100%;max-height:65vh;aspect-ratio:9/16;background:#080a0f;border-radius:10px}.vg-history{display:flex;flex-direction:column;gap:8px;margin-top:18px}.vg-history button{text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:6px;color:var(--ink-2)}.vg-history [aria-pressed=true]{border-color:var(--acc);color:var(--ink)}
+@media(max-width:1020px){.vg-columns{gap:24px}.vg-dropwrap{gap:26px}.vg-footer{left:74px}.vg-footer-in{gap:12px;padding:14px 20px}.vg-footer-status{display:none}.vg-footer-actions{margin-left:auto}.vg-runlayout{grid-template-columns:190px minmax(0,1fr);gap:24px}}
+@media(max-width:760px){.vg-flow{padding:0 0 168px}.vg-columns,.vg-export{grid-template-columns:1fr;gap:24px}.vg-context h1{font-size:23px}.vg-steps{gap:7px;justify-content:space-between}.vg-steps button{font-size:11px;gap:4px}.vg-steps em{width:10px}.vg-steps i{width:21px;height:21px}.vg-footer-in{flex-wrap:wrap;gap:10px;padding:12px 14px}.vg-setting{flex:1;max-width:none;padding-right:10px}.vg-footer-actions{width:100%;justify-content:flex-end}.vg-runlayout{grid-template-columns:1fr}.vg-runrail{display:flex;overflow:auto;border:0;padding:0}.vg-stage{min-width:130px}.vg-runrail .vg-notes{display:none}.vg-assets-all{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-stills{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-dialog .tpls{grid-template-columns:repeat(3,minmax(0,1fr))}.vg-export-player{max-height:60vh}.vg-context{flex-wrap:wrap}.vg-import{padding:24px 18px}.vg-dropwrap{grid-template-columns:1fr}.vg-drop{padding:32px 18px}.vg-drop b{font-size:17px}}
+@media(max-width:480px){.vg-steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}.vg-steps em{display:none}.vg-footer-actions .btn{white-space:normal}.vg-dialog .tpls{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -595,10 +632,11 @@ let CUR = null;                                    // 当前项目
 let CURB = null;                                   // 当前项目的素材包详情
 let CFG = null;                                    // 渲染配置（跨项目记忆）
 const CFG_DEF = { voice:"zh-CN-YunxiNeural", rate:100, bgm:"", sfxMode:"hook",
-                  subtitles:true, sources:true, format:"editorial" };
+                  subtitles:true, sources:true, format:"editorial",
+                  disclaimer:"本片内容基于公开报道与公开资料整理，观点仅供参考，不构成任何投资建议" };
 function loadCfg(){ try { CFG = Object.assign({}, CFG_DEF, JSON.parse(localStorage.getItem("vg.cfg") || "{}")); }
   catch (e) { CFG = Object.assign({}, CFG_DEF); } }
-function saveCfg(){ localStorage.setItem("vg.cfg", JSON.stringify(CFG)); }
+function saveCfg(){ localStorage.setItem("vg.cfg", JSON.stringify(CFG)); paintFlowFooter(); }
 loadCfg();
 
 /* 模板缩略与说明（模板清单以 /api/templates 为准） */
@@ -727,10 +765,11 @@ function dialog(title, desc, onOk, okText, readonly, extraHTML){
   m.onclick = (e) => { if (e.target === m) m.remove(); };
   document.body.appendChild(m); (k || m.querySelector("[data-c]")).focus();
 }
-function playDialog(r){
-  dialog("成片预览", "", null, "", true,
-    `<div class="play"><video src="${vid(r.id)}" controls autoplay playsinline></video>
-      <div class="cap">${esc(r.title)}${r.ts ? " · " + esc(r.ts) : ""}</div></div>`);
+async function playDialog(r){
+  const p = HOME_PS.find(p => p.project_id === r.project || (p.renders || []).some(x => x.id === r.id));
+  if (!p) return;
+  CUR = p; setHash("#/project/" + p.project_id); await renderProject("export");
+  if (CUR && CUR.project_id === p.project_id && FLOW){ FLOW.exportId = r.id; setFlowView("export"); }
 }
 
 /* ================= 试听（B5） ================= */
@@ -748,9 +787,10 @@ let AUTHMODE = "register";               // "register" | "login"
 let codeTimer = null;
 
 async function showAuth(){
-  stopPoll(); CUR = null;
+  leaveFlow(); CUR = null;
+  const epoch = viewEpoch;
   try { AUTHST = await api("/api/auth/status"); } catch (e) {}
-  renderAuth();
+  if (epoch === viewEpoch) renderAuth();
 }
 function renderAuth(mode){
   if (mode) AUTHMODE = mode;
@@ -928,28 +968,34 @@ const setHash = (h) => { lock = h; if (location.hash !== h) location.hash = h; }
 async function route(force){
   if (!force && location.hash === lock) return;
   lock = location.hash;
-  const m = location.hash.match(/#\/project\/([a-f0-9]+)/);
+  leaveFlow();
+  const epoch = viewEpoch;
+  const m = location.hash.match(/#\/project\/([a-f0-9]+)(?:\/(import|confirm|generate|export))?/);
   if (m){
     try {
       const ps = await api("/api/projects");
+      if (epoch !== viewEpoch) return;
       const p = ps.find(x => x.project_id === m[1]);
-      if (p){ CUR = p; return renderProject(); }
-    } catch (e) { if (e.auth) return showAuth(); }
+      if (p){ CUR = p; return renderProject(m[2]); }
+    } catch (e) { if (epoch !== viewEpoch) return; if (e.auth) return showAuth(); }
   }
+  if (epoch !== viewEpoch) return;
   CUR = null;
   renderHome();
 }
 $("navNew").onclick = (e) => { e.preventDefault(); newProject(); };
-function goHome(){ CUR = null; stopPoll(); setHash("#/"); renderHome(); }
+function goHome(){ CUR = null; setHash("#/"); renderHome(); }
 window.addEventListener("hashchange", () => route());
 $("brand").onclick = (e) => { e.preventDefault(); goHome(); };
 $("newBtn").onclick = newProject;
 
 async function newProject(){
+  leaveFlow(); const epoch = viewEpoch;
   try {
     const r = await api("/api/projects/create", {method:"POST",
       headers:{"Content-Type":"application/json"}, body:"{}"});
     if (!r || !r.project_id) return toast("创建失败");
+    if (epoch !== viewEpoch) return;
     CUR = {project_id:r.project_id, title:"新建项目", bundle:null, renders:[]};
     setHash("#/project/" + r.project_id);
     renderProject();
@@ -965,7 +1011,8 @@ function allRenders(projects){
   return out;
 }
 async function renderHome(){
-  stopPoll();
+  leaveFlow(); CUR = null;
+  const epoch = viewEpoch;
   paintNav("home");
   paintSwitcher(false);
   document.title = "作品库 · videogen";
@@ -973,11 +1020,12 @@ async function renderHome(){
   $("main").innerHTML = SKELETON_HOME;
   let ps = [];
   try { ps = await api("/api/projects"); }
-  catch (e) { if (e.auth) return showAuth(); }
+  catch (e) { if (epoch !== viewEpoch) return; if (e.auth) return showAuth(); }
+  if (epoch !== viewEpoch) return;
   const rs = allRenders(ps).reverse();
   HOME_PS = ps; HOME_RS = rs;
   const recent = rs.length ? `<section class="rail-sec">
-    <div class="sec-h"><h2>最近成片</h2><span class="n">${rs.length} 条 · 悬停即播 · 点开看大屏</span></div>
+    <div class="sec-h"><h2>最近成片</h2><span class="n">${rs.length} 条 · 点开预览与导出</span></div>
     <div class="posters" id="posters"></div></section>` : "";
   const chips = ps.length ? `<div class="chips" id="fchips">
     <button class="chip on" data-f="all">全部 ${ps.length}</button>
@@ -1043,8 +1091,6 @@ function poster(r){
     const d = el.querySelector(".pdur");
     if (d && isFinite(v.duration)) d.textContent = mmss(v.duration);
   });
-  el.onmouseenter = () => v.play().catch(() => {});
-  el.onmouseleave = () => { v.pause(); frameAt(v, 1.2); };
   el.onclick = () => playDialog(r);
   return el;
 }
@@ -1112,20 +1158,19 @@ function wireImport(drop, input, onFile){
 }
 async function heroStart(file){
   if (!file) return;
+  const epoch = viewEpoch;
+  const strip = $("dropstrip"); if (strip && strip.disabled) return;
+  if (strip) strip.disabled = true;
   try {
-    const r = await api("/api/projects/create", {method:"POST",
-      headers:{"Content-Type":"application/json"}, body:"{}"});
-    if (!r || !r.project_id) return toast("创建失败");
-    CUR = {project_id:r.project_id, title:file.name.replace(/\.zip$/i,""), bundle:null, renders:[]};
+    const r = await api("/api/projects/create", {method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+    if (!r || !r.project_id) throw new Error("创建失败");
     const up = await uploadZip(file);
-    CUR.bundle = up.name; CUR.title = up.name;
-    await api(`/api/projects/${CUR.project_id}/mount`, {method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({bundle:up.name, title:up.name})});
-    toast("已导入");
-    setHash("#/project/" + CUR.project_id);
-    renderProject();
-  } catch (e) { if (e.auth) showAuth(); else toast("导入失败：" + e.message); }
+    await api(`/api/projects/${r.project_id}/mount`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bundle:up.name,title:up.name})});
+    if (epoch !== viewEpoch) return;
+    CUR = {project_id:r.project_id,title:up.name,bundle:up.name,renders:[]};
+    toast("已导入"); setHash("#/project/" + r.project_id); renderProject();
+  } catch(e){ if (epoch === viewEpoch){ if (e.auth) showAuth(); else toast("导入失败：" + e.message); } }
+  finally { if (strip && strip.isConnected) strip.disabled = false; }
 }
 async function uploadZip(file){
   toast("正在上传并解析…");
@@ -1135,177 +1180,235 @@ async function uploadZip(file){
 
 /* ================= 项目页 ================= */
 let timer = null, job = null, lastJob = null;
-let JD = null;
-function newJD(){ return { lastPct:-1, lastChange:0, stages:{}, localT0:Date.now(), samples:[], firstPoll:true, watchFrom:1 }; }
-function stopPoll(){ if (timer) clearInterval(timer); timer = null; }
+// View state is independent of backend stage. Epochs invalidate in-flight navigation/polls.
+let viewEpoch = 0, pollEpoch = 0;
+let FLOW = null;
+const BUILD_PENDING = new Set();
+const FLOW_STEPS = [["import","导入素材"],["confirm","内容确认"],["generate","自动生成"],["export","下载导出"]];
+function stopPoll(){ if (timer) clearTimeout(timer); timer = null; pollEpoch++; }
+function flowHere(epoch, pid){ return epoch === viewEpoch && CUR && CUR.project_id === pid; }
+function leaveFlow(){ document.body.classList.remove("vg-production"); viewEpoch++; stopPoll(); closeFlowDialog(); FLOW = null; CURB = null; job = lastJob = null; }
+function flowBusy(){ return !!(CUR && (BUILD_PENDING.has(CUR.project_id) || (FLOW && FLOW.jobId && !["done","failed","unknown"].includes((FLOW.status || {}).stage)))); }
+function flowRenders(){ return (CUR && CUR.renders || []).filter(r => r.file && r.id); }
+function flowEmpty(title, text){ return `<div class="vg-empty"><h3>${esc(title)}</h3><p>${esc(text)}</p></div>`; }
 
-async function renderProject(){
+async function renderProject(requestedView){
   if (!CUR) return goHome();
-  stopPoll();
+  leaveFlow();
+  const epoch = viewEpoch, project = CUR, pid = project.project_id;
   paintNav("home");
-  document.title = (CUR.title || "项目") + " · videogen";
+  document.title = (project.title || "项目") + " · videogen";
   $("newBtn").classList.remove("hide");
   $("main").innerHTML = SKELETON_HOME;
-  let b = null;
-  if (CUR.bundle){
-    try { b = await api("/api/bundle/" + CUR.bundle); }
-    catch (e) { if (e.auth) return showAuth(); b = null; }
-  }
-  CURB = b;
-  paintSwitcher(true, CUR.title || "项目",
-    b ? b.assets.length + " 素材 · 片长约 " + mmss(b.estSeconds) : "尚未选择素材");
-  const hasRenders = (CUR.renders || []).some(r => r.file);
-  $("main").innerHTML = `<div class="view">
-    <div class="steps4">
-      <div class="st ${b ? "done" : "on"}"><i>01</i><span>选择素材</span></div><em></em>
-      <div class="st ${b ? "done" : ""}"><i>02</i><span>内容确认</span></div><em></em>
-      <div class="st ${hasRenders ? "done" : (b ? "on" : "")}"><i>03</i><span>渲染配置</span></div><em></em>
-      <div class="st ${hasRenders ? "done" : ""}"><i>04</i><span>生成与成片</span></div>
-    </div>
-    <div class="crumb">
-      <button class="ghost" id="back">← 全部项目</button>
-      <h1>${esc(CUR.title)}</h1>
-      ${b ? `<span class="tag">${b.assets.length} 素材 · ${mmss(b.estSeconds)}</span>` : `<span class="tag">未挂素材包</span>`}
-    </div>
-    <div class="pj">
-      <div class="colmain" id="colmain"></div>
-      <div class="railcol" id="rail"></div>
-    </div>
+  let bundle = null, bundleError = "", jobs = null, authError = false;
+  await Promise.all([
+    project.bundle ? api("/api/bundle/" + encodeURIComponent(project.bundle)).then(x => { bundle = x; }).catch(e => { bundleError = e.message; authError = !!e.auth; }) : Promise.resolve(),
+    api("/api/jobs").then(x => { jobs = x; }).catch(e => { authError = authError || !!e.auth; })
+  ]);
+  if (!flowHere(epoch, pid)) return;
+  if (authError) return showAuth();
+  CURB = bundle;
+  document.body.classList.add("vg-production");
+  const active = jobs && jobs.active.find(x => x.project_id === pid);
+  const saved = localStorage.getItem("vg.job." + pid);
+  const recent = jobs && jobs.recent.find(x => x.project_id === pid);
+  const restored = active ? active.job_id : saved;
+  FLOW = {pid, view:restored ? "generate" : requestedView || (bundle ? "confirm" : "import"),
+    jobId:restored || null, status:active || null, selectedStage:null, artifactKey:null,
+    exportId:null, bundleError, restoreError:!jobs};
+  if (!restored && requestedView === "generate" && recent){ FLOW.jobId = recent.job_id; FLOW.status = recent; }
+  if (FLOW.view === "confirm" && !bundle) FLOW.view = "import";
+  if (FLOW.view === "generate" && !FLOW.jobId) FLOW.view = bundle ? "confirm" : "import";
+  if (FLOW.view === "export" && !flowRenders().length) FLOW.view = bundle ? "confirm" : "import";
+  job = lastJob = FLOW.jobId;
+  paintSwitcher(true, project.title || "项目", bundle ? (bundle.assets || []).length + " 素材 · 预计 " + mmss(bundle.estSeconds) : "尚未读取素材");
+  paintFlow();
+  if (FLOW.jobId){ localStorage.setItem("vg.job." + pid, FLOW.jobId); startPoll(); }
+}
+function setFlowView(view){
+  if (!FLOW || !CUR || !FLOW_STEPS.some(x => x[0] === view)) return;
+  if (view === "confirm" && !CURB) return;
+  if (view === "generate" && !FLOW.jobId) return;
+  if (view === "export" && !flowRenders().length && (FLOW.status || {}).stage !== "done") return;
+  closeFlowDialog(); FLOW.view = view; FLOW.artifactKey = null; setHash("#/project/" + CUR.project_id + "/" + view); paintFlow();
+}
+function paintFlow(){
+  if (!FLOW || !CUR) return;
+  const view = FLOW.view, b = CURB;
+  const titles = {import:"从一个压缩包，开始制作。",confirm:"检查这条视频的内容",generate:"每一步，都能看到处理了什么",export:"成片已就绪，检查后导出"};
+  const norm = s => String(s || "").replace(/[\s\-_·—–()（）]/g, "");
+  const eyeline = [CUR.title || "新建项目"].concat(b && b.name && norm(b.name) !== norm(CUR.title) ? [b.name] : []).join(" / ");
+  $("main").innerHTML = `<div class="view vg-flow">
+    <nav class="vg-steps" aria-label="制作流程">${FLOW_STEPS.map(([v,label],i) => `${i ? '<em aria-hidden="true"></em>' : ''}<button data-flow="${v}" ${v === view ? 'aria-current="step"' : ''} ${v === "confirm" && !b || v === "generate" && !FLOW.jobId || v === "export" && !flowRenders().length && (FLOW.status || {}).stage !== "done" ? 'disabled' : ''}><i>${i+1}</i>${label}</button>`).join("")}</nav>
+    <div class="vg-context"><div><div class="vg-eyeline">${esc(eyeline)}</div><h1>${titles[view]}</h1><p class="vg-sub">${view === "confirm" ? "文案与素材已经展开。检查后，再决定怎么生成。" : view === "generate" ? "后台继续制作；点击左侧阶段回看，不会改变任务执行。" : view === "export" ? "仅展示本项目的真实成片，历史版本不会被覆盖。" : "导入素材，检查内容，看着它生成，最后下载。"}</p></div></div>
+    <div id="vg-view"></div><footer class="vg-footer"><div class="vg-footer-in" id="vg-footer"></div></footer>
   </div>`;
-  $("back").onclick = goHome;
-  renderStageCard(b);
-  renderRail(b);
-  $("cfgReset").onclick = () => {
-    CFG = Object.assign({}, CFG_DEF); saveCfg();
-    paintConfig(CURB);
-    toast("已恢复默认配置");
-  };
-  wireRenderPane(b);
+  document.querySelectorAll("[data-flow]").forEach(el => el.onclick = () => setFlowView(el.dataset.flow));
+  if (view === "import") paintFlowImport();
+  if (view === "confirm") paintFlowConfirm();
+  if (view === "generate") paintFlowGeneration();
+  if (view === "export") paintFlowExport();
+  paintFlowFooter();
 }
-
-/* —— 左栏：成片 + 内容 —— */
-function renderStageCard(b){
-  const box = $("colmain"); if (!box) return;
-  const rs = (CUR.renders || []).filter(r => r.file);
-  const hooks = b && (b.hookLines || []).map(l => {
-    const i = l.text.indexOf(l.highlight || "");
-    if (!l.highlight || i < 0) return `<div class="ln">${esc(l.text)}</div>`;
-    return `<div class="ln">${esc(l.text.slice(0,i))}<span class="hl">${esc(l.highlight)}</span>${esc(l.text.slice(i+l.highlight.length))}</div>`;
+function paintFlowFooter(){
+  const el = $("vg-footer"); if (!el || !FLOW) return;
+  const busy = flowBusy(), view = FLOW.view, status = FLOW.status || {};
+  const tpl = TPLS.find(t => t.id === CFG.format);
+  el.innerHTML = `<button class="vg-setting" data-setting="style" aria-haspopup="dialog" ${busy ? "disabled" : ""}><small>画面样式</small><b>${esc(tpl ? tpl.name : CFG.format)} · 设置</b></button>
+    <button class="vg-setting" data-setting="sound" aria-haspopup="dialog" ${busy ? "disabled" : ""}><small>配音、字幕与更多设置</small><b>${esc(voiceLabel())} · ${(CFG.rate/100).toFixed(2)}× · 字幕${CFG.subtitles ? "开" : "关"}</b></button>
+    <span class="vg-footer-status">${busy ? "任务在后台进行；配置已锁定" : CURB ? "预计成片 " + mmss(CURB.estSeconds / (CFG.rate/100)) + " / 生成 " + renderEstimate(CURB.estSeconds / (CFG.rate/100)) : "导入后先确认内容，不会自动生成"}</span>
+    <div class="vg-footer-actions">${view === "import" ? `<button class="btn" id="vg-next" ${!CURB ? "disabled" : ""}>继续确认内容</button>` : view === "confirm" ? `${flowRenders().length ? '<button class="btn line" id="vg-export">历史成片</button>' : ''}<button class="btn" id="go" ${busy || !CURB || !String(CURB.script || "").trim() ? "disabled" : ""}>${busy ? "后台制作中" : "确认内容并开始生成"}</button>${busy && FLOW.jobId ? '<button class="btn line" id="vg-running">查看进度</button>' : ''}` : `<button class="btn line" id="againBtn" ${!CURB ? "disabled" : ""}>返回确认${busy ? "" : "，再生成一版"}</button>${view === "generate" && (status.stage === "done" || flowRenders().length) ? '<button class="btn" id="vg-export">查看成片与导出</button>' : ''}`}</div>`;
+  el.querySelectorAll("[data-setting]").forEach(x => x.onclick = () => openFlowConfig(x.dataset.setting));
+  if ($("go")) $("go").onclick = () => startRender(CURB);
+  if ($("vg-next")) $("vg-next").onclick = () => setFlowView("confirm");
+  if ($("againBtn")) $("againBtn").onclick = () => setFlowView("confirm");
+  if ($("vg-export")) $("vg-export").onclick = () => setFlowView("export");
+  if ($("vg-running")) $("vg-running").onclick = () => setFlowView("generate");
+}
+function paintFlowImport(){
+  const epoch = viewEpoch, pid = CUR.project_id, busy = flowBusy();
+  $("vg-view").innerHTML = `<div class="vg-dropwrap">
+    <section>
+      <button class="vg-drop" id="vg-drop" ${busy ? "disabled" : ""}><span class="vg-zip" aria-hidden="true">ZIP</span><b>把素材包拖到这里</b><span>无需解压，文案与素材会一起读入</span><span class="vg-pick" aria-hidden="true">选择 ZIP 文件</span><small>支持约定格式的素材包，最大 512 MB · 需包含 content.json</small></button>
+      <input type="file" accept=".zip" id="vg-zip" class="hide">
+      <div class="vg-importer"><button class="btn line" id="vg-bundles" ${busy ? "disabled" : ""}>${CURB ? "更换素材包" : "选用服务器上已有的素材包"}</button>${CURB ? `<span class="vg-current">当前已选用 ${esc(CURB.name)}</span>` : ""}</div>
+      <p id="vg-upload-status" role="status">${FLOW.bundleError ? `<span class="vg-error">素材读取失败：${esc(FLOW.bundleError)}，可以重新选用素材。</span>` : busy ? "当前任务完成前不能更换素材。" : ""}</p>
+    </section>
+    <aside class="vg-dropnote"><h2>放进来之后，会发生什么？</h2><ol>
+      <li><i aria-hidden="true">▤</i><div><b>先把内容摊开给你看</b><span>标题、口播文案与素材照片，都按原包内容展示，不做改写。</span></div></li>
+      <li><i aria-hidden="true">◌</i><div><b>每一步处理都有状态</b><span>配音、分镜、画面合成，正在做哪一步一目了然。</span></div></li>
+      <li><i aria-hidden="true">↓</i><div><b>完成后，直接下载</b><span>拿走 MP4；需要二次编辑，再导出剪映草稿。</span></div></li>
+    </ol><p>素材包简介与素材清单都以包内 content.json、manifest.json 为准。</p></aside>
+  </div>`;
+  $("vg-drop").disabled = busy;
+  wireImport($("vg-drop"), $("vg-zip"), async file => {
+    if (!file || flowBusy() || !flowHere(epoch,pid)) return;
+    const drop = $("vg-drop"), label = $("vg-upload-status");
+    if (drop.disabled) return;
+    drop.disabled = true; $("vg-bundles").disabled = true; label.textContent = "正在上传并解析…";
+    try { const up = await uploadZip(file); if (flowHere(epoch,pid)) await mountBundle(up.name,up.name,pid,epoch); }
+    catch(e){ if (flowHere(epoch,pid)){ label.textContent = "上传失败：" + e.message; drop.disabled = false; $("vg-bundles").disabled = false; } }
+  });
+  $("vg-bundles").onclick = openBundleModal;
+}
+function flowAsset(a, index){
+  const source = a.file ? mediaUrl(CURB.name, a.file) : "";
+  return `<button class="vg-asset" data-asset="${index}" aria-label="预览 ${esc(a.summary || a.file || '素材')}">${source && a.kind === "image" ? `<img src="${esc(source)}" loading="lazy" alt="${esc(a.summary || a.file)}">` : source && a.kind === "video" ? `<video src="${esc(source)}" muted playsinline preload="metadata"></video>` : '<small>无可预览的媒体</small>'}<span>${a.kind === "video" ? "视频 · " : ""}${esc(a.summary || a.file || "未命名素材")}</span></button>`;
+}
+function wireFlowAssets(root){
+  root.querySelectorAll("[data-asset]").forEach(el => el.onclick = () => {
+    const a = (CURB.assets || [])[+el.dataset.asset]; if (!a) return;
+    const url = a.file ? mediaUrl(CURB.name, a.file) : "";
+    openFlowDialog(a.summary || a.file || "素材", `${url && a.kind === "image" ? `<img class="vg-lightbox" src="${esc(url)}" alt="${esc(a.summary || a.file)}">` : url && a.kind === "video" ? `<video class="vg-lightbox" src="${esc(url)}" controls playsinline></video>` : flowEmpty("无法预览", "这个素材没有可用的媒体文件。")}
+      <p class="vg-notes">${esc(a.file)}${a.width && a.height ? " · " + esc(a.width) + " × " + esc(a.height) : ""}${a.duration ? " · " + mmss(a.duration) : ""}<br>原始素材，不是生成结果。${a.source_url ? "<br>来源声明：" + esc(a.source_url) : ""}</p>`);
+  });
+  root.querySelectorAll("video").forEach(v => frameAt(v,.1));
+  root.querySelectorAll(".vg-asset img,.vg-asset video").forEach(media => media.addEventListener("error", () => { const note = document.createElement("small"); note.textContent = "媒体暂不可用 · 点击查看信息"; media.replaceWith(note); }, {once:true}));
+}
+function paintFlowConfirm(){
+  const b = CURB, assets = b.assets || [], script = String(b.script || "");
+  const hooks = (b.hookLines || []).map(l => {
+    const text = String(l.text || ""), hi = String(l.highlight || ""), i = text.indexOf(hi);
+    return `<div>${hi && i >= 0 ? esc(text.slice(0,i)) + '<mark>' + esc(hi) + '</mark>' + esc(text.slice(i+hi.length)) : esc(text)}</div>`;
   }).join("");
-  const assets = b ? b.assets : [];
-  const imgs = assets.filter(a => a.kind === "image").length;
-  const vids = assets.length - imgs;
-  const assetCell = (a) => `<div class="a">
-      ${a.kind === "video" ? `<video src="${mediaUrl(b.name, a.file)}" muted preload="none"></video>`
-        : `<img loading="lazy" alt="" src="${mediaUrl(b.name, a.file)}">`}
-      <div class="cap">${esc(a.summary || a.file)}</div></div>`;
-  box.innerHTML = `
-    <section class="card stage-card" id="stageCard">
-      <div class="sec-h" style="margin-bottom:14px"><h2>成片</h2>
-        <span class="n" id="stageMeta">${rs.length ? "最近 " + esc(rs[rs.length-1].ts || "") : "还没有成片"}</span></div>
-      <div class="player-row">
-        ${rs.length
-          ? `<div class="media-frame"><video id="mainPlayer" controls playsinline src="${vid(rs[rs.length-1].id)}"></video></div>`
-          : `<div class="theater">
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="1.6" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="3"/>
-                <path d="M10 9l5 3-5 3z"/></svg>
-              <b>成片会在这里放映</b>
-              <span>右边按 1 → 2 → 3 配好素材、画面和声音，<br>点「开始渲染」。<br>渲染时剧照会先一张张长出来，几分钟后成片出炉。</span>
-            </div>`}
-        <div class="stage-side">
-          ${rs.length ? `
-            <div class="stats">这条片子可以直接预览。渲染新的一版时，这里不会被覆盖。</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <a class="btn sm line" id="dlBtn" ${rs.length ? `href="${vid(rs[rs.length-1].id)}" download` : ""}>下载成片</a>
-              <a class="btn sm line" id="jyBtn" ${rs.length ? `href="${qs("/api/projects/" + CUR.project_id + "/renders/" + (rs[rs.length-1].id) + "/jianying-draft")}"` : ""} title="下载剪映专业版分轨草稿：画面/底板/卡片/字幕/叠加文字/配音/背景音乐/音效各一条轨——素材可替换、卡片可单独动、文字都能改（首次导出约 1-2 分钟）">剪映草稿</a>
-              <button class="btn sm" id="againBtn">再生成一版</button>
-            </div>
-            <div>
-              <div class="sub-h" style="margin-bottom:6px">历史版本</div>
-              <div class="hist" id="hist"></div>
-            </div>`
-          : `<div class="stats">渲染期间可以随时离开这页，回来进度还在。</div>`}
-        </div>
-      </div>
-    </section>
-    ${b ? `
-    <section class="card hookline">
-      <span class="cap">开场钩子</span>${hooks || `<div class="ln">${esc(b.title)}</div>`}
-    </section>
-    <section class="card">
-      <div class="sec-h" style="padding:14px 20px 0;margin-bottom:8px"><h2>口播文案</h2>
-        <span class="n">${b.script.length} 字 · 图片 ${imgs} · 视频 ${vids}</span></div>
-      <div style="max-height:240px;overflow:auto;padding:0 20px 16px" class="script">${esc(b.script)}</div>
-    </section>
-    <section class="card assetscard">
-      <div class="sec-h" style="padding:14px 20px 0;margin-bottom:12px"><h2>素材</h2>
-        <span class="n">${assets.length} 个 · 图片 ${imgs} · 视频 ${vids}</span></div>
-      <div class="assets-grid">
-        ${assets.slice(0, 8).map(assetCell).join("")}
-        ${assets.length > 8 ? `<button class="a more" id="assetMore" aria-label="展开全部素材">+${assets.length - 8}</button>` : ""}
-      </div>
-      ${assets.length > 8 ? `
-      <div class="assets-grid hide" id="assetAll">${assets.map(assetCell).join("")}</div>
-      <div style="padding:12px 20px 16px"><button class="btn sm line" id="assetToggle">展开全部 ${assets.length} 个</button></div>`
-      : `<div style="padding:12px 20px 16px"></div>`}
-    </section>` : `
-    <section class="card firstcard"><b>先给这条片子配上素材</b>
-      <p class="fc-sub" style="margin-top:4px">在右边第 1 步「素材」里选用已有的，或上传一个素材 zip。</p></section>
-    <section class="card" style="padding:16px 20px">
-      <div class="sub-h" style="margin-bottom:10px">服务器上已有的素材包，点一下就能用</div>
-      <div class="chips" id="quickBundles"><span style="color:var(--ink-3);font-size:13px">读取中…</span></div>
-    </section>`}`;
-  const hist = $("hist");
-  if (hist && rs.length){
-    rs.slice().reverse().forEach((r, i) => {
-      const jid = r.id || String(r.file).split("-").pop().replace(".mp4","");
-      const it = document.createElement("button");
-      it.className = "h-item" + (i === 0 ? " on" : "");
-      it.innerHTML = `<span class="frame"><video src="${vid(jid)}#t=0.8" muted preload="metadata" playsinline></video></span>
-        <span>${esc((r.ts || "").slice(-5))}</span>`;
-      const v = it.querySelector("video"); previewSeek(v, 0.8);
-      it.onclick = () => {
-        $("mainPlayer").src = vid(jid);
-        $("dlBtn").href = vid(jid);
-        const jy = $("jyBtn");
-        if (jy) jy.href = qs("/api/projects/" + CUR.project_id + "/renders/" + jid + "/jianying-draft");
-        hist.querySelectorAll(".h-item").forEach(x => x.classList.remove("on"));
-        it.classList.add("on");
-      };
-      hist.appendChild(it);
-    });
-  }
-  const more = $("assetMore"), tg = $("assetToggle");
-  const toggleAssets = () => {
-    const all = $("assetAll"); if (!all) return;
-    const hidden = all.classList.toggle("hide");
-    if (tg) tg.textContent = hidden ? `展开全部 ${assets.length} 个` : "收起";
+  $("vg-view").innerHTML = `<div class="vg-columns"><section aria-label="口播文案"><div class="vg-sectionhead"><h2>口播文案</h2><small>${script.length} 字符</small><button id="vg-fulltext" aria-haspopup="dialog">展开全文</button></div>
+    <article class="vg-script"><div class="vg-hook"><small>开场标题 · 来自素材包</small><h2>${hooks || esc(b.title || "未提供开场标题")}</h2></div><div class="vg-reader" tabindex="0" aria-label="滚动阅读完整口播">${esc(script || "素材包未提供口播文案，请更换素材包后再生成。")}</div><div class="vg-scriptfoot">原文保留，未做自动改写 · 预计 ${mmss(b.estSeconds / (CFG.rate/100))}</div></article>
+    ${b.notes ? `<div class="vg-notes">素材包备注<br>${esc(b.notes)}</div>` : ''}<p class="vg-notes">仅展示素材包内容，新闻事实与来源尚未核验。</p></section>
+    <section aria-label="素材内容"><div class="vg-sectionhead"><h2>本次素材</h2><small>${assets.filter(a => a.kind === 'image').length} 图片 · ${assets.filter(a => a.kind === 'video').length} 视频</small><button id="vg-all-assets" aria-haspopup="dialog">查看全部 ${assets.length} 份</button></div>
+    ${assets.length ? `<div class="vg-gallery">${assets.slice(0,5).map(flowAsset).join("")}</div>` : flowEmpty("未提供媒体素材", "素材包里没有已登记的图片或视频；不会用其他项目的素材填充。")}
+    <div class="vg-notes"><button id="vg-meta" aria-haspopup="dialog">来源与读音提示</button><br>仅显示包内已提供的声明；不推测尺寸、时长或分镜对应。</div>
+    <div class="vg-import-actions"><button class="btn line sm" id="vg-change" ${flowBusy() ? 'disabled' : ''}>更换素材包</button></div></section></div>`;
+  wireFlowAssets($("vg-view"));
+  $("vg-fulltext").onclick = () => openFlowDialog("完整口播 · 原包文案", `<div class="vg-fulltext">${esc(script || "未提供文案")}</div>`);
+  $("vg-all-assets").onclick = () => { const d = openFlowDialog("全部素材 · " + assets.length + " 份", `<div class="vg-assets-all">${assets.map(flowAsset).join("")}</div>`); wireFlowAssets(d); };
+  $("vg-meta").onclick = () => {
+    const sources = Array.isArray(b.sources) ? b.sources : b.sources ? [b.sources] : [];
+    const pronunciation = b.pronunciations && typeof b.pronunciations === 'object' ? Object.entries(b.pronunciations) : [];
+    const text = v => typeof v === "string" ? v : JSON.stringify(v);
+    openFlowDialog("来源与读音 · 原包声明", `<p class="vg-sub">来源声明不等于已核验的引用。</p><h3>来源</h3>${sources.length ? sources.map(x => `<p class="vg-notes">${esc(text(x))}</p>`).join("") : '<p class="vg-notes">未提供来源声明</p>'}<h3>读音提示</h3>${pronunciation.length ? pronunciation.map(([k,v]) => `<p class="vg-notes">${esc(k)}　${esc(text(v))}</p>`).join("") : '<p class="vg-notes">未提供读音提示</p>'}`);
   };
-  if (more) more.onclick = toggleAssets;
-  if (tg) tg.onclick = toggleAssets;
-  if (!b){
-    api("/api/bundles").then(list => {
-      const q = $("quickBundles"); if (!q) return;
-      if (!list.length){
-        q.innerHTML = `<span style="color:var(--ink-3);font-size:13px">服务器上还没有素材包，在右侧第 1 步「选用」里上传一个 zip</span>`;
-        return;
-      }
-      q.innerHTML = list.map(x =>
-        `<button class="chip" data-b="${esc(x.name)}">${esc(x.name)}<span style="color:var(--ink-3);font-weight:600">· ${x.assets} 素材</span></button>`).join("");
-      q.querySelectorAll(".chip").forEach(c => c.onclick = () => mountBundle(c.dataset.b, c.dataset.b));
-    }).catch(() => { const q = $("quickBundles"); if (q) q.innerHTML = ""; });
-  }
+  $("vg-change").onclick = () => setFlowView("import");
 }
-function refreshStageCard(){
-  api("/api/projects").then(ps => {
-    const me = ps.find(x => x.project_id === CUR.project_id);
-    if (!me) return;
-    CUR = Object.assign(CUR, me);
-    let b = null;
-    if (CUR.bundle) api("/api/bundle/" + CUR.bundle).then(x => renderStageCard(x)).catch(() => renderStageCard(null));
-    else renderStageCard(null);
-  }).catch(() => {});
+function closeFlowDialog(){ const d = $("vg-dialog"); if (d){ d.close(); d.remove(); } if (AUD){ AUD.pause(); AUD = null; } }
+function openFlowDialog(title, html){
+  const opener = document.activeElement;
+  closeFlowDialog();
+  const d = document.createElement("dialog"); d.id = "vg-dialog"; d.className = "vg-dialog"; d.setAttribute("aria-labelledby","vg-dialog-title");
+  d.innerHTML = `<div class="vg-dialog-head"><h2 id="vg-dialog-title">${esc(title)}</h2><button class="ghost" data-close aria-label="关闭弹窗">×</button></div><div class="vg-dialog-body">${html}</div><div class="vg-dialog-foot"><button class="btn line sm" data-close>完成</button></div>`;
+  d.querySelectorAll("[data-close]").forEach(el => el.onclick = closeFlowDialog);
+  d.addEventListener("close", () => { if (AUD){ AUD.pause(); AUD = null; } d.remove(); if (opener && opener.isConnected) opener.focus(); });
+  d.addEventListener("click", e => { if (e.target === d){ const r = d.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeFlowDialog(); } });
+  document.body.appendChild(d); d.showModal(); return d;
+}
+function openFlowConfig(section){
+  if (!FLOW || flowBusy()) return;
+  // Reuse every production control; only its location changes. All values stay in CFG.
+  const d = openFlowDialog("生成设置 · " + (section === "style" ? "画面样式" : "声音与画面信息"), '<div id="rail"></div>');
+  renderRail(CURB);
+  $("cfgReset").onclick = () => { CFG = Object.assign({},CFG_DEF); saveCfg(); openFlowConfig(section); toast("已恢复默认配置"); };
+  const target = section === "style" ? $("fmt") : $("voiceSeg");
+  if (section === "sound") d.querySelectorAll("details.disc").forEach(x => { x.open = true; });
+  target.scrollIntoView({block:"nearest"});
+  d.addEventListener("close", paintFlowFooter, {once:true});
+}
+function paintFlowGeneration(){
+  $("vg-view").innerHTML = `<div class="vg-runlayout"><aside class="vg-runrail" id="vg-stages" aria-label="生成阶段"></aside><section><div class="vg-runhead"><h2 id="vg-stage-title"></h2><small id="vg-stage-state"></small></div><div id="vg-artifact"></div><div class="vg-progress" id="vg-progress" role="status"></div></section></div>`;
+  updateFlowJobView(true);
+}
+function updateFlowJobView(force){
+  if (!FLOW || FLOW.view !== "generate" || !$("vg-stages")) return;
+  const j = FLOW.status || {}, idx = j.stage === "queued" || !j.stage ? 0 : Math.max(1,Math.min(8,j.stage8 || 1));
+  const selected = FLOW.selectedStage == null ? Math.max(1,idx) : FLOW.selectedStage;
+  const terminal = ["failed","unknown"].includes(j.stage);
+  $("vg-stages").innerHTML = STAGE8.map((s,i) => {
+    const n=i+1, current = !terminal && j.stage !== "done" && n === idx;
+    return `<button class="vg-stage ${current ? 'vg-current' : ''} ${!terminal && n < idx ? 'vg-reached' : ''}" data-stage="${n}" aria-pressed="${n === selected}"><i>${n}</i><span>${esc(s)}<small>${n === selected ? "正在查看 · " : ""}${terminal ? "任务已停止" : j.stage === "done" || n < idx ? "已执行，可回看" : current ? "后台执行中" : "尚未执行"}</small></span></button>`;
+  }).join("") + '<p class="vg-notes">查看阶段与后台执行阶段独立。<br>进度为估算，不代表精确帧数。</p>';
+  $("vg-stages").querySelectorAll("[data-stage]").forEach(el => el.onclick = () => { FLOW.selectedStage = +el.dataset.stage; updateFlowJobView(true); });
+  $("vg-stage-title").textContent = STAGE8[selected-1];
+  $("vg-stage-state").textContent = `查看阶段 ${selected} / 8`;
+  const pct = Math.max(0,Math.min(100,Number(j.progress) || 0));
+  $("vg-progress").innerHTML = `<p>${j.stage === "queued" ? "排队中" : j.stage === "done" ? "后台已完成" : j.stage === "failed" ? "生成失败" : j.stage === "unknown" ? "任务记录不可用" : "后台阶段：" + esc(STAGE8[Math.max(0,idx-1)])} · ${j.stage === "queued" ? "等待开始" : "估算进度 " + pct + "%"}${j.elapsed != null ? " · 已用 " + mmss(j.elapsed) : ""}</p><progress max="100" value="${pct}" aria-label="估算生成进度"></progress><p>${esc(FLOW.pollError || j.detail || "正在连接任务状态…")}</p>${j.error ? `<p class="vg-error">${esc(String(j.error).slice(0,400))}</p>` : ''}<p>任务 ${esc(FLOW.jobId || "—")} <button class="ghost" id="vg-copy-job">复制</button></p>`;
+  $("vg-copy-job").onclick = () => { if (navigator.clipboard) navigator.clipboard.writeText(FLOW.jobId || "").then(() => toast("已复制"), () => toast("复制失败")); else toast("当前环境不支持复制"); };
+  const stills = Array.isArray(j.stills) ? j.stills.filter(u => typeof u === "string" && u.startsWith("/still/")) : [];
+  const key = JSON.stringify([selected, stills, j.stage === "done", terminal]);
+  if (!force && FLOW.artifactKey === key) return;
+  FLOW.artifactKey = key;
+  let html;
+  if (selected === 1){
+    html = CURB ? `<p class="vg-sub">本项目的原始输入 · 不是新生成的产物</p><div class="vg-script"><div class="vg-reader" tabindex="0">${esc(CURB.script || "未提供文案")}</div></div><div class="vg-assets-all">${(CURB.assets || []).slice(0,6).map(flowAsset).join("")}</div>` : flowEmpty("原始输入暂不可用", "任务仍可继续；本次未能读取素材包详情。");
+  } else if ([4,5,7].includes(selected)){
+    html = stills.length ? `<p class="vg-sub">本任务真实分镜静帧 · ${stills.length} 张。不是连续视频，也不是校验报告。</p><div class="vg-stills">${stills.map((url,i) => `<button data-still="${esc(url)}" aria-label="查看分镜静帧 ${i+1}"><img src="${esc(qs(url))}" alt="分镜静帧 ${i+1}"><span>静帧 ${i+1}</span></button>`).join("")}</div>${selected === 7 ? '<p class="vg-notes">后端未提供逐镜校验报告，不据静帧推断校验通过。</p>' : ''}` : flowEmpty("暂时没有可展示的静帧", "后端尚未返回本任务的分镜静帧。不会拿模板缩略图或原始素材冒充生成结果。");
+  } else if (selected === 8){ html = flowEmpty(j.stage === "done" ? "视频已生成" : "成片尚未就绪", j.stage === "done" ? "请使用下方「查看成片与导出」进入独立导出页。" : "这里只显示真实任务状态。完成后才能查看和下载本项目成片。"); }
+  else {
+    const info = {2:["配音音频暂不可预览","后端未提供本任务配音文件或时长接口。音色试听仅为设置样例，不冒充本条口播。"],3:["分镜规划暂不可查看","后端未提供分镜文本、素材对应关系或镜头时长。不会把原始图片与段落拼成虚构分镜。"],6:["混音产物暂不可预览","后端未提供独立混音音轨。生成完成后请在导出页试听完整成片。"]};
+    html = flowEmpty(...info[selected]);
+  }
+  $("vg-artifact").innerHTML = html;
+  wireFlowAssets($("vg-artifact"));
+  $("vg-artifact").querySelectorAll("[data-still]").forEach(el => el.onclick = () => openFlowDialog("本任务分镜静帧", `<img class="vg-lightbox" src="${esc(qs(el.dataset.still))}" alt="本任务分镜静帧">`));
+  $("vg-artifact").querySelectorAll(".vg-stills img").forEach(img => img.onerror = () => { img.alt = "静帧暂不可用"; });
+}
+function paintFlowExport(){
+  const rs = flowRenders().slice().reverse();
+  if (!rs.length){
+    $("vg-view").innerHTML = flowEmpty("成片记录暂未就绪", "后台已结束，但本项目尚未返回可导出的成片记录。稍后刷新，不会使用其他项目的最近成片。") + '<button class="btn line" id="vg-refresh-export">刷新本项目记录</button>';
+    $("vg-refresh-export").onclick = refreshStageCard; return;
+  }
+  const r = rs.find(x => x.id === FLOW.exportId) || rs[0]; FLOW.exportId = r.id;
+  $("vg-view").innerHTML = `<div class="vg-export"><video class="vg-export-player" id="mainPlayer" controls playsinline src="${esc(vid(r.id))}"></video><section><div class="vg-sectionhead"><h2>下载与交付</h2></div><p class="vg-sub" id="stageMeta">${esc(r.ts || "已完成")} · ${esc(r.id)}</p><div class="vg-import-actions"><a class="btn" id="dlBtn" href="${esc(vid(r.id))}" download>下载 MP4</a><a class="btn line" id="jyBtn" href="${esc(qs('/api/projects/' + CUR.project_id + '/renders/' + r.id + '/jianying-draft'))}">导出剪映草稿</a></div><p class="vg-notes">剪映草稿保留现有分轨导出能力，首次打包可能需要 1–2 分钟。旧版本是否可编辑取决于服务端保存的清单。</p><h3>历史版本 · ${rs.length}</h3><div class="vg-history" id="hist">${rs.map((x,i) => `<button data-render="${esc(x.id)}" aria-pressed="${x.id === r.id}">${i === 0 ? "最新版本" : "历史版本"} · ${esc(x.ts || x.id)}</button>`).join("")}</div><p class="vg-sub" id="vg-video-error" role="status"></p></section></div>`;
+  $("hist").querySelectorAll("[data-render]").forEach(el => el.onclick = () => { FLOW.exportId = el.dataset.render; paintFlowExport(); });
+  $("mainPlayer").onerror = () => { $("vg-video-error").textContent = "成片文件暂不可播放；可能已被清理或任务记录已过期。历史记录仍保留。"; };
+}
+async function refreshStageCard(){
+  const epoch = viewEpoch, pid = CUR && CUR.project_id, jid = job;
+  try {
+    const ps = await api("/api/projects"); if (!flowHere(epoch,pid) || job !== jid || !FLOW) return;
+    const me = ps.find(x => x.project_id === pid); if (!me) return;
+    CUR = Object.assign(CUR,me);
+    if (FLOW.view === "export") paintFlowExport();
+    paintFlowFooter();
+  } catch(e){ if (flowHere(epoch,pid) && job === jid) toast("无法刷新本项目成片记录，请稍后重试"); }
 }
 
 /* —— 右栏：编号步骤流 —— */
@@ -1317,14 +1420,11 @@ function renderRail(b){
     <section class="card panel">
       <div class="ph"><h3>呈现方式</h3><button class="ghost" id="cfgReset" style="padding:4px 8px;font-size:12.5px">恢复默认</button></div>
       ${warn}
-      <div class="step"><span class="step-n">1</span><div class="step-b">
-        <div class="gh">素材</div><div id="bundlePanel"></div>
-      </div></div>
-      <div class="step"><span class="step-n">2</span><div class="step-b">
-        <div class="gh">画面 <span class="hint">选一个模板，就是成片的样子</span></div>
+      <div class="step"><div class="step-b">
+        <div class="gh">画面 <span class="hint">通用模板示例，不是本项目生成产物</span></div>
         <div class="tpls" id="fmt"></div>
       </div></div>
-      <div class="step"><span class="step-n">3</span><div class="step-b">
+      <div class="step"><div class="step-b">
         <div class="gh">声音 <span class="hint">点 ▶ 试听</span></div>
         <div class="pills" id="voiceSeg"></div>
         <div class="gh" style="margin-top:13px">语速 <span id="rateTxt" style="color:var(--ink)">${(CFG.rate/100).toFixed(2)}×</span>
@@ -1345,82 +1445,52 @@ function renderRail(b){
             <button class="swt ${CFG.sources ? "on" : ""}" data-k="sources" role="switch"
               aria-checked="${CFG.sources}" aria-label="资料来源"><i></i></button></div></div>
           <div class="grp" style="margin-top:12px"><div class="gh">免责声明</div>
-            <textarea id="disclaimer">本片内容基于公开报道与公开资料整理，观点仅供参考，不构成任何投资建议</textarea></div>
+            <textarea id="disclaimer" aria-label="免责声明">${esc(CFG.disclaimer)}</textarea></div>
         </div></details>
       <div class="render-cta">
         <div class="est">成片 <b id="est2">—</b><br>渲染 <b id="render2">—</b></div>
-        <button class="btn go" id="go">开始渲染</button>
+        <span class="vg-sub">设置自动保存；返回内容确认后开始生成</span>
       </div>
-    </section>
-    <section class="card panel task" id="taskCard"></section>`;
-  paintBundlePanel();
+    </section>`;
   paintConfig(b);
-  paintTaskIdle();
-}
-function paintBundlePanel(){
-  const el = $("bundlePanel"); if (!el) return;
-  if (!CUR.bundle){
-    el.innerHTML = `<div class="bundle-none"><span>还没有素材</span><button class="btn sm line" id="pickBundle">选用</button></div>`;
-  } else {
-    el.innerHTML = `<div class="bundle-chip">
-        <span class="b-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></span>
-        <span class="b-name"><b>${esc(CUR.bundle)}</b><span id="bundleMeta"></span></span>
-        <button id="pickBundle">更换</button>
-      </div>`;
-    api("/api/bundles").then(list => {
-      const m = $("bundleMeta");
-      const hit = list.find(x => x.name === CUR.bundle);
-      if (m && hit) m.textContent = hit.assets + " 素材";
-    }).catch(() => {});
-  }
-  $("pickBundle").onclick = openBundleModal;
 }
 function openBundleModal(){
-  const m = document.createElement("div"); m.className = "modal";
-  m.innerHTML = `<div class="box" role="dialog" aria-modal="true">
-    <h3>选用素材</h3><p>选服务器上已有的素材，或上传一个素材 zip（用 Agent 或工具导出的包）。</p>
-    <button class="btn sm" id="bmUpload" style="width:100%">上传 zip 文件</button>
-    <input type="file" id="bmZip" accept=".zip" class="hide">
-    <div class="sub-h" style="margin-top:14px">已有的素材包</div>
-    <div class="mlist" id="bmList"><p style="color:var(--ink-3);font-size:13px">读取中…</p></div>
-    <div class="row"><button class="btn sm line" data-c>关闭</button></div></div>`;
-  m.querySelector("[data-c]").onclick = () => m.remove();
-  m.onclick = (e) => { if (e.target === m) m.remove(); };
-  document.body.appendChild(m);
-  m.querySelector("#bmUpload").onclick = () => m.querySelector("#bmZip").click();
-  m.querySelector("#bmZip").onchange = async (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    try {
-      const up = await uploadZip(f);
-      await mountBundle(up.name, up.name);
-      m.remove();
-    } catch (err) { toast("上传失败：" + err.message); }
+  if (!CUR || flowBusy()) return;
+  const epoch = viewEpoch, pid = CUR.project_id;
+  const m = openFlowDialog("选用素材", `<p class="vg-sub">选用已有素材，或上传素材 zip。导入后先确认，不会自动生成。</p><button class="btn" id="bmUpload">上传 zip 文件</button><input type="file" id="bmZip" accept=".zip" class="hide"><div class="mlist" id="bmList">读取中…</div><p id="bmStatus" class="vg-sub" role="status"></p>`);
+  let busy = false;
+  const mount = async (name,title) => {
+    if (!flowHere(epoch,pid) || !m.isConnected) return;
+    await mountBundle(name,title,pid,epoch);
+  };
+  $("bmUpload").onclick = () => $("bmZip").click();
+  $("bmZip").onchange = async e => {
+    const file = e.target.files[0]; if (!file || busy) return;
+    busy = true; const status = $("bmStatus"); status.textContent = "正在上传并解析…";
+    try { const up = await uploadZip(file); await mount(up.name,up.name); }
+    catch(err){ if (m.isConnected) status.textContent = "上传失败：" + err.message; }
+    finally { busy = false; }
   };
   api("/api/bundles").then(list => {
-    const box = m.querySelector("#bmList");
-    if (!list.length) return void (box.innerHTML = `<p style="color:var(--ink-3);font-size:13px">服务器上还没有素材</p>`);
-    box.innerHTML = "";
-    list.forEach(x => {
-      const btn = document.createElement("button");
-      btn.innerHTML = `<span>${esc(x.name)}</span><span class="m">${x.assets} 素材 · ${esc(x.updated)}</span>`;
-      btn.onclick = async () => { await mountBundle(x.name, x.name); m.remove(); };
-      box.appendChild(btn);
-    });
-  }).catch(() => {});
+    if (!flowHere(epoch,pid) || !m.isConnected) return;
+    const box = $("bmList");
+    box.innerHTML = list.length ? list.map(x => `<button data-b="${esc(x.name)}"><span>${esc(x.name)}</span><span class="m">${x.assets} 素材 · ${esc(x.updated)}</span></button>`).join("") : "服务器上还没有素材包";
+    box.querySelectorAll("[data-b]").forEach(el => el.onclick = async () => { if (busy) return; busy = true; try { await mount(el.dataset.b,el.dataset.b); } catch(err){ if (m.isConnected) $("bmStatus").textContent = "挂载失败：" + err.message; } finally { busy = false; } });
+  }).catch(() => { if (m.isConnected) $("bmList").textContent = "素材列表读取失败，请关闭后重试"; });
 }
-async function mountBundle(name, title){
+async function mountBundle(name,title,pid = CUR && CUR.project_id,epoch = viewEpoch){
+  if (!flowHere(epoch,pid) || flowBusy()) return;
   try {
-    await api(`/api/projects/${CUR.project_id}/mount`, {method:"POST",
-      headers:{"Content-Type":"application/json"}, body:JSON.stringify({bundle:name, title})});
+    await api(`/api/projects/${pid}/mount`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bundle:name,title})});
+    if (!flowHere(epoch,pid)) return;
     CUR.bundle = name; if (title) CUR.title = title;
-    toast("已挂载 " + name);
-    renderProject();
-  } catch (e) { toast("挂载失败：" + e.message); }
+    toast("已挂载 " + name); await renderProject("confirm");
+  } catch(e){ if (flowHere(epoch,pid)) toast("挂载失败：" + e.message); throw e; }
 }
 
 function paintConfig(b){
+  const musicSelect = $("bgm");
+  $("disclaimer").oninput = e => { CFG.disclaimer = e.target.value; saveCfg(); };
   // 模板
   const fmt = $("fmt");
   fmt.innerHTML = TPLS.map(t => {
@@ -1475,12 +1545,13 @@ function paintConfig(b){
   });
   // BGM
   api("/api/music").then(list => {
-    const sel = $("bgm"); if (!sel) return;
+    const sel = $("bgm"); if (!sel || sel !== musicSelect || !sel.isConnected) return;
     sel.innerHTML = `<option value="">不用背景音乐</option>` +
       list.map(m => `<option value="${esc(m.file)}">${esc(m.name)}${m.mood ? " · " + esc(m.mood) : ""}</option>`).join("");
-    const want = CFG.bgm && list.some(m => m.file === CFG.bgm) ? CFG.bgm : (list[0] ? list[0].file : "");
+    const want = !CFG.bgm || list.some(m => m.file === CFG.bgm) ? CFG.bgm : "";
     sel.value = want; CFG.bgm = want; saveCfg();
-    sel.onchange = () => { CFG.bgm = sel.value; saveCfg(); };
+    const setBgm = () => { CFG.bgm = sel.value; saveCfg(); };
+    sel.onchange = setBgm; sel.addEventListener("change", setBgm);
     const bp = $("bgmPrev");
     if (bp) bp.onclick = () => {
       if (!CFG.bgm) return toast("当前没选背景音乐");
@@ -1497,190 +1568,77 @@ function updateEst(b){
   $("render2").textContent = renderEstimate(est);
 }
 
-/* —— 任务卡 —— */
-function taskEl(){ return $("taskCard"); }
-function enableRenderBtn(){
-  const g = $("go"); if (!g) return;
-  g.disabled = false; g.textContent = "开始渲染";
-}
-function paintTaskIdle(){
-  const t = taskEl(); if (!t) return;
-  t.className = "card panel task";
-  t.innerHTML = `<div class="th"><span class="dot"></span>渲染器<span class="tpct idle">待机</span></div>
-    <div class="pdetail" style="margin-top:8px">还没有在跑的任务。点上面的「开始渲染」开工，进度和剧照会出现在这里。</div>`;
-  enableRenderBtn();
-}
-function paintTaskRunning(){
-  const t = taskEl(); if (!t) return;
-  t.className = "card panel task running";
-  t.innerHTML = `<div class="th"><span class="dot"></span><span id="tstage">正在制作</span>
-      <span class="tpct" id="tpct">0%</span></div>
-    <div class="pbar"><i id="tbar"></i></div>
-    <div class="pdetail" id="tdetail">连接中…</div>
-    <div class="pmeta"><span id="teta"></span><span id="tstep"></span></div>
-    <ul class="stages8" id="tstages">${STAGE8.map(s => `<li>${s}</li>`).join("")}</ul>
-    <div class="stills" id="tstills">
-      ${[1,2,3,4].map(() => `<div class="shot">取景中</div>`).join("")}
-    </div>
-    <div class="terr hide" id="terr"></div>
-    <div class="tfoot"><span>任务</span><code id="taskId">—</code>
-      <button class="ghost" id="copyId" style="margin-left:auto;padding:2px 8px">复制</button></div>`;
-  const g = $("go");
-  if (g){ g.disabled = true; g.innerHTML = `<span class="spin"></span>制作中`; }
-  $("copyId").onclick = () => {
-    const txt = $("taskId").textContent;
-    if (navigator.clipboard && navigator.clipboard.writeText)
-      navigator.clipboard.writeText(txt).then(() => toast("已复制"), () => toast("复制失败"));
-    else toast("当前环境不支持复制");
-  };
-}
-function paintStills(stills){
-  const strip = $("tstills"); if (!strip || !stills) return;
-  const have = strip.querySelectorAll("img").length;
-  if (stills.length <= have) return;
-  stills.forEach((url, i) => {
-    if (i < have) return;
-    const cell = strip.children[i] || strip.appendChild(document.createElement("div"));
-    cell.className = "shot";
-    cell.innerHTML = `<img src="${qs(url)}" alt="分镜剧照 ${i+1}">`;
-    cell.onclick = () => window.open(qs(url), "_blank");
-  });
-}
-function markStages(idx){
-  const lis = $("tstages"); if (!lis) return;
-  [...lis.children].forEach((li, i) => {
-    li.className = i + 1 < idx ? "done" : (i + 1 === idx ? "on" : "");
-  });
-}
-function wireRenderPane(b){
-  $("go").onclick = () => startRender(CURB);
-  const again = $("againBtn");
-  if (again) again.onclick = () => startRender(CURB);
-  // 恢复未完成的任务
-  const saved = localStorage.getItem("vg.job." + CUR.project_id);
-  if (saved){ job = lastJob = saved; paintTaskRunning(); startPoll(); }
-}
+/* Task lifecycle: no overlapping timer polls; every response belongs to a project/job epoch. */
+let JD = null;
+function newJD(){ return {lastPct:-1,lastChange:Date.now(),localT0:Date.now(),samples:[],firstPoll:true}; }
 async function startRender(b){
-  if (!CUR.bundle){ toast("先在第 1 步选一个素材包"); return openBundleModal(); }
-  const btn = $("go");
-  if (btn){ btn.disabled = true; btn.innerHTML = `<span class="spin"></span>启动中`; }
+  if (!CUR || BUILD_PENDING.has(CUR.project_id) || flowBusy()) return;
+  if (!CUR.bundle || !b || !String(b.script || "").trim()){ toast("请先导入并确认完整文案"); return; }
+  if (!FLOW || FLOW.view !== "confirm" || b !== CURB) return;
+  const pid = CUR.project_id, epoch = viewEpoch, bundle = CUR.bundle;
+  const payload = {project_id:pid,bundle,voice:CFG.voice,rate:String(CFG.rate),bgm:CFG.bgm,
+    sfx:CFG.sfxMode !== "off",sfxMode:CFG.sfxMode,subtitles:CFG.subtitles !== false,
+    sources:CFG.sources !== false,format:CFG.format,
+    disclaimer:String(CFG.disclaimer || "").trim() || undefined,useLlm:true};
+  BUILD_PENDING.add(pid); paintFlowFooter();
   try {
-    const r = await api("/api/build", {method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({project_id: CUR.project_id, bundle: CUR.bundle,
-        voice: CFG.voice, rate: String(CFG.rate), bgm: CFG.bgm,
-        sfx: CFG.sfxMode !== "off", sfxMode: CFG.sfxMode,
-        subtitles: CFG.subtitles !== false, sources: CFG.sources !== false,
-        format: CFG.format,
-        disclaimer: (($("disclaimer") || {}).value || "").trim() || undefined, useLlm: true})});
+    const r = await api("/api/build",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     if (!r || !r.job) throw new Error((r && r.error) || "启动失败");
-    job = lastJob = r.job;
-    localStorage.setItem("vg.job." + CUR.project_id, job);
-    paintTaskRunning();
-    startPoll();
-    toast("已在后台开始渲染，你可以继续做别的项目");
-  } catch (e) {
+    // Even after navigation, remember the job under its originating project, never the new one.
+    localStorage.setItem("vg.job." + pid,r.job);
+    if (!flowHere(epoch,pid) || !FLOW) return;
+    job = lastJob = r.job; FLOW.jobId = r.job;
+    FLOW.status = {stage:"queued",stage8:1,progress:0,detail:"已提交，等待后台开始"};
+    FLOW.selectedStage = null; FLOW.view = "generate"; FLOW.artifactKey = null;
+    setHash("#/project/" + pid + "/generate"); paintFlow(); startPoll(); toast("已在后台开始生成，你可以继续做别的项目");
+  } catch(e){
+    if (!flowHere(epoch,pid)) return;
     if (e.auth) return showAuth();
-    if (btn){ btn.disabled = false; btn.textContent = "开始渲染"; }
     toast("启动失败：" + e.message);
-  }
+    // A different browser may have submitted this project; restore its real job on conflict.
+    if (e.data && /已有任务/.test(e.message)) renderProject();
+  } finally { BUILD_PENDING.delete(pid); if (flowHere(epoch,pid)) paintFlowFooter(); }
 }
 function startPoll(){
-  stopPoll();
-  JD = newJD();
-  JD.lastChange = Date.now();
-  pollJob(job);
-  timer = setInterval(() => pollJob(job), 1500);
+  stopPoll(); JD = newJD();
+  const token = pollEpoch, jid = job, pid = CUR && CUR.project_id;
+  const tick = async () => {
+    await pollJob(jid);
+    if (token === pollEpoch && CUR && CUR.project_id === pid && job === jid)
+      timer = setTimeout(tick,1500);
+  };
+  tick();
 }
 async function pollJob(jid){
+  const epoch = viewEpoch, token = pollEpoch, pid = CUR && CUR.project_id;
+  if (!pid || !jid || job !== jid || !FLOW || FLOW.jobId !== jid) return;
+  const current = () => flowHere(epoch,pid) && pollEpoch === token && job === jid && FLOW && FLOW.jobId === jid;
   let j;
-  try { j = await api("/api/job/" + jid); } catch (e) { if (e.auth) showAuth(); return; }
-  const t = taskEl(); if (!t) return;
-  if (j.stage === "queued"){
-    t.className = "card panel task";
-    const ts = $("tstage"); if (ts) ts.textContent = "排队中";
-    const tp = $("tpct"); if (tp) tp.textContent = "--";
-    const tb = $("tbar"); if (tb) tb.style.width = "0%";
-    const td = $("tdetail"); if (td) td.textContent = j.detail || "排队中";
-    const te = $("teta"); if (te) te.textContent = "";
-    const tsp = $("tstep"); if (tsp) tsp.textContent = "";
-    const ti = $("taskId"); if (ti) ti.textContent = jid;
-    markStages(0);
-    return;
+  try { j = await api("/api/job/" + encodeURIComponent(jid)); }
+  catch(e){
+    if (!current()) return;
+    if (e.auth) return showAuth();
+    FLOW.pollError = "状态连接暂时中断，将继续重试。不能据此判断任务已停止。";
+    updateFlowJobView(); return;
   }
-  if (j.stage === "unknown"){
-    if (lastJob !== jid) return;
-    stopPoll(); localStorage.removeItem("vg.job." + CUR.project_id);
-    try {
-      const l = await api("/api/latest");
-      if (l && l.video){
-        t.className = "card panel task done";
-        t.querySelector(".tpct").textContent = "完成";
-        t.querySelector("#tdetail").textContent = "服务重启过，已找回最近一次成片。";
-        enableRenderBtn();
-        refreshStageCard();
-      } else paintTaskIdle();
-    } catch (e) { paintTaskIdle(); }
-    return;
-  }
-  const idx = Math.min(j.stage8 || 1, 8);
-  const pct = Math.max(0, Math.min(100, j.progress || 0));
-  const now = Date.now();
-  if (pct !== JD.lastPct){ JD.lastPct = pct; JD.lastChange = now; }
-  const el = j.elapsed != null ? j.elapsed : Math.round((now - JD.localT0)/1000);
-  const firstPoll = JD.firstPoll !== false;
-  JD.firstPoll = false;
-  if (firstPoll && el > 5) JD.localT0 = now - el*1000;
-
-  $("tpct").textContent = pct + "%";
-  $("tbar").style.width = pct + "%";
-  $("tstage").textContent = j.stage === "done" ? "全部完成" : STAGE8[idx-1];
-  if (j.detail) $("tdetail").textContent = j.detail;
-  $("tstep").textContent = j.stage === "done" ? "" : "第 " + idx + " / 8 步";
-  $("taskId").textContent = jid;
-  markStages(j.stage === "done" ? 9 : idx);
-  paintStills(j.stills);
-
-  JD.samples.push({t: now, p: pct});
-  JD.samples = JD.samples.filter(s => now - s.t < 90000);
-  const s0 = JD.samples[0], sN = JD.samples[JD.samples.length - 1];
-  const dt = (sN.t - s0.t)/1000, dp = sN.p - s0.p;
-  const rate = dt > 20 ? dp/dt : 0;
-  const eta = $("teta");
-  if (j.stage === "done") eta.textContent = "";
-  else if (pct >= 85 && rate > .02)
-    eta.textContent = "已用 " + mmss(el) + " · 还需约 " + mmss(Math.max(5, Math.round((100-pct)/rate)));
-  else eta.textContent = "已用 " + mmss(el) + (QUOTE[j.stage] ? " · " + QUOTE[j.stage] : "");
-  $("tdetail").textContent = (j.detail || "") + ((now - JD.lastChange)/1000 > 25 && j.stage !== "done"
-    ? "（仍在处理中，没有卡住）" : "");
-  if (j.stage === "done") $("tdetail").textContent = "成片已经生成，左侧可以直接预览。";
-
-  if (j.stage === "failed"){
-    stopPoll(); localStorage.removeItem("vg.job." + CUR.project_id);
-    t.className = "card panel task failed";
-    t.querySelector(".tpct").textContent = "失败";
-    t.querySelector(".tpct").classList.add("idle");
-    $("tstage").textContent = "没有生成成功";
-    const er = $("terr");
-    er.classList.remove("hide");
-    er.textContent = (j.error || "未知错误").slice(0, 400);
-    const foot = t.querySelector(".tfoot");
-    const retry = document.createElement("button");
-    retry.className = "btn sm"; retry.style.marginLeft = "auto";
-    retry.textContent = "重试渲染";
-    retry.onclick = () => startRender(CURB);
-    enableRenderBtn();
-    foot.appendChild(retry);
-    return;
-  }
-  if (j.stage === "done"){
-    stopPoll(); localStorage.removeItem("vg.job." + CUR.project_id);
-    lastJob = jid;
-    t.className = "card panel task done";
-    t.querySelector(".tpct").textContent = "完成";
-    t.querySelector(".tpct").classList.add("idle");
-    $("tstage").textContent = "成片出炉";
-    enableRenderBtn();
-    refreshStageCard();
+  if (!current() || j.project_id && j.project_id !== pid) return;
+  FLOW.pollError = ""; FLOW.status = j;
+  if (!JD) JD = newJD();
+  if (j.progress !== JD.lastPct){ JD.lastPct = j.progress; JD.lastChange = Date.now(); }
+  updateFlowJobView();
+  if (["done","failed","unknown"].includes(j.stage)){
+    stopPoll();
+    if (localStorage.getItem("vg.job." + pid) === jid) localStorage.removeItem("vg.job." + pid);
+    if (j.stage === "unknown") FLOW.status.detail = "服务重启或任务记录已清理。请查看本项目历史成片，或返回确认重新生成。";
+    updateFlowJobView();
+    if (j.stage === "done" || j.stage === "unknown") await refreshStageCard();
+    if (!flowHere(epoch,pid) || job !== jid) return;
+    // Keep the selected review stage. Completion exposes export, never inserts a player here.
+    paintFlowFooter();
+    if ($("vg-change")) $("vg-change").disabled = false;
+    if ($("vg-drop")) $("vg-drop").disabled = false;
+    if ($("vg-bundles")) $("vg-bundles").disabled = false;
+    document.querySelectorAll('[data-flow="export"]').forEach(el => { el.disabled = !flowRenders().length && j.stage !== "done"; });
   }
 }
 
@@ -1708,8 +1666,8 @@ async function refreshTasks(){
     const rows = [...r.active, ...r.recent].map(i => {
       const running = i.stage !== "done" && i.stage !== "failed";
       const stageTxt = i.stage === "done" ? "成片出炉" : (i.stage === "failed" ? "失败了" : (i.detail || ""));
-      const pct = running ? (i.progress || 0) + "%" : (i.stage === "done" ? "出炉" : "失败");
-      return `<button class="tk" data-p="${i.project_id || ""}">
+      const pct = running ? "估算 " + (i.progress || 0) + "%" : (i.stage === "done" ? "出炉" : "失败");
+      return `<button class="tk" data-p="${esc(i.project_id || "")}" data-view="${i.stage === "done" ? "export" : "generate"}">
         <span class="tk-t"><b>${esc(i.title)}</b><small>${esc(stageTxt)}</small></span>
         <span class="tk-p">${running ? (i.stage === "queued" ? "排队中" : pct) : pct}</span>
         ${running && i.stage !== "queued" ? `<span class="tk-bar"><i style="width:${i.progress || 0}%"></i></span>` : ""}
@@ -1721,7 +1679,7 @@ async function refreshTasks(){
       const pid = el.dataset.p;
       panel.classList.add("hide");
       TASKS_OPEN = false;
-      if (pid){ location.hash = "#/project/" + pid; }
+      if (pid){ setHash("#/project/" + pid + "/" + el.dataset.view); route(true); }
     });
   } catch (e) {}
 }
