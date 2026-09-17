@@ -236,6 +236,27 @@ test('late build response saves the job against its originating project only', a
   assert.equal(h.evaluate('FLOW && FLOW.jobId'), null, 'New project must not adopt the old job');
 });
 
+test('home lists one poster per project and shows how many versions exist', async t => {
+  const h = await setup(t);
+  h.projects[0].renders = [
+    {id: 'job-a-old', file: 'old.mp4', ts: '2026-01-01 10:00'},
+    {id: 'job-a', file: 'new.mp4', ts: '2026-01-02 10:00'},
+  ];
+  h.projects[0].renders_count = 2;
+  h.projects[1].renders = [{id: 'job-b', file: 'b.mp4', ts: '2026-01-03 10:00'}];
+  h.projects[1].renders_count = 1;
+  await h.evaluate('renderHome()'); await h.flush();
+  const posters = h.document.querySelectorAll('#posters .poster');
+  assert.equal(posters.length, 2, 'Two projects with renders must produce two posters');
+  const badges = h.document.querySelectorAll('#posters .pver');
+  assert.equal(badges.length, 1, 'Only the project with several versions gets a version badge');
+  assert.match(badges[0].textContent, /共 2 版/);
+  const withBadge = [...posters].find(p => p.querySelector('.pver'));
+  assert.match(withBadge.getAttribute ? withBadge.textContent : '', /Project aa/, 'Badge sits on the multi-version project');
+  assert.match(await h.document.querySelector('#posters .poster video').getAttribute('src'), /\/video\//);
+  assert.match(h.document.querySelector('.sec-h .n').textContent, /2 个项目 · 共 3 条成片/);
+});
+
 test('late poll response cannot paint another project or clear its active task', async t => {
   const h = await setup(t);
   await h.openProject(); await start(h);
