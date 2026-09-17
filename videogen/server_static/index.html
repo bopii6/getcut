@@ -1218,7 +1218,7 @@ function renderStageCard(b){
             <div class="stats">这条片子可以直接预览。渲染新的一版时，这里不会被覆盖。</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <a class="btn sm line" id="dlBtn" ${rs.length ? `href="${vid(rs[rs.length-1].id)}" download` : ""}>下载成片</a>
-              <a class="btn sm line" id="jyBtn" ${rs.length ? `href="${qs("/api/projects/" + CUR.project_id + "/renders/" + (rs[rs.length-1].id) + "/jianying-draft")}" download` : ""} title="下载剪映专业版草稿包：成片已按分镜切段，可在剪映里逐镜修改；渲染时关闭字幕的话，文案还会以可编辑文本轨进入草稿">剪映草稿</a>
+              <a class="btn sm line" id="jyBtn" ${rs.length ? `href="${qs("/api/projects/" + CUR.project_id + "/renders/" + (rs[rs.length-1].id) + "/jianying-draft")}"` : ""} title="下载剪映专业版分轨草稿：画面/底板/卡片/字幕/叠加文字/配音/背景音乐/音效各一条轨——素材可替换、卡片可单独动、文字都能改（首次导出约 1-2 分钟）">剪映草稿</a>
               <button class="btn sm" id="againBtn">再生成一版</button>
             </div>
             <div>
@@ -1751,6 +1751,38 @@ document.addEventListener("click", (e) => {
   if (t.closest && (t.closest("#tasksPanel") || t.closest("#tasksBtn"))) return;
   TASKS_OPEN = false;
   $("tasksPanel").classList.add("hide");
+});
+// 剪映草稿：首次导出要在服务端分轨（切素材 + 渲染包装层），直接点链接会干等，
+// 这里改成带进度的下载：转圈提示 + 完成后触发保存。
+document.addEventListener("click", async (e) => {
+  const a = e.target.closest && e.target.closest("#jyBtn");
+  if (!a || !a.getAttribute("href") || a.dataset.busy) return;
+  e.preventDefault();
+  const old = a.innerHTML;
+  a.dataset.busy = "1";
+  a.style.pointerEvents = "none";
+  a.innerHTML = `<span class="spin"></span>正在分轨…`;
+  try {
+    const r = await fetch(a.getAttribute("href"));
+    if (!r.ok) throw new Error("导出失败");
+    const blob = await r.blob();
+    const cd = r.headers.get("Content-Disposition") || "";
+    const m = /filename\*=UTF-8''([^;]+)/.exec(cd);
+    const name = m ? decodeURIComponent(m[1]) : "jianying-draft.zip";
+    const url = URL.createObjectURL(blob);
+    const t = document.createElement("a");
+    t.href = url; t.download = name;
+    document.body.appendChild(t); t.click(); t.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    a.innerHTML = "草稿已下载";
+  } catch (err) {
+    if (typeof toast === "function") toast("草稿导出失败，请稍后重试"); 
+    a.innerHTML = old;
+  } finally {
+    a.dataset.busy = "";
+    a.style.pointerEvents = "";
+    setTimeout(() => { a.innerHTML = old; }, 2500);
+  }
 });
 boot();
 </script>

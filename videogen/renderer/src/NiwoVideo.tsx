@@ -90,6 +90,17 @@ export type NiwoProps = {
   template?: string;
   shots: Shot[];
   clauses: Clause[];
+  /**
+   * 分轨草稿导出模式：card=只出卡片/包装层（文字转剪映文本轨），base=只出底板层。
+   * 供剪映草稿分层合成。
+   */
+  exportMode?: ExportMode;
+  /** @deprecated 旧字段，等价于 exportMode="card" */
+  chromeOnly?: boolean;
+  /** 分轨导出：文字测量结果回传地址（Node 侧小 HTTP 服务） */
+  probeUrl?: string;
+  /** 测量结果的分组标签（通常是镜头 id） */
+  probeTag?: string;
 };
 
 export const estW = (text: string, size: number) => {
@@ -101,6 +112,88 @@ const fitSize = (text: string, maxSize: number, maxW: number) =>
   Math.min(maxSize, Math.max(20, (maxW / Math.max(estW(text, maxSize), 1)) * maxSize));
 
 const msToF = (ms: number, fps: number) => Math.round((ms / 1000) * fps);
+
+// ---------------- 分轨导出（exportMode） ----------------
+// full：正常成片
+// card：只出「卡片/包装」层（页面底/纸卡/面板/页脚不出，素材与字幕不出，文字只留几何位置）
+// base：只出「底板」层（页面底/纸卡/面板留洞/标题带/页脚，镜头内容与字幕不出）
+// 剪映草稿的轨道顺序（下→上）：底板 → 画面 → 卡片 → 字幕 → 叠加文字
+export type ExportMode = 'full' | 'card' | 'base';
+let EXPORT_MODE: ExportMode = 'full';
+const setExportMode = (m: ExportMode) => {
+  EXPORT_MODE = m;
+};
+/** 素材/字幕是否隐藏（分轨导出时） */
+const hideMedia = () => EXPORT_MODE !== 'full';
+const isCard = () => EXPORT_MODE === 'card';
+const isBase = () => EXPORT_MODE === 'base';
+/** 内层面板几何：与 EditorialVideo 中的面板 rect 保持一致 */
+const PANEL_RECT = {left: 115, top: 596, width: 849, height: 844, radius: 16};
+/** 面板内媒体窗几何（ShotView 用）：相对面板左上角 */
+const MEDIA_WINDOW = {left: 36, top: 71, width: 778, height: 440};
+/** 媒体窗在整帧里的 rect（= 面板 rect + 窗口相对偏移）：素材轨的落点 */
+export const MEDIA_RECT = {
+  left: PANEL_RECT.left + MEDIA_WINDOW.left,
+  top: PANEL_RECT.top + MEDIA_WINDOW.top,
+  width: MEDIA_WINDOW.width,
+  height: MEDIA_WINDOW.height,
+};
+/** 纸卡 rect（editorial 版面） */
+const PAPER_RECT = {left: 91, top: 124, width: 892, height: 1432, radius: 26};
+
+type Rect = {left: number; top: number; width: number; height: number};
+
+/** 全帧坐标 -> clip-path polygon(evenodd) 字符串：整块挖掉 hole 矩形 */
+const holeClip = (frameW: number, frameH: number, hole: Rect) =>
+  `polygon(evenodd, 0 0, ${frameW}px 0, ${frameW}px ${frameH}px, 0 ${frameH}px, 0 0, ` +
+  `${hole.left}px ${hole.top}px, ${hole.left}px ${hole.top + hole.height}px, ` +
+  `${hole.left + hole.width}px ${hole.top + hole.height}px, ` +
+  `${hole.left + hole.width}px ${hole.top}px, ${hole.left}px ${hole.top}px)`;
+
+/** 分轨导出：把整层按媒体窗挖洞（页面底、纸卡等整层不透明元素用） */
+const ChromeClip: React.FC<{hole: Rect; children?: React.ReactNode}> = ({hole, children}) => {
+  const {width, height} = useVideoConfig();
+  return <AbsoluteFill style={{clipPath: holeClip(width, height, hole)}}>{children}</AbsoluteFill>;
+};
+
+/**
+ * 带矩形洞的底板：把 hole 之外的部分画成 4 条边带（共用 fill 样式）。
+ * 分轨导出时，媒体窗才能透出下层的素材轨。
+ */
+const RectWithHole: React.FC<{
+  rect: Rect;
+  hole: Rect;
+  radius?: number;
+  fill: React.CSSProperties;
+  style?: React.CSSProperties;
+}> = ({rect, hole, radius = 0, fill, style}) => {
+  const hx = hole.left - rect.left;
+  const hy = hole.top - rect.top;
+  const w = rect.width;
+  const h = rect.height;
+  const band = (s: React.CSSProperties, key: string) => (
+    <div key={key} style={{position: 'absolute', ...fill, ...s}} />
+  );
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: rect.left,
+        top: rect.top,
+        width: w,
+        height: h,
+        borderRadius: radius,
+        overflow: 'hidden',
+        ...style,
+      }}
+    >
+      {band({left: 0, top: 0, width: w, height: hy}, 'top')}
+      {band({left: 0, top: hy + hole.height, width: w, height: h - hy - hole.height}, 'bottom')}
+      {band({left: 0, top: hy, width: hx, height: hole.height}, 'left')}
+      {band({left: hx + hole.width, top: hy, width: w - hx - hole.width, height: hole.height}, 'right')}
+    </div>
+  );
+};
 
 // 注意：这两个是模块级常量，但 T 是在渲染时才被 applySkin 改写的。
 // 用 getter 而不是普通属性，保证每次展开/读取时取到当前皮肤的值，
@@ -545,7 +638,7 @@ const StatementMedia: React.FC<{spec: ShotOverlay; media?: string}> = ({spec, me
       <div style={{position: 'absolute', left: 36, top: 60, opacity: tO, ...heavy, fontSize: 76, color: T.white}}>
         {spec.title}
       </div>
-      {media ? (
+      {media && !hideMedia() ? (
         <div
           style={{
             position: 'absolute',
@@ -570,7 +663,7 @@ const MediaWindow: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) 
   const fps = useVideoConfig().fps;
   const frame = useCurrentFrame();
   const durFrames = msToF(shot.endMs - shot.startMs, fps) + 1;
-  if (!shot.media) return null;
+  if (!shot.media || hideMedia()) return null;
   const src = staticFile(`media/${shot.media}`);
   // 图片运镜：推近/拉远交替 + 轻微平移（让静帧有呼吸感）
   const zoom = interpolate(frame, [0, durFrames], index % 2 === 0 ? [1.0, 1.12] : [1.12, 1.0], {
@@ -637,12 +730,12 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
     <div
       style={{
         position: 'absolute',
-        left: 115,
-        top: 596,
-        width: 849,
-        height: 844,
-        borderRadius: 16,
-        background: T.panel,
+        left: PANEL_RECT.left,
+        top: PANEL_RECT.top,
+        width: PANEL_RECT.width,
+        height: PANEL_RECT.height,
+        borderRadius: PANEL_RECT.radius,
+        background: hideMedia() ? 'transparent' : T.panel,
         overflow: 'hidden',
       }}
     >
@@ -658,10 +751,10 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
           <div
             style={{
               position: 'absolute',
-              left: 36,
-              top: 71,
-              width: 778,
-              height: 440,
+              left: MEDIA_WINDOW.left,
+              top: MEDIA_WINDOW.top,
+              width: MEDIA_WINDOW.width,
+              height: MEDIA_WINDOW.height,
               overflow: 'hidden',
               opacity: interpolate(shotFrame, [0, (globalThis as any).__motionFrames || 7], [0, 1], {extrapolateRight: 'clamp'}),
               transform: `scale(${interpolate(shotFrame, [0, ((globalThis as any).__motionFrames || 7) + 2], [1.05, 1.0], {extrapolateRight: 'clamp'})})`,
@@ -902,7 +995,7 @@ const Subtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
   const t = (frame / fps) * 1000;
   const chunks = buildSubtitleChunks(clauses);
   const active = chunks.find((c) => t >= c.startMs && t < c.endMs);
-  if (!active) return null;
+  if (!active || hideMedia()) return null;
   return (
     <div
       style={{
@@ -928,7 +1021,7 @@ const Subtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
 const PortraitMedia: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
   const fps = useVideoConfig().fps;
   const frame = useCurrentFrame();
-  if (!shot.media) return null;
+  if (!shot.media || hideMedia()) return null;
   const src = staticFile(`media/${shot.media}`);
   const durFrames = msToF(shot.endMs - shot.startMs, fps) + 1;
   if (shot.mediaKind === 'image') {
@@ -988,7 +1081,7 @@ const PortraitSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
   const fps = useVideoConfig().fps;
   const t = (frame / fps) * 1000;
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
-  if (!active) return null;
+  if (!active || hideMedia()) return null;
   return (
     <div style={{position: 'absolute', left: 80, right: 80, bottom: 330, textAlign: 'center',
       ...heavy, fontSize: 62, color: T.white, textShadow: '0 3px 16px rgba(0,0,0,0.75)'}}>
@@ -1089,16 +1182,83 @@ const PortraitFooter: React.FC<{sources: string[]; disclaimer: string}> = ({sour
 );
 
 const PortraitVideo: React.FC<NiwoProps> = (props) => (
-  <AbsoluteFill style={{background: T.bgTop, fontFamily: T.font}}>
+  <AbsoluteFill data-vg-frame="1"
+    style={{background: hideMedia() ? 'transparent' : T.bgTop, fontFamily: T.font}}>
     <FontFace />
-    {props.shots.map((shot, i) => (
+    {isBase() ? null : props.shots.map((shot, i) => (
       <PortraitShot key={i} shot={shot} index={i} />
     ))}
-    <PortraitHeadline lines={props.headline.lines} />
+    {isCard() ? null : <PortraitHeadline lines={props.headline.lines} />}
     {props.showSubtitles !== false ? <PortraitSubtitles clauses={props.clauses} /> : null}
-    <PortraitFooter sources={props.sources} disclaimer={props.disclaimer} />
+    {isCard() ? null : <PortraitFooter sources={props.sources} disclaimer={props.disclaimer} />}
   </AbsoluteFill>
 );
+
+// ---------------- 分轨导出：文字测量探针 ----------------
+// card 模式下文字只留形状与位置（颜色透明），这里把每个文字元素的几何/样式量出来，
+// 由 Python 侧生成剪映文本片段（可改字的那一层）。
+const TextProbe: React.FC<{url?: string; tag?: string}> = ({url, tag}) => {
+  const [handle] = React.useState(() => delayRender('draft text probe'));
+  React.useEffect(() => {
+    const items: Record<string, unknown>[] = [];
+    const seen = new Set<string>();
+    // 画面原点：Remotion 会把画面整体放在缩放容器里，rect 是屏幕坐标，需要换算
+    const frame = document.querySelector('[data-vg-frame]') as HTMLElement | null;
+    const fr = frame ? frame.getBoundingClientRect() : {x: 0, y: 0};
+    // 关掉「文字透明」再量，拿到设计里的真实字色；量完恢复
+    const hideStyle = document.getElementById('vg-hide-text') as HTMLStyleElement | null;
+    if (hideStyle) hideStyle.disabled = true;
+    const walk = (el: Element) => {
+      const node = el as HTMLElement;
+      const box = node.getBoundingClientRect();
+      if (box.width > 0.5 && box.height > 0.5) {
+        for (const child of Array.from(node.childNodes)) {
+          if (child.nodeType !== 3) continue;
+          const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
+          if (!text) continue;
+          const cs = getComputedStyle(node);
+          if (parseFloat(cs.fontSize) < 6) continue;
+          // 用 Range 量「文字本身」的框：元素框常是整行宽度，不能代表文字位置
+          const range = document.createRange();
+          range.selectNodeContents(child);
+          const r = range.getBoundingClientRect();
+          if (r.width <= 0.5 || r.height <= 0.5) continue;
+          const key = `${text}|${Math.round(r.x)}|${Math.round(r.y)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          items.push({
+            text, x: r.x - fr.x, y: r.y - fr.y, w: r.width, h: r.height,
+            size: parseFloat(cs.fontSize),
+            weight: parseInt(cs.fontWeight, 10) || 400,
+            color: cs.color,
+            align: cs.textAlign,
+          });
+        }
+      }
+      for (const c of Array.from(el.children)) walk(c);
+    };
+    walk(document.body);
+    if (hideStyle) hideStyle.disabled = false;
+    const done = () => continueRender(handle);
+    if (url) {
+      const payload = JSON.stringify({tag, items});
+      // 通道 A：no-cors POST
+      fetch(url, {method: 'POST', mode: 'no-cors', body: payload}).then(done).catch(done);
+      // 通道 B：图片信标（file:// 页面也能发）
+      try {
+        const img = new Image();
+        const b64 = btoa(unescape(encodeURIComponent(payload)));
+        img.src = `${url}?chunk=${encodeURIComponent(b64)}`;
+      } catch (err) {
+        /* 忽略 */
+      }
+    } else {
+      done();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+};
 
 // ---------------- root video ----------------
 export const NiwoVideo: React.FC<NiwoProps> = (props) => {
@@ -1107,69 +1267,127 @@ export const NiwoVideo: React.FC<NiwoProps> = (props) => {
   // 不再影响画面颜色（否则每个模板都会被同一套主题色染色，等于没换模板）。
   const skin = resolveSkin(props.template);
   applySkin(skin);
-  if (skin.layout === 'bleed') return <PortraitVideo {...props} />;
-  if (skin.layout === 'lower') return <LowerVideo {...props} />;
-  return <EditorialVideo props={props} />;
+  const mode = props.exportMode ?? (props.chromeOnly ? 'card' : 'full');
+  setExportMode(mode);
+  const probe =
+    mode === 'card' ? (
+      <>
+        {/* 只留形状与位置：字形交给剪映文本轨 */}
+        <style
+          id="vg-hide-text"
+          dangerouslySetInnerHTML={{
+            __html: '*{color:transparent !important;text-shadow:none !important;}',
+          }}
+        />
+        <TextProbe url={props.probeUrl} tag={props.probeTag} />
+      </>
+    ) : null;
+  if (skin.layout === 'bleed') {
+    return (
+      <>
+        {probe}
+        <PortraitVideo {...props} />
+      </>
+    );
+  }
+  if (skin.layout === 'lower') {
+    return (
+      <>
+        {probe}
+        <LowerVideo {...props} />
+      </>
+    );
+  }
+  return (
+    <>
+      {probe}
+      <EditorialVideo props={props} />
+    </>
+  );
 };
 
 // ---------------- editorial layout（纸卡 + 顶标题带 + 内嵌媒体窗） ----------------
 const EditorialVideo: React.FC<{props: NiwoProps}> = ({props}) => (
-  <AbsoluteFill style={{background: T.bgTop, fontFamily: T.font}}>
+  <AbsoluteFill data-vg-frame="1"
+    style={{background: hideMedia() ? 'transparent' : T.bgTop, fontFamily: T.font}}>
     <FontFace />
-    <Background />
-    {/* paper card */}
-    <div
-      style={{
-        position: 'absolute',
-        left: 91,
-        top: 124,
-        width: 892,
-        height: 1432,
-        borderRadius: 26,
-        background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)`,
-        boxShadow: T.paperShadow,
-        overflow: 'hidden',
-      }}
-    >
+    {/* 页面底：card 模式不出（卡片层要能叠在素材上） */}
+    {isCard() ? null : isBase() ? (
+      <ChromeClip hole={MEDIA_RECT}>
+        <Background />
+      </ChromeClip>
+    ) : (
+      <Background />
+    )}
+    {/* paper card：card 模式不出；base 模式留出媒体窗的洞 */}
+    {isCard() ? null : isBase() ? (
+      <RectWithHole
+        rect={PAPER_RECT}
+        hole={MEDIA_RECT}
+        radius={PAPER_RECT.radius}
+        fill={{background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)`}}
+        style={{boxShadow: T.paperShadow}}
+      />
+    ) : (
       <div
         style={{
           position: 'absolute',
-          inset: 0,
-          ...decorLayer(T.paperTexture, T.paperTexture === 'grid' ? T.accent : '#78736e', 1.4),
+          left: PAPER_RECT.left,
+          top: PAPER_RECT.top,
+          width: PAPER_RECT.width,
+          height: PAPER_RECT.height,
+          borderRadius: PAPER_RECT.radius,
+          background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)`,
+          boxShadow: T.paperShadow,
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            ...decorLayer(T.paperTexture, T.paperTexture === 'grid' ? T.accent : '#78736e', 1.4),
+          }}
+        />
+      </div>
+    )}
+    {isCard() ? null : <HeadlineBand lines={props.headline.lines} />}
+    {/* inner panel：分轨导出时改成带媒体窗留洞的面板（card 模式不出） */}
+    {isCard() ? null : isBase() ? (
+      <RectWithHole rect={PANEL_RECT} hole={MEDIA_RECT} radius={T.panelRadius} fill={{background: T.panel}} />
+    ) : (
+      <div
+        style={{
+          position: 'absolute',
+          left: PANEL_RECT.left,
+          top: PANEL_RECT.top,
+          width: PANEL_RECT.width,
+          height: PANEL_RECT.height,
+          borderRadius: T.panelRadius,
+          background: T.panel,
         }}
       />
-    </div>
-    <HeadlineBand lines={props.headline.lines} />
-    {/* inner panel */}
-    <div
-      style={{
-        position: 'absolute',
-        left: 115,
-        top: 596,
-        width: 849,
-        height: 844,
-        borderRadius: T.panelRadius,
-        background: T.panel,
-      }}
-    />
-    {props.shots.map((shot, i) => (
+    )}
+    {/* base 层只出底板：镜头内容（卡片/角标/章节标签）交给卡片层 */}
+    {isBase() ? null : props.shots.map((shot, i) => (
       <ShotView key={i} shot={shot} index={i} />
     ))}
     {props.showSubtitles !== false ? <Subtitles clauses={props.clauses} /> : null}
-    <Footer sources={props.sources} disclaimer={props.disclaimer} />
+    {isCard() ? null : <Footer sources={props.sources} disclaimer={props.disclaimer} />}
   </AbsoluteFill>
 );
 
 // ---------------- lower layout（满屏素材 + 底部实色信息条） ----------------
 const LowerVideo: React.FC<{props: NiwoProps}> = (props) => (
-  <AbsoluteFill style={{background: '#000', fontFamily: T.font}}>
+  <AbsoluteFill data-vg-frame="1"
+    style={{background: hideMedia() ? 'transparent' : '#000', fontFamily: T.font}}>
     <FontFace />
-    {props.shots.map((shot, i) => (
+    {isBase() ? null : props.shots.map((shot, i) => (
       <LowerShot key={i} shot={shot} index={i} />
     ))}
-    <LowerBar lines={props.headline.lines} />
+    {isCard() ? null : <LowerBar lines={props.headline.lines} />}
     {props.showSubtitles !== false ? <LowerSubtitles clauses={props.clauses} /> : null}
-    <Footer sources={props.sources} disclaimer={props.disclaimer} />
+    {isCard() ? null : <Footer sources={props.sources} disclaimer={props.disclaimer} />}
   </AbsoluteFill>
 );
 
@@ -1260,7 +1478,7 @@ const LowerSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
   const fps = useVideoConfig().fps;
   const t = (frame / fps) * 1000;
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
-  if (!active) return null;
+  if (!active || hideMedia()) return null;
   return (
     <div style={{position: 'absolute', left: 70, right: 70, bottom: 800, textAlign: 'center'}}>
       <span

@@ -184,6 +184,12 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
             theme=getattr(plan, "theme", {}),
             show_subtitles=show_subtitles, show_sources=show_sources,
             disclaimer=disclaimer, template=template)
+        # 草稿分轨要用同一份 props：拷到 work 里存档（renderer/props.json 会被下次渲染覆盖）
+        try:
+            (work / "props.json").write_text(
+                json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
+        except Exception:
+            pass
         # 分镜剧照：先把几张关键画面拍出来，等待期间用户能看到片子长什么样
         if job_id:
             report("props", 32, "正在拍分镜剧照")
@@ -268,17 +274,33 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
 
     # 落盘剪映草稿清单（供「下载剪映草稿」用）：分镜/字幕时间点 + 配音与配置
     try:
+        from . import remotion_render as _rr
         from .jianying_draft import dump_manifest
+        media_dir = _rr.RENDERER / "public" / "media"
+        shot_rows = []
+        props_shots = (props.get("shots") if renderer == "remotion" and props else None) or []
+        for i, s in enumerate(plan.shots):
+            row = {"start_ms": s.start_ms, "end_ms": s.end_ms, "kind": s.kind,
+                   "chapter": s.chapter_label or ""}
+            row["overlay"] = dict(s.overlay or {})
+            if i < len(props_shots):
+                name = props_shots[i].get("media")
+                if name:
+                    # renderer/public/media 里的副本：与成片用的是同一份素材
+                    row["asset"] = str(media_dir / name)
+            shot_rows.append(row)
         dump_manifest(out_mp4.with_suffix(".draft.json"),
                       video=str(out_mp4), duration_ms=plan.duration_ms, fps=30,
                       width=1080, height=1920, title=content.title,
-                      subtitles=show_subtitles, sources=show_sources, fmt=format,
+                      subtitles=show_subtitles, sources=show_sources, fmt=template,
                       sfx_mode=mode, voice=str(Path(mp3)) if mp3 else None,
                       bgm=str(bgm) if bgm else None, render_id=job_id,
-                      shots=[{"start_ms": s.start_ms, "end_ms": s.end_ms, "kind": s.kind}
-                             for s in plan.shots],
+                      shots=shot_rows,
                       clauses=[{"text": c.text, "start_ms": c.start_ms, "end_ms": c.end_ms}
-                               for c in plan.clauses])
+                               for c in plan.clauses],
+                      sfx=[{"at_ms": at_s * 1000.0, "file": str(f), "vol": vol}
+                           for at_s, f, vol in sfx_events],
+                      props=str(work / "props.json") if (work / "props.json").is_file() else None)
     except Exception as exc:  # 清单失败不影响成片
         print(f"draft manifest skipped: {exc}")
 
@@ -291,6 +313,27 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
           f"duration: {duration_s:.1f}s -> {out_mp4}")
     print("verify:", "OK" if vreport["ok"] else "FAILED", vreport["errors"], vreport["warnings"])
     return out_mp4
+
+
+def build_draft_zip(video: Path, out_zip: Path | None = None, progress=None,
+                    install: bool = False) -> Path:
+    """把已渲染的成片打包成剪映草稿 zip（分轨；缺清单/资产时退回整条切片）。
+
+    install=True 时顺带装进剪映草稿库（等价于包里的「一键导入剪映.bat」）。
+    """
+    from . import jianying_draft as jyd
+    video = Path(video)
+    manifest = jyd.load_manifest(video)
+    if manifest is None:
+        raise SystemExit(f"找不到草稿清单：{video.with_suffix('.draft.json')}")
+    voice = manifest.get("voice")
+    out_zip = Path(out_zip) if out_zip else video.with_suffix(".draft.zip")
+    zip_path = jyd.build_zip(manifest, video, Path(voice) if voice else None, out_zip,
+                             progress=progress)
+    if install:
+        dest = jyd.install_draft(zip_path)
+        print(f"installed: {dest}")
+    return zip_path
 
 
 def main() -> None:
@@ -315,7 +358,15 @@ def main() -> None:
     b.add_argument("--theme", default="auto", help="主题色 hex（如 #a44231）或 auto")
     b.add_argument("--disclaimer", default=None)
     b.add_argument("--no-llm", action="store_true", help="禁用 LLM 导演/文案，走规则引擎")
+    d = sub.add_parser("draft", help="export a JianYing draft zip for a rendered video")
+    d.add_argument("video", type=Path, help="成片 mp4（旁边要有同名 .draft.json）")
+    d.add_argument("-o", "--out", type=Path, default=None, help="输出的草稿 zip 路径")
+    d.add_argument("--install", action="store_true", help="同时装进剪映草稿库（免手动导入）")
     a = ap.parse_args()
+    if a.cmd == "draft":
+        out = build_draft_zip(a.video, a.out, install=a.install)
+        print(f"draft: {out}")
+        return
     build(a.bundle, a.out, a.work, a.voice, a.rate, a.bgm,
           renderer=a.renderer, clone=a.clone, format=a.format, sfx=not a.no_sfx,
           show_subtitles=not a.no_subtitles, show_sources=not a.no_sources,

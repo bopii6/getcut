@@ -1,15 +1,21 @@
 """生成剪映（JianYing 专业版）草稿包，供用户在剪映里二次剪辑。
 
-产出 zip 结构：
-    videogen_draft_<rid6>/          ← 这个整体拷进剪映草稿库（一键导入剪映.bat 会代劳）
-        draft_content.json          ← 时间线：按分镜切好的视频段 +（关字幕渲染时）可编辑字幕
+分轨草稿（v2，推荐）：
+    videogen_draft_<rid6>/
+        draft_content.json          ← 时间线：画面 / 包装 / 字幕 / 配音 / 背景音乐 / 音效
         draft_meta_info.json
-        media/final.mp4             ← 成片（含全部声音）
-        media/voice.mp3             ← 配音干声（备件）
+        media/*.mp4                 ← 按分镜切好的素材（可直接替换成自己的图片/视频）
+        chrome/*.png                ← 每镜的包装层（带透明媒体窗）
+        audio/*.mp3                 ← 按句切好的配音 + 背景音乐 + 音效
+        draft_cover.jpg
     一键导入剪映.bat                 ← 拷贝草稿到剪映草稿库并改写素材绝对路径
     使用说明.txt
 
-格式基准：pyJianYingDraft (MIT) 的 draft 模板（JianYing 5.9 线，向上兼容）。
+    每个元素都在自己的轨道上：文字能改字，图片/视频能替换，配音/BGM/音效各一条轨。
+
+兜底（v1）：没有分轨资产时退回「整条成片按分镜切片 + 可编辑字幕」的单轨草稿。
+
+格式基准：pyJianYingDraft (MIT) 的字段结构（JianYing 5.9 线，向上兼容）。
 媒体路径在 JSON 里以 __VG_DRAFT_DIR__ 占位 + 正斜杠，由 bat 导入时改写为
 真实路径的正斜杠形式（避免 JSON 反斜杠转义问题；Windows 文件 API 通用）。
 """
@@ -22,6 +28,19 @@ from pathlib import Path
 _US = 1000  # 毫秒 -> 微秒
 TMPL_DIR = Path(__file__).resolve().parent
 PLACEHOLDER = "__VG_DRAFT_DIR__"
+
+# 轨道渲染层级（大的在上）：画面 → 底板（带媒体窗洞）→ 卡片 → 字幕 → 叠加文字
+RENDER_MEDIA, RENDER_BASE, RENDER_CARD = 0, 1, 2
+RENDER_TEXT, RENDER_OVERLAY = 3, 4
+RENDER_VOICE, RENDER_BGM, RENDER_SFX = 5, 6, 7
+
+# 配音/字幕样式（字号与剪映定义一致；坐标见 NiwoVideo.tsx 的字幕位置）
+SUBTITLE_SIZE = 9.0
+SUBTITLE_Y = -0.40            # 负值向下：与成片字幕位置（画面 69% 高度处）对齐
+SUBTITLE_MAX_W = 0.82
+SUBTITLE_STROKE_W = 0.06
+# 卡片文字的像素(1080x1920 画布) → 剪映字号 的换算系数（量出来的近似值，可整体微调）
+TEXT_PX_TO_SIZE = 0.135
 
 
 def _uid() -> str:
@@ -37,14 +56,16 @@ def _speed_entry() -> tuple[str, dict]:
     return sid, {"curve_speed": None, "id": sid, "mode": 0, "speed": 1.0, "type": "speed"}
 
 
-def _clip() -> dict:
+def _clip(transform_y: float = 0.0) -> dict:
     return {"alpha": 1.0, "flip": {"horizontal": False, "vertical": False},
-            "rotation": 0.0, "scale": {"x": 1.0, "y": 1.0}, "transform": {"x": 0.0, "y": 0.0}}
+            "rotation": 0.0, "scale": {"x": 1.0, "y": 1.0},
+            "transform": {"x": 0.0, "y": float(transform_y)}}
 
 
 def _segment_base(material_id: str, target: dict, *, source: dict | None,
-                  speed_id: str, render_index: int) -> dict:
-    return {
+                  speed_id: str, render_index: int, volume: float = 1.0,
+                  transform_y: float = 0.0, visual: bool = True) -> dict:
+    seg = {
         "enable_adjust": True, "enable_color_correct_adjust": False,
         "enable_color_curves": True, "enable_color_match_adjust": False,
         "enable_color_wheels": True, "enable_lut": True, "enable_smart_color_adjust": False,
@@ -55,29 +76,117 @@ def _segment_base(material_id: str, target: dict, *, source: dict | None,
         "target_timerange": target,
         "source_timerange": source,
         "common_keyframes": [], "keyframe_refs": [],
-        "speed": 1.0, "volume": 1.0,
-        "extra_material_refs": [speed_id],
+        "speed": 1.0, "volume": volume,
+        "extra_material_refs": [speed_id] if speed_id else [],
         "is_tone_modify": False,
-        "clip": _clip(),
-        "uniform_scale": {"on": True, "value": 1.0},
     }
+    if visual:
+        seg["clip"] = _clip(transform_y)
+        seg["uniform_scale"] = {"on": True, "value": 1.0}
+    seg["render_index"] = render_index
+    return seg
 
 
-def _text_material(text: str) -> dict:
-    content = json.dumps({
-        "styles": [{
-            "fill": {"alpha": 1.0, "content": {
-                "render_type": "solid", "solid": {"alpha": 1.0, "color": [1.0, 1.0, 1.0]}}},
-            "range": [0, len(text)], "size": 8, "bold": True,
-            "italic": False, "underline": False, "strokes": [],
-        }],
-        "text": text,
-    }, ensure_ascii=False)
+def _text_material(text: str, *, size: float = SUBTITLE_SIZE, bold: bool = True,
+                   color: tuple[float, float, float] = (1.0, 1.0, 1.0),
+                   max_w: float = SUBTITLE_MAX_W, stroke: bool = True) -> dict:
+    style = {
+        "fill": {"alpha": 1.0, "content": {
+            "render_type": "solid", "solid": {"alpha": 1.0, "color": list(color)}}},
+        "range": [0, len(text)], "size": float(size), "bold": bool(bold),
+        "italic": False, "underline": False,
+        "strokes": ([{"content": {"solid": {"alpha": 1.0, "color": [0.0, 0.0, 0.0]}},
+                      "width": SUBTITLE_STROKE_W}] if stroke else []),
+    }
+    content = json.dumps({"styles": [style], "text": text}, ensure_ascii=False)
     return {
         "id": _uid(), "content": content, "typesetting": 0, "alignment": 1,
         "letter_spacing": 0.0, "line_spacing": 0.02, "line_feed": 1,
-        "line_max_width": 0.82, "force_apply_line_max_width": False,
-        "check_flag": 7, "type": "text", "global_alpha": 1.0,
+        "line_max_width": float(max_w), "force_apply_line_max_width": False,
+        "check_flag": 15, "type": "text", "global_alpha": 1.0,
+    }
+
+
+def _parse_css_color(value: str) -> tuple[float, float, float]:
+    """'rgb(r, g, b)' / 'rgba(...)' -> (0..1, 0..1, 0..1)"""
+    import re
+    m = re.search(r"rgba?\(([^)]+)\)", str(value or ""))
+    if not m:
+        return (1.0, 1.0, 1.0)
+    parts = [p.strip() for p in m.group(1).split(",")]
+    try:
+        r, g, b = (max(0, min(255, float(parts[i]))) / 255.0 for i in range(3))
+        return (round(r, 4), round(g, 4), round(b, 4))
+    except Exception:
+        return (1.0, 1.0, 1.0)
+
+
+def _overlay_text_segments(plan: dict, shot: dict, tpl: dict, speeds: list) -> list[dict]:
+    """把卡片上量出来的文字几何转成剪映文本片段（可改字的那一层）。"""
+    width = float(plan.get("width") or 1080)
+    height = float(plan.get("height") or 1920)
+    start = float(shot.get("start_ms") or 0.0)
+    dur = float(shot.get("end_ms") or start) - start
+    segs: list[dict] = []
+    if dur <= 0:
+        return segs
+    for item in shot.get("texts") or []:
+        text = str(item.get("text") or "").strip()
+        if not text:
+            continue
+        x = float(item.get("x") or 0.0)
+        y = float(item.get("y") or 0.0)
+        w = float(item.get("w") or 0.0)
+        h = float(item.get("h") or 0.0)
+        px_size = float(item.get("size") or 0.0)
+        if px_size < 6 or w <= 0:
+            continue
+        size = max(3.0, min(60.0, round(px_size * TEXT_PX_TO_SIZE, 1)))
+        bold = int(item.get("weight") or 400) >= 600
+        tm = _text_material(text, size=size, bold=bold,
+                           color=_parse_css_color(str(item.get("color") or "")),
+                           max_w=max(0.1, min(0.98, (w + 60.0) / width)),
+                           stroke=False)
+        tpl["materials"]["texts"].append(tm)
+        sid, sp = _speed_entry()
+        speeds.append(sp)
+        tx = (x + w / 2.0 - width / 2.0) / (width / 2.0)
+        ty = -((y + h / 2.0 - height / 2.0) / (height / 2.0))
+        seg = _segment_base(tm["id"], _trange(start, dur), source=None, speed_id=sid,
+                            render_index=RENDER_OVERLAY, transform_y=ty)
+        seg["clip"]["transform"]["x"] = round(tx, 4)
+        seg["render_index"] = RENDER_OVERLAY
+        segs.append(seg)
+    return segs
+
+
+
+def _video_material(mid: str, path: str, name: str, kind: str, duration_ms: float,
+                    width: int, height: int) -> dict:
+    """kind: video（分镜素材）｜photo（包装层 PNG，剪映按图片处理）"""
+    dur_us = 10_800_000_000 if kind == "photo" else int(round(duration_ms * _US))
+    return {
+        "audio_fade": None, "category_id": "", "category_name": "local",
+        "check_flag": 63487,
+        "crop": {"upper_left_x": 0.0, "upper_left_y": 0.0, "upper_right_x": 1.0,
+                 "upper_right_y": 0.0, "lower_left_x": 0.0, "lower_left_y": 1.0,
+                 "lower_right_x": 1.0, "lower_right_y": 1.0},
+        "crop_ratio": "free", "crop_scale": 1.0,
+        "duration": dur_us,
+        "height": int(height), "width": int(width),
+        "id": mid, "local_material_id": "", "material_id": mid,
+        "material_name": name, "media_path": "",
+        "path": f"{PLACEHOLDER}/{path}", "type": kind,
+    }
+
+
+def _audio_material(mid: str, path: str, name: str, duration_ms: float) -> dict:
+    return {
+        "app_id": 0, "category_id": "", "category_name": "local", "check_flag": 3,
+        "copyright_limit_type": "none", "duration": int(round(duration_ms * _US)),
+        "effect_id": "", "formula_id": "", "id": mid, "local_material_id": mid,
+        "music_id": mid, "name": name, "path": f"{PLACEHOLDER}/{path}",
+        "source_platform": 0, "type": "extract_music", "wave_points": [],
     }
 
 
@@ -86,14 +195,17 @@ def dump_manifest(path, *, video: str, duration_ms: float, fps: int = 30,
                   subtitles: bool = True, sources: bool = True, fmt: str = "",
                   sfx_mode: str = "", voice: str | None = None, bgm: str | None = None,
                   render_id: str | None = None,
-                  shots: list | None = None, clauses: list | None = None) -> None:
+                  shots: list | None = None, clauses: list | None = None,
+                  sfx: list | None = None, props: str | None = None,
+                  draft_dir: str | None = None) -> None:
     """渲染结束时把草稿需要的元数据落在成片旁（<成片名>.draft.json）。"""
-    data = {"version": 1, "video": video, "duration_ms": float(duration_ms),
+    data = {"version": 2, "video": video, "duration_ms": float(duration_ms),
             "fps": int(fps), "width": int(width), "height": int(height),
             "title": title, "subtitles": bool(subtitles), "sources": bool(sources),
             "format": fmt, "sfx_mode": sfx_mode,
             "voice": voice, "bgm": bgm, "render_id": render_id,
-            "shots": shots or [], "clauses": clauses or []}
+            "shots": shots or [], "clauses": clauses or [], "sfx": sfx or [],
+            "props": props, "draft_dir": draft_dir}
     Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
@@ -108,12 +220,187 @@ def load_manifest(video_path) -> dict | None:
         return None
 
 
-def build_draft_content(manifest: dict, draft_dir_placeholder: str = PLACEHOLDER) -> dict:
-    """按 manifest 构造 draft_content.json 字典。
+# ---------------------------------------------------------------- 分轨草稿
 
-    manifest 键（见 cli.build 落盘的 *.draft.json）：
-    video_name, duration_ms, fps, width, height, shots[], clauses[], subtitles
-    """
+def build_multitrack_content(plan: dict) -> dict:
+    """按 draft_plan.json 构造多轨 draft_content.json。"""
+    tpl = json.load(open(TMPL_DIR / "jianying_template.json", encoding="utf-8"))
+    tpl["name"] = plan.get("title") or "videogen 成片"
+    width = int(plan.get("width") or 1080)
+    height = int(plan.get("height") or 1920)
+    tpl["canvas_config"] = {"width": width, "height": height, "ratio": "original"}
+    tpl["duration"] = int(round(float(plan.get("duration_ms") or 0) * _US))
+    tpl["fps"] = float(plan.get("fps") or 30)
+
+    speeds: list[dict] = []
+    media_segs: list[dict] = []
+    base_segs: list[dict] = []
+    card_segs: list[dict] = []
+    text_segs: list[dict] = []
+    overlay_segs: list[dict] = []
+    voice_segs: list[dict] = []
+    bgm_segs: list[dict] = []
+    sfx_segs: list[dict] = []
+
+    # 底板轨：一张图铺满全片（页面底/纸卡/面板留洞/标题带/页脚）
+    base = plan.get("base")
+    if base:
+        dur_all = float(plan.get("duration_ms") or 0.0)
+        fid = _uid()
+        tpl["materials"]["videos"].append(
+            _video_material(fid, base, Path(base).name, "photo", dur_all, width, height))
+        sid, sp = _speed_entry()
+        speeds.append(sp)
+        base_segs.append(_segment_base(fid, _trange(0, dur_all),
+                                       source=_trange(0, dur_all), speed_id=sid,
+                                       render_index=RENDER_BASE))
+
+    for shot in plan.get("shots") or []:
+        start = float(shot.get("start_ms") or 0.0)
+        dur = float(shot.get("end_ms") or start) - start
+        if dur <= 0:
+            continue
+        # 画面轨：素材片段（可整段替换成自己的图片/视频）
+        media = shot.get("media")
+        if media:
+            mdur = float(shot.get("media_duration_ms") or 0.0) or dur
+            fid = _uid()
+            tpl["materials"]["videos"].append(
+                _video_material(fid, media, Path(media).name, "video", mdur, width, height))
+            sid, sp = _speed_entry()
+            speeds.append(sp)
+            media_segs.append(_segment_base(fid, _trange(start, dur),
+                                            source=_trange(0, dur), speed_id=sid,
+                                            render_index=RENDER_MEDIA))
+        # 卡片轨：叠加信息的图形（对比卡/数字卡/事实卡…），文字已抽到叠加文字轨
+        card = shot.get("card") or shot.get("chrome")
+        if card:
+            fid = _uid()
+            tpl["materials"]["videos"].append(
+                _video_material(fid, card, Path(card).name, "photo", dur, width, height))
+            sid, sp = _speed_entry()
+            speeds.append(sp)
+            card_segs.append(_segment_base(fid, _trange(start, dur),
+                                           source=_trange(0, dur), speed_id=sid,
+                                           render_index=RENDER_CARD))
+        # 叠加文字轨：卡片上的文字，逐条可改字
+        overlay_segs.extend(_overlay_text_segments(plan, shot, tpl, speeds))
+
+    # 字幕轨：一句一个文本片段，位置与成片一致（画面下方）
+    for cl in plan.get("subtitles") or []:
+        text = (cl.get("text") or "").strip()
+        start = float(cl.get("start_ms") or 0.0)
+        dur = float(cl.get("end_ms") or start) - start
+        if not text or dur <= 0:
+            continue
+        tm = _text_material(text)
+        tpl["materials"]["texts"].append(tm)
+        sid, sp = _speed_entry()
+        speeds.append(sp)
+        seg = _segment_base(tm["id"], _trange(start, dur), source=None, speed_id=sid,
+                            render_index=RENDER_TEXT, transform_y=SUBTITLE_Y)
+        seg["render_index"] = RENDER_TEXT
+        text_segs.append(seg)
+
+    # 配音轨：按句切好的片段，逐句可替换
+    for cl in plan.get("voice_clips") or []:
+        f = cl.get("file")
+        if not f:
+            continue
+        start = float(cl.get("start_ms") or 0.0)
+        dur = float(cl.get("end_ms") or start) - start
+        if dur <= 0:
+            continue
+        adur = float(cl.get("duration_ms") or 0.0) or dur
+        aid = _uid()
+        am = _audio_material(aid, f, Path(f).name, adur)
+        tpl["materials"]["audios"].append(am)
+        sid, sp = _speed_entry()
+        speeds.append(sp)
+        voice_segs.append(_segment_base(am["id"], _trange(start, dur),
+                                        source=_trange(0, min(dur, adur)), speed_id=sid,
+                                        render_index=RENDER_VOICE, visual=False))
+
+    # 背景音乐轨
+    bgm = plan.get("bgm") or None
+    if bgm and bgm.get("file"):
+        dur_total = float(plan.get("duration_ms") or 0.0)
+        bdur = float(bgm.get("duration_ms") or 0.0) or dur_total
+        aid = _uid()
+        am = _audio_material(aid, bgm["file"], Path(bgm["file"]).name, bdur)
+        tpl["materials"]["audios"].append(am)
+        sid, sp = _speed_entry()
+        speeds.append(sp)
+        bgm_segs.append(_segment_base(am["id"], _trange(0, dur_total),
+                                      source=_trange(0, min(dur_total, bdur)), speed_id=sid,
+                                      render_index=RENDER_BGM, volume=float(bgm.get("volume") or 0.2),
+                                      visual=False))
+
+    # 音效轨：每个音效独立片段，起点/音量都保留了
+    for ev in plan.get("sfx") or []:
+        f = ev.get("file")
+        if not f:
+            continue
+        dur = float(ev.get("duration_ms") or 0.0) or 1000.0
+        aid = _uid()
+        am = _audio_material(aid, f, Path(f).name, dur)
+        tpl["materials"]["audios"].append(am)
+        sid, sp = _speed_entry()
+        speeds.append(sp)
+        sfx_segs.append(_segment_base(am["id"], _trange(float(ev.get("at_ms") or 0.0), dur),
+                                      source=_trange(0, dur), speed_id=sid,
+                                      render_index=RENDER_SFX,
+                                      volume=float(ev.get("volume") or 0.5), visual=False))
+
+    tracks = []
+    if media_segs:
+        tracks.append({"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": False,
+                       "name": "画面", "segments": media_segs, "type": "video"})
+    if base_segs:
+        tracks.append({"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": False,
+                       "name": "底板", "segments": base_segs, "type": "video"})
+    if card_segs:
+        tracks.append({"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": False,
+                       "name": "卡片", "segments": card_segs, "type": "video"})
+    if text_segs:
+        tracks.append({"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": False,
+                       "name": "字幕", "segments": text_segs, "type": "text"})
+    if overlay_segs:
+        tracks.append({"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": False,
+                       "name": "叠加文字", "segments": overlay_segs, "type": "text"})
+    if voice_segs:
+        tracks.append({"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": False,
+                       "name": "配音", "segments": voice_segs, "type": "audio"})
+    if bgm_segs:
+        tracks.append({"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": False,
+                       "name": "背景音乐", "segments": bgm_segs, "type": "audio"})
+    if sfx_segs:
+        tracks.append({"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": False,
+                       "name": "音效", "segments": sfx_segs, "type": "audio"})
+
+    tpl["materials"]["speeds"] = speeds
+    tpl["tracks"] = tracks
+    _validate_content(tpl)
+    return tpl
+
+
+def _validate_content(tpl: dict) -> None:
+    """自检：片段引用的素材/附加素材必须都存在（悬空引用会让剪映拒绝打开）。"""
+    ids = {m["id"] for v in tpl["materials"].values() if isinstance(v, list)
+           for m in v if isinstance(m, dict) and m.get("id")}
+    for track in tpl["tracks"]:
+        for seg in track["segments"]:
+            if seg["material_id"] not in ids:
+                raise RuntimeError(f"草稿自检失败：{track['name']} 轨有悬空素材引用")
+            for ref in seg.get("extra_material_refs") or []:
+                if ref not in ids:
+                    raise RuntimeError(f"草稿自检失败：{track['name']} 轨有悬空附加素材引用")
+
+
+# ---------------------------------------------------------------- 兜底：整条切片
+
+def build_flat_content(manifest: dict, draft_dir_placeholder: str = PLACEHOLDER) -> dict:
+    """旧路径：成片按分镜切片 + 可编辑字幕（没有分轨资产时使用）。"""
     media = f"{draft_dir_placeholder}/media"
     tpl = json.load(open(TMPL_DIR / "jianying_template.json", encoding="utf-8"))
     tpl["name"] = manifest.get("title") or "videogen 成片"
@@ -122,13 +409,12 @@ def build_draft_content(manifest: dict, draft_dir_placeholder: str = PLACEHOLDER
     tpl["duration"] = int(round(manifest["duration_ms"] * _US))
     tpl["fps"] = int(manifest.get("fps", 30))
 
-    # 素材：成片视频（声音完整：配音/音乐/音效都在里面）
     vid = _uid()
     tpl["materials"]["videos"].append({
         "audio_fade": None, "category_id": "", "category_name": "local",
         "check_flag": 63487,
         "crop": {"upper_left_x": 0.0, "upper_left_y": 0.0, "upper_right_x": 1.0,
-                 "lower_left_x": 0.0, "lower_left_y": 1.0,
+                 "upper_right_y": 0.0, "lower_left_x": 0.0, "lower_left_y": 1.0,
                  "lower_right_x": 1.0, "lower_right_y": 1.0},
         "crop_ratio": "free", "crop_scale": 1.0,
         "duration": int(round(manifest["duration_ms"] * _US)),
@@ -139,7 +425,6 @@ def build_draft_content(manifest: dict, draft_dir_placeholder: str = PLACEHOLDER
         "media_path": "", "path": f"{media}/final.mp4", "type": "video",
     })
 
-    # 视频轨：按分镜切段（同源文件不同 source 区间），整轨还原成片
     segments: list[dict] = []
     speeds: list[dict] = []
     shots = manifest.get("shots") or [{"start_ms": 0, "end_ms": manifest["duration_ms"]}]
@@ -155,12 +440,9 @@ def build_draft_content(manifest: dict, draft_dir_placeholder: str = PLACEHOLDER
                             speed_id=sid, render_index=0)
         seg["audio_fade"] = None
         segments.append(seg)
-    track_video = {"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": True,
-                   "name": "", "segments": segments, "type": "video"}
+    tracks = [{"attribute": 0, "flag": 0, "id": _uid(), "is_default_name": True,
+               "name": "", "segments": segments, "type": "video"}]
 
-    tracks = [track_video]
-
-    # 文本轨：仅在渲染时关闭了字幕（画面无烧入字幕）才带可编辑字幕
     if manifest.get("subtitles") is False and manifest.get("clauses"):
         tsegs: list[dict] = []
         for cl in manifest["clauses"]:
@@ -174,7 +456,7 @@ def build_draft_content(manifest: dict, draft_dir_placeholder: str = PLACEHOLDER
             sid, sp = _speed_entry()
             speeds.append(sp)
             seg = _segment_base(tm["id"], _trange(start, end - start), source=None,
-                                speed_id=sid, render_index=1)
+                                speed_id=sid, render_index=1, transform_y=SUBTITLE_Y)
             seg["render_index"] = 1
             tsegs.append(seg)
         if tsegs:
@@ -185,6 +467,8 @@ def build_draft_content(manifest: dict, draft_dir_placeholder: str = PLACEHOLDER
     tpl["tracks"] = tracks
     return tpl
 
+
+# ---------------------------------------------------------------- 打包
 
 def build_meta_info(draft_name: str, duration_ms: float) -> dict:
     mi = json.load(open(TMPL_DIR / "jianying_meta_template.json", encoding="utf-8"))
@@ -235,10 +519,20 @@ README = """videogen 剪映草稿 · 使用说明
 ================================
 
 这是什么
-  一个剪映专业版（Windows 桌面版）草稿包。里面不是只有一个视频：
-  - 成片已按 AI 分镜切好段，每一镜在时间线上独立可拖动/裁剪/替换
-  - 渲染时如果关闭了字幕，文案会以可编辑文本轨进草稿（可直接改字）
-  - media/voice.mp3 是配音干声，需要时可拖回时间线使用
+  一个剪映专业版（Windows 桌面版）**分轨草稿**。时间线上每样东西都在自己的轨道：
+    · 画面     —— 按分镜切好的素材片段。要换图/换视频：右键片段「替换」，位置和时长自动保持
+    · 底板     —— 页面底 / 纸卡 / 面板（媒体窗留洞）/ 标题带 / 页脚，一张图铺满全片
+    · 卡片     —— 每镜的「叠加信息」图形：对比卡、数字卡、事实卡、观点卡、角标、章节标签…
+                  可单独拖动 / 改时长 / 删除 / 换成自己的图
+    · 字幕     —— 一句一条，双击即可改字
+    · 叠加文字 —— 卡片上的文字（标题/数字/标签/对比两侧…），逐条可改字、改颜色、改位置
+    · 配音     —— 按句切好的配音，可单独重录/替换某一句
+    · 背景音乐 —— 已循环铺满全片，音量默认 20%；右键「替换」换歌
+    · 音效     —— 开场、卡片、强调音效各自独立，可单独替换或删除
+
+  关于「叠加文字」的字体：成片用的是思源黑体特粗，剪映里用的是剪映自带字体，
+  所以字形会有差异；字号与位置是量出来的近似值（定位是准的）。全选这一轨
+  可以一次性调字体/字号。
 
 怎么导入（推荐）
   1. 把整个压缩包解压到任意位置
@@ -251,11 +545,16 @@ README = """videogen 剪映草稿 · 使用说明
      %LOCALAPPDATA%\\JianyingPro\\User Data\\Projects\\com.lveditor.draft\\
   2. 用记事本打开其中的 draft_content.json 和 draft_meta_info.json，
      把里面的 __VG_DRAFT_DIR__ 全部替换为该文件夹的实际路径
+     ⚠ 路径要用正斜杠（C:/Users/...），反斜杠会被 JSON 当转义符、草稿会打不开
   3. 打开剪映即可看到草稿
+
+小提示
+  · 素材轨/卡片轨的片段都是 1080x1920 画布（已按成片位置摆好），替换后仍在原位
+  · 成片渲染时若烧入了字幕，草稿里另有独立字幕轨；两套不会同时出现
 
 常见问题
   · 打开草稿提示素材丢失：说明草稿文件夹被移动过，重新跑一次 bat，
-    或在剪映里对缺失素材点「查找」并指向草稿文件夹内的 media 目录
+    或在剪映里对缺失素材点「查找」并指向草稿文件夹
   · Mac 版剪映：本包仅支持 Windows 专业版
   · 草稿建立在剪映 5.9 兼容格式上，新版剪映打开时会自动升级
 """
@@ -274,28 +573,115 @@ def make_cover(final_mp4: Path, out_jpg: Path) -> bool:
         return False
 
 
+def draft_dir_for(video: Path) -> Path:
+    return Path(video).with_suffix(".draft")
+
+
+def jianying_draft_dir() -> Path:
+    """剪映专业版的草稿库目录（Windows）。"""
+    import os
+    return (Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "JianyingPro"
+            / "User Data" / "Projects" / "com.lveditor.draft")
+
+
+def install_draft(zip_path: Path, dest_root: Path | None = None) -> Path:
+    """把草稿 zip 装进剪映草稿库（等价于「一键导入剪映.bat」，但带 JSON 校验）。
+
+    路径统一改写成正斜杠绝对路径：反斜杠会被 JSON 当转义符，草稿会打不开。
+    """
+    import shutil
+    import zipfile
+
+    zip_path = Path(zip_path)
+    dest_root = Path(dest_root) if dest_root else jianying_draft_dir()
+    if not dest_root.is_dir():
+        raise RuntimeError(f"找不到剪映草稿目录：{dest_root}（请先运行一次剪映）")
+    with zipfile.ZipFile(zip_path) as z:
+        folder = next((n.split("/")[0] for n in z.namelist() if "/" in n), "")
+        if not folder:
+            raise RuntimeError("草稿包结构异常")
+        tmp = dest_root / f"_vg_import_{uuid.uuid4().hex[:8]}"
+        try:
+            z.extractall(tmp)
+            dest = dest_root / folder
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.move(str(tmp / folder), str(dest))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    destf = str(dest).replace("\\", "/")
+    for f in ("draft_content.json", "draft_meta_info.json"):
+        p = dest / f
+        text = p.read_text(encoding="utf-8").replace(PLACEHOLDER, destf)
+        json.loads(text)          # 自检：坏 JSON 直接抛错，不塞给剪映
+        p.write_text(text, encoding="utf-8", newline="")
+    return dest
+
+
 def build_zip(manifest: dict, final_mp4: Path, voice_mp3: Path | None,
-              out_zip: Path) -> Path:
-    """打包剪映草稿 zip。"""
+              out_zip: Path, progress=None) -> Path:
+    """打包剪映草稿 zip：优先分轨草稿，资产缺失/失败时退回整条切片草稿。"""
     import tempfile
     import zipfile
 
-    rid = (manifest.get("render_id") or "draft")[:6]
+    from . import draft_build
+
+    final_mp4 = Path(final_mp4)
+    rid = (manifest.get("render_id") or uuid.uuid4().hex)[:6]
     title = (manifest.get("title") or "成片").strip() or "成片"
     folder = f"videogen_draft_{rid}"
-    draft_name = f"{title}（videogen）"
+    draft_name = f"{title}（videogen·分轨）"
 
-    content = build_draft_content({**manifest, "title": draft_name},
-                                  draft_dir_placeholder=PLACEHOLDER)
-    meta = build_meta_info(draft_name, manifest["duration_ms"])
+    plan_dir = Path(manifest.get("draft_dir") or draft_dir_for(final_mp4))
+    plan = draft_build.load_plan(plan_dir) if draft_build.plan_fresh(plan_dir, final_mp4) else None
+    if plan is None and manifest.get("props"):
+        # 首次导出：现做分轨资产（切素材 + 渲染包装层 + 切配音）
+        try:
+            props = json.loads(Path(manifest["props"]).read_text(encoding="utf-8"))
+            plan = draft_build.build_draft_assets(manifest, plan_dir, props, progress=progress)
+        except Exception as exc:  # noqa: BLE001 - 分轨失败不阻塞，退回整条草稿
+            print(f"multitrack draft skipped: {exc}")
+            plan = None
 
     with tempfile.TemporaryDirectory() as td:
-        cover = Path(td) / "draft_cover.jpg"
+        td = Path(td)
+        cover = td / "draft_cover.jpg"
         has_cover = make_cover(final_mp4, cover)
+
+        if plan is not None:
+            content = build_multitrack_content(plan)
+            meta = build_meta_info(draft_name, plan.get("duration_ms") or manifest["duration_ms"])
+            if has_cover:
+                meta["draft_cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
+                content["cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
+            out_zip.parent.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
+                z.writestr(f"{folder}/draft_content.json",
+                           json.dumps(content, ensure_ascii=False, indent=1))
+                z.writestr(f"{folder}/draft_meta_info.json",
+                           json.dumps(meta, ensure_ascii=False, indent=1))
+                # 底板（根目录单图）+ 画面/卡片/音频目录
+                files = [plan_dir / plan["base"]] if plan.get("base") else []
+                for sub in ("media", "cards", "audio"):
+                    files += [f for f in sorted((plan_dir / sub).glob("*")) if f.is_file()]
+                for f in files:
+                    if f.is_file():
+                        z.write(f, f"{folder}/{f.relative_to(plan_dir).as_posix()}")
+                if has_cover:
+                    z.write(cover, f"{folder}/draft_cover.jpg")
+                z.writestr("一键导入剪映.bat", build_bat(folder).replace("\n", "\r\n"))
+                z.writestr("使用说明.txt", README.replace("\n", "\r\n"))
+            return out_zip
+
+        # 兜底：整条成片按分镜切片
+        draft_name = f"{title}（videogen）"
+        content = build_flat_content({**manifest, "title": draft_name},
+                                     draft_dir_placeholder=PLACEHOLDER)
+        meta = build_meta_info(draft_name, manifest["duration_ms"])
         if has_cover:
             meta["draft_cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
             content["cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
-
         out_zip.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
             z.writestr(f"{folder}/draft_content.json",

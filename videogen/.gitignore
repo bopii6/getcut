@@ -33,6 +33,9 @@ Thumbs.db
 registry.json
 renderer/still_test.*
 renderer/props_portrait.json
+renderer/props_draft.json
+renderer/draft_frames.json
+renderer/draft_stills.log
 
 # 账号体系本地存储（不入库）
 .videogen-users.json

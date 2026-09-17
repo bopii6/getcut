@@ -178,6 +178,40 @@ def render_stills(props: dict, out_dir: Path, prefix: str,
     return made
 
 
+def render_draft_layers(props: dict, frames: list[dict], base_out: Path, card_dir: Path,
+                        texts_out: Path, timeout: int = 2400) -> bool:
+    """剪映分轨草稿的两层素材：底板 PNG（一张）+ 每镜卡片 PNG + 文字几何 JSON。
+
+    一次打包、逐镜头渲染；返回是否全部产出。props 会按 exportMode 覆盖。
+    """
+    script = RENDERER / "scripts" / "draft_layers.mjs"
+    node = shutil.which("node")
+    if not script.is_file() or not node:
+        return False
+    props_path = RENDERER / "props_draft.json"
+    frames_path = RENDERER / "draft_frames.json"
+    props_path.write_text(json.dumps(props, ensure_ascii=False), encoding="utf-8")
+    frames_path.write_text(json.dumps(frames, ensure_ascii=False), encoding="utf-8")
+    base_out = Path(base_out)
+    base_out.parent.mkdir(parents=True, exist_ok=True)
+    card_dir = Path(card_dir)
+    card_dir.mkdir(parents=True, exist_ok=True)
+    texts_out = Path(texts_out)
+    cmd = [node, str(script), str(props_path), str(base_out), str(card_dir),
+           str(frames_path), str(texts_out)]
+    log_path = RENDERER / "draft_stills.log"
+    try:
+        with open(log_path, "w", encoding="utf-8", errors="replace") as logf:
+            subprocess.run(cmd, cwd=str(RENDERER), stdout=logf,
+                           stderr=subprocess.STDOUT, timeout=timeout)
+    except Exception:
+        pass
+    ok_base = base_out.is_file() and base_out.stat().st_size > 0
+    made = sum(1 for f in frames if (card_dir / f"{f['id']}.png").is_file())
+    return ok_base and made == len(frames) and texts_out.is_file()
+
+
+
 def render_visual(props: dict, out_path: Path, timeout: int = 1800,
                   progress=None) -> Path:
     props_path = RENDERER / "props.json"
