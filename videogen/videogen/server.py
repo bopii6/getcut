@@ -327,7 +327,7 @@ with _LOCK:
     _stale = [jid for jid, j in JOBS.items() if j.get("stage") not in ("done", "failed")]
     if _stale:
         for jid in _stale:
-            JOBS[jid].update(stage="failed", stage8=8,
+            JOBS[jid].update(stage="failed", stage8=8, t_end=time.time(),
                              error="服务重启，任务中断，请重新渲染")
         _jobs_save()
 
@@ -759,7 +759,7 @@ def job_status(job_id: str):
         out["queued_pos"] = ahead
         out["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
     t0 = out.get("t0")
-    out["elapsed"] = int(time.time() - t0) if t0 else None
+    out["elapsed"] = int((out.get("t_end") or time.time()) - t0) if t0 else None
     # 分镜剧照（渲染开始前先拍好，渲染中陆续可见）
     stills = sorted(OUTPUTS.glob(f"{job_id}-still-*.jpg")) if OUTPUTS.is_dir() else []
     out["stills"] = [f"/still/{p.name}" for p in stills]
@@ -922,7 +922,7 @@ def _worker(job_id: str, body: dict) -> None:
                       job_id=job_id,
                       progress=progress)
         with _LOCK:
-            JOBS[job_id].update(stage="done", stage8=8, progress=100, video=str(out),
+            JOBS[job_id].update(stage="done", stage8=8, progress=100, video=str(out), t_end=time.time(),
                                 detail="成片已生成")
             _jobs_save()
             reg = _reg()
@@ -934,7 +934,7 @@ def _worker(job_id: str, body: dict) -> None:
         _cleanup_work(bundle_dir.name)
     except Exception as e:  # noqa: BLE001
         with _LOCK:
-            JOBS[job_id].update(stage="failed", stage8=8, error=str(e)[-800:])
+            JOBS[job_id].update(stage="failed", stage8=8, error=str(e)[-800:], t_end=time.time())
             _jobs_save()
 
 

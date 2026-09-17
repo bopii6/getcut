@@ -133,7 +133,7 @@ test('queued -> running -> failed updates stages, progress, error and retry avai
   h.jobStates.set('job-a', {project_id: 'aa', stage: 'failed', stage8: 5, progress: 54,
     error: 'offline renderer failure'});
   await h.tick();
-  assert.match(h.get('vg-progress').textContent, /生成失败/);
+  assert.match(h.get('vg-progress').textContent, /这一版没做成/);
   assert.match(h.get('vg-progress').textContent, /offline renderer failure/);
   assert(!h.document.querySelector('#vg-stages .vg-current'), 'No stage may look active after failure');
   assert.equal(h.localStorage.getItem('vg.job.aa'), null);
@@ -151,7 +151,7 @@ test('queued -> running -> done exposes export view with this project renders on
   h.jobStates.set('job-a', {project_id: 'aa', stage: 'done', stage8: 8, progress: 100,
     video: 'fixture-job-a.mp4', elapsed: 300});
   await h.tick();
-  assert.match(h.get('vg-progress').textContent, /后台已完成/);
+  assert.match(h.get('vg-progress').textContent, /已经做完/);
   assert.equal(h.localStorage.getItem('vg.job.aa'), null);
   const exportBtn = h.get('vg-export');
   assert(exportBtn, 'Done state must expose the export entry');

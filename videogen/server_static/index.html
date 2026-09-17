@@ -238,6 +238,11 @@ img,video{display:block}
 .pcard:hover .cover .pplay{opacity:1}
 .pcard .cover .pplay svg{margin-left:3px}
 .pcard .body{padding:10px 13px;cursor:pointer}
+.pcard .body>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pcard .pwatch{flex:none;background:var(--acc);color:var(--acc-ink);font-size:12.5px;font-weight:700;
+  padding:7px 13px;border-radius:8px}
+.pcard .pwatch:hover{filter:brightness(1.06)}
+.pcard .ptodo{flex:none;color:var(--ink-3);font-size:12.5px}
 .pcard .body .m{color:var(--ink-3);font-size:12px}
 .pcard .del{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:8px;
   background:rgba(8,10,15,.6);color:#fff;display:grid;place-items:center;
@@ -548,23 +553,25 @@ body.vg-production .top{background:#14161be8}
 .vg-flow{background:var(--bg);padding:0 10px 112px;min-height:calc(100vh - 180px)}
 .vg-flow .btn,.vg-dialog .btn{box-shadow:none;border-radius:7px;font-size:13px}
 .vg-steps{display:flex;gap:14px;align-items:center;padding:0 0 22px;border-bottom:1px solid var(--line)}
-.vg-steps button{display:flex;align-items:center;gap:9px;color:var(--ink-2);font-size:13px;text-align:left}
-.vg-steps button:disabled{cursor:default;opacity:.5}.vg-steps i{font-style:normal;display:grid;place-items:center;border:1px solid var(--line2);border-radius:50%;width:25px;height:25px;font-size:11px}
-.vg-steps [aria-current=step]{color:var(--ink)}.vg-steps [aria-current=step] i{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.vg-steps button{display:flex;align-items:center;gap:10px;color:var(--ink-2);font-size:14.5px;text-align:left}
+.vg-steps button:disabled{cursor:default;opacity:.55}.vg-steps i{font-style:normal;display:grid;place-items:center;border:1px solid var(--line2);border-radius:50%;width:27px;height:27px;font-size:12px}
+.vg-steps [aria-current=step]{color:var(--ink);font-weight:700;font-size:16px}
+.vg-steps [aria-current=step] i{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);width:31px;height:31px;font-size:14px}
+.vg-steps .vg-done{color:var(--ink-2)}.vg-steps .vg-done i{border-color:#4d7a63;color:#8fd0ac}
 .vg-steps em{width:38px;height:1px;background:var(--line2)}
-.vg-context{display:flex;align-items:start;justify-content:space-between;gap:20px;margin:26px 0 24px}.vg-context h1{font-size:27px;font-weight:650;line-height:1.5;overflow-wrap:anywhere}.vg-sub{font-size:13px;color:var(--ink-2);margin-top:7px}.vg-eyeline{font-size:12px;color:var(--ink-2);margin-bottom:6px;overflow-wrap:anywhere}
+.vg-context{display:flex;align-items:start;justify-content:space-between;gap:20px;margin:26px 0 24px}.vg-context h1{font-size:30px;font-weight:700;line-height:1.45;overflow-wrap:anywhere}.vg-sub{font-size:14.5px;color:var(--ink-2);margin-top:8px;line-height:1.7}.vg-eyeline{font-size:12px;color:var(--ink-2);margin-bottom:6px;overflow-wrap:anywhere}
 .vg-columns{display:grid;grid-template-columns:1.06fr 1fr;gap:36px}.vg-columns>section{min-width:0}.vg-sectionhead{display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:13px;margin-bottom:18px}.vg-sectionhead h2{font-size:15px;font-weight:600}.vg-sectionhead button{margin-left:auto;color:var(--acc);font-size:12px}.vg-sectionhead small{color:var(--ink-2);font-size:11px}
 .vg-script{background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden}.vg-hook{padding:20px 24px;border-bottom:1px solid var(--line)}.vg-hook small{color:var(--ink-2);font-size:11px}.vg-hook h2{font-size:24px;font-weight:600;line-height:1.5;margin-top:7px}.vg-hook mark{background:none;color:#d0c7ff}.vg-reader{padding:18px 24px;max-height:370px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:2;color:#ced4df}.vg-scriptfoot{padding:11px 24px;color:var(--ink-2);font-size:11px;border-top:1px solid var(--line)}
 .vg-gallery{display:grid;grid-template-columns:1.4fr 1fr;grid-auto-rows:142px;gap:8px}.vg-gallery .vg-asset:first-child{grid-row:span 2}.vg-asset{position:relative;border-radius:6px;overflow:hidden;background:var(--sunken);text-align:left;min-width:0}.vg-asset img,.vg-asset video{width:100%;height:100%;object-fit:cover}.vg-asset span{position:absolute;bottom:0;left:0;right:0;padding:30px 11px 9px;background:linear-gradient(transparent,#0000 4%,#000d 62%);color:#fff;font-size:12px;text-shadow:0 1px 3px #000b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-asset small{display:grid;place-items:center;height:100%;color:var(--ink-2)}
 .vg-assets-all{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.vg-assets-all .vg-asset{height:155px}.vg-notes{color:var(--ink-2);font-size:12px;border-top:1px solid var(--line);margin-top:17px;padding-top:13px;white-space:pre-wrap;overflow-wrap:anywhere}.vg-notes button{color:var(--acc);padding:6px 0;text-decoration:underline;text-underline-offset:4px}.vg-empty{min-height:230px;background:var(--surface);border:1px dashed var(--line2);border-radius:9px;padding:32px;display:flex;flex-direction:column;justify-content:center;gap:12px}.vg-empty h3{font-size:19px;font-weight:600}.vg-empty p{font-size:13px;color:var(--ink-2);line-height:1.9;max-width:56em;white-space:pre-wrap;overflow-wrap:anywhere}
-.vg-dropwrap{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:36px;align-items:start}
+.vg-dropwrap{display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-items:start;max-width:760px}
 .vg-drop{display:flex;flex-direction:column;align-items:center;gap:9px;width:100%;padding:46px 24px;border:1px dashed var(--line2);border-radius:11px;background:var(--surface);text-align:center}
 .vg-drop:hover,.vg-drop.over{border-color:var(--acc);background:#232131}
 .vg-drop[disabled]{opacity:.55;cursor:default}.vg-drop[disabled]:hover{border-color:var(--line2);background:var(--surface)}
 .vg-drop .vg-zip{display:grid;place-items:center;width:74px;height:74px;border:1px dashed var(--line2);border-radius:12px;background:var(--sunken);color:var(--acc);font-weight:650;letter-spacing:.5px;margin-bottom:8px}
-.vg-drop b{font-size:19px;font-weight:600}.vg-drop span{font-size:13px;color:var(--ink-2)}
-.vg-drop .vg-pick{margin-top:8px;padding:11px 22px;border-radius:7px;background:var(--acc);color:var(--acc-ink);font-size:13px;font-weight:600}
-.vg-drop small{font-size:11px;color:var(--ink-2);margin-top:4px}
+.vg-drop b{font-size:23px;font-weight:700}.vg-drop span{font-size:14.5px;color:var(--ink-2)}
+.vg-drop .vg-pick{margin-top:10px;padding:14px 30px;border-radius:9px;background:var(--acc);color:var(--acc-ink);font-size:16px;font-weight:700}
+.vg-drop small{font-size:12.5px;color:var(--ink-2);margin-top:6px}
 .vg-importer{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:16px}
 .vg-current{color:var(--ink-2);font-size:12px;overflow-wrap:anywhere}
 .vg-dropnote h2{font-size:16px;font-weight:600;margin-bottom:18px}
@@ -572,22 +579,23 @@ body.vg-production .top{background:#14161be8}
 .vg-dropnote li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:12px}
 .vg-dropnote i{font-style:normal;display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--line);border-radius:7px;background:var(--sunken);color:var(--acc);font-size:12px}
 .vg-dropnote b{display:block;font-size:13.5px;font-weight:600}.vg-dropnote span{font-size:12.5px;color:var(--ink-2)}
-.vg-dropnote>p{margin-top:18px;font-size:12px;color:var(--ink-2)}.vg-import-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;align-items:center}.vg-footer{position:fixed;bottom:0;left:90px;right:0;z-index:35;background:#1d2028;border-top:1px solid #3b414e;box-shadow:0 -12px 30px #14161b55}.vg-footer-in{max-width:1240px;margin:auto;padding:16px 28px;display:flex;align-items:center;gap:20px}.vg-setting{text-align:left;border-right:1px solid #3c424e;padding-right:20px;max-width:240px}.vg-setting small{display:block;font-size:10px;color:var(--ink-2)}.vg-setting b{display:block;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-setting:disabled{opacity:.6;cursor:default}.vg-footer-status{margin-left:auto;color:var(--ink-2);font-size:11px;max-width:250px}.vg-footer-actions{display:flex;gap:8px;flex-wrap:wrap}.vg-footer .btn{min-height:42px;padding:0 16px}
+.vg-dropnote>p{margin-top:18px;font-size:12px;color:var(--ink-2)}.vg-import-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;align-items:center}.vg-footer{position:fixed;bottom:0;left:90px;right:0;z-index:35;background:#1d2028;border-top:1px solid #3b414e;box-shadow:0 -12px 30px #14161b55}.vg-footer-in{max-width:1240px;margin:auto;padding:16px 28px;display:flex;align-items:center;gap:20px}.vg-setting{text-align:left;border-right:1px solid #3c424e;padding-right:20px;max-width:240px}.vg-setting small{display:block;font-size:11.5px;color:var(--ink-2)}.vg-setting b{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-setting:disabled{opacity:.6;cursor:default}.vg-footer-status{margin-left:auto;color:var(--ink-2);font-size:12.5px;max-width:260px;line-height:1.5}.vg-footer-actions{display:flex;gap:8px;flex-wrap:wrap}.vg-footer .btn{min-height:46px;padding:0 18px}
+.vg-footer .btn.go{min-height:54px;padding:0 30px;font-size:16px;border-radius:11px}
 .vg-dialog{margin:auto;border:1px solid var(--line2);background:var(--surface);border-radius:13px;padding:0;width:780px;max-width:calc(100vw - 32px);max-height:88vh;box-shadow:0 22px 90px #0008}.vg-dialog::backdrop{background:#080b11bd;backdrop-filter:blur(5px)}.vg-dialog-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line)}.vg-dialog-head h2{font-size:17px}.vg-dialog-body{padding:23px 24px;max-height:65vh;overflow:auto}.vg-dialog-foot{padding:14px 24px;border-top:1px solid var(--line);text-align:right}.vg-dialog .panel{padding:0;border:0;background:none;box-shadow:none}.vg-dialog .tpls{grid-template-columns:repeat(4,minmax(0,1fr))}.vg-dialog .tpl .mock{max-height:210px}.vg-dialog .vg-fulltext{white-space:pre-wrap;line-height:2;overflow-wrap:anywhere}.vg-lightbox{width:100%;max-height:52vh;object-fit:contain;background:#101217}.vg-dialog select{max-width:100%}
-.vg-runlayout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:36px}.vg-runrail{border-right:1px solid var(--line);padding-right:20px}.vg-stage{width:100%;display:flex;gap:11px;align-items:center;text-align:left;padding:11px 9px;border-radius:6px;margin-bottom:6px;font-size:13px}.vg-stage i{font-style:normal;border:1px solid var(--line2);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;flex:none;font-size:11px}.vg-stage small{display:block;font-size:10px;color:var(--ink-2)}.vg-stage[aria-pressed=true]{background:#2c283e;color:#e0dafa}.vg-stage[aria-pressed=true] i{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}.vg-stage.vg-current{box-shadow:inset 3px 0 var(--acc)}.vg-stage.vg-reached i{border-color:#49695d;color:#9bceb8}.vg-runhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.vg-runhead h2{font-size:22px;font-weight:600}.vg-runhead small{color:var(--ink-2);font-size:12px}.vg-progress{margin:20px 0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px}.vg-progress p{font-size:12px;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}.vg-progress progress{width:100%;height:5px;accent-color:var(--acc);margin:10px 0}.vg-stills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.vg-stills button{min-width:0;text-align:left}.vg-stills img{width:100%;aspect-ratio:9/16;object-fit:contain;background:#101217;border-radius:6px}.vg-stills span{display:block;color:var(--ink-2);font-size:11px;margin-top:6px}.vg-error{color:#ffb2b2!important}.vg-export{display:grid;grid-template-columns:minmax(240px,360px) minmax(0,1fr);gap:36px}.vg-export-player{width:100%;max-height:65vh;aspect-ratio:9/16;background:#080a0f;border-radius:10px}.vg-history{display:flex;flex-direction:column;gap:8px;margin-top:18px}.vg-history button{text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:6px;color:var(--ink-2)}.vg-history [aria-pressed=true]{border-color:var(--acc);color:var(--ink)}
+.vg-runlayout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:36px}.vg-runrail{border-right:1px solid var(--line);padding-right:20px}.vg-stage{width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:12px 10px;border-radius:7px;margin-bottom:7px;font-size:14.5px}.vg-stage i{font-style:normal;border:1px solid var(--line2);border-radius:50%;width:27px;height:27px;display:grid;place-items:center;flex:none;font-size:12.5px}.vg-stage small{display:block;font-size:10px;color:var(--ink-2)}.vg-stage[aria-pressed=true]{background:#2c283e;color:#e0dafa}.vg-stage[aria-pressed=true] i{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}.vg-stage.vg-current{box-shadow:inset 3px 0 var(--acc)}.vg-stage.vg-reached i{border-color:#49695d;color:#9bceb8}.vg-runhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.vg-runhead h2{font-size:25px;font-weight:700}.vg-runhead small{color:var(--ink-2);font-size:13.5px}.vg-progress{margin:20px 0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px}.vg-progress p{font-size:14px;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}.vg-progress progress{width:100%;height:12px;margin:14px 0;border:0;border-radius:7px;appearance:none;-webkit-appearance:none;background:var(--sunken)}
+.vg-progress progress::-webkit-progress-bar{background:var(--sunken);border-radius:7px}
+.vg-progress progress::-webkit-progress-value{background:var(--acc);border-radius:7px;transition:width .4s var(--ease)}
+.vg-progress progress::-moz-progress-bar{background:var(--acc);border-radius:7px}.vg-stills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.vg-stills button{min-width:0;text-align:left}.vg-stills img{width:100%;aspect-ratio:9/16;object-fit:contain;background:#101217;border-radius:6px}.vg-stills span{display:block;color:var(--ink-2);font-size:11px;margin-top:6px}.vg-error{color:#ffb2b2!important}.vg-export{display:grid;grid-template-columns:minmax(240px,360px) minmax(0,1fr);gap:36px}.vg-export-player{width:100%;max-height:65vh;aspect-ratio:9/16;background:#080a0f;border-radius:10px}.vg-history{display:flex;flex-direction:column;gap:8px;margin-top:18px}.vg-history button{text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:6px;color:var(--ink-2)}.vg-history [aria-pressed=true]{border-color:var(--acc);color:var(--ink)}
 @media(max-width:1020px){.vg-columns{gap:24px}.vg-dropwrap{gap:26px}.vg-footer{left:74px}.vg-footer-in{gap:12px;padding:14px 20px}.vg-footer-status{display:none}.vg-footer-actions{margin-left:auto}.vg-runlayout{grid-template-columns:190px minmax(0,1fr);gap:24px}}
-@media(max-width:760px){.vg-flow{padding:0 0 168px}.vg-columns,.vg-export{grid-template-columns:1fr;gap:24px}.vg-context h1{font-size:23px}.vg-steps{gap:7px;justify-content:space-between}.vg-steps button{font-size:11px;gap:4px}.vg-steps em{width:10px}.vg-steps i{width:21px;height:21px}.vg-footer-in{flex-wrap:wrap;gap:10px;padding:12px 14px}.vg-setting{flex:1;max-width:none;padding-right:10px}.vg-footer-actions{width:100%;justify-content:flex-end}.vg-runlayout{grid-template-columns:1fr}.vg-runrail{display:flex;overflow:auto;border:0;padding:0}.vg-stage{min-width:130px}.vg-runrail .vg-notes{display:none}.vg-assets-all{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-stills{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-dialog .tpls{grid-template-columns:repeat(3,minmax(0,1fr))}.vg-export-player{max-height:60vh}.vg-context{flex-wrap:wrap}.vg-import{padding:24px 18px}.vg-dropwrap{grid-template-columns:1fr}.vg-drop{padding:32px 18px}.vg-drop b{font-size:17px}}
-@media(max-width:480px){.top h1{display:none}.tact #newBtn{display:none}.vg-steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}.vg-steps em{display:none}.vg-footer-actions .btn{white-space:normal}.vg-dialog .tpls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.vg-flow{padding:0 0 168px}.vg-columns,.vg-export{grid-template-columns:1fr;gap:24px}.vg-context h1{font-size:23px}.vg-steps{gap:7px;justify-content:space-between}.vg-steps button{font-size:12.5px;gap:5px}.vg-steps em{width:10px}.vg-steps i{width:24px;height:24px}.vg-footer-in{flex-wrap:wrap;gap:10px;padding:12px 14px}.vg-setting{flex:1;max-width:none;padding-right:10px}.vg-footer-actions{width:100%;justify-content:flex-end}.vg-runlayout{grid-template-columns:1fr}.vg-runrail{display:flex;overflow:auto;border:0;padding:0}.vg-stage{min-width:130px}.vg-runrail .vg-notes{display:none}.vg-assets-all{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-stills{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-dialog .tpls{grid-template-columns:repeat(3,minmax(0,1fr))}.vg-export-player{max-height:60vh}.vg-context{flex-wrap:wrap}.vg-import{padding:24px 18px}.vg-dropwrap{grid-template-columns:1fr}.vg-drop{padding:32px 18px}.vg-drop b{font-size:17px}}
+@media(max-width:480px){.top h1{display:none}.vg-steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}.vg-steps em{display:none}.vg-footer-actions .btn{white-space:normal}.vg-dialog .tpls{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
 <div class="shell">
   <aside class="side">
-    <a class="brand" href="#/" id="brand" title="videogen"><span class="mark">V</span></a>
+    <a class="brand" href="#/" id="brand" title="首页" aria-label="回到首页"><span class="mark">V</span></a>
     <nav class="nav">
-      <a href="#/" data-nav="home" class="on" title="作品库">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-        <span class="lb">作品库</span></a>
       <a href="#new" id="navNew" title="新建项目">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         <span class="lb">新建项目</span></a>
@@ -602,7 +610,6 @@ body.vg-production .top{background:#14161be8}
         <span class="sp"></span>
         <div class="tact">
           <span id="account" style="display:flex;align-items:center;gap:8px"></span>
-          <button class="btn sm hide" id="newBtn">＋ 新建项目</button>
           <button class="tasks-btn" id="tasksBtn" title="渲染任务">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="8" x2="18" y2="8"/><line x1="12" y1="8" x2="6" y2="8"/><line x1="18" y1="16" x2="12" y2="16"/><line x1="8" y1="16" x2="6" y2="16"/><rect x="2" y="4" width="20" height="16" rx="3"/></svg>
             任务<span class="tbadge hide" id="tasksBadge">0</span>
@@ -828,7 +835,6 @@ function renderAuth(mode){
   stopPoll();
   clearInterval(codeTimer);
   document.title = (reg ? "注册" : rst ? "重设密码" : "登录") + " · videogen";
-  $("newBtn").classList.add("hide");
   $("main").innerHTML = `<div class="view"><div class="auth"><div class="card">
     <div class="aw"><span class="mark">V</span></div>
     <h1>${reg ? "注册 videogen" : rst ? "重设密码" : "欢迎回来"}</h1>
@@ -964,7 +970,6 @@ async function submitRegister(){
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ email, code, password: pass, remember: true }) });
     ME = { email: r.email };
-    $("newBtn").classList.remove("hide");
     paintAccount();
     await loadTemplates();
     route(true);
@@ -990,7 +995,6 @@ async function submitReset(){
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ email, code, password: pass, remember: true }) });
     ME = { email: r.email };
-    $("newBtn").classList.remove("hide");
     paintAccount();
     await loadTemplates();
     toast("密码已重设，下次用新密码登录");
@@ -1014,7 +1018,6 @@ async function submitLogin(){
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ email, password: pass, remember: $("liRemember").checked }) });
     ME = { email: r.email };
-    $("newBtn").classList.remove("hide");
     paintAccount();
     await loadTemplates();
     route(true);
@@ -1072,7 +1075,6 @@ $("navNew").onclick = (e) => { e.preventDefault(); newProject(); };
 function goHome(){ CUR = null; setHash("#/"); renderHome(); }
 window.addEventListener("hashchange", () => route());
 $("brand").onclick = (e) => { e.preventDefault(); goHome(); };
-$("newBtn").onclick = newProject;
 
 async function newProject(){
   leaveFlow(); const epoch = viewEpoch;
@@ -1101,7 +1103,6 @@ async function renderHome(){
   paintNav("home");
   paintSwitcher(false);
   document.title = "作品库 · videogen";
-  $("newBtn").classList.add("hide");   // 刊头上已有新建按钮，顶栏的收起避免重复
   $("main").innerHTML = SKELETON_HOME;
   let ps = [];
   try { ps = await api("/api/projects"); }
@@ -1243,7 +1244,8 @@ function pcard(p){
        : `<span class="letter">${esc((p.title || "?").slice(0, 1))}</span>`);
   el.innerHTML = `<div class="cover">${status}${media}
       <span class="shade"></span><span class="ct">${esc(p.title)}</span></div>
-    <div class="body"><div class="m">${p.assets_count ?? 0} 素材 · ${esc(p.created || "")}</div></div>
+    <div class="body"><div><div class="m">${p.assets_count ?? 0} 素材 · ${esc(p.created || "")}</div>
+      ${last ? '<button class="pwatch" data-watch>▶ 看成片</button>' : '<span class="ptodo">还没有成片</span>'}</div></div>
     <button class="ren" data-ren aria-label="重命名项目"><svg width="13" height="13" viewBox="0 0 24 24"
       fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
@@ -1251,14 +1253,13 @@ function pcard(p){
       fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
   const open = () => { CUR = p; setHash("#/project/" + p.project_id); renderProject(); };
-  if (last){
-    const v = el.querySelector(".cover video");
-    previewSeek(v, 0.8);
-    el.querySelector(".cover").onclick = () => playDialog({id: last.id, title: p.title, ts: last.ts});
-  } else {
-    el.querySelector(".cover").onclick = open;
-  }
+  el.querySelector(".cover").onclick = open;      // 封面永远只有一个含义：打开这个项目
   el.querySelector(".body").onclick = open;
+  if (last){
+    previewSeek(el.querySelector(".cover video"), 0.8);
+    const w = el.querySelector("[data-watch]");
+    if (w) w.onclick = (e) => { e.stopPropagation(); playDialog({id: last.id, title: p.title, ts: last.ts}); };
+  }
   el.querySelector("[data-ren]").onclick = (e) => { e.stopPropagation(); renameProject(p); };
   el.querySelector("[data-del]").onclick = (e) => {
     e.stopPropagation();
@@ -1326,7 +1327,6 @@ async function renderProject(requestedView){
   const epoch = viewEpoch, project = CUR, pid = project.project_id;
   paintNav("home");
   document.title = (project.title || "项目") + " · videogen";
-  $("newBtn").classList.remove("hide");
   $("main").innerHTML = SKELETON_HOME;
   let bundle = null, bundleError = "", jobs = null, authError = false;
   await Promise.all([
@@ -1348,6 +1348,8 @@ async function renderProject(requestedView){
   if (FLOW.view === "confirm" && !bundle) FLOW.view = "import";
   if (FLOW.view === "generate" && !FLOW.jobId) FLOW.view = bundle ? "confirm" : "import";
   if (FLOW.view === "export" && !flowRenders().length) FLOW.view = bundle ? "confirm" : "import";
+  const wantHash = "#/project/" + pid + "/" + FLOW.view;
+  if (location.hash !== wantHash) setHash(wantHash);
   job = lastJob = FLOW.jobId;
   paintSwitcher(true, project.title || "项目", bundle ? (bundle.assets || []).length + " 素材 · 预计 " + mmss(bundle.estSeconds) : "尚未读取素材");
   paintFlow();
@@ -1364,11 +1366,10 @@ function paintFlow(){
   if (!FLOW || !CUR) return;
   const view = FLOW.view, b = CURB;
   const titles = {import:"从一个压缩包，开始制作。",confirm:"检查这条视频的内容",generate:"每一步，都能看到处理了什么",export:"成片已就绪，检查后导出"};
-  const norm = s => String(s || "").replace(/[\s\-_·—–()（）]/g, "");
-  const eyeline = [CUR.title || "新建项目"].concat(b && b.name && norm(b.name) !== norm(CUR.title) ? [b.name] : []).join(" / ");
+  const here = FLOW_STEPS.findIndex(x => x[0] === view);
   $("main").innerHTML = `<div class="view vg-flow">
-    <nav class="vg-steps" aria-label="制作流程">${FLOW_STEPS.map(([v,label],i) => `${i ? '<em aria-hidden="true"></em>' : ''}<button data-flow="${v}" ${v === view ? 'aria-current="step"' : ''} ${v === "confirm" && !b || v === "generate" && !FLOW.jobId || v === "export" && !flowRenders().length && (FLOW.status || {}).stage !== "done" ? 'disabled' : ''}><i>${i+1}</i>${label}</button>`).join("")}</nav>
-    <div class="vg-context"><div><div class="vg-eyeline">${esc(eyeline)}</div><h1>${titles[view]}</h1><p class="vg-sub">${view === "confirm" ? "文案与素材已经展开。检查后，再决定怎么生成。" : view === "generate" ? "后台继续制作；点击左侧阶段回看，不会改变任务执行。" : view === "export" ? "仅展示本项目的真实成片，历史版本不会被覆盖。" : "导入素材，检查内容，看着它生成，最后下载。"}</p></div></div>
+    <nav class="vg-steps" aria-label="制作流程">${FLOW_STEPS.map(([v,label],i) => `${i ? '<em aria-hidden="true"></em>' : ''}<button data-flow="${v}" ${v === view ? 'aria-current="step"' : ''} class="${i < here ? "vg-done" : ""}" ${v === "confirm" && !b || v === "generate" && !FLOW.jobId || v === "export" && !flowRenders().length && (FLOW.status || {}).stage !== "done" ? 'disabled' : ''}><i aria-hidden="true">${i < here ? "✓" : i+1}</i>${label}</button>`).join("")}</nav>
+    <div class="vg-context"><div><h1>${titles[view]}</h1><p class="vg-sub">${view === "confirm" ? "文案与素材已经展开。检查后，再决定怎么生成。" : view === "generate" ? "后台继续制作；点击左侧阶段回看，不会改变任务执行。" : view === "export" ? "仅展示本项目的真实成片，历史版本不会被覆盖。" : "导入素材，检查内容，看着它生成，最后下载。"}</p></div></div>
     <div id="vg-view"></div><footer class="vg-footer"><div class="vg-footer-in" id="vg-footer"></div></footer>
   </div>`;
   document.querySelectorAll("[data-flow]").forEach(el => el.onclick = () => setFlowView(el.dataset.flow));
@@ -1402,11 +1403,7 @@ function paintFlowImport(){
       <div class="vg-importer"><button class="btn line" id="vg-bundles" ${busy ? "disabled" : ""}>${CURB ? "更换素材包" : "选用服务器上已有的素材包"}</button>${CURB ? `<span class="vg-current">当前已选用 ${esc(CURB.name)}</span>` : ""}</div>
       <p id="vg-upload-status" role="status">${FLOW.bundleError ? `<span class="vg-error">${esc(humanError(FLOW.bundleError))}</span>` : busy ? "当前任务完成前不能更换素材。" : ""}</p>
     </section>
-    <aside class="vg-dropnote"><h2>放进来之后，会发生什么？</h2><ol>
-      <li><i aria-hidden="true">▤</i><div><b>先把内容摊开给你看</b><span>标题、口播文案与素材照片，都按原包内容展示，不做改写。</span></div></li>
-      <li><i aria-hidden="true">◌</i><div><b>每一步处理都有状态</b><span>配音、分镜、画面合成，正在做哪一步一目了然。</span></div></li>
-      <li><i aria-hidden="true">↓</i><div><b>完成后，直接下载</b><span>拿走 MP4；需要二次编辑，再导出剪映草稿。</span></div></li>
-    </ol><p>素材包简介与素材清单都以包内 content.json、manifest.json 为准。</p></aside>
+    <p class="vg-sub" style="margin-top:18px">放进来之后会先让你检查内容，点确认才开始生成——不会自动开始。</p>
   </div>`;
   $("vg-drop").disabled = busy;
   wireImport($("vg-drop"), $("vg-zip"), async file => {
@@ -1441,7 +1438,7 @@ function paintFlowConfirm(){
   }).join("");
   $("vg-view").innerHTML = `<div class="vg-columns"><section aria-label="口播文案"><div class="vg-sectionhead"><h2>口播文案</h2><small>${script.length} 字符</small><button id="vg-fulltext" aria-haspopup="dialog">展开全文</button></div>
     <article class="vg-script"><div class="vg-hook"><small>开场标题 · 来自素材包</small><h2>${hooks || esc(b.title || "未提供开场标题")}</h2></div><div class="vg-reader" tabindex="0" aria-label="滚动阅读完整口播">${esc(script || "素材包未提供口播文案，请更换素材包后再生成。")}</div><div class="vg-scriptfoot">原文保留，未做自动改写 · 预计 ${mmss(b.estSeconds / (CFG.rate/100))}</div></article>
-    ${b.notes ? `<div class="vg-notes">素材包备注<br>${esc(b.notes)}</div>` : ''}<p class="vg-notes">仅展示素材包内容，新闻事实与来源尚未核验。</p></section>
+    <p class="vg-notes">文案与素材按原包内容展示，新闻事实与来源尚未核验。</p></section>
     <section aria-label="素材内容"><div class="vg-sectionhead"><h2>本次素材</h2><small>${assets.filter(a => a.kind === 'image').length} 图片 · ${assets.filter(a => a.kind === 'video').length} 视频</small><button id="vg-all-assets" aria-haspopup="dialog">查看全部 ${assets.length} 份</button></div>
     ${assets.length ? `<div class="vg-gallery">${assets.slice(0,5).map(flowAsset).join("")}</div>` : flowEmpty("未提供媒体素材", "素材包里没有已登记的图片或视频；不会用其他项目的素材填充。")}
     <div class="vg-notes"><button id="vg-meta" aria-haspopup="dialog">来源与读音提示</button><br>仅显示包内已提供的声明；不推测尺寸、时长或分镜对应。</div>
@@ -1490,14 +1487,16 @@ function updateFlowJobView(force){
   const terminal = ["failed","unknown"].includes(j.stage);
   $("vg-stages").innerHTML = STAGE8.map((s,i) => {
     const n=i+1, current = !terminal && j.stage !== "done" && n === idx;
-    return `<button class="vg-stage ${current ? 'vg-current' : ''} ${!terminal && n < idx ? 'vg-reached' : ''}" data-stage="${n}" aria-pressed="${n === selected}"><i>${n}</i><span>${esc(s)}<small>${n === selected ? "正在查看 · " : ""}${terminal ? "任务已停止" : j.stage === "done" || n < idx ? "已执行，可回看" : current ? "后台执行中" : "尚未执行"}</small></span></button>`;
-  }).join("") + '<p class="vg-notes">查看阶段与后台执行阶段独立。<br>进度为估算，不代表精确帧数。</p>';
+    const sub = terminal ? (n === idx ? "任务已停止" : "") : (j.stage === "done" || n < idx ? "已完成" : current ? "正在做" : "");
+    return `<button class="vg-stage ${current ? 'vg-current' : ''} ${!terminal && n < idx ? 'vg-reached' : ''}" data-stage="${n}" aria-pressed="${n === selected}"><i aria-hidden="true">${!terminal && (j.stage === "done" || n < idx) ? "✓" : n}</i><span>${esc(s)}${sub ? `<small>${sub}</small>` : ""}</span></button>`;
+  }).join("");
   $("vg-stages").querySelectorAll("[data-stage]").forEach(el => el.onclick = () => { FLOW.selectedStage = +el.dataset.stage; updateFlowJobView(true); });
   $("vg-stage-title").textContent = STAGE8[selected-1];
   $("vg-stage-state").textContent = `查看阶段 ${selected} / 8`;
   const pct = Math.max(0,Math.min(100,Number(j.progress) || 0));
-  $("vg-progress").innerHTML = `<p>${j.stage === "queued" ? "排队中" : j.stage === "done" ? "后台已完成" : j.stage === "failed" ? "生成失败" : j.stage === "unknown" ? "任务记录不可用" : "后台阶段：" + esc(STAGE8[Math.max(0,idx-1)])} · ${j.stage === "queued" ? "等待开始" : "估算进度 " + pct + "%"}${j.elapsed != null ? " · 已用 " + mmss(j.elapsed) : ""}</p><progress max="100" value="${pct}" aria-label="估算生成进度"></progress><p>${esc(FLOW.pollError || j.detail || "正在连接任务状态…")}</p>${j.error ? `<p class="vg-error" title="${esc(String(j.error).slice(0,300))}">${esc(humanError(j.error))}</p>` : ''}<p>任务 ${esc(FLOW.jobId || "—")} <button class="ghost" id="vg-copy-job">复制</button></p>`;
-  $("vg-copy-job").onclick = () => { if (navigator.clipboard) navigator.clipboard.writeText(FLOW.jobId || "").then(() => toast("已复制"), () => toast("复制失败")); else toast("当前环境不支持复制"); };
+  const working = !["queued","done","failed","unknown"].includes(j.stage);
+  $("vg-progress").innerHTML = `<p><b>${j.stage === "queued" ? "排队中" : j.stage === "done" ? "已经做完" : j.stage === "failed" ? "这一版没做成" : j.stage === "unknown" ? "任务记录不可用" : "正在做：" + esc(STAGE8[Math.max(0,idx-1)])}</b>${j.stage === "queued" ? " · 等前面任务结束就轮到它" : " · 大约完成 " + pct + "%"}${j.elapsed != null ? " · 已用 " + mmss(j.elapsed) : ""}</p><progress max="100" value="${pct}" aria-label="估算生成进度"></progress><p>${esc(FLOW.pollError || j.detail || "正在连接任务状态…")}</p>${working && TIP[j.stage] ? `<p>${esc(TIP[j.stage])}</p>` : ''}${j.error ? `<p class="vg-error" title="${esc(String(j.error).slice(0,300))}">${esc(humanError(j.error))}</p><p>任务号 ${esc(FLOW.jobId || "—")} <button class="ghost" id="vg-copy-job">复制</button>（反馈问题时带上它）</p>` : ''}`;
+  if ($("vg-copy-job")) $("vg-copy-job").onclick = () => { if (navigator.clipboard) navigator.clipboard.writeText(FLOW.jobId || "").then(() => toast("已复制"), () => toast("复制失败")); else toast("当前环境不支持复制"); };
   const stills = Array.isArray(j.stills) ? j.stills.filter(u => typeof u === "string" && u.startsWith("/still/")) : [];
   const key = JSON.stringify([selected, stills, j.stage === "done", terminal]);
   if (!force && FLOW.artifactKey === key) return;
@@ -1524,7 +1523,7 @@ function paintFlowExport(){
     $("vg-refresh-export").onclick = refreshStageCard; return;
   }
   const r = rs.find(x => x.id === FLOW.exportId) || rs[0]; FLOW.exportId = r.id;
-  $("vg-view").innerHTML = `<div class="vg-export"><video class="vg-export-player" id="mainPlayer" controls playsinline src="${esc(vid(r.id))}"></video><section><div class="vg-sectionhead"><h2>下载与交付</h2></div><p class="vg-sub" id="stageMeta">${esc(r.ts || "已完成")} · ${esc(r.id)}</p><div class="vg-import-actions"><a class="btn" id="dlBtn" href="${esc(vid(r.id))}" download>下载 MP4</a><a class="btn line" id="jyBtn" href="${esc(qs('/api/projects/' + CUR.project_id + '/renders/' + r.id + '/jianying-draft'))}">导出剪映草稿</a></div><p class="vg-notes">剪映草稿保留现有分轨导出能力，首次打包可能需要 1–2 分钟。旧版本是否可编辑取决于服务端保存的清单。</p><h3>历史版本 · ${rs.length}</h3><div class="vg-history" id="hist">${rs.map((x,i) => `<button data-render="${esc(x.id)}" aria-pressed="${x.id === r.id}">${i === 0 ? "最新版本" : "历史版本"} · ${esc(x.ts || x.id)}</button>`).join("")}</div><p class="vg-sub" id="vg-video-error" role="status"></p></section></div>`;
+  $("vg-view").innerHTML = `<div class="vg-export"><video class="vg-export-player" id="mainPlayer" controls playsinline src="${esc(vid(r.id))}"></video><section><div class="vg-sectionhead"><h2>下载与交付</h2></div><p class="vg-sub" id="stageMeta">${esc(r.ts || "已完成")}</p><div class="vg-import-actions"><a class="btn go" id="dlBtn" href="${esc(vid(r.id))}" download>下载 MP4</a><a class="btn line" id="jyBtn" href="${esc(qs('/api/projects/' + CUR.project_id + '/renders/' + r.id + '/jianying-draft'))}">导出剪映草稿</a></div><p class="vg-notes">想再剪一遍就导出剪映草稿（首次打包约 1–2 分钟）。</p><h3>历史版本 · ${rs.length}</h3><div class="vg-history" id="hist">${rs.map((x,i) => `<button data-render="${esc(x.id)}" aria-pressed="${x.id === r.id}">${i === 0 ? "最新版本" : "历史版本"} · ${esc(x.ts || x.id)}</button>`).join("")}</div><p class="vg-sub" id="vg-video-error" role="status"></p></section></div>`;
   $("hist").querySelectorAll("[data-render]").forEach(el => el.onclick = () => { FLOW.exportId = el.dataset.render; paintFlowExport(); });
   $("mainPlayer").onerror = () => { $("vg-video-error").textContent = "成片文件暂不可播放；可能已被清理或任务记录已过期。历史记录仍保留。"; };
 }
@@ -1585,7 +1584,7 @@ function renderRail(b){
 function openBundleModal(){
   if (!CUR || flowBusy()) return;
   const epoch = viewEpoch, pid = CUR.project_id;
-  const m = openFlowDialog("选用素材", `<p class="vg-sub">选用已有素材，或上传素材 zip。导入后先确认，不会自动生成。</p><button class="btn" id="bmUpload">上传 zip 文件</button><input type="file" id="bmZip" accept=".zip" class="hide"><div class="mlist" id="bmList">读取中…</div><p id="bmStatus" class="vg-sub" role="status"></p>`);
+  const m = openFlowDialog("选用素材", `<p class="vg-sub">从服务器上已有的素材包里选一个（要传新包，关掉这里，用页面上的「选择 ZIP 文件」）。</p><div class="mlist" id="bmList">读取中…</div><p id="bmStatus" class="vg-sub" role="status"></p>`);
   let busy = false;
   const mount = async (name,title) => {
     if (!flowHere(epoch,pid) || !m.isConnected) return;
@@ -1822,7 +1821,6 @@ async function boot(){
   // 开放模式（没账号、没令牌、没邮箱服务）= 本机自用，不拦；其余都要登录/注册
   const gated = AUTHST.locked || AUTHST.smtp || AUTHST.dev_email || AUTHST.token_auth;
   if (!ME && gated) return showAuth();
-  $("newBtn").classList.remove("hide");
   await loadTemplates();
   route(true);
   refreshTasks();
