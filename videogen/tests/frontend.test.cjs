@@ -21,11 +21,10 @@ async function start(h) {
   await h.evaluate('startRender(CURB)');
   await h.flush();
 }
-// 设置默认全自动：确认页上的「调整画面与声音」是唯一入口
+// 设置直接摆在确认页上（模板/配音/音乐/音效），点渲染之前就能定
 async function configure(h, {format, voice, rate, sfx, subtitles, sources, bgm, disclaimer}) {
   const wanted = [format, voice, rate, sfx, subtitles, sources, bgm, disclaimer].some(v => v !== undefined);
   if (!wanted) return;
-  await h.click('#vg-adv');
   await h.flush(); // music select 的 onchange 在 /api/music 解析后才挂上
   if (format !== undefined) h.click('#fmt [data-v="' + format + '"]');
   if (voice !== undefined) h.click('#voiceSeg [data-v="' + voice + '"]');
@@ -39,7 +38,6 @@ async function configure(h, {format, voice, rate, sfx, subtitles, sources, bgm, 
     el.value = disclaimer;
     el.oninput({target: el});
   }
-  h.evaluate('closeFlowDialog()');
 }
 
 test('production boot loads templates and projects entirely through mocked fetch', async t => {
@@ -84,7 +82,6 @@ test('all sound effect modes preserve production sfx boolean semantics', async t
 test('persisted configuration loads without reading real user storage', async t => {
   const h = await setup(t, {storage: {'vg.cfg': JSON.stringify({format: 'retro', voice: 'zh-CN-YunjianNeural', rate: 90})}});
   await h.openProject();
-  await h.click('#vg-adv');
   assert(h.document.querySelector('#fmt [data-v="retro"]').classList.contains('on'));
   assert(h.document.querySelector('#voiceSeg [data-v="zh-CN-YunjianNeural"]').classList.contains('on'));
   assert(h.document.querySelector('#rateSeg [data-r="90"]').classList.contains('on'));
@@ -111,31 +108,28 @@ test('duplicate starts during submission and queued task issue just one POST', a
   assert.equal(builds(h).length, 1, 'An active task must block another submission');
 });
 
-test('queued -> running -> failed updates stages, progress, error and retry availability', async t => {
+test('generation shows one plain progress bar, then the failure reason and a retry', async t => {
   const h = await setup(t);
   await h.openProject(); await start(h);
-  assert.match(h.get('vg-progress').textContent, /排队中/);
+  assert.match(h.get('vg-bigline').textContent, /排队中/);
   h.jobStates.set('job-a', {project_id: 'aa', stage: 'render', stage8: 5, progress: 54,
-    detail: '离线画面渲染', elapsed: 40, error: null,
-    stills: ['/still/job-a-still-01.jpg']});
+    detail: '正在渲染画面 1,037 / 3,455 帧', elapsed: 40, error: null});
   await h.tick();
-  assert(h.document.querySelector('#vg-stages [data-stage="5"]').classList.contains('vg-current'));
-  assert(h.document.querySelector('#vg-stages [data-stage="4"]').classList.contains('vg-reached'));
-  assert.equal(h.get('vg-stage-title').textContent, '画面渲染');
-  assert.equal(h.get('vg-progress').querySelector('progress').getAttribute('value'), '54');
-  assert.equal(h.document.querySelectorAll('#vg-artifact .vg-stills img').length, 1);
+  assert.equal(h.get('vg-pct').textContent, '54%');
+  assert.equal(h.get('vg-bigbar').querySelector('i').style.width, '54%');
+  assert.match(h.get('vg-bigline').textContent, /正在渲染画面/);
+  assert.equal(h.document.querySelectorAll('.vg-stage').length, 0, '生成页不再展示逐阶段细节');
   h.jobStates.set('job-a', {project_id: 'aa', stage: 'failed', stage8: 5, progress: 54,
-    error: 'offline renderer failure'});
+    error: '素材包不存在或路径不合法'});
   await h.tick();
-  assert.match(h.get('vg-progress').textContent, /这一版没做成/);
-  assert.match(h.get('vg-progress').textContent, /offline renderer failure/);
-  assert(!h.document.querySelector('#vg-stages .vg-current'), 'No stage may look active after failure');
+  assert.equal(h.get('vg-bigstage').textContent, '这一版没做成');
+  assert.match(h.get('vg-bigline').textContent, /素材包已经不在服务器上了/, '失败要给可行动的人话');
   assert.equal(h.localStorage.getItem('vg.job.aa'), null);
-  assert.equal(h.get('againBtn').disabled, false, 'Submit controls must be usable again');
-  assert.equal([...h.timers.values()].filter(x => x.ms === 1500).length, 0, 'Polling must stop');
+  assert.equal(h.get('againBtn').disabled, false, '失败后要能重来');
+  assert.equal([...h.timers.values()].filter(x => x.ms === 1500).length, 0, '轮询必须停');
 });
 
-test('queued -> running -> done exposes export view with this project renders only', async t => {
+test('completion puts the finished video right where the user waited, and the export view still works', async t => {
   const h = await setup(t);
   await h.openProject(); await start(h);
   h.jobStates.set('job-a', {project_id: 'aa', stage: 'render', stage8: 5, progress: 50});
@@ -145,32 +139,35 @@ test('queued -> running -> done exposes export view with this project renders on
   h.jobStates.set('job-a', {project_id: 'aa', stage: 'done', stage8: 8, progress: 100,
     video: 'fixture-job-a.mp4', elapsed: 300});
   await h.tick();
-  assert.match(h.get('vg-progress').textContent, /已经做完/);
+  assert.equal(h.get('vg-bigstage').textContent, '成片好了。');
+  assert.equal(h.get('vg-pct').textContent, '100%');
+  assert(h.get('mainPlayer'), '完成后要就地给出成片');
+  assert.match(h.get('mainPlayer').getAttribute('src'), /\/video\/job-a/);
+  assert.match(h.get('dlBtn').getAttribute('href'), /\/video\/job-a/);
   assert.equal(h.localStorage.getItem('vg.job.aa'), null);
   const exportBtn = h.get('vg-export');
   assert(exportBtn, 'Done state must expose the export entry');
   h.click('#vg-export');
-  assert(h.get('mainPlayer'));
   assert.match(h.get('mainPlayer').getAttribute('src'), /\/video\/job-a/);
-  assert.match(h.get('dlBtn').getAttribute('href'), /\/video\/job-a/);
   assert.match(h.get('jyBtn').getAttribute('href'), /\/api\/projects\/aa\/renders\/job-a\/jianying-draft/);
   assert.equal(h.document.querySelectorAll('#hist [data-render="job-a"]').length, 1);
   assert.equal(h.requests.filter(r => /jianying-draft/.test(r.url)).length, 0, 'Downloads must not run implicitly');
 });
 
-test('generation stage navigation is review-only and never resubmits', async t => {
+test('generation view keeps the decision before the render and shows no per-stage detail', async t => {
   const h = await setup(t);
-  await h.openProject(); await start(h);
+  await h.openProject();
+  assert(h.get('fmt'), '确认页要能直接选画面模板');
+  assert(h.get('voiceSeg'), '确认页要能直接选配音');
+  assert(h.get('bgm'), '确认页要能直接选背景音乐');
+  assert(h.get('sfxSeg'), '确认页要能直接选音效');
+  assert.equal(h.document.querySelectorAll('.vg-choices .tpl').length, 7, '模板要摆在页面上，不是弹窗里');
+  await start(h);
   h.jobStates.set('job-a', {project_id: 'aa', stage: 'tts', stage8: 2, progress: 10});
   await h.tick();
-  assert(h.document.querySelector('#vg-stages [data-stage="2"]').classList.contains('vg-current'));
-  h.click('#vg-stages [data-stage="1"]');
-  assert.equal(h.get('vg-stage-title').textContent, '读取素材');
-  assert.equal(h.get('vg-stage-state').textContent, '查看阶段 1 / 8');
-  assert.equal(h.document.querySelector('#vg-stages [data-stage="1"]').getAttribute('aria-pressed'), 'true');
-  h.click('#vg-stages [data-stage="3"]');
-  assert.equal(h.get('vg-stage-title').textContent, '分镜规划');
-  assert.equal(builds(h).length, 1, 'Review navigation must not trigger new builds');
+  assert.equal(h.get('vg-bigstage').textContent, '正在生成你的视频');
+  assert.equal(h.document.querySelectorAll('#vg-stages, .vg-stage, .vg-artifact, .vg-progress').length, 0,
+    '用户不需要逐阶段细节，只要一根总进度条');
 });
 
 test('build HTTP error restores submit button and creates no saved job', async t => {
