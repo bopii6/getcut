@@ -170,6 +170,8 @@ img,video{display:block}
   margin-top:6px;overflow:hidden}
 .tasks-panel .tk-bar i{display:block;height:100%;background:var(--acc);border-radius:2px}
 .tasks-panel .tk-empty{color:var(--ink-3);font-size:13px;padding:8px}
+.tasks-panel .tk-e{display:block;color:var(--err);font-size:11.5px;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── 首页 · 开放式刊头（不是盒子里的 hero） ── */
 .homehead{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
@@ -240,6 +242,11 @@ img,video{display:block}
 .pcard .del{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:8px;
   background:rgba(8,10,15,.6);color:#fff;display:grid;place-items:center;
   opacity:0;transition:opacity .2s,background .2s;backdrop-filter:blur(4px);z-index:4}
+.pcard .ren{position:absolute;right:44px;top:8px;width:30px;height:30px;border-radius:8px;
+  background:rgba(8,10,15,.6);color:#fff;display:grid;place-items:center;
+  opacity:0;transition:opacity .2s,background .2s;backdrop-filter:blur(4px);z-index:4}
+.pcard:hover .ren,.pcard .ren:focus-visible,.pcard .del:focus-visible{opacity:1}
+.pcard .ren:hover{background:var(--acc);color:var(--acc-ink)}
 .pcard:hover .del{opacity:1}
 .pcard .del:hover{background:var(--err)}
 
@@ -523,7 +530,10 @@ textarea:focus{outline:none;border-color:var(--acc)}
 }
 @media (max-width:640px){
   .mainwrap{padding:18px 14px 96px}
-  .top .in{padding:0 14px}
+  .top .in{padding:0 14px;gap:10px}
+  .tact{gap:8px;white-space:nowrap}
+  .tact .btn,.tasks-btn{white-space:nowrap}
+  .tact .who{display:none}
   .player-row{flex-direction:column}
   .media-frame,.theater{align-self:flex-start}
   .theater{width:100%}
@@ -567,7 +577,7 @@ body.vg-production .top{background:#14161be8}
 .vg-runlayout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:36px}.vg-runrail{border-right:1px solid var(--line);padding-right:20px}.vg-stage{width:100%;display:flex;gap:11px;align-items:center;text-align:left;padding:11px 9px;border-radius:6px;margin-bottom:6px;font-size:13px}.vg-stage i{font-style:normal;border:1px solid var(--line2);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;flex:none;font-size:11px}.vg-stage small{display:block;font-size:10px;color:var(--ink-2)}.vg-stage[aria-pressed=true]{background:#2c283e;color:#e0dafa}.vg-stage[aria-pressed=true] i{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}.vg-stage.vg-current{box-shadow:inset 3px 0 var(--acc)}.vg-stage.vg-reached i{border-color:#49695d;color:#9bceb8}.vg-runhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.vg-runhead h2{font-size:22px;font-weight:600}.vg-runhead small{color:var(--ink-2);font-size:12px}.vg-progress{margin:20px 0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px}.vg-progress p{font-size:12px;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}.vg-progress progress{width:100%;height:5px;accent-color:var(--acc);margin:10px 0}.vg-stills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.vg-stills button{min-width:0;text-align:left}.vg-stills img{width:100%;aspect-ratio:9/16;object-fit:contain;background:#101217;border-radius:6px}.vg-stills span{display:block;color:var(--ink-2);font-size:11px;margin-top:6px}.vg-error{color:#ffb2b2!important}.vg-export{display:grid;grid-template-columns:minmax(240px,360px) minmax(0,1fr);gap:36px}.vg-export-player{width:100%;max-height:65vh;aspect-ratio:9/16;background:#080a0f;border-radius:10px}.vg-history{display:flex;flex-direction:column;gap:8px;margin-top:18px}.vg-history button{text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:6px;color:var(--ink-2)}.vg-history [aria-pressed=true]{border-color:var(--acc);color:var(--ink)}
 @media(max-width:1020px){.vg-columns{gap:24px}.vg-dropwrap{gap:26px}.vg-footer{left:74px}.vg-footer-in{gap:12px;padding:14px 20px}.vg-footer-status{display:none}.vg-footer-actions{margin-left:auto}.vg-runlayout{grid-template-columns:190px minmax(0,1fr);gap:24px}}
 @media(max-width:760px){.vg-flow{padding:0 0 168px}.vg-columns,.vg-export{grid-template-columns:1fr;gap:24px}.vg-context h1{font-size:23px}.vg-steps{gap:7px;justify-content:space-between}.vg-steps button{font-size:11px;gap:4px}.vg-steps em{width:10px}.vg-steps i{width:21px;height:21px}.vg-footer-in{flex-wrap:wrap;gap:10px;padding:12px 14px}.vg-setting{flex:1;max-width:none;padding-right:10px}.vg-footer-actions{width:100%;justify-content:flex-end}.vg-runlayout{grid-template-columns:1fr}.vg-runrail{display:flex;overflow:auto;border:0;padding:0}.vg-stage{min-width:130px}.vg-runrail .vg-notes{display:none}.vg-assets-all{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-stills{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-dialog .tpls{grid-template-columns:repeat(3,minmax(0,1fr))}.vg-export-player{max-height:60vh}.vg-context{flex-wrap:wrap}.vg-import{padding:24px 18px}.vg-dropwrap{grid-template-columns:1fr}.vg-drop{padding:32px 18px}.vg-drop b{font-size:17px}}
-@media(max-width:480px){.vg-steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}.vg-steps em{display:none}.vg-footer-actions .btn{white-space:normal}.vg-dialog .tpls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.top h1{display:none}.tact #newBtn{display:none}.vg-steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}.vg-steps em{display:none}.vg-footer-actions .btn{white-space:normal}.vg-dialog .tpls{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -627,6 +637,19 @@ const mmss = (s) => { s = Math.max(0, Math.round(s || 0));
 const num = (n) => { const v = Number(String(n == null ? 0 : n).replace(/,/g, ""));
   return isFinite(v) ? v.toLocaleString("en-US") : "0"; };
 const vid = (id) => qs("/video/" + encodeURIComponent(id));
+// 失败提示说人话：只翻译服务端的原始报错（not found / ValueError / 浏览器网络文案），
+// 服务端已经是人话的提示（409 冲突、验证码、体积上限等）原样透传
+function humanError(msg){
+  const s = String(msg == null ? "" : msg).trim();
+  const hit = [
+    [/not found|不存在或路径不合法|素材包不存在|素材读取失败/i, "这个项目的素材包已经不在服务器上了（可能被清理），重新导入素材包就能再生成。"],
+    [/模板.*不存在|不存在，可选/i, "选的画面样式不存在了，去底栏「画面样式」里重新选一个。"],
+    [/Failed to fetch|NetworkError|网络|timeout|超时/i, "连不上服务器或请求超时，检查网络后再试一次。"],
+  ].find(([re]) => re.test(s));
+  if (hit) return hit[1];
+  return s || "生成失败，服务端没有给出更多信息。";
+}
+const shortError = (msg) => humanError(msg).replace(/。$/, "");
 const mediaUrl = (bundle, file) =>
   qs("/media/" + encodeURIComponent(bundle) + "/" + file.split("/").map(encodeURIComponent).join("/"));
 
@@ -1101,6 +1124,41 @@ function poster(r){
   return el;
 }
 let HOME_PS = [], HOME_RS = [], HOME_FILTER = "all";
+function renameProject(p){
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-labelledby="rnTitle">
+    <h3 id="rnTitle">重命名项目</h3><p>只改列表里显示的名字，不动素材包和已有的成片。</p>
+    <input type="text" id="rnName" maxlength="40" value="${esc(p.title || "")}" aria-label="项目名">
+    <div class="row"><button class="btn sm line" data-c>取消</button><button class="btn sm" data-k>保存</button></div></div>`;
+  const inp = m.querySelector("#rnName");
+  const close = () => m.remove();
+  const save = async () => {
+    const title = (inp.value || "").trim().slice(0, 40);
+    if (!title){ inp.setAttribute("aria-invalid","true"); inp.focus(); toast("项目名不能为空"); return; }
+    const btn = m.querySelector("[data-k]"); btn.disabled = true; btn.textContent = "保存中…";
+    try{
+      // 复用 mount：它按项目归属校验权限，且 title/bundle 一起写；不为改名单开接口
+      await api(`/api/projects/${p.project_id}/mount`, {method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({bundle: p.bundle ?? null, title})});
+      p.title = title;
+      const hit = HOME_PS.find(x => x.project_id === p.project_id); if (hit) hit.title = title;
+      if (CUR && CUR.project_id === p.project_id) CUR.title = title;
+      close(); drawGrid(); toast("已改名为「" + title + "」");
+    }catch(err){
+      btn.disabled = false; btn.textContent = "保存";
+      toast("改名失败：" + humanError(err.message));
+    }
+  };
+  m.querySelector("[data-c]").onclick = close;
+  m.querySelector("[data-k]").onclick = save;
+  m.onclick = (e) => { if (e.target === m) close(); };
+  m.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+    if (e.key === "Enter"){ e.preventDefault(); save(); }
+  });
+  document.body.appendChild(m); inp.focus(); inp.select();
+}
 function drawGrid(){
   const g = $("pgrid"); if (!g) return;
   g.innerHTML = "";
@@ -1126,6 +1184,9 @@ function pcard(p){
   el.innerHTML = `<div class="cover">${status}${media}
       <span class="shade"></span><span class="ct">${esc(p.title)}</span></div>
     <div class="body"><div class="m">${p.assets_count ?? 0} 素材 · ${esc(p.created || "")}</div></div>
+    <button class="ren" data-ren aria-label="重命名项目"><svg width="13" height="13" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
     <button class="del" data-del aria-label="删除项目"><svg width="14" height="14" viewBox="0 0 24 24"
       fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
@@ -1138,6 +1199,7 @@ function pcard(p){
     el.querySelector(".cover").onclick = open;
   }
   el.querySelector(".body").onclick = open;
+  el.querySelector("[data-ren]").onclick = (e) => { e.stopPropagation(); renameProject(p); };
   el.querySelector("[data-del]").onclick = (e) => {
     e.stopPropagation();
     dialog("删除「" + p.title + "」", "项目与渲染记录会一起删除，成片文件保留在服务器 outputs/。", async () => {
@@ -1278,7 +1340,7 @@ function paintFlowImport(){
       <button class="vg-drop" id="vg-drop" ${busy ? "disabled" : ""}><span class="vg-zip" aria-hidden="true">ZIP</span><b>把素材包拖到这里</b><span>无需解压，文案与素材会一起读入</span><span class="vg-pick" aria-hidden="true">选择 ZIP 文件</span><small>支持约定格式的素材包，最大 512 MB · 需包含 content.json</small></button>
       <input type="file" accept=".zip" id="vg-zip" class="hide">
       <div class="vg-importer"><button class="btn line" id="vg-bundles" ${busy ? "disabled" : ""}>${CURB ? "更换素材包" : "选用服务器上已有的素材包"}</button>${CURB ? `<span class="vg-current">当前已选用 ${esc(CURB.name)}</span>` : ""}</div>
-      <p id="vg-upload-status" role="status">${FLOW.bundleError ? `<span class="vg-error">素材读取失败：${esc(FLOW.bundleError)}，可以重新选用素材。</span>` : busy ? "当前任务完成前不能更换素材。" : ""}</p>
+      <p id="vg-upload-status" role="status">${FLOW.bundleError ? `<span class="vg-error">${esc(humanError(FLOW.bundleError))}</span>` : busy ? "当前任务完成前不能更换素材。" : ""}</p>
     </section>
     <aside class="vg-dropnote"><h2>放进来之后，会发生什么？</h2><ol>
       <li><i aria-hidden="true">▤</i><div><b>先把内容摊开给你看</b><span>标题、口播文案与素材照片，都按原包内容展示，不做改写。</span></div></li>
@@ -1374,7 +1436,7 @@ function updateFlowJobView(force){
   $("vg-stage-title").textContent = STAGE8[selected-1];
   $("vg-stage-state").textContent = `查看阶段 ${selected} / 8`;
   const pct = Math.max(0,Math.min(100,Number(j.progress) || 0));
-  $("vg-progress").innerHTML = `<p>${j.stage === "queued" ? "排队中" : j.stage === "done" ? "后台已完成" : j.stage === "failed" ? "生成失败" : j.stage === "unknown" ? "任务记录不可用" : "后台阶段：" + esc(STAGE8[Math.max(0,idx-1)])} · ${j.stage === "queued" ? "等待开始" : "估算进度 " + pct + "%"}${j.elapsed != null ? " · 已用 " + mmss(j.elapsed) : ""}</p><progress max="100" value="${pct}" aria-label="估算生成进度"></progress><p>${esc(FLOW.pollError || j.detail || "正在连接任务状态…")}</p>${j.error ? `<p class="vg-error">${esc(String(j.error).slice(0,400))}</p>` : ''}<p>任务 ${esc(FLOW.jobId || "—")} <button class="ghost" id="vg-copy-job">复制</button></p>`;
+  $("vg-progress").innerHTML = `<p>${j.stage === "queued" ? "排队中" : j.stage === "done" ? "后台已完成" : j.stage === "failed" ? "生成失败" : j.stage === "unknown" ? "任务记录不可用" : "后台阶段：" + esc(STAGE8[Math.max(0,idx-1)])} · ${j.stage === "queued" ? "等待开始" : "估算进度 " + pct + "%"}${j.elapsed != null ? " · 已用 " + mmss(j.elapsed) : ""}</p><progress max="100" value="${pct}" aria-label="估算生成进度"></progress><p>${esc(FLOW.pollError || j.detail || "正在连接任务状态…")}</p>${j.error ? `<p class="vg-error" title="${esc(String(j.error).slice(0,300))}">${esc(humanError(j.error))}</p>` : ''}<p>任务 ${esc(FLOW.jobId || "—")} <button class="ghost" id="vg-copy-job">复制</button></p>`;
   $("vg-copy-job").onclick = () => { if (navigator.clipboard) navigator.clipboard.writeText(FLOW.jobId || "").then(() => toast("已复制"), () => toast("复制失败")); else toast("当前环境不支持复制"); };
   const stills = Array.isArray(j.stills) ? j.stills.filter(u => typeof u === "string" && u.startsWith("/still/")) : [];
   const key = JSON.stringify([selected, stills, j.stage === "done", terminal]);
@@ -1600,7 +1662,7 @@ async function startRender(b){
   } catch(e){
     if (!flowHere(epoch,pid)) return;
     if (e.auth) return showAuth();
-    toast("启动失败：" + e.message);
+    toast("启动失败：" + humanError(e.message));
     // A different browser may have submitted this project; restore its real job on conflict.
     if (e.data && /已有任务/.test(e.message)) renderProject();
   } finally { BUILD_PENDING.delete(pid); if (flowHere(epoch,pid)) paintFlowFooter(); }
@@ -1671,12 +1733,13 @@ async function refreshTasks(){
     if (!panel || panel.classList.contains("hide")) return;
     const rows = [...r.active, ...r.recent].map(i => {
       const running = i.stage !== "done" && i.stage !== "failed";
-      const stageTxt = i.stage === "done" ? "成片出炉" : (i.stage === "failed" ? "失败了" : (i.detail || ""));
-      const pct = running ? "估算 " + (i.progress || 0) + "%" : (i.stage === "done" ? "出炉" : "失败");
+      const stageTxt = i.stage === "done" ? "成片出炉" : (i.stage === "failed" ? "这一版没做成" : (i.detail || ""));
+      const pct = running ? "估算 " + (i.progress || 0) + "%" : (i.stage === "done" ? "出炉" : "去处理");
       return `<button class="tk" data-p="${esc(i.project_id || "")}" data-view="${i.stage === "done" ? "export" : "generate"}">
         <span class="tk-t"><b>${esc(i.title)}</b><small>${esc(stageTxt)}</small></span>
-        <span class="tk-p">${running ? (i.stage === "queued" ? "排队中" : pct) : pct}</span>
+        <span class="tk-p">${running ? (i.stage === "queued" ? (i.queued_pos ? "前面还有 " + i.queued_pos + " 个" : "排队中") : pct) : pct}</span>
         ${running && i.stage !== "queued" ? `<span class="tk-bar"><i style="width:${i.progress || 0}%"></i></span>` : ""}
+        ${i.stage === "failed" ? `<span class="tk-e">${esc(shortError(i.error))}</span>` : ""}
       </button>`;
     }).join("");
     panel.innerHTML = `<div class="tk-h">渲染任务 · 同时渲染 ${r.concurrency} 个</div>`

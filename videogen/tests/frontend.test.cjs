@@ -257,6 +257,27 @@ test('home lists one poster per project and shows how many versions exist', asyn
   assert.match(h.document.querySelector('.sec-h .n').textContent, /2 个项目 · 共 3 条成片/);
 });
 
+test('renaming a project saves through the ownership-checked mount endpoint', async t => {
+  const h = await setup(t);
+  h.respond('POST', '/api/projects/aa/mount', {ok: true});
+  await h.evaluate('renderHome()'); await h.flush();
+  assert(h.document.querySelector('.pcard [data-ren]'), 'Project cards must expose rename');
+  await h.click('.pcard [data-ren]');
+  const input = h.get('rnName');
+  assert(input, 'Rename dialog must offer a name field');
+  assert.equal(input.value, 'Project aa', 'Rename starts from the current title');
+  input.value = '  新名字  ';
+  await h.click('.modal .row [data-k]');
+  await h.flush();
+  const calls = h.requests.filter(r => r.url === '/api/projects/aa/mount');
+  assert.equal(calls.length, 1, 'Rename must hit the project-scoped endpoint exactly once');
+  assert.deepEqual(JSON.parse(calls[0].body), {bundle: 'bundle-a', title: '新名字'},
+    'Rename keeps the mounted bundle and trims the new title');
+  assert.equal(h.evaluate('HOME_PS[0].title'), '新名字');
+  assert.equal(h.document.querySelector('.pcard .ct').textContent, '新名字');
+  assert.equal(h.document.querySelectorAll('.modal').length, 0, 'Dialog closes after saving');
+});
+
 test('late poll response cannot paint another project or clear its active task', async t => {
   const h = await setup(t);
   await h.openProject(); await start(h);

@@ -45,7 +45,7 @@ async function createHarness({storage = {}} = {}) {
     configurable: true, get: selectValue.get,
     set(value) { for (const option of this.options) option.selected = option.value === String(value); }
   });
-  for (const name of ['play', 'pause', 'load', 'scrollIntoView']) {
+  for (const name of ['play', 'pause', 'load', 'scrollIntoView', 'select']) {
     if (!domWindow.HTMLElement.prototype[name]) Object.defineProperty(domWindow.HTMLElement.prototype, name, {
       configurable: true, value: name === 'play' ? () => Promise.resolve() : () => {}
     });
