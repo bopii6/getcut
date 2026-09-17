@@ -175,6 +175,14 @@ img,video{display:block}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── 首页 · 开放式刊头（不是盒子里的 hero） ── */
+/* 落地页：第一屏就是"拖进去" */
+.hero{text-align:center;padding:22px 0 30px}
+.hero h1{font-size:42px;font-weight:750;line-height:1.28;letter-spacing:-.01em;overflow-wrap:anywhere}
+.hero .sub{font-size:16.5px;color:var(--ink-2);margin-top:12px;line-height:1.7}
+.hero .vg-drop{max-width:720px;margin:28px auto 0;padding:52px 26px;border-color:#5b5390;background:linear-gradient(180deg,#1e2130,#1a1d27)}
+.hero .vg-drop:hover{border-color:var(--acc);background:linear-gradient(180deg,#242739,#1c1f2b)}
+.hero .hint{color:var(--ink-2);font-size:14px;margin-top:16px}
+@media(max-width:760px){.hero h1{font-size:29px}.hero .sub{font-size:15px}.hero .vg-drop{padding:34px 18px}}
 .homehead{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
   flex-wrap:wrap;padding:26px 28px;margin:6px 0 18px;border-radius:18px;
   background:var(--surface);border:1px solid var(--line)}
@@ -1093,7 +1101,7 @@ async function renderHome(){
   leaveFlow(); CUR = null;
   const epoch = viewEpoch;
   paintSwitcher(false);
-  document.title = "作品库 · videogen";
+  document.title = "videogen · 从一个压缩包，开始制作";
   $("main").innerHTML = SKELETON_HOME;
   let ps = [];
   try { ps = await api("/api/projects"); }
@@ -1113,39 +1121,27 @@ async function renderHome(){
     <button class="chip" data-f="done">已完成 ${ps.filter(x => (x.renders_count||0) > 0).length}</button>
     <button class="chip" data-f="todo">待制作 ${ps.filter(p => !(p.renders_count > 0)).length}</button>
   </div>` : "";
-  const empty = !ps.length ? `<div class="card firstcard">
-    <div class="fc-art"><i></i><i></i><i></i></div>
-    <b>第一条片子从这里开始</b>
-    <p class="fc-sub">三步，几分钟出一条能发的竖屏短片</p>
-    <ol>
-      <li><i>1</i><span><b>导入素材</b>上面拖入素材包 zip，自动建项目</span></li>
-      <li><i>2</i><span><b>选画面和声音</b>制作间里挑模板、配音音色</span></li>
-      <li><i>3</i><span><b>开始渲染</b>成片出炉，回到这个作品库</span></li>
-    </ol>
-  </div>` : "";
   $("main").innerHTML = `<div class="view">
-    <header class="homehead">
-      <div class="hh-l">
-        <h2>作品库</h2>
-        <p class="hh-sub">${ps.length ? `<b>${ps.length}</b> 个项目 · <b>${rs.length}</b> 条成片 · 导入素材就能开做下一条` : "导入素材，几分钟出一条能发的短片"}</p>
-      </div>
-    </header>
-    <button class="import" id="dropstrip" role="button" tabindex="0" aria-label="导入素材包 zip">
-      <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/></svg></span>
-      <span><b>导入素材包</b><span>拖入 zip（用 Agent 导出的那种），会自动建一个项目</span></span>
-      <span class="pick btn sm line">选择文件</span>
-    </button>
-    <input type="file" id="homeZip" accept=".zip" class="hide">
-    ${recent}
-    <section class="rail-sec">
-      <div class="sec-h"><h2>全部项目</h2>${chips}</div>
-      ${ps.length ? `<div class="grid" id="pgrid"></div>` : empty}
+    <section class="hero">
+      <h1>从一个压缩包，开始制作。</h1>
+      <p class="sub">导入素材，检查内容，看着它生成，最后下载。</p>
+      <button class="vg-drop" id="heroDrop" role="button" tabindex="0" aria-label="导入素材包 zip">
+        <span class="vg-zip" aria-hidden="true">ZIP</span>
+        <b>把素材包拖到这里</b>
+        <span>无需解压，文案与素材会一起读入</span>
+        <span class="vg-pick" aria-hidden="true">选择 ZIP 文件</span>
+        <small>支持约定格式的素材包，最大 512 MB · 需包含 content.json</small>
+      </button>
+      <input type="file" id="heroZip" accept=".zip" class="hide">
+      <p class="hint">放进来之后会先让你检查内容，点确认才开始生成——不会自动开始。</p>
     </section>
+    ${recent}
+    ${ps.length ? `<section class="rail-sec">
+      <div class="sec-h"><h2>全部项目</h2>${chips}</div>
+      <div class="grid" id="pgrid"></div>
+    </section>` : ""}
   </div>`;
-  wireImport($("dropstrip"), $("homeZip"), heroStart);
+  wireImport($("heroDrop"), $("heroZip"), heroStart);
   const pw = $("posters");
   if (pw) rs.slice(0, 12).forEach((r, i) => {
     const el = poster(r);
@@ -1277,18 +1273,24 @@ function wireImport(drop, input, onFile){
 async function heroStart(file){
   if (!file) return;
   const epoch = viewEpoch;
-  const strip = $("dropstrip"); if (strip && strip.disabled) return;
+  const strip = $("heroDrop"); if (strip && strip.disabled) return;
   if (strip) strip.disabled = true;
   try {
     const r = await api("/api/projects/create", {method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
     if (!r || !r.project_id) throw new Error("创建失败");
+    if (strip) { strip.disabled = true; const b = strip.querySelector("b"); if (b) b.textContent = "正在导入…"; }
     const up = await uploadZip(file);
     await api(`/api/projects/${r.project_id}/mount`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bundle:up.name,title:up.name})});
     if (epoch !== viewEpoch) return;
     CUR = {project_id:r.project_id,title:up.name,bundle:up.name,renders:[]};
     toast("已导入"); setHash("#/project/" + r.project_id); renderProject();
   } catch(e){ if (epoch === viewEpoch){ if (e.auth) showAuth(); else toast("导入失败：" + e.message); } }
-  finally { if (strip && strip.isConnected) strip.disabled = false; }
+  finally {
+    if (strip && strip.isConnected) {
+      strip.disabled = false;
+      const b = strip.querySelector("b"); if (b) b.textContent = "把素材包拖到这里";
+    }
+  }
 }
 async function uploadZip(file){
   toast("正在上传并解析…");
@@ -1353,11 +1355,11 @@ function setFlowView(view){
 function paintFlow(){
   if (!FLOW || !CUR) return;
   const view = FLOW.view, b = CURB;
-  const titles = {import:"从一个压缩包，开始制作。",confirm:"检查这条视频的内容",generate:"每一步，都能看到处理了什么",export:"成片已就绪，检查后导出"};
+  const titles = {import:"从一个压缩包，开始制作。",confirm:"检查这条视频的内容",generate:"每一步，都能看到处理了什么",export:"这一版做好了，拿走就行。"};
   const here = FLOW_STEPS.findIndex(x => x[0] === view);
   $("main").innerHTML = `<div class="view vg-flow">
     <nav class="vg-steps" aria-label="制作流程">${FLOW_STEPS.map(([v,label],i) => `${i ? '<em aria-hidden="true"></em>' : ''}<button data-flow="${v}" ${v === view ? 'aria-current="step"' : ''} class="${i < here ? "vg-done" : ""}" ${v === "confirm" && !b || v === "generate" && !FLOW.jobId || v === "export" && !flowRenders().length && (FLOW.status || {}).stage !== "done" ? 'disabled' : ''}><i aria-hidden="true">${i < here ? "✓" : i+1}</i>${label}</button>`).join("")}</nav>
-    <div class="vg-context"><div><h1>${titles[view]}</h1><p class="vg-sub">${view === "confirm" ? "文案与素材已经展开。检查后，再决定怎么生成。" : view === "generate" ? "后台继续制作；点击左侧阶段回看，不会改变任务执行。" : view === "export" ? "仅展示本项目的真实成片，历史版本不会被覆盖。" : "导入素材，检查内容，看着它生成，最后下载。"}</p></div></div>
+    <div class="vg-context"><div><h1>${titles[view]}</h1><p class="vg-sub">${view === "confirm" ? "文案与素材已经展开。检查后，再决定怎么生成。" : view === "generate" ? "后台继续制作；点击左侧阶段回看，不会改变任务执行。" : view === "export" ? "先看一遍，没问题就下载 MP4；想再剪一遍，导出剪映草稿。" : "导入素材，检查内容，看着它生成，最后下载。"}</p></div></div>
     <div id="vg-view"></div><footer class="vg-footer"><div class="vg-footer-in" id="vg-footer"></div></footer>
   </div>`;
   document.querySelectorAll("[data-flow]").forEach(el => el.onclick = () => setFlowView(el.dataset.flow));
@@ -1372,8 +1374,14 @@ function paintFlowFooter(){
   const busy = flowBusy(), view = FLOW.view, status = FLOW.status || {};
   const tpl = TPLS.find(t => t.id === CFG.format);
   const voice = voiceLabel().split(" · ")[0];
-  const cfgLine = CURB ? `预计成片 ${mmss(CURB.estSeconds / (CFG.rate/100))} · 生成约 ${renderEstimate(CURB.estSeconds / (CFG.rate/100))}` : "导入素材包后先确认内容，不会自动开始";
-  el.innerHTML = `<span class="vg-footer-status">${busy ? "正在后台生成，页面可以关掉" : esc(cfgLine)}</span>
+  const est = CURB ? `预计成片 ${mmss(CURB.estSeconds / (CFG.rate/100))} · 生成约 ${renderEstimate(CURB.estSeconds / (CFG.rate/100))}` : "";
+  // 底栏那句话要跟着"这一步在干什么"走：成片都出来了就别再报渲染预估
+  const line = busy ? "正在后台生成，页面可以关掉"
+    : view === "export" ? "成片已就绪，可直接下载"
+    : view === "generate" ? (status.stage === "failed" ? "这一版没做成，可以返回确认重来" : status.stage === "done" ? "已生成完毕，去导出页取走" : (est || "正在准备"))
+    : view === "confirm" ? (est || "确认后开始生成")
+    : "导入素材包后先确认内容，不会自动开始";
+  el.innerHTML = `<span class="vg-footer-status">${esc(line)}</span>
     ${view === "confirm" && !busy ? `<button class="ghost" id="vg-adv">按推荐配置：${esc(tpl ? tpl.name : CFG.format)} · ${esc(voice)} · ${CFG.subtitles ? "带字幕" : "不带字幕"}（调整）</button>` : ""}
     <div class="vg-footer-actions">${view === "import" ? `<button class="btn" id="vg-next" ${!CURB ? "disabled" : ""}>继续确认内容</button>` : view === "confirm" ? `${flowRenders().length ? '<button class="btn line" id="vg-export">历史成片</button>' : ''}<button class="btn" id="go" ${busy || !CURB || !String(CURB.script || "").trim() ? "disabled" : ""}>${busy ? "后台制作中" : "确认内容并开始生成"}</button>${busy && FLOW.jobId ? '<button class="btn line" id="vg-running">查看进度</button>' : ''}` : `<button class="btn line" id="againBtn" ${!CURB ? "disabled" : ""}>返回确认${busy ? "" : "，再生成一版"}</button>${view === "generate" && (status.stage === "done" || flowRenders().length) ? '<button class="btn" id="vg-export">查看成片与导出</button>' : ''}`}</div>`;
   if ($("vg-adv")) $("vg-adv").onclick = () => openFlowConfig();
@@ -1511,9 +1519,14 @@ function paintFlowExport(){
     $("vg-refresh-export").onclick = refreshStageCard; return;
   }
   const r = rs.find(x => x.id === FLOW.exportId) || rs[0]; FLOW.exportId = r.id;
-  $("vg-view").innerHTML = `<div class="vg-export"><video class="vg-export-player" id="mainPlayer" controls playsinline src="${esc(vid(r.id))}"></video><section><div class="vg-sectionhead"><h2>下载与交付</h2></div><p class="vg-sub" id="stageMeta">${esc(r.ts || "已完成")}</p><div class="vg-import-actions"><a class="btn go" id="dlBtn" href="${esc(vid(r.id))}" download>下载 MP4</a><a class="btn line" id="jyBtn" href="${esc(qs('/api/projects/' + CUR.project_id + '/renders/' + r.id + '/jianying-draft'))}">导出剪映草稿</a></div><p class="vg-notes">想再剪一遍就导出剪映草稿（首次打包约 1–2 分钟）。</p><h3>历史版本 · ${rs.length}</h3><div class="vg-history" id="hist">${rs.map((x,i) => `<button data-render="${esc(x.id)}" aria-pressed="${x.id === r.id}">${i === 0 ? "最新版本" : "历史版本"} · ${esc(x.ts || x.id)}</button>`).join("")}</div><p class="vg-sub" id="vg-video-error" role="status"></p></section></div>`;
+  $("vg-view").innerHTML = `<div class="vg-export"><video class="vg-export-player" id="mainPlayer" controls playsinline src="${esc(vid(r.id))}"></video><section><div class="vg-sectionhead"><h2>下载与交付</h2></div><p class="vg-sub" id="stageMeta">${esc(r.ts || "已完成")}<span id="vgSpecs"></span></p><div class="vg-import-actions"><a class="btn go" id="dlBtn" href="${esc(vid(r.id))}" download>下载 MP4</a><a class="btn line" id="jyBtn" href="${esc(qs('/api/projects/' + CUR.project_id + '/renders/' + r.id + '/jianying-draft'))}">导出剪映草稿</a></div><p class="vg-notes">想再剪一遍就导出剪映草稿（首次打包约 1–2 分钟）。</p><h3>历史版本 · ${rs.length}</h3><div class="vg-history" id="hist">${rs.map((x,i) => `<button data-render="${esc(x.id)}" aria-pressed="${x.id === r.id}">${i === 0 ? "最新版本" : "历史版本"} · ${esc(x.ts || x.id)}</button>`).join("")}</div><p class="vg-sub" id="vg-video-error" role="status"></p></section></div>`;
   $("hist").querySelectorAll("[data-render]").forEach(el => el.onclick = () => { FLOW.exportId = el.dataset.render; paintFlowExport(); });
   $("mainPlayer").onerror = () => { $("vg-video-error").textContent = "成片文件暂不可播放；可能已被清理或任务记录已过期。历史记录仍保留。"; };
+  const vp = $("mainPlayer");
+  vp.addEventListener("loadedmetadata", () => {
+    const sp = $("vgSpecs");
+    if (sp && vp.videoWidth) sp.textContent = ` · ${vp.videoWidth} × ${vp.videoHeight} · ${mmss(vp.duration)}`;
+  }, {once:true});
 }
 async function refreshStageCard(){
   const epoch = viewEpoch, pid = CUR && CUR.project_id, jid = job;
