@@ -278,6 +278,34 @@ test('renaming a project saves through the ownership-checked mount endpoint', as
   assert.equal(h.document.querySelectorAll('.modal').length, 0, 'Dialog closes after saving');
 });
 
+test('forgot-password asks for a code and submits the reset payload', async t => {
+  const h = await setup(t);
+  h.respond('GET', '/api/auth/status', {locked: true, smtp: false, dev_email: true, token_auth: false});
+  h.respond('POST', '/api/auth/reset-code', {ok: true, message: '（本机开发模式）验证码：123456'});
+  h.respond('POST', '/api/auth/reset', {email: 'someone@example.invalid'});
+  await h.evaluate('showAuth()'); await h.flush();
+  await h.click('.atabs button[data-m="login"]');
+  assert(h.get('liForgot'), 'Login form must offer 忘记密码');
+  await h.click('#liForgot');
+  const email = h.get('rsEmail');
+  assert(email && h.get('rsCode') && h.get('rsPass') && h.get('rsPass2'), 'Reset form must expose all fields');
+  email.value = 'someone@example.invalid';
+  await h.click('#rsSend');
+  await h.flush();
+  const sends = h.requests.filter(r => r.url === '/api/auth/reset-code');
+  assert.equal(sends.length, 1, 'Reset code must not be requested twice');
+  assert.deepEqual(JSON.parse(sends[0].body), {email: 'someone@example.invalid'});
+  h.get('rsCode').value = '123456';
+  h.get('rsPass').value = 'brand-new-pass';
+  h.get('rsPass2').value = 'brand-new-pass';
+  await h.click('#rsGo');
+  await h.flush();
+  const resets = h.requests.filter(r => r.url === '/api/auth/reset');
+  assert.equal(resets.length, 1, 'Reset must be submitted exactly once');
+  assert.deepEqual(JSON.parse(resets[0].body),
+    {email: 'someone@example.invalid', code: '123456', password: 'brand-new-pass', remember: true});
+});
+
 test('late poll response cannot paint another project or clear its active task', async t => {
   const h = await setup(t);
   await h.openProject(); await start(h);

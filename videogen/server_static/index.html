@@ -626,7 +626,9 @@ async function api(u, o) {
   const r = await fetch(u, o);
   let d = null;
   try { d = await r.json(); } catch (e) { d = {}; }
-  if (r.status === 401) { const err = new Error("需要访问令牌"); err.auth = true; throw err; }
+  // 401 一律带 auth 标记（调用方据此回登录页），但提示优先用服务端的人话：
+  // 登录密码错也是 401，不能都显示"需要访问令牌"
+  if (r.status === 401) { const err = new Error((d && d.error) || "需要访问令牌"); err.auth = true; err.data = d; throw err; }
   if (!r.ok) { const err = new Error((d && d.error) || ("HTTP " + r.status)); err.data = d; throw err; }
   return d;
 }
@@ -808,7 +810,7 @@ function preview(url){
 /* ================= 账号（邮箱注册 + 密码登录） ================= */
 let ME = null;            // 当前登录用户 {email}；null = 未登录
 let AUTHST = { smtp: false, dev_email: false };
-let AUTHMODE = "register";               // "register" | "login"
+let AUTHMODE = "register";               // "register" | "login" | "reset"
 let codeTimer = null;
 
 async function showAuth(){
@@ -821,20 +823,20 @@ function renderAuth(mode){
   if (mode) AUTHMODE = mode;
   paintNav(""); paintSwitcher(false);
   if (!AUTHMODE && (AUTHST.locked)) AUTHMODE = "login";
-  const reg = AUTHMODE === "register";
+  const reg = AUTHMODE === "register", rst = AUTHMODE === "reset";
   const canRegister = AUTHST.smtp || AUTHST.dev_email;
   stopPoll();
   clearInterval(codeTimer);
-  document.title = (reg ? "注册" : "登录") + " · videogen";
+  document.title = (reg ? "注册" : rst ? "重设密码" : "登录") + " · videogen";
   $("newBtn").classList.add("hide");
   $("main").innerHTML = `<div class="view"><div class="auth"><div class="card">
     <div class="aw"><span class="mark">V</span></div>
-    <h1>${reg ? "注册 videogen" : "欢迎回来"}</h1>
-    <p class="sub">${reg ? "把一篇文案变成能发的竖屏短片" : "登录后继续做你的片子"}</p>
-    <div class="atabs">
+    <h1>${reg ? "注册 videogen" : rst ? "重设密码" : "欢迎回来"}</h1>
+    <p class="sub">${reg ? "把一篇文案变成能发的竖屏短片" : rst ? "邮箱验证码验证是你本人，然后设个新密码" : "登录后继续做你的片子"}</p>
+    ${rst ? "" : `<div class="atabs">
       <button class="${reg ? "on" : ""}" data-m="register">注册</button>
       <button class="${reg ? "" : "on"}" data-m="login">登录</button>
-    </div>
+    </div>`}
     <div class="aerr" id="aerr"></div>
     <div id="regBox" class="${reg ? "" : "hide"}">
       ${canRegister ? `
@@ -851,24 +853,44 @@ function renderAuth(mode){
       : `<p class="sub" style="margin-bottom:0">注册功能需要先在服务器配置发信邮箱（SMTP）。<br>配置好之后，这里就是「输邮箱 → 收验证码 → 设密码」。</p>
          <button class="btn line" id="auToLogin" style="width:100%;margin-top:14px">我有账号，去登录</button>`}
     </div>
-    <div id="loginBox" class="${reg ? "hide" : ""}">
+    <div id="loginBox" class="${reg || rst ? "hide" : ""}">
       <div class="fld"><label for="liEmail">邮箱</label>
         <input id="liEmail" type="email" placeholder="you@example.com" autocomplete="username"></div>
       <div class="fld"><label for="liPass">密码</label>
         <input id="liPass" type="password" placeholder="密码" autocomplete="current-password"></div>
       <label class="remember"><input type="checkbox" id="liRemember" checked> 记住我，30 天内免登录</label>
       <button class="btn" id="liGo">登录</button>
+      <p class="sub" style="margin:12px 0 0"><button class="ghost" id="liForgot">忘记密码？</button></p>
     </div>
-    <p class="sub" style="margin:14px 0 0;font-size:12px">${AUTHST.dev_email && reg && canRegister
+    <div id="resetBox" class="${rst ? "" : "hide"}">
+      ${canRegister ? `
+      <div class="fld"><label for="rsEmail">注册邮箱</label>
+        <div class="row2"><input id="rsEmail" type="email" placeholder="you@example.com" autocomplete="username">
+        <button class="btn sm line" id="rsSend">获取验证码</button></div></div>
+      <div class="fld"><label for="rsCode">验证码</label>
+        <input id="rsCode" type="text" placeholder="6 位数字" maxlength="6" inputmode="numeric"></div>
+      <div class="fld"><label for="rsPass">新密码</label>
+        <input id="rsPass" type="password" placeholder="至少 8 位" autocomplete="new-password"></div>
+      <div class="fld"><label for="rsPass2">确认新密码</label>
+        <input id="rsPass2" type="password" autocomplete="new-password"></div>
+      <button class="btn" id="rsGo">重设密码并进入</button>
+      <p class="sub" style="margin:12px 0 0"><button class="ghost" id="rsBack">返回登录</button></p>`
+      : `<p class="sub" style="margin-bottom:0">重设密码需要服务器配置发信邮箱（SMTP），否则收不到验证码。<br>请联系管理员。</p>
+         <button class="btn line" id="rsBack2" style="width:100%;margin-top:14px">返回登录</button>`}
+    </div>
+    <p class="sub" style="margin:14px 0 0;font-size:12px">${AUTHST.dev_email && canRegister && (reg || rst)
       ? "（本机开发模式：验证码会直接显示在提示里）" : ""}</p>
   </div></div></div>`;
   // tab 切换
   document.querySelectorAll(".atabs button").forEach(b => b.onclick = () => renderAuth(b.dataset.m));
   const toLogin = $("auToLogin");
   if (toLogin) toLogin.onclick = () => renderAuth("login");
+  const forgot = $("liForgot");
+  if (forgot) forgot.onclick = () => renderAuth("reset");
+  ["rsBack", "rsBack2"].forEach(id => { const b = $(id); if (b) b.onclick = () => renderAuth("login"); });
   // 注册
   const send = $("auSend");
-  if (send) send.onclick = sendCode;
+  if (send) send.onclick = () => sendCode("auEmail", "auSend");
   const go = $("auGo");
   if (go){
     go.onclick = submitRegister;
@@ -876,6 +898,17 @@ function renderAuth(mode){
       const el = $(id); if (el) el.onkeydown = (e) => { if (e.key === "Enter") go.click(); };
     });
     $("auEmail").focus();
+  }
+  // 重设密码
+  const rsSend = $("rsSend");
+  if (rsSend) rsSend.onclick = () => sendCode("rsEmail", "rsSend", "/api/auth/reset-code");
+  const rsGo = $("rsGo");
+  if (rsGo){
+    rsGo.onclick = submitReset;
+    ["rsCode", "rsPass", "rsPass2"].forEach(id => {
+      const el = $(id); if (el) el.onkeydown = (e) => { if (e.key === "Enter") rsGo.click(); };
+    });
+    $("rsEmail").focus();
   }
   // 登录
   const li = $("liGo");
@@ -886,17 +919,17 @@ function renderAuth(mode){
   }
 }
 let lastSentAt = 0;
-async function sendCode(){
-  const email = $("auEmail").value.trim();
+async function sendCode(emailId = "auEmail", buttonId = "auSend", endpoint = "/api/auth/send-code"){
+  const email = $(emailId).value.trim();
   const err = (m) => { const el = $("aerr"); el.style.display = "block"; el.textContent = m; };
   const ok = (m) => { const el = $("aerr"); el.style.display = "block"; el.style.color = "var(--ok)";
     el.style.background = "var(--ok-soft)"; el.textContent = m; };
   const reset = () => { const el = $("aerr"); el.style.color = ""; el.style.background = ""; };
   if (!email) return err("请先输入邮箱");
-  const btn = $("auSend");
+  const btn = $(buttonId);
   btn.disabled = true;
   try {
-    const r = await api("/api/auth/send-code", { method: "POST",
+    const r = await api(endpoint, { method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ email }) });
     reset(); ok(r.message || "验证码已发送");
@@ -938,6 +971,33 @@ async function submitRegister(){
   } catch (e) {
     btn.disabled = false; btn.textContent = "注册并进入";
     err(e.message || "注册失败");
+  }
+}
+async function submitReset(){
+  const err = (m) => { const el = $("aerr"); el.style.display = "block";
+    el.style.color = ""; el.style.background = ""; el.textContent = m; };
+  const email = $("rsEmail").value.trim();
+  const code = $("rsCode").value.trim();
+  const pass = $("rsPass").value;
+  if (!email) return err("请输入注册时用的邮箱");
+  if (!/^\d{6}$/.test(code)) return err("请输入 6 位验证码");
+  if (pass.length < 8) return err("密码至少 8 位");
+  if (pass !== $("rsPass2").value) return err("两次输入的密码不一样");
+  const btn = $("rsGo");
+  btn.disabled = true; btn.textContent = "重设中…";
+  try {
+    const r = await api("/api/auth/reset", { method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ email, code, password: pass, remember: true }) });
+    ME = { email: r.email };
+    $("newBtn").classList.remove("hide");
+    paintAccount();
+    await loadTemplates();
+    toast("密码已重设，下次用新密码登录");
+    route(true);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "重设密码并进入";
+    err(humanError(e.message) || "重设失败");
   }
 }
 async function submitLogin(){
@@ -1542,7 +1602,8 @@ function openBundleModal(){
   api("/api/bundles").then(list => {
     if (!flowHere(epoch,pid) || !m.isConnected) return;
     const box = $("bmList");
-    box.innerHTML = list.length ? list.map(x => `<button data-b="${esc(x.name)}"><span>${esc(x.name)}</span><span class="m">${x.assets} 素材 · ${esc(x.updated)}</span></button>`).join("") : "服务器上还没有素材包";
+    box.innerHTML = list.length ? list.map(x => `<button data-b="${esc(x.name)}"><span>${esc(x.name)}</span><span class="m">${x.assets} 素材 · ${esc(x.updated)}</span></button>`).join("")
+      : `<p class="vg-notes" style="margin:0;border:0;padding:0">你还没有可用的素材包：上面「上传 zip 文件」导入一个，或在作品库拖入 zip 也会自动建包。</p>`;
     box.querySelectorAll("[data-b]").forEach(el => el.onclick = async () => { if (busy) return; busy = true; try { await mount(el.dataset.b,el.dataset.b); } catch(err){ if (m.isConnected) $("bmStatus").textContent = "挂载失败：" + err.message; } finally { busy = false; } });
   }).catch(() => { if (m.isConnected) $("bmList").textContent = "素材列表读取失败，请关闭后重试"; });
 }

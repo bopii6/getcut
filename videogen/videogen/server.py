@@ -54,6 +54,19 @@ _RENDER_LOCK = threading.Lock()  # 兼容保留（不再使用）
 _RENDER_QUEUE: "queue.Queue[str]" = queue.Queue()
 _RENDER_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_CONCURRENCY", "1")))
 _QUEUE_HEAD: list = []   # 排队中的 job_id（FIFO 顺序）
+
+# 正在干活（非排队/非终态）的阶段：算排队位置时要把它们算在"前面"
+_RUNNING_STAGES = ("tts", "plan", "props", "render", "audio", "mux", "verify")
+
+
+def _queue_ahead(job_id: str) -> int:
+    """排在 job_id 前面的任务数 = 排队在我之前的 + 正在渲染的。"""
+    try:
+        waiting = _QUEUE_HEAD.index(job_id)
+    except ValueError:
+        waiting = 0
+    running = sum(1 for j in JOBS.values() if j.get("stage") in _RUNNING_STAGES)
+    return waiting + running
 _PENDING: dict = {}      # job_id -> body（入队暂存，开跑时取出）
 
 
@@ -66,7 +79,7 @@ _PENDING: dict = {}      # job_id -> body（入队暂存，开跑时取出）
 SESSION_COOKIE = "vg_session"
 _PUBLIC_PATHS = {"/", "/index.html", "/healthz",
                  "/api/auth/status", "/api/auth/login", "/api/auth/register",
-                 "/api/auth/send-code"}
+                 "/api/auth/send-code", "/api/auth/reset-code", "/api/auth/reset"}
 
 
 def _is_public(path: str) -> bool:
@@ -95,6 +108,50 @@ def _is_adminish(request: Request) -> bool:
     if email and auth.is_admin(email):
         return True
     return not email and _token_ok(request)
+
+
+BUNDLES_META = WORKSPACES / "bundles.json"   # 素材包归属：{"bundles": {名字: {owner, created}}}
+
+
+def _bundles_meta() -> dict:
+    if BUNDLES_META.is_file():
+        try:
+            return json.loads(BUNDLES_META.read_text(encoding="utf-8")).get("bundles", {})
+        except Exception:  # noqa: BLE001 - 元数据坏了不该让素材包整体不可用
+            return {}
+    return {}
+
+
+def _bundles_meta_save(meta: dict) -> None:
+    try:
+        BUNDLES_META.write_text(json.dumps({"bundles": meta}, ensure_ascii=False, indent=1),
+                                encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _bundle_owner(name: str) -> str | None:
+    return (_bundles_meta().get(name) or {}).get("owner") or None
+
+
+def _bundle_visible(name: str, request: Request) -> bool:
+    """素材包也按归属隔离：自己的、自己项目正在用的、或管理员。
+
+    本次改动之前上传的素材包没有归属记录（无主），只对管理员可见；
+    但如果它已经被某个自己可见的项目挂上（老项目），仍然放行，避免历史项目打不开。
+    """
+    if _is_adminish(request):
+        return True
+    if not AUTH_TOKEN and not auth.has_users():
+        return True          # 开放模式（本机自用）
+    email = _session_email(request)
+    if not email:
+        return False
+    owner = _bundle_owner(name)
+    if owner:
+        return owner == email
+    return any(p.get("bundle") == name and p.get("owner") == email
+               for p in _reg()["projects"])
 
 
 def _project_visible(p: dict, request: Request) -> bool:
@@ -161,6 +218,32 @@ def auth_register(body: dict, request: Request, response: Response):
     _set_session_cookie(response, request, user["email"],
                         bool(body.get("remember", True)))
     return user
+
+
+@app.post("/api/auth/reset-code")
+def auth_reset_code(body: dict):
+    """忘记密码第一步：给已注册邮箱发验证码（邮箱没注册就直接说清楚）。"""
+    email = body.get("email", "")
+    if not auth.user_exists(email):
+        return JSONResponse({"error": "这个邮箱还没注册过，先注册吧"}, status_code=400)
+    ok, msg = auth.issue_code(email, purpose="重设密码")
+    if not ok:
+        return JSONResponse({"error": msg}, status_code=400)
+    return {"ok": True, "message": msg}
+
+
+@app.post("/api/auth/reset")
+def auth_reset(body: dict, request: Request, response: Response):
+    """忘记密码第二步：验证码 + 新密码，成功后直接登录。"""
+    email = (body.get("email") or "").strip().lower()
+    if not auth.check_code(email, body.get("code", "")):
+        return JSONResponse({"error": "验证码不对或已过期"}, status_code=400)
+    try:
+        auth.set_password(email, body.get("password", ""))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    _set_session_cookie(response, request, email, bool(body.get("remember", True)))
+    return {"email": email}
 
 
 @app.post("/api/auth/login")
@@ -314,8 +397,8 @@ def font(name: str):
 
 
 @app.get("/api/bundles")
-def bundles():
-    return _find_bundles()
+def bundles(request: Request):
+    return [b for b in _find_bundles() if _bundle_visible(b["name"], request)]
 
 
 @app.get("/api/templates")
@@ -471,9 +554,13 @@ def mount_bundle(pid: str, body: dict, request: Request):
         target = next((p for p in reg["projects"] if p["project_id"] == pid), None)
         if not target or not _project_visible(target, request):
             return JSONResponse({"error": "项目不存在"}, status_code=404)
+        new_bundle = body.get("bundle")
+        # 只在"换包"时校验归属：改名也走这个接口，且素材包可能已被清理，不能误伤
+        if new_bundle and new_bundle != target.get("bundle") and not _bundle_visible(new_bundle, request):
+            return JSONResponse({"error": "素材包不存在"}, status_code=404)
         for p in reg["projects"]:
             if p["project_id"] == pid:
-                p["bundle"] = body.get("bundle")
+                p["bundle"] = new_bundle
                 p["title"] = body.get("title") or p["title"]
         _reg_save(reg)
         return {"ok": True}
@@ -494,7 +581,7 @@ def _safe_extract(zf: zipfile.ZipFile, dest: Path) -> None:
 
 
 @app.post("/api/upload")
-async def upload(file: UploadFile):
+async def upload(file: UploadFile, request: Request):
     name = Path(file.filename or "bundle.zip").stem or f"bundle-{int(time.time())}"
     data = await file.read()
     if len(data) > MAX_UPLOAD_BYTES:
@@ -520,13 +607,18 @@ async def upload(file: UploadFile):
         import shutil as _sh
         _sh.rmtree(dest, ignore_errors=True)
         return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
+    meta = _bundles_meta()
+    meta[dest.name] = {"owner": _session_email(request), "created": time.strftime("%Y/%m/%d %H:%M")}
+    _bundles_meta_save(meta)
     return {"name": dest.name}
 
 
 @app.get("/api/bundle/{name}")
-def bundle_detail(name: str):
+def bundle_detail(name: str, request: Request):
     d = (WORKSPACES / name).resolve()
     if not d.is_dir() or WORKSPACES.resolve() not in d.parents:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    if not _bundle_visible(name, request):
         return JSONResponse({"error": "not found"}, status_code=404)
     content = Content.load(d / "content.json")
     assets = []
@@ -557,10 +649,12 @@ def bundle_detail(name: str):
 
 
 @app.get("/media/{name}/{path:path}")
-def media(name: str, path: str):
+def media(name: str, path: str, request: Request):
     d = (WORKSPACES / name).resolve()
     f = (d / path).resolve()
     if not f.is_file() or WORKSPACES.resolve() not in f.parents:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    if not _bundle_visible(name, request):
         return JSONResponse({"error": "not found"}, status_code=404)
     return FileResponse(f)
 
@@ -579,6 +673,8 @@ def start_build(body: dict, request: Request):
                            if p["project_id"] == body["project_id"]), None)
             if target and not _project_visible(target, request):
                 return JSONResponse({"error": "项目不存在"}, status_code=403)
+    if not _bundle_visible(body["bundle"], request):
+        return JSONResponse({"error": "素材包不存在"}, status_code=404)
     try:
         _resolve_bundle(body["bundle"])
         _resolve_bgm(body.get("bgm"))
@@ -593,7 +689,7 @@ def start_build(body: dict, request: Request):
                         {"error": "该项目已有任务在排队/渲染，等它完成再发起新的"},
                         status_code=409)
         job_id = uuid.uuid4().hex[:12]
-        ahead = len(_QUEUE_HEAD)
+        ahead = _queue_ahead(job_id)
         JOBS[job_id] = {"stage": "queued", "stage8": 1, "progress": 3, "error": None, "video": None,
                         "project_id": pid, "detail": ("排队中 · 前面还有 %d 个任务" % ahead) if ahead
                         else "已加入队列", "t0": time.time()}
@@ -641,11 +737,9 @@ def my_jobs(request: Request):
                     "progress": j.get("progress"), "detail": j.get("detail"),
                     "error": j.get("error"), "t0": j.get("t0")}
             if item["stage"] == "queued":
-                try:
-                    ahead = _QUEUE_HEAD.index(jid)
-                except ValueError:
-                    ahead = 0
+                ahead = _queue_ahead(jid)
                 item["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
+                item["queued_pos"] = ahead
             items.append(item)
     active = [i for i in items if i["stage"] not in ("done", "failed")]
     finished = sorted((i for i in items if i["stage"] in ("done", "failed")),
@@ -661,10 +755,7 @@ def job_status(job_id: str):
     out = dict(j)
     if out.get("stage") == "queued":
         with _LOCK:
-            try:
-                ahead = _QUEUE_HEAD.index(job_id)
-            except ValueError:
-                ahead = 0
+            ahead = _queue_ahead(job_id)
         out["queued_pos"] = ahead
         out["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
     t0 = out.get("t0")

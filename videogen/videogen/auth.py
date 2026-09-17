@@ -47,7 +47,7 @@ def smtp_ready() -> bool:
                 and config.EMAIL_SMTP_PASS)
 
 
-def issue_code(email: str) -> tuple[bool, str]:
+def issue_code(email: str, purpose: str = "注册") -> tuple[bool, str]:
     """生成并发送验证码。返回 (是否成功, 给用户看的提示)。"""
     email = _norm_email(email)
     if not EMAIL_RE.match(email):
@@ -61,7 +61,7 @@ def issue_code(email: str) -> tuple[bool, str]:
                      "attempts": 0, "sent_at": time.time()}
     if smtp_ready():
         try:
-            _smtp_send(email, code)
+            _smtp_send(email, code, purpose)
             return True, "验证码已发送，请查收邮箱（注意垃圾箱）"
         except Exception as e:  # noqa: BLE001 - 发信失败要给用户明确反馈
             _codes.pop(email, None)
@@ -89,14 +89,14 @@ def check_code(email: str, code: str) -> bool:
     return True
 
 
-def _smtp_send(to: str, code: str) -> None:
+def _smtp_send(to: str, code: str, purpose: str = "注册") -> None:
     host = config.EMAIL_SMTP_HOST
     port = int(config.EMAIL_SMTP_PORT or "465")
     user, pwd = config.EMAIL_SMTP_USER, config.EMAIL_SMTP_PASS
     msg = MIMEText(
-        f"你的 videogen 注册验证码是 {code}，{CODE_TTL // 60} 分钟内有效。\n\n"
+        f"你的 videogen {purpose}验证码是 {code}，{CODE_TTL // 60} 分钟内有效。\n\n"
         "如果这不是你本人的操作，请忽略本邮件。", "plain", "utf-8")
-    msg["Subject"] = Header("videogen 验证码", "utf-8")
+    msg["Subject"] = Header(f"videogen {purpose}验证码", "utf-8")
     msg["From"] = config.EMAIL_FROM or user
     msg["To"] = to
     if port == "465" or str(port) == "465":
@@ -171,6 +171,30 @@ def create_user(email: str, password: str, role: str = "user") -> dict:
     })
     _save_users(users)
     return {"email": email, "role": role}
+
+
+def user_exists(email: str) -> bool:
+    email = _norm_email(email)
+    return any(u["email"] == email for u in _load_users())
+
+
+def set_password(email: str, password: str) -> None:
+    """重设密码（忘记密码走这里）。非法输入抛 ValueError（信息可直接给前端）。"""
+    email = _norm_email(email)
+    if not EMAIL_RE.match(email):
+        raise ValueError("邮箱格式不对")
+    if len(password or "") < MIN_PASSWORD_LEN:
+        raise ValueError(f"密码至少 {MIN_PASSWORD_LEN} 位")
+    users = _load_users()
+    user = next((u for u in users if u["email"] == email), None)
+    if user is None:
+        raise ValueError("这个邮箱还没注册过")
+    salt = secrets.token_bytes(16)
+    user["salt"] = salt.hex()
+    user["hash"] = _hash_password(password, salt).hex()
+    user["iters"] = PBKDF2_ITERS
+    user["pw_reset"] = time.strftime("%Y-%m-%d %H:%M")
+    _save_users(users)
 
 
 def verify_login(email: str, password: str) -> bool:
