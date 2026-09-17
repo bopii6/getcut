@@ -48,7 +48,7 @@ async function configure(h, {format, voice, rate, sfx, subtitles, sources, bgm, 
 
 test('production boot loads templates and projects entirely through mocked fetch', async t => {
   const h = await setup(t);
-  assert(h.get('heroNew'));
+  assert(h.get('topNew'), '顶栏必须常驻「新建项目」入口');
   assert.equal(h.evaluate('TPLS.length'), 7);
   assert(h.requests.some(r => r.url === '/api/templates'));
   assert(h.requests.some(r => r.url === '/api/projects'));

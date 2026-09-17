@@ -83,6 +83,7 @@ img,video{display:block}
 .top h1{font-size:15.5px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
 .top h1 b{font-family:"Display",var(--sans);font-weight:900;margin-right:2px}
+.top h1 a{color:inherit;text-decoration:none}.top h1 a:hover{color:var(--acc)}
 .switcher{display:flex;align-items:center;gap:12px;margin:0 auto;padding:7px 8px 7px 16px;
   border-radius:999px;background:var(--surface);border:1px solid var(--line2);font-size:13px;
   max-width:520px;min-width:0}
@@ -527,7 +528,6 @@ textarea:focus{outline:none;border-color:var(--acc)}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:1020px){
-  .side{width:64px;margin:10px 0 10px 10px}
   .nav a{justify-content:center}
   .pj{grid-template-columns:1fr}
   .railcol{position:static}
@@ -579,36 +579,28 @@ body.vg-production .top{background:#14161be8}
 .vg-dropnote li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:12px}
 .vg-dropnote i{font-style:normal;display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--line);border-radius:7px;background:var(--sunken);color:var(--acc);font-size:12px}
 .vg-dropnote b{display:block;font-size:13.5px;font-weight:600}.vg-dropnote span{font-size:12.5px;color:var(--ink-2)}
-.vg-dropnote>p{margin-top:18px;font-size:12px;color:var(--ink-2)}.vg-import-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;align-items:center}.vg-footer{position:fixed;bottom:0;left:90px;right:0;z-index:35;background:#1d2028;border-top:1px solid #3b414e;box-shadow:0 -12px 30px #14161b55}.vg-footer-in{max-width:1240px;margin:auto;padding:16px 28px;display:flex;align-items:center;gap:20px}.vg-setting{text-align:left;border-right:1px solid #3c424e;padding-right:20px;max-width:240px}.vg-setting small{display:block;font-size:11.5px;color:var(--ink-2)}.vg-setting b{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-setting:disabled{opacity:.6;cursor:default}.vg-footer-status{margin-left:auto;color:var(--ink-2);font-size:12.5px;max-width:260px;line-height:1.5}.vg-footer-actions{display:flex;gap:8px;flex-wrap:wrap}.vg-footer .btn{min-height:46px;padding:0 18px}
+.vg-dropnote>p{margin-top:18px;font-size:12px;color:var(--ink-2)}.vg-import-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;align-items:center}.vg-footer{position:fixed;bottom:0;left:0;right:0;z-index:35;background:#1d2028;border-top:1px solid #3b414e;box-shadow:0 -12px 30px #14161b55}.vg-footer-in{max-width:1240px;margin:auto;padding:16px 28px;display:flex;align-items:center;gap:20px}.vg-setting{text-align:left;border-right:1px solid #3c424e;padding-right:20px;max-width:240px}.vg-setting small{display:block;font-size:11.5px;color:var(--ink-2)}.vg-setting b{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-setting:disabled{opacity:.6;cursor:default}.vg-footer-status{margin-left:auto;color:var(--ink-2);font-size:12.5px;max-width:260px;line-height:1.5}.vg-footer-actions{display:flex;gap:8px;flex-wrap:wrap}.vg-footer .btn{min-height:46px;padding:0 18px}
 .vg-footer .btn.go{min-height:54px;padding:0 30px;font-size:16px;border-radius:11px}
 .vg-dialog{margin:auto;border:1px solid var(--line2);background:var(--surface);border-radius:13px;padding:0;width:780px;max-width:calc(100vw - 32px);max-height:88vh;box-shadow:0 22px 90px #0008}.vg-dialog::backdrop{background:#080b11bd;backdrop-filter:blur(5px)}.vg-dialog-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line)}.vg-dialog-head h2{font-size:17px}.vg-dialog-body{padding:23px 24px;max-height:65vh;overflow:auto}.vg-dialog-foot{padding:14px 24px;border-top:1px solid var(--line);text-align:right}.vg-dialog .panel{padding:0;border:0;background:none;box-shadow:none}.vg-dialog .tpls{grid-template-columns:repeat(4,minmax(0,1fr))}.vg-dialog .tpl .mock{max-height:210px}.vg-dialog .vg-fulltext{white-space:pre-wrap;line-height:2;overflow-wrap:anywhere}.vg-lightbox{width:100%;max-height:52vh;object-fit:contain;background:#101217}.vg-dialog select{max-width:100%}
 .vg-runlayout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:36px}.vg-runrail{border-right:1px solid var(--line);padding-right:20px}.vg-stage{width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:12px 10px;border-radius:7px;margin-bottom:7px;font-size:14.5px}.vg-stage i{font-style:normal;border:1px solid var(--line2);border-radius:50%;width:27px;height:27px;display:grid;place-items:center;flex:none;font-size:12.5px}.vg-stage small{display:block;font-size:10px;color:var(--ink-2)}.vg-stage[aria-pressed=true]{background:#2c283e;color:#e0dafa}.vg-stage[aria-pressed=true] i{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}.vg-stage.vg-current{box-shadow:inset 3px 0 var(--acc)}.vg-stage.vg-reached i{border-color:#49695d;color:#9bceb8}.vg-runhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.vg-runhead h2{font-size:25px;font-weight:700}.vg-runhead small{color:var(--ink-2);font-size:13.5px}.vg-progress{margin:20px 0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px}.vg-progress p{font-size:14px;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}.vg-progress progress{width:100%;height:12px;margin:14px 0;border:0;border-radius:7px;appearance:none;-webkit-appearance:none;background:var(--sunken)}
 .vg-progress progress::-webkit-progress-bar{background:var(--sunken);border-radius:7px}
 .vg-progress progress::-webkit-progress-value{background:var(--acc);border-radius:7px;transition:width .4s var(--ease)}
 .vg-progress progress::-moz-progress-bar{background:var(--acc);border-radius:7px}.vg-stills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.vg-stills button{min-width:0;text-align:left}.vg-stills img{width:100%;aspect-ratio:9/16;object-fit:contain;background:#101217;border-radius:6px}.vg-stills span{display:block;color:var(--ink-2);font-size:11px;margin-top:6px}.vg-error{color:#ffb2b2!important}.vg-export{display:grid;grid-template-columns:minmax(240px,360px) minmax(0,1fr);gap:36px}.vg-export-player{width:100%;max-height:65vh;aspect-ratio:9/16;background:#080a0f;border-radius:10px}.vg-history{display:flex;flex-direction:column;gap:8px;margin-top:18px}.vg-history button{text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:6px;color:var(--ink-2)}.vg-history [aria-pressed=true]{border-color:var(--acc);color:var(--ink)}
-@media(max-width:1020px){.vg-columns{gap:24px}.vg-dropwrap{gap:26px}.vg-footer{left:74px}.vg-footer-in{gap:12px;padding:14px 20px}.vg-footer-status{display:none}.vg-footer-actions{margin-left:auto}.vg-runlayout{grid-template-columns:190px minmax(0,1fr);gap:24px}}
-@media(max-width:760px){.vg-flow{padding:0 0 168px}.vg-columns,.vg-export{grid-template-columns:1fr;gap:24px}.vg-context h1{font-size:23px}.vg-steps{gap:7px;justify-content:space-between}.vg-steps button{font-size:12.5px;gap:5px}.vg-steps em{width:10px}.vg-steps i{width:24px;height:24px}.vg-footer-in{flex-wrap:wrap;gap:10px;padding:12px 14px}.vg-setting{flex:1;max-width:none;padding-right:10px}.vg-footer-actions{width:100%;justify-content:flex-end}.vg-runlayout{grid-template-columns:1fr}.vg-runrail{display:flex;overflow:auto;border:0;padding:0}.vg-stage{min-width:130px}.vg-runrail .vg-notes{display:none}.vg-assets-all{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-stills{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-dialog .tpls{grid-template-columns:repeat(3,minmax(0,1fr))}.vg-export-player{max-height:60vh}.vg-context{flex-wrap:wrap}.vg-import{padding:24px 18px}.vg-dropwrap{grid-template-columns:1fr}.vg-drop{padding:32px 18px}.vg-drop b{font-size:17px}}
+@media(max-width:1020px){.vg-columns{gap:24px}.vg-dropwrap{gap:26px}.vg-footer{left:0}.vg-footer-in{gap:12px;padding:14px 20px}.vg-footer-status{display:none}.vg-footer-actions{margin-left:auto}.vg-runlayout{grid-template-columns:190px minmax(0,1fr);gap:24px}}
+@media(max-width:760px){.vg-flow{padding:0 0 196px}.vg-columns,.vg-export{grid-template-columns:1fr;gap:24px}.vg-context h1{font-size:23px}.vg-steps{gap:7px;justify-content:space-between}.vg-steps button{font-size:12.5px;gap:5px}.vg-steps em{width:10px}.vg-steps i{width:24px;height:24px}.vg-footer-in{flex-wrap:wrap;gap:10px;padding:12px 14px}.vg-setting{flex:1;max-width:none;padding-right:10px}.vg-footer-actions{width:100%;justify-content:flex-end}.vg-runlayout{grid-template-columns:1fr}.vg-runrail{display:flex;overflow:auto;border:0;padding:0}.vg-stage{min-width:130px}.vg-runrail .vg-notes{display:none}.vg-assets-all{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-stills{grid-template-columns:repeat(2,minmax(0,1fr))}.vg-dialog .tpls{grid-template-columns:repeat(3,minmax(0,1fr))}.vg-export-player{max-height:60vh}.vg-context{flex-wrap:wrap}.vg-import{padding:24px 18px}.vg-dropwrap{grid-template-columns:1fr}.vg-drop{padding:32px 18px}.vg-drop b{font-size:17px}}
 @media(max-width:480px){.top h1{display:none}.vg-steps{display:grid;grid-template-columns:1fr 1fr;gap:12px}.vg-steps em{display:none}.vg-footer-actions .btn{white-space:normal}.vg-dialog .tpls{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
 <div class="shell">
-  <aside class="side">
-    <a class="brand" href="#/" id="brand" title="首页" aria-label="回到首页"><span class="mark">V</span></a>
-    <nav class="nav">
-      <a href="#new" id="navNew" title="新建项目">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        <span class="lb">新建项目</span></a>
-    </nav>
-    <div class="sp"></div>
-  </aside>
   <div class="maincol">
     <header class="top">
       <div class="in">
-        <h1><b>videogen</b> 视频工作台</h1>
+        <h1><a href="#/" id="brand" title="回到首页"><b>videogen</b> 视频工作台</a></h1>
         <div class="switcher hide" id="switcher"></div>
         <span class="sp"></span>
         <div class="tact">
+          <button class="btn sm line" id="topNew">＋ 新建项目</button>
           <span id="account" style="display:flex;align-items:center;gap:8px"></span>
           <button class="tasks-btn" id="tasksBtn" title="渲染任务">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="8" x2="18" y2="8"/><line x1="12" y1="8" x2="6" y2="8"/><line x1="18" y1="16" x2="12" y2="16"/><line x1="8" y1="16" x2="6" y2="16"/><rect x="2" y="4" width="20" height="16" rx="3"/></svg>
@@ -828,7 +820,7 @@ async function showAuth(){
 }
 function renderAuth(mode){
   if (mode) AUTHMODE = mode;
-  paintNav(""); paintSwitcher(false);
+  paintSwitcher(false);
   if (!AUTHMODE && (AUTHST.locked)) AUTHMODE = "login";
   const reg = AUTHMODE === "register", rst = AUTHMODE === "reset";
   const canRegister = AUTHST.smtp || AUTHST.dev_email;
@@ -1037,10 +1029,6 @@ function paintAccount(){
   };
 }
 
-function paintNav(page, title){
-  document.querySelectorAll(".nav a").forEach(a =>
-    a.classList.toggle("on", a.dataset.nav === page));
-}
 function paintSwitcher(show, title, sub){
   const sw = $("switcher"); if (!sw) return;
   if (!show){ sw.classList.add("hide"); return; }
@@ -1071,10 +1059,11 @@ async function route(force){
   CUR = null;
   renderHome();
 }
-$("navNew").onclick = (e) => { e.preventDefault(); newProject(); };
 function goHome(){ CUR = null; setHash("#/"); renderHome(); }
 window.addEventListener("hashchange", () => route());
 $("brand").onclick = (e) => { e.preventDefault(); goHome(); };
+
+$("topNew").onclick = newProject;
 
 async function newProject(){
   leaveFlow(); const epoch = viewEpoch;
@@ -1100,7 +1089,6 @@ function allRenders(projects){
 async function renderHome(){
   leaveFlow(); CUR = null;
   const epoch = viewEpoch;
-  paintNav("home");
   paintSwitcher(false);
   document.title = "作品库 · videogen";
   $("main").innerHTML = SKELETON_HOME;
@@ -1138,7 +1126,6 @@ async function renderHome(){
         <h2>作品库</h2>
         <p class="hh-sub">${ps.length ? `<b>${ps.length}</b> 个项目 · <b>${rs.length}</b> 条成片 · 导入素材就能开做下一条` : "导入素材，几分钟出一条能发的短片"}</p>
       </div>
-      <div class="hh-r"><button class="btn" id="heroNew">＋ 新建项目</button></div>
     </header>
     <button class="import" id="dropstrip" role="button" tabindex="0" aria-label="导入素材包 zip">
       <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -1156,7 +1143,6 @@ async function renderHome(){
     </section>
   </div>`;
   wireImport($("dropstrip"), $("homeZip"), heroStart);
-  $("heroNew").onclick = newProject;
   const pw = $("posters");
   if (pw) rs.slice(0, 12).forEach((r, i) => {
     const el = poster(r);
@@ -1325,7 +1311,6 @@ async function renderProject(requestedView){
   if (!CUR) return goHome();
   leaveFlow();
   const epoch = viewEpoch, project = CUR, pid = project.project_id;
-  paintNav("home");
   document.title = (project.title || "项目") + " · videogen";
   $("main").innerHTML = SKELETON_HOME;
   let bundle = null, bundleError = "", jobs = null, authError = false;
