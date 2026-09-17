@@ -21,29 +21,25 @@ async function start(h) {
   await h.evaluate('startRender(CURB)');
   await h.flush();
 }
-// Config is edited inside production dialogs; values persist in CFG across close/open.
+// 设置默认全自动：确认页上的「调整画面与声音」是唯一入口
 async function configure(h, {format, voice, rate, sfx, subtitles, sources, bgm, disclaimer}) {
-  if (format !== undefined) {
-    h.click('[data-setting="style"]');
-    h.click('#fmt [data-v="' + format + '"]');
-    h.evaluate('closeFlowDialog()');
+  const wanted = [format, voice, rate, sfx, subtitles, sources, bgm, disclaimer].some(v => v !== undefined);
+  if (!wanted) return;
+  await h.click('#vg-adv');
+  await h.flush(); // music select 的 onchange 在 /api/music 解析后才挂上
+  if (format !== undefined) h.click('#fmt [data-v="' + format + '"]');
+  if (voice !== undefined) h.click('#voiceSeg [data-v="' + voice + '"]');
+  if (rate !== undefined) h.click('#rateSeg [data-r="' + rate + '"]');
+  if (sfx !== undefined) h.click('#sfxSeg [data-v="' + sfx + '"]');
+  if (subtitles !== undefined) h.click('.swt[data-k="subtitles"]');
+  if (sources !== undefined) h.click('.swt[data-k="sources"]');
+  if (bgm !== undefined) { h.get('bgm').value = bgm; h.get('bgm').onchange(); }
+  if (disclaimer !== undefined) {
+    const el = h.get('disclaimer');
+    el.value = disclaimer;
+    el.oninput({target: el});
   }
-  if ([voice, rate, sfx, subtitles, sources, bgm, disclaimer].some(v => v !== undefined)) {
-    h.click('[data-setting="sound"]');
-    await h.flush(); // music select onchange is assigned after /api/music resolves
-    if (voice !== undefined) h.click('#voiceSeg [data-v="' + voice + '"]');
-    if (rate !== undefined) h.click('#rateSeg [data-r="' + rate + '"]');
-    if (sfx !== undefined) h.click('#sfxSeg [data-v="' + sfx + '"]');
-    if (subtitles !== undefined) h.click('.swt[data-k="subtitles"]');
-    if (sources !== undefined) h.click('.swt[data-k="sources"]');
-    if (bgm !== undefined) { h.get('bgm').value = bgm; h.get('bgm').onchange(); }
-    if (disclaimer !== undefined) {
-      const el = h.get('disclaimer');
-      el.value = disclaimer;
-      el.oninput({target: el});
-    }
-    h.evaluate('closeFlowDialog()');
-  }
+  h.evaluate('closeFlowDialog()');
 }
 
 test('production boot loads templates and projects entirely through mocked fetch', async t => {
@@ -88,10 +84,8 @@ test('all sound effect modes preserve production sfx boolean semantics', async t
 test('persisted configuration loads without reading real user storage', async t => {
   const h = await setup(t, {storage: {'vg.cfg': JSON.stringify({format: 'retro', voice: 'zh-CN-YunjianNeural', rate: 90})}});
   await h.openProject();
-  h.click('[data-setting="style"]');
+  await h.click('#vg-adv');
   assert(h.document.querySelector('#fmt [data-v="retro"]').classList.contains('on'));
-  h.evaluate('closeFlowDialog()');
-  h.click('[data-setting="sound"]');
   assert(h.document.querySelector('#voiceSeg [data-v="zh-CN-YunjianNeural"]').classList.contains('on'));
   assert(h.document.querySelector('#rateSeg [data-r="90"]').classList.contains('on'));
 });

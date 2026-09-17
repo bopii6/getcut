@@ -579,7 +579,10 @@ body.vg-production .top{background:#14161be8}
 .vg-dropnote li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:12px}
 .vg-dropnote i{font-style:normal;display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--line);border-radius:7px;background:var(--sunken);color:var(--acc);font-size:12px}
 .vg-dropnote b{display:block;font-size:13.5px;font-weight:600}.vg-dropnote span{font-size:12.5px;color:var(--ink-2)}
-.vg-dropnote>p{margin-top:18px;font-size:12px;color:var(--ink-2)}.vg-import-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;align-items:center}.vg-footer{position:fixed;bottom:0;left:0;right:0;z-index:35;background:#1d2028;border-top:1px solid #3b414e;box-shadow:0 -12px 30px #14161b55}.vg-footer-in{max-width:1240px;margin:auto;padding:16px 28px;display:flex;align-items:center;gap:20px}.vg-setting{text-align:left;border-right:1px solid #3c424e;padding-right:20px;max-width:240px}.vg-setting small{display:block;font-size:11.5px;color:var(--ink-2)}.vg-setting b{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-setting:disabled{opacity:.6;cursor:default}.vg-footer-status{margin-left:auto;color:var(--ink-2);font-size:12.5px;max-width:260px;line-height:1.5}.vg-footer-actions{display:flex;gap:8px;flex-wrap:wrap}.vg-footer .btn{min-height:46px;padding:0 18px}
+.vg-dropnote>p{margin-top:18px;font-size:12px;color:var(--ink-2)}.vg-import-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;align-items:center}
+.vg-footer{position:fixed;bottom:0;left:0;right:0;z-index:35;background:#1d2028;border-top:1px solid #3b414e;box-shadow:0 -12px 30px #14161b55}.vg-footer-in{max-width:1240px;margin:auto;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px}.vg-setting{text-align:left;border-right:1px solid #3c424e;padding-right:20px;max-width:240px}.vg-setting small{display:block;font-size:11.5px;color:var(--ink-2)}.vg-setting b{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-setting:disabled{opacity:.6;cursor:default}.vg-footer-status{color:var(--ink-2);font-size:13.5px;line-height:1.5}
+.vg-footer-in>#vg-adv{flex:none;color:var(--ink-2);font-size:13px;text-decoration:underline;text-underline-offset:4px;white-space:nowrap}
+.vg-footer-in>#vg-adv:hover{color:var(--acc)}.vg-footer-actions{display:flex;gap:8px;flex-wrap:wrap}.vg-footer .btn{min-height:46px;padding:0 18px}
 .vg-footer .btn.go{min-height:54px;padding:0 30px;font-size:16px;border-radius:11px}
 .vg-dialog{margin:auto;border:1px solid var(--line2);background:var(--surface);border-radius:13px;padding:0;width:780px;max-width:calc(100vw - 32px);max-height:88vh;box-shadow:0 22px 90px #0008}.vg-dialog::backdrop{background:#080b11bd;backdrop-filter:blur(5px)}.vg-dialog-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line)}.vg-dialog-head h2{font-size:17px}.vg-dialog-body{padding:23px 24px;max-height:65vh;overflow:auto}.vg-dialog-foot{padding:14px 24px;border-top:1px solid var(--line);text-align:right}.vg-dialog .panel{padding:0;border:0;background:none;box-shadow:none}.vg-dialog .tpls{grid-template-columns:repeat(4,minmax(0,1fr))}.vg-dialog .tpl .mock{max-height:210px}.vg-dialog .vg-fulltext{white-space:pre-wrap;line-height:2;overflow-wrap:anywhere}.vg-lightbox{width:100%;max-height:52vh;object-fit:contain;background:#101217}.vg-dialog select{max-width:100%}
 .vg-runlayout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:36px}.vg-runrail{border-right:1px solid var(--line);padding-right:20px}.vg-stage{width:100%;display:flex;gap:12px;align-items:center;text-align:left;padding:12px 10px;border-radius:7px;margin-bottom:7px;font-size:14.5px}.vg-stage i{font-style:normal;border:1px solid var(--line2);border-radius:50%;width:27px;height:27px;display:grid;place-items:center;flex:none;font-size:12.5px}.vg-stage small{display:block;font-size:10px;color:var(--ink-2)}.vg-stage[aria-pressed=true]{background:#2c283e;color:#e0dafa}.vg-stage[aria-pressed=true] i{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}.vg-stage.vg-current{box-shadow:inset 3px 0 var(--acc)}.vg-stage.vg-reached i{border-color:#49695d;color:#9bceb8}.vg-runhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.vg-runhead h2{font-size:25px;font-weight:700}.vg-runhead small{color:var(--ink-2);font-size:13.5px}.vg-progress{margin:20px 0;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px}.vg-progress p{font-size:14px;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}.vg-progress progress{width:100%;height:12px;margin:14px 0;border:0;border-radius:7px;appearance:none;-webkit-appearance:none;background:var(--sunken)}
@@ -1368,11 +1371,12 @@ function paintFlowFooter(){
   const el = $("vg-footer"); if (!el || !FLOW) return;
   const busy = flowBusy(), view = FLOW.view, status = FLOW.status || {};
   const tpl = TPLS.find(t => t.id === CFG.format);
-  el.innerHTML = `<button class="vg-setting" data-setting="style" aria-haspopup="dialog" ${busy ? "disabled" : ""}><small>画面样式</small><b>${esc(tpl ? tpl.name : CFG.format)} · 设置</b></button>
-    <button class="vg-setting" data-setting="sound" aria-haspopup="dialog" ${busy ? "disabled" : ""}><small>配音、字幕与更多设置</small><b>${esc(voiceLabel())} · ${(CFG.rate/100).toFixed(2)}× · 字幕${CFG.subtitles ? "开" : "关"}</b></button>
-    <span class="vg-footer-status">${busy ? "任务在后台进行；配置已锁定" : CURB ? "预计成片 " + mmss(CURB.estSeconds / (CFG.rate/100)) + " / 生成 " + renderEstimate(CURB.estSeconds / (CFG.rate/100)) : "导入后先确认内容，不会自动生成"}</span>
+  const voice = voiceLabel().split(" · ")[0];
+  const cfgLine = CURB ? `预计成片 ${mmss(CURB.estSeconds / (CFG.rate/100))} · 生成约 ${renderEstimate(CURB.estSeconds / (CFG.rate/100))}` : "导入素材包后先确认内容，不会自动开始";
+  el.innerHTML = `<span class="vg-footer-status">${busy ? "正在后台生成，页面可以关掉" : esc(cfgLine)}</span>
+    ${view === "confirm" && !busy ? `<button class="ghost" id="vg-adv">按推荐配置：${esc(tpl ? tpl.name : CFG.format)} · ${esc(voice)} · ${CFG.subtitles ? "带字幕" : "不带字幕"}（调整）</button>` : ""}
     <div class="vg-footer-actions">${view === "import" ? `<button class="btn" id="vg-next" ${!CURB ? "disabled" : ""}>继续确认内容</button>` : view === "confirm" ? `${flowRenders().length ? '<button class="btn line" id="vg-export">历史成片</button>' : ''}<button class="btn" id="go" ${busy || !CURB || !String(CURB.script || "").trim() ? "disabled" : ""}>${busy ? "后台制作中" : "确认内容并开始生成"}</button>${busy && FLOW.jobId ? '<button class="btn line" id="vg-running">查看进度</button>' : ''}` : `<button class="btn line" id="againBtn" ${!CURB ? "disabled" : ""}>返回确认${busy ? "" : "，再生成一版"}</button>${view === "generate" && (status.stage === "done" || flowRenders().length) ? '<button class="btn" id="vg-export">查看成片与导出</button>' : ''}`}</div>`;
-  el.querySelectorAll("[data-setting]").forEach(x => x.onclick = () => openFlowConfig(x.dataset.setting));
+  if ($("vg-adv")) $("vg-adv").onclick = () => openFlowConfig();
   if ($("go")) $("go").onclick = () => startRender(CURB);
   if ($("vg-next")) $("vg-next").onclick = () => setFlowView("confirm");
   if ($("againBtn")) $("againBtn").onclick = () => setFlowView("confirm");
@@ -1427,7 +1431,8 @@ function paintFlowConfirm(){
     <section aria-label="素材内容"><div class="vg-sectionhead"><h2>本次素材</h2><small>${assets.filter(a => a.kind === 'image').length} 图片 · ${assets.filter(a => a.kind === 'video').length} 视频</small><button id="vg-all-assets" aria-haspopup="dialog">查看全部 ${assets.length} 份</button></div>
     ${assets.length ? `<div class="vg-gallery">${assets.slice(0,5).map(flowAsset).join("")}</div>` : flowEmpty("未提供媒体素材", "素材包里没有已登记的图片或视频；不会用其他项目的素材填充。")}
     <div class="vg-notes"><button id="vg-meta" aria-haspopup="dialog">来源与读音提示</button><br>仅显示包内已提供的声明；不推测尺寸、时长或分镜对应。</div>
-    <div class="vg-import-actions"><button class="btn line sm" id="vg-change" ${flowBusy() ? 'disabled' : ''}>更换素材包</button></div></section></div>`;
+    <div class="vg-import-actions"><button class="btn line sm" id="vg-change" ${flowBusy() ? 'disabled' : ''}>更换素材包</button></div></section>
+  </div>`;
   wireFlowAssets($("vg-view"));
   $("vg-fulltext").onclick = () => openFlowDialog("完整口播 · 原包文案", `<div class="vg-fulltext">${esc(script || "未提供文案")}</div>`);
   $("vg-all-assets").onclick = () => { const d = openFlowDialog("全部素材 · " + assets.length + " 份", `<div class="vg-assets-all">${assets.map(flowAsset).join("")}</div>`); wireFlowAssets(d); };
@@ -1450,15 +1455,13 @@ function openFlowDialog(title, html){
   d.addEventListener("click", e => { if (e.target === d){ const r = d.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeFlowDialog(); } });
   document.body.appendChild(d); d.showModal(); return d;
 }
-function openFlowConfig(section){
+function openFlowConfig(){
   if (!FLOW || flowBusy()) return;
-  // Reuse every production control; only its location changes. All values stay in CFG.
-  const d = openFlowDialog("生成设置 · " + (section === "style" ? "画面样式" : "声音与画面信息"), '<div id="rail"></div>');
+  // 全自动是默认：设置收进一个链接，点开就是全部可调项（值都在 CFG）
+  const d = openFlowDialog("调整画面与声音", '<div id="rail"></div>');
   renderRail(CURB);
-  $("cfgReset").onclick = () => { CFG = Object.assign({},CFG_DEF); saveCfg(); openFlowConfig(section); toast("已恢复默认配置"); };
-  const target = section === "style" ? $("fmt") : $("voiceSeg");
-  if (section === "sound") d.querySelectorAll("details.disc").forEach(x => { x.open = true; });
-  target.scrollIntoView({block:"nearest"});
+  $("cfgReset").onclick = () => { CFG = Object.assign({},CFG_DEF); saveCfg(); openFlowConfig(); toast("已恢复推荐配置"); };
+  d.querySelectorAll("details.disc").forEach(x => { x.open = true; });
   d.addEventListener("close", paintFlowFooter, {once:true});
 }
 function paintFlowGeneration(){
