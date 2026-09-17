@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 from pathlib import Path
 
 from . import compose, llm, overlays, remotion_render, subtitle, tts, verify
@@ -277,6 +278,38 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
         from . import remotion_render as _rr
         from .jianying_draft import dump_manifest
         media_dir = _rr.RENDERER / "public" / "media"
+        # work 目录渲染后会被清理（容器重建也会丢），分轨草稿要用的输入存到成片旁
+        keep = Path(out_mp4).with_suffix(".draftsrc")
+        try:
+            keep.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            keep = None
+        props_keep = None
+        if keep is not None and renderer == "remotion" and (work / "props.json").is_file():
+            try:
+                props_keep = keep / "props.json"
+                shutil.copyfile(work / "props.json", props_keep)
+            except Exception:
+                props_keep = None
+        voice_keep = None
+        if keep is not None:
+            try:
+                if mp3 and Path(mp3).is_file():
+                    voice_keep = keep / "voice.mp3"
+                    shutil.copyfile(mp3, voice_keep)
+            except Exception:
+                voice_keep = None
+        sfx_rows = []
+        for idx, (at_s, f, vol) in enumerate(sfx_events):
+            f = Path(f)
+            path = f
+            if keep is not None and f.is_file():
+                try:
+                    path = keep / f"sfx_{idx:02d}{f.suffix or '.wav'}"
+                    shutil.copyfile(f, path)
+                except Exception:
+                    path = f
+            sfx_rows.append({"at_ms": at_s * 1000.0, "file": str(path), "vol": vol})
         shot_rows = []
         props_shots = (props.get("shots") if renderer == "remotion" and props else None) or []
         for i, s in enumerate(plan.shots):
@@ -293,14 +326,15 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                       video=str(out_mp4), duration_ms=plan.duration_ms, fps=30,
                       width=1080, height=1920, title=content.title,
                       subtitles=show_subtitles, sources=show_sources, fmt=template,
-                      sfx_mode=mode, voice=str(Path(mp3)) if mp3 else None,
+                      sfx_mode=mode, voice=str(voice_keep or mp3) if mp3 else None,
                       bgm=str(bgm) if bgm else None, render_id=job_id,
                       shots=shot_rows,
                       clauses=[{"text": c.text, "start_ms": c.start_ms, "end_ms": c.end_ms}
                                for c in plan.clauses],
-                      sfx=[{"at_ms": at_s * 1000.0, "file": str(f), "vol": vol}
-                           for at_s, f, vol in sfx_events],
-                      props=str(work / "props.json") if (work / "props.json").is_file() else None)
+                      sfx=sfx_rows,
+                      props=str(props_keep) if props_keep else None)
+    except Exception as exc:  # 清单失败不影响成片
+        print(f"draft manifest skipped: {exc}")
     except Exception as exc:  # 清单失败不影响成片
         print(f"draft manifest skipped: {exc}")
 
