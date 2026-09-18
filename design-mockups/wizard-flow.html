@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GetCut 工作台 · 交互原型</title>
+<style>
+  :root{
+    --ink:#1a1817;
+    --ink-2:#5c5751;
+    --ink-3:#8a847c;
+    --line:#ddd8d2;
+    --line-strong:#b9b3aa;
+    --paper:#f5f4f1;
+    --panel:#ffffff;
+    --red:#a44231;
+    --red-soft:#f4e6e1;
+    --ok:#3d6b4f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{font-size:16px}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Source Han Sans SC",sans-serif;
+    background:var(--paper);color:var(--ink);
+    line-height:1.6;min-height:100vh;
+    display:flex;flex-direction:column;
+  }
+  button{font:inherit;cursor:pointer}
+  button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 28px;border-bottom:1px solid var(--line);
+    background:var(--panel);position:sticky;top:0;z-index:10;
+  }
+  .topbar .brand{font-weight:700;font-size:17px;letter-spacing:.5px}
+  .topbar .brand em{font-style:normal;color:var(--red)}
+  .topbar .proto-tag{
+    font-size:12px;color:var(--ink-2);border:1px solid var(--line-strong);
+    padding:2px 8px;border-radius:3px;margin-left:12px;vertical-align:2px;
+  }
+  .topbar .home-link{background:none;border:none;color:var(--ink-2);font-size:14px}
+  .topbar .home-link:hover{color:var(--red)}
+
+  .stepper{
+    display:flex;gap:0;justify-content:center;
+    padding:18px 16px 0;max-width:860px;margin:0 auto;width:100%;
+  }
+  .stepper ol{display:flex;list-style:none;width:100%}
+  .stepper li{
+    flex:1;display:flex;align-items:center;gap:8px;
+    font-size:13px;color:var(--ink-3);position:relative;
+  }
+  .stepper li:not(:last-child)::after{
+    content:"";flex:1;height:1px;background:var(--line);
+    margin:0 10px;min-width:16px;
+  }
+  .stepper .dot{
+    width:22px;height:22px;border-radius:50%;
+    border:1px solid var(--line-strong);display:inline-flex;
+    align-items:center;justify-content:center;font-size:12px;flex:none;
+  }
+  .stepper li.current{color:var(--ink);font-weight:600}
+  .stepper li.current .dot{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .stepper li.done{color:var(--ink-2)}
+  .stepper li.done .dot{background:var(--panel);border-color:var(--ink);color:var(--ink)}
+  .stepper li.done:not(:last-child)::after{background:var(--line-strong)}
+
+  main{flex:1;width:100%;max-width:860px;margin:0 auto;padding:28px 20px 80px}
+  .view{display:none}
+  .view.active{display:block}
+  h1{font-size:24px;font-weight:700;margin-bottom:6px}
+  .page-sub{color:var(--ink-2);font-size:14px;margin-bottom:26px}
+
+  .actions{display:flex;justify-content:space-between;align-items:center;margin-top:34px;gap:12px}
+  .btn{
+    border:1px solid var(--line-strong);background:var(--panel);
+    padding:10px 22px;border-radius:6px;font-size:15px;color:var(--ink);
+  }
+  .btn:hover{border-color:var(--ink)}
+  .btn.primary{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+  .btn.primary:hover{background:#000}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .btn[disabled]:hover{border-color:var(--line-strong)}
+  .btn.ghost{background:none;border:none;color:var(--ink-2);padding:10px 8px}
+  .btn.ghost:hover{color:var(--red)}
+  .btn.danger-quiet{color:var(--ink-2)}
+
+  /* ---------- 首页 ---------- */
+  .home-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .home-filters{display:flex;gap:6px;margin:14px 0 22px}
+  .chip{
+    border:1px solid var(--line-strong);background:none;border-radius:99px;
+    padding:5px 14px;font-size:13px;color:var(--ink-2);
+  }
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+  .proj-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .proj-cover{aspect-ratio:9/12;background:#e8e5e0;position:relative;display:flex;align-items:center;justify-content:center}
+  .proj-cover .fake-frame{width:56%;aspect-ratio:9/16;background:var(--ink);border-radius:4px;display:flex;flex-direction:column;justify-content:space-between;padding:8% 6%;color:#fff}
+  .proj-cover .fake-frame .t{font-size:12px;font-weight:700;line-height:1.5}
+  .proj-cover .fake-frame .bar{height:3px;background:var(--red);width:34%}
+  .proj-cover .fake-frame .sub{font-size:8px;color:#c9c4bd}
+  .proj-cover.pending .fake-frame{background:#2a2624;opacity:.85}
+  .proj-meta{padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px}
+  .proj-meta .name{font-weight:600;font-size:15px}
+  .proj-meta .state{font-size:13px;color:var(--ink-2)}
+  .proj-meta .state.ok{color:var(--ok)}
+  .proj-meta .state.todo{color:var(--red)}
+  .proj-meta .go{
+    margin-top:10px;align-self:flex-start;font-size:14px;font-weight:600;
+    background:none;border:none;color:var(--red);padding:0;
+  }
+  .proj-meta .go:hover{text-decoration:underline}
+
+  /* ---------- 第一步：导入 ---------- */
+  .dropzone{
+    border:1.5px dashed var(--line-strong);border-radius:10px;
+    background:var(--panel);padding:56px 20px;text-align:center;
+  }
+  .dropzone .big{font-size:16px;font-weight:600;margin-bottom:6px}
+  .dropzone .hint{font-size:13px;color:var(--ink-2);margin-bottom:20px}
+  .scan-result{
+    margin-top:20px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:16px 20px;display:none;align-items:center;gap:12px;
+    font-size:14px;
+  }
+  .scan-result.show{display:flex}
+  .scan-result .tick{color:var(--ok);font-weight:700}
+  .scan-result .detail{color:var(--ink-2)}
+
+  /* ---------- 第二步：确认内容 ---------- */
+  .field{margin-bottom:26px}
+  .field .lab{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
+  .field .lab .mini{font-weight:400;font-size:13px;color:var(--ink-3)}
+  .field .ops{font-size:13px}
+  .field .ops button{background:none;border:none;color:var(--red);font-size:13px;padding:0 0 0 10px}
+  textarea,input[type=text]{
+    width:100%;border:1px solid var(--line-strong);border-radius:6px;
+    padding:10px 12px;font:inherit;font-size:15px;background:var(--panel);color:var(--ink);
+  }
+  textarea{min-height:96px;resize:vertical;line-height:1.7}
+  .cfg-row{display:flex;gap:28px;flex-wrap:wrap}
+  .cfg-item{flex:1;min-width:220px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:14px 16px}
+  .cfg-item-head{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600;margin-bottom:10px}
+  .cfg-item-head button{background:none;border:none;color:var(--red);font-size:13px;padding:0}
+  .cfg-thumb{width:72px;height:44px;border-radius:4px;object-fit:cover;display:block;border:1px solid var(--line)}
+  .cfg-line{font-size:14px;color:var(--ink-2);display:flex;justify-content:space-between;align-items:center}
+  .cfg-line b{color:var(--ink);font-weight:600}
+  details.more{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0 16px;margin-top:18px}
+  details.more summary{padding:13px 0;font-size:14px;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  details.more summary::after{content:"展开";font-weight:400;color:var(--ink-3);font-size:13px}
+  details.more[open] summary::after{content:"收起"}
+  details.more .more-body{padding:2px 0 14px;display:grid;gap:10px;font-size:14px;color:var(--ink-2)}
+  .llm-note{font-size:12px;color:var(--ink-3);margin-top:8px}
+
+  /* ---------- 第三步：分镜 ---------- */
+  .stage{
+    display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);
+    gap:32px;align-items:start;
+  }
+  .phone{
+    aspect-ratio:9/16;background:var(--ink);border-radius:10px;overflow:hidden;
+    position:relative;display:flex;flex-direction:column;color:#fff;
+    box-shadow:0 8px 24px rgba(26,24,23,.18);
+  }
+  .shot-canvas{flex:1;display:flex;flex-direction:column;padding:7% 6%;position:relative}
+  .shot-canvas .paper{
+    flex:1;background:#e7e4e0;border-radius:4px;color:var(--ink);
+    padding:8% 7%;display:flex;flex-direction:column;position:relative;overflow:hidden;
+  }
+  .shot-canvas .paper .headline{font-size:15px;font-weight:800;line-height:1.5}
+  .shot-canvas .paper .headline .hl{background:var(--ink);color:#fff;padding:0 4px}
+  .shot-canvas .media{
+    margin:auto 0;width:100%;aspect-ratio:16/9;border-radius:2px;position:relative;overflow:hidden;
+  }
+  .shot-canvas .media .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;letter-spacing:2px}
+  .shot-canvas .media.m1 .ph{background:#4a4e57}
+  .shot-canvas .media.m2 .ph{background:#5c5347}
+  .shot-canvas .media.m3 .ph{background:#3f4a44}
+  .shot-canvas .media.m4 .ph{background:#57453f}
+  .shot-canvas .media.m5 .ph{background:#3d4451}
+  .shot-canvas .caption{
+    text-align:center;font-size:11px;color:#e9e6e2;margin-top:5%;min-height:1.5em;
+  }
+  .shot-canvas .overlay-tag{
+    position:absolute;top:4%;right:5%;background:var(--red);color:#fff;
+    font-size:10px;padding:3px 7px;border-radius:2px;max-width:70%;
+  }
+  .shot-canvas .kicker{
+    position:absolute;top:4%;left:6%;font-size:10px;color:var(--ink-3);letter-spacing:1px;
+  }
+  .shot-nav{display:flex;justify-content:space-between;margin-top:12px}
+  .shot-meta{font-size:13px;color:var(--ink-3);margin-bottom:8px}
+  .shot-side .lab{font-size:13px;font-weight:600;color:var(--ink-3);margin:20px 0 6px}
+  .shot-side .lab:first-child{margin-top:0}
+  .shot-line{
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    padding:12px 14px;font-size:14px;line-height:1.8;
+  }
+  .shot-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 14px;font-size:14px}
+  .shot-row + .shot-row{margin-top:8px}
+  .shot-row .k{color:var(--ink-2);flex:none}
+  .shot-row .v{flex:1;font-weight:600}
+  .shot-row .v.plain{font-weight:400;color:var(--ink-2)}
+  .shot-row button{background:none;border:none;color:var(--red);font-size:13px;flex:none;padding:0}
+  .shot-strip{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .thumb{
+    width:64px;aspect-ratio:9/14;border-radius:4px;border:1px solid var(--line);
+    background:#e8e5e0;font-size:11px;color:var(--ink-2);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:3px;background:none;
+  }
+  .thumb .no{font-weight:700;color:var(--ink)}
+  .thumb.on{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+  .thumb:hover{border-color:var(--ink)}
+  .strip-wrap{margin-top:34px}
+  .strip-wrap .lab{font-size:14px;font-weight:600;margin-bottom:2px}
+  .strip-wrap .hint{font-size:12px;color:var(--ink-3);margin-bottom:4px}
+
+  /* ---------- 第四步：生成 ---------- */
+  .gen-wrap{max-width:560px;margin:0 auto;text-align:left}
+  .gen-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:28px 30px}
+  .gen-card h2{font-size:18px;margin-bottom:18px}
+  .bar{height:8px;background:#eceae6;border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--red);border-radius:99px;transition:width .5s ease;width:0}
+  .gen-steps{list-style:none;margin-top:20px;display:grid;gap:9px;font-size:14px}
+  .gen-steps li{display:flex;align-items:center;gap:10px;color:var(--ink-3)}
+  .gen-steps li .st{width:18px;text-align:center;flex:none}
+  .gen-steps li.doing{color:var(--ink);font-weight:600}
+  .gen-steps li.done{color:var(--ink-2)}
+  .gen-steps li.done .st{color:var(--ok)}
+  .gen-steps li.doing .st{color:var(--red)}
+  .leave-note{font-size:13px;color:var(--ink-3);margin-top:22px}
+  .done-view{display:none}
+  .done-view.show{display:block}
+  .player{
+    aspect-ratio:16/9;max-width:560px;background:var(--ink);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;color:#cfc9c2;
+    font-size:14px;letter-spacing:2px;position:relative;
+  }
+  .player::after{
+    content:"";width:0;height:0;border-left:22px solid rgba(255,255,255,.85);
+    border-top:14px solid transparent;border-bottom:14px solid transparent;
+    position:absolute;
+  }
+  .done-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+  .done-more{margin-top:26px;font-size:14px;color:var(--ink-2)}
+  .done-more button{background:none;border:none;color:var(--red);font-size:14px;padding:0}
+
+  .foot-note{
+    text-align:center;font-size:12px;color:var(--ink-3);
+    padding:16px;border-top:1px solid var(--line);background:var(--panel);
+  }
+
+  @media (max-width:640px){
+    .stage{grid-template-columns:1fr}
+    .stepper li span.txt{display:none}
+    .stepper li.current span.txt{display:inline}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div><span class="brand">GetCut 工作台</span><span class="proto-tag">交互原型 · 数据为示例</span></div>
+  <button class="home-link" data-go="home">返回我的作品</button>
+</header>
+
+<nav class="stepper" id="stepper" aria-label="制作步骤" hidden>
+  <ol>
+    <li data-step="1"><span class="dot">1</span><span class="txt">导入内容</span></li>
+    <li data-step="2"><span class="dot">2</span><span class="txt">确认内容</span></li>
+    <li data-step="3"><span class="dot">3</span><span class="txt">预览分镜</span></li>
+    <li data-step="4"><span class="dot">4</span><span class="txt">生成成片</span></li>
+  </ol>
+</nav>
+
+<main>
+
+  <!-- ===== 首页 ===== -->
+  <section class="view active" id="view-home">
+    <div class="home-head">
+      <h1>我的作品</h1>
+      <button class="btn primary" id="btn-new" data-go="step1">新建视频</button>
+    </div>
+    <div class="home-filters" role="tablist" aria-label="筛选作品">
+      <button class="chip on">全部</button>
+      <button class="chip">制作中</button>
+      <button class="chip">已完成</button>
+    </div>
+    <div class="proj-grid">
+      <article class="proj-card">
+        <div class="proj-cover"><div class="fake-frame"><span class="t">AI 要不要踩刹车？</span><span class="bar"></span><span class="sub">1080×1920 · 84 秒</span></div></div>
+        <div class="proj-meta">
+          <span class="name">AI 放缓之争</span>
+          <span class="state ok">已完成 · 昨天</span>
+          <button class="go" data-go="done">查看成片</button>
+        </div>
+      </article>
+      <article class="proj-card">
+        <div class="proj-cover pending"><div class="fake-frame"><span class="t">美联储加息</span><span class="bar"></span><span class="sub">素材包 · 31 个素材</span></div></div>
+        <div class="proj-meta">
+          <span class="name">美联储加息</span>
+          <span class="state todo">待确认分镜</span>
+          <button class="go" data-go="shots">继续制作</button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===== 第一步 导入 ===== -->
+  <section class="view" id="view-step1">
+    <h1>导入内容</h1>
+    <p class="page-sub" style="color:var(--ink-2);font-size:14px;margin-bottom:24px">素材包中的文案、图片和视频会自动整理到下一步。</p>
+    <div class="dropzone">
+      <p class="big">拖入 ZIP 素材包</p>
+      <p class="hint">包含 content.json 的素材包，最大 512 MB</p>
+      <button class="btn" id="btn-pick">选择文件</button>
+    </div>
+    <div class="scan-result" id="scan-result">
+      <span class="tick">✓</span>
+      <span>已识别：</span>
+      <span class="detail">口播文案 530 字 · 图片 21 张 · 视频 10 段 · 预计 88 秒</span>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" data-go="home">← 返回我的作品</button>
+      <button class="btn primary" id="btn-to-confirm" data-go="confirm" disabled>下一步：确认内容</button>
+    </div>
+  </section>
+
+  <!-- ===== 第二步 确认内容 ===== -->
+  <section class="view" id="view-confirm">
+    <h1>确认视频内容</h1>
+    <p class="page-sub" style="color:var(--ink-2);font-size:14px;margin-bottom:26px">先确定文案和整体风格，下一步再逐镜头检查画面。</p>
+
+    <div class="field">
+      <div class="lab">开场标题</div>
+      <input type="text" value="AI 要不要踩刹车？" aria-label="开场标题">
+    </div>
+
+    <div class="field">
+      <div class="lab">口播文案 <button class="ops-edit">编辑</button></div>
+      <textarea aria-label="口播文案">最近，关于人工智能是否应该放缓发展的讨论，突然变得非常激烈。九月初，Anthropic 的 CEO 阿莫迪发文警告，超级人工智能可能在两年内到来，人类必须提前踩下刹车。三天后，白宫明确反对……</textarea>
+    </div>
+
+    <div class="cfg-row">
+      <div class="cfg-item">
+        <div class="cfg-item-head">画面风格 <button data-toast="模板选择暂未接入原型">更换</button></div>
+        <img class="cfg-thumb" src="wizard-template.png" alt="当前画面风格：编辑部样式">
+        <p class="cfg-line" style="margin-top:8px"><b>编辑部</b><span>纸卡 · 高亮标题</span></p>
+      </div>
+      <div class="cfg-item">
+        <div class="cfg-item-head">配音 <button data-toast="音色试听暂未接入原型">更换</button></div>
+        <p class="cfg-line"><b>云希</b><span>男声 · 沉稳</span></p>
+        <p class="cfg-line" style="margin-top:6px"><span>语速</span><b>+10%</b></p>
+      </div>
+    </div>
+
+    <details class="more">
+      <summary>更多设置（背景音乐、字幕、音效）</summary>
+      <div class="more-body">
+        <p class="cfg-line"><span>背景音乐</span><b>明快节奏 · 音量 20%</b></p>
+        <p class="cfg-line"><span>字幕</span><b>开启</b></p>
+        <p class="cfg-line"><span>智能音效</span><b>开启</b></p>
+      </div>
+    </details>
+    <p class="llm-note">下一步将用 AI 规划分镜并逐镜头配画面，通常需要一到两分钟。</p>
+
+    <div class="actions">
+      <button class="btn ghost" data-go="step1">← 上一步</button>
+      <button class="btn primary" id="btn-to-shots">生成分镜预览</button>
+    </div>
+  </section>
+
+  <!-- ===== 第三步 分镜预览 ===== -->
+  <section class="view" id="view-shots">
+    <h1>看看每句话对应什么画面</h1>
+    <p class="page-sub" style="color:var(--ink-2);font-size:14px;margin-bottom:24px">检查配图和重点文字，满意后再生成视频。</p>
+
+    <div class="stage">
+      <div>
+        <div class="phone" aria-label="当前镜头画面示意">
+          <div class="shot-canvas" id="shot-canvas"></div>
+        </div>
+        <div class="shot-nav">
+          <button class="btn" id="shot-prev">← 上一镜</button>
+          <button class="btn" id="shot-next">下一镜 →</button>
+        </div>
+      </div>
+      <div class="shot-side">
+        <p class="shot-meta" id="shot-meta">镜头 1 / 14 · 预计 00:00 – 00:06</p>
+        <p class="lab">口播</p>
+        <div class="shot-line" id="shot-line">最近，关于人工智能是否应该放缓发展的讨论，突然变得非常激烈。</div>
+        <p class="lab">这一镜的画面</p>
+        <div class="shot-row"><span class="k">当前素材</span><span class="v" id="shot-media">片头标题卡</span><button data-toast="换素材暂未接入原型">更换素材</button></div>
+        <div class="shot-row"><span class="k">画面重点</span><span class="v" id="shot-overlay">标题：AI 要不要踩刹车？</span><button data-toast="改文字暂未接入原型">修改文字</button></div>
+      </div>
+    </div>
+
+    <div class="strip-wrap">
+      <p class="lab">镜头概览</p>
+      <p class="hint">点击缩略图直接跳到那一镜</p>
+      <div class="shot-strip" id="shot-strip"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn ghost" data-go="confirm">← 返回修改内容</button>
+      <button class="btn primary" id="btn-generate">确认并生成视频</button>
+    </div>
+  </section>
+
+  <!-- ===== 第四步 生成 ===== -->
+  <section class="view" id="view-generate">
+    <div class="gen-wrap">
+      <div class="gen-card" id="gen-progress">
+        <h2>正在生成视频</h2>
+        <div class="bar"><i id="gen-bar"></i></div>
+        <ul class="gen-steps" id="gen-steps">
+          <li data-g><span class="st">·</span>生成配音</li>
+          <li data-g><span class="st">·</span>规划分镜</li>
+          <li data-g><span class="st">·</span>渲染画面</li>
+          <li data-g><span class="st">·</span>混音与音效</li>
+          <li data-g><span class="st">·</span>画面检查</li>
+        </ul>
+        <p class="leave-note">可以离开此页，稍后从"我的作品"查看进度。</p>
+        <div class="actions" style="margin-top:22px">
+          <button class="btn ghost" data-go="home">返回我的作品</button>
+        </div>
+      </div>
+
+      <div class="done-view" id="gen-done">
+        <div class="gen-card">
+          <h2>视频已完成</h2>
+          <div class="player" aria-label="成片播放器"></div>
+          <div class="done-actions">
+            <button class="btn primary" data-toast="下载暂未接入原型">下载视频</button>
+            <button class="btn" data-toast="剪映草稿导出暂未接入原型">导出剪映草稿</button>
+          </div>
+          <p class="done-more">还需要调整？<button data-go="shots">返回分镜修改</button></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot-note">交互原型 · 数据均为示例 · 未连接正式工作台</footer>
+
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+  /* ---------- 数据（示例） ---------- */
+  var shots = [
+    {type:"片头卡", media:null, mediaName:"片头标题卡",
+     line:"最近，关于人工智能是否应该放缓发展的讨论，突然变得非常激烈。",
+     overlay:"标题：AI 要不要踩刹车？",
+     headline:'<span class="hl">AI 要不要踩刹车？</span>'},
+    {type:"人物", media:"m1", mediaName:"阿莫迪演讲照片",
+     line:"九月初，Anthropic 的 CEO 阿莫迪发文警告，超级智能可能在两年内到来。",
+     overlay:"角标：Anthropic CEO",
+     headline:"阿莫迪发文警告"},
+    {type:"视频", media:"m2", mediaName:"白宫外景视频",
+     line:"三天后，白宫明确反对，称美国不会放慢人工智能的发展。",
+     overlay:null,
+     headline:"白宫明确反对"},
+    {type:"数字卡", media:null, mediaName:"数据标注卡",
+     line:"而另一边的数据显示，今年全球 AI 投资比去年翻了一倍。",
+     overlay:"数字：2 倍",
+     headline:"投资翻了一倍"},
+    {type:"金句卡", media:null, mediaName:"金句收尾卡",
+     line:"刹车还是油门，答案可能要由未来两年给出。",
+     overlay:"金句：答案由未来给出",
+     headline:'“答案，由未来两年给出。”'}
+  ];
+
+  /* ---------- 视图切换 ---------- */
+  var stepper = $("#stepper");
+  function go(name){
+    $$(".view").forEach(function(v){ v.classList.remove("active"); });
+    if(name === "done"){ name = "generate"; resetGenerate(true); }
+    var v = $("#view-" + name);
+    if(v){ v.classList.add("active"); }
+    var inFlow = /^step1$|^confirm$|^shots$|^generate$/.test(name);
+    stepper.hidden = !inFlow;
+    var n = name === "step1" ? 1 : name === "confirm" ? 2 : name === "shots" ? 3 : name === "generate" ? 4 : 0;
+    $$("#stepper li").forEach(function(li){
+      var s = +li.dataset.step;
+      li.classList.toggle("current", s === n);
+      li.classList.toggle("done", s < n);
+      li.querySelector(".dot").textContent = s < n ? "✓" : s;
+    });
+    window.scrollTo(0, 0);
+    if(name === "shots"){ renderShot(); }
+    if(name === "home"){ resetGenerate(); }
+  }
+  document.addEventListener("click", function(e){
+    var t = e.target.closest("[data-go]");
+    if(t){ go(t.dataset.go); return; }
+    var toast = e.target.closest("[data-toast]");
+    if(toast){ alert(toast.dataset.toast); }
+  });
+
+  /* ---------- 第一步：模拟识别 ---------- */
+  $("#btn-pick").addEventListener("click", function(){
+    var r = $("#scan-result");
+    r.classList.remove("show");
+    setTimeout(function(){ r.classList.add("show"); $("#btn-to-confirm").disabled = false; }, 800);
+  });
+
+  /* ---------- 第二步 → 第三步 ---------- */
+  $("#btn-to-shots").addEventListener("click", function(){
+    var b = this;
+    b.disabled = true; b.textContent = "正在生成分镜…";
+    setTimeout(function(){
+      b.disabled = false; b.textContent = "生成分镜预览";
+      go("shots");
+    }, 1200);
+  });
+
+  /* ---------- 第三步：分镜 ---------- */
+  var idx = 0;
+  var canvas = $("#shot-canvas");
+  function renderShot(){
+    var s = shots[idx];
+    var h = '<div class="kicker">' + (s.type === "片头卡" ? "" : "GETCUT") + '</div>';
+    if(s.overlay){ h += '<div class="overlay-tag">' + s.overlay.replace(/^[^：]*：/, "") + '</div>'; }
+    h += '<div class="paper"><div class="headline">' + s.headline + '</div>';
+    if(s.media){
+      h += '<div class="media ' + s.media + '"><div class="ph">' + s.mediaName + '</div></div>';
+    } else {
+      h += '<div class="media m1"><div class="ph">' + s.mediaName + '</div></div>';
+    }
+    h += '<div class="caption">' + s.line.slice(0, 22) + '…</div></div>';
+    canvas.innerHTML = h;
+    $("#shot-meta").textContent = "镜头 " + (idx + 1) + " / " + shots.length +
+      " · 预计 " + pad(idx * 6) + " – " + pad(idx * 6 + 6);
+    $("#shot-line").textContent = s.line;
+    $("#shot-media").textContent = s.mediaName;
+    $("#shot-overlay").textContent = s.overlay || "无";
+    $$("#shot-strip .thumb").forEach(function(b, i){
+      b.classList.toggle("on", i === idx);
+    });
+    $("#shot-prev").disabled = idx === 0;
+    $("#shot-next").disabled = idx === shots.length - 1;
+  }
+  function pad(sec){
+    var m = Math.floor(sec / 60), r = sec % 60;
+    return (m < 10 ? "0" + m : m) + ":" + (r < 10 ? "0" + r : r);
+  }
+  var strip = $("#shot-strip");
+  shots.forEach(function(s, i){
+    var b = document.createElement("button");
+    b.className = "thumb";
+    b.innerHTML = '<span class="no">' + (i + 1) + '</span><span>' + s.type + '</span>';
+    b.addEventListener("click", function(){ idx = i; renderShot(); });
+    strip.appendChild(b);
+  });
+  $("#shot-prev").addEventListener("click", function(){ if(idx > 0){ idx--; renderShot(); } });
+  $("#shot-next").addEventListener("click", function(){ if(idx < shots.length - 1){ idx++; renderShot(); } });
+
+  /* ---------- 第四步：模拟生成 ---------- */
+  var genTimer = null;
+  function resetGenerate(skipAnim){
+    if(genTimer){ clearTimeout(genTimer); genTimer = null; }
+    $$("#gen-steps li").forEach(function(li){
+      li.className = ""; li.querySelector(".st").textContent = "·";
+    });
+    if(skipAnim){
+      $("#gen-bar").style.width = "100%";
+      $$("#gen-steps li").forEach(function(li){
+        li.className = "done"; li.querySelector(".st").textContent = "✓";
+      });
+      $("#gen-progress").style.display = "none";
+      $("#gen-done").classList.add("show");
+      return;
+    }
+    $("#gen-progress").style.display = "";
+    $("#gen-done").classList.remove("show");
+    $("#gen-bar").style.width = "0";
+  }
+  $("#btn-generate").addEventListener("click", function(){
+    go("generate");
+    var items = $$("#gen-steps li");
+    var t = 0, per = 900;
+    items.forEach(function(li, i){
+      genTimer = setTimeout(function(){
+        li.className = "doing"; li.querySelector(".st").textContent = "…";
+        if(i > 0){
+          var prev = items[i - 1];
+          prev.className = "done"; prev.querySelector(".st").textContent = "✓";
+        }
+        $("#gen-bar").style.width = Math.round((i + 1) / items.length * 100) + "%";
+      }, t);
+      t += per;
+    });
+    genTimer = setTimeout(function(){
+      items[items.length - 1].className = "done";
+      items[items.length - 1].querySelector(".st").textContent = "✓";
+      $("#gen-bar").style.width = "100%";
+      setTimeout(function(){
+        $("#gen-progress").style.display = "none";
+        $("#gen-done").classList.add("show");
+      }, 400);
+    }, t);
+  });
+})();
+</script>
+</body>
+</html>

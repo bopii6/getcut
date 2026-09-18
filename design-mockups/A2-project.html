@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0a0b09; color:#e8ece5; font-family:"PingFang SC","Microsoft YaHei",sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+  .topbar { height:58px; background:#0e100d; border-bottom:1px solid #1c1f19; display:flex; align-items:center; padding:0 20px; gap:16px; flex-shrink:0; }
+  .logo { width:32px; height:32px; border-radius:8px; background:#c8f549; color:#0a0b09; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .crumb { font-size:14px; color:#8b937f; } .crumb b { color:#e8ece5; font-size:15px; }
+  .pill { border:1px solid #2a2f22; border-radius:99px; padding:5px 14px; font-size:12px; color:#aab39a; }
+  .pill b { color:#c8f549; }
+  .spacer { flex:1; }
+  .btn-g { border:1px solid #333a2a; border-radius:9px; padding:8px 16px; font-size:13px; color:#cdd5c2; }
+  .btn-pri { background:#c8f549; color:#10130a; font-weight:700; border-radius:9px; padding:8px 18px; font-size:13px; }
+  /* 步骤条 */
+  .steps { height:52px; background:#0e100d; border-bottom:1px solid #1c1f19; display:flex; align-items:center; padding:0 40px; gap:0; flex-shrink:0; }
+  .step { display:flex; align-items:center; gap:9px; font-size:13px; color:#6d7466; }
+  .step .num { width:22px; height:22px; border-radius:11px; border:1px solid #333a2a; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .step.done { color:#aab39a; } .step.done .num { background:#1a1e15; border-color:#1a1e15; color:#c8f549; }
+  .step.on { color:#e8ece5; font-weight:700; } .step.on .num { background:#c8f549; border-color:#c8f549; color:#10130a; font-weight:800; }
+  .line { width:120px; height:1px; background:#242820; margin:0 16px; }
+  .line.done { background:#3a422c; }
+  /* 主体三栏 */
+  .body { flex:1; display:flex; overflow:hidden; }
+  .left { flex:1; padding:26px 30px; display:flex; flex-direction:column; background:#0a0b09; }
+  .paneltitle { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; }
+  .paneltitle b { font-size:16px; } .paneltitle span { font-size:12px; color:#6d7466; }
+  .stage { flex:1; background:#000; border:1px solid #20241b; border-radius:16px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+  .phone { width:270px; height:480px; background:linear-gradient(160deg,#f5f2ea,#e8e2d2); border-radius:18px; padding:26px 20px; box-shadow:0 20px 60px rgba(0,0,0,.7); }
+  .phone .h { font-size:26px; font-weight:900; color:#151410; line-height:1.3; }
+  .phone .bar { margin-top:16px; height:6px; width:60%; background:#c8f549; border-radius:3px; }
+  .phone .img { margin-top:18px; height:180px; border-radius:10px; background:linear-gradient(135deg,#2b1f14,#4a2c17); }
+  .phone .cap { margin-top:14px; font-size:12px; color:#5a564a; line-height:1.6; }
+  .playbar { position:absolute; left:16px; right:16px; bottom:14px; display:flex; align-items:center; gap:10px; }
+  .play { width:34px; height:34px; border-radius:17px; background:#c8f549; color:#10130a; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .track { flex:1; height:4px; background:#2a2e25; border-radius:2px; position:relative; }
+  .track .fill { position:absolute; left:0; top:0; bottom:0; width:38%; background:#c8f549; border-radius:2px; }
+  .t { font-size:11px; color:#8b937f; }
+  .right { width:380px; background:#0e100d; border-left:1px solid #1c1f19; padding:22px 22px 90px; overflow-y:auto; flex-shrink:0; }
+  .sect { display:flex; align-items:center; gap:10px; margin:20px 0 12px; }
+  .sect:first-child { margin-top:0; }
+  .sect .n { width:20px; height:20px; border-radius:10px; background:#1a1e15; color:#c8f549; font-size:11px; display:flex; align-items:center; justify-content:center; font-weight:700; }
+  .sect b { font-size:14px; }
+  .sect .lnk { margin-left:auto; font-size:12px; color:#8b937f; }
+  .note { background:rgba(200,245,73,.07); border:1px solid rgba(200,245,73,.25); border-radius:10px; padding:11px 13px; font-size:12px; color:#c6cfb2; line-height:1.7; }
+  .sel { border:1px solid #c8f549; border-radius:12px; padding:12px 14px; background:#141810; display:flex; align-items:center; gap:11px; }
+  .sel .ic { width:36px; height:36px; border-radius:9px; background:#1e2416; display:flex; align-items:center; justify-content:center; }
+  .sel .nm { font-size:13px; font-weight:600; } .sel .ds { font-size:11px; color:#8b937f; margin-top:3px; }
+  .sel .chg { margin-left:auto; color:#c8f549; font-size:12px; }
+  /* 模板选择 */
+  .tpls { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .tpl { border:1px solid #242820; border-radius:11px; overflow:hidden; }
+  .tpl.on { border-color:#c8f549; box-shadow:0 0 0 1px #c8f549; }
+  .tp { height:96px; position:relative; }
+  .tp1 { background:linear-gradient(160deg,#f5f2ea,#ddd6c4); } .tp2 { background:linear-gradient(160deg,#0f1b2b,#1d3550); } .tp3 { background:linear-gradient(160deg,#101010,#262626); }
+  .tp .tt { position:absolute; top:8px; left:8px; right:8px; font-size:10px; font-weight:800; color:#151410; }
+  .tp2 .tt, .tp3 .tt { color:#e8ece5; }
+  .tp .nm { padding:7px 9px; font-size:11px; display:flex; justify-content:space-between; align-items:center; }
+  .ck { color:#c8f549; font-size:11px; }
+  .opts { display:flex; gap:8px; flex-wrap:wrap; }
+  .opt { border:1px solid #242820; border-radius:8px; padding:7px 13px; font-size:12px; color:#aab39a; }
+  .opt.on { border-color:#c8f549; color:#c8f549; background:rgba(200,245,73,.08); }
+  /* 底部操作条 */
+  .actionbar { position:absolute; left:0; right:0; bottom:0; background:linear-gradient(to top,#0e100d 70%,transparent); padding:16px 22px 18px; display:flex; gap:10px; }
+  .abtn { flex:1; text-align:center; border:1px solid #333a2a; border-radius:10px; padding:12px 0; font-size:13px; color:#cdd5c2; }
+  .abtn.pri { background:#c8f549; color:#10130a; font-weight:800; border:none; box-shadow:0 6px 24px rgba(200,245,73,.25); }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">V</div>
+    <div class="crumb"><b>美联储加息-9月17日-素材包</b> · 39 素材 · 片长约 1:28</div>
+    <div class="pill">版本 <b>v3</b> · 04:46</div>
+    <div class="spacer"></div>
+    <div class="btn-g">任务中心</div>
+    <div class="btn-g">← 全部项目</div>
+  </div>
+  <div class="steps">
+    <div class="step done"><div class="num">✓</div>选择素材</div><div class="line done"></div>
+    <div class="step done"><div class="num">✓</div>内容确认</div><div class="line done"></div>
+    <div class="step done"><div class="num">✓</div>渲染配置</div><div class="line"></div>
+    <div class="step on"><div class="num">4</div>生成与成片</div>
+  </div>
+  <div class="body">
+    <div class="left">
+      <div class="paneltitle"><b>成片预览</b><span>渲染新的一版时，这里不会被覆盖</span></div>
+      <div class="stage">
+        <div class="phone">
+          <div class="h">白宫要降到1%<br>美联储当场加息</div>
+          <div class="bar"></div>
+          <div class="img"></div>
+          <div class="cap">9 月议息会议落地，美联储宣布加息 25 个基点，鲍威尔发布会表态……</div>
+        </div>
+        <div class="playbar">
+          <div class="play">▶</div>
+          <div class="track"><div class="fill"></div></div>
+          <div class="t">01:49 / 04:46</div>
+          <div class="t">竖屏 1080×1920</div>
+        </div>
+      </div>
+    </div>
+    <div class="right" style="position:relative">
+      <div class="sect"><div class="n">1</div><b>素材</b></div>
+      <div class="sel">
+        <div class="ic">🗂</div>
+        <div><div class="nm">美联储加息-9月17日-素材包</div><div class="ds">39 张 · 已按构图分类</div></div>
+        <div class="chg">更换</div>
+      </div>
+      <div class="sect"><div class="n">2</div><b>画面模板</b><span class="lnk">换一个 →</span></div>
+      <div class="tpls">
+        <div class="tpl on"><div class="tp tp1"><div class="tt">通胀升级</div></div><div class="nm">杂志编辑版<span class="ck">✓</span></div></div>
+        <div class="tpl"><div class="tp tp2"><div class="tt">通胀升级</div></div><div class="nm">财经数据版</div></div>
+        <div class="tpl"><div class="tp tp3"><div class="tt">通胀升级</div></div><div class="nm">极简白版</div></div>
+      </div>
+      <div class="sect"><div class="n">3</div><b>呈现方式</b></div>
+      <div class="note">素材按横构图收集，建议选「竖屏信息版 · 杂志编辑」；「竖屏满屏」可能裁掉主体。</div>
+      <div class="opts" style="margin-top:12px">
+        <div class="opt on">杂志编辑</div><div class="opt">满屏裁切</div><div class="opt">上下留白</div>
+      </div>
+      <div class="sect"><div class="n">4</div><b>配音与字幕</b></div>
+      <div class="opts">
+        <div class="opt on">男声·沉稳</div><div class="opt">女声·明快</div><div class="opt">无配音</div>
+      </div>
+      <div class="actionbar">
+        <div class="abtn">下载成片</div>
+        <div class="abtn">导出剪映草稿</div>
+        <div class="abtn pri">再生成一版</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
