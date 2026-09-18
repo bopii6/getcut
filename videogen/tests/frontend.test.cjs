@@ -162,10 +162,30 @@ test('generation view keeps the decision before the render and shows no per-stag
   assert(h.get('bgm'), '确认页要能直接选背景音乐');
   assert(h.get('sfxSeg'), '确认页要能直接选音效');
   assert.equal(h.document.querySelectorAll('.vg-choices .tpl').length, 7, '模板要摆在页面上，不是弹窗里');
+  // 确认页只确认不改稿：素材与文案收成一条状态，原文只在弹窗里看一眼
+  assert.match(h.get('vg-view').textContent, /素材已读入/);
+  assert.equal(h.document.querySelectorAll('#vg-view .vg-fulltext').length, 0, '文稿不应铺在页面上');
+  assert(h.get('vg-peek'), '原包内容改成点开才看');
+  // 模板只占一格：默认收起，点那一格才展开，选完自动收起并回填
+  const grid = h.get('fmt');
+  assert(grid.classList.contains('hide'), '模板列表默认收起，不占地方');
+  assert.match(h.get('tplNow').textContent, new RegExp(h.evaluate('CFG.format')), '当前这套要能一眼看到');
+  await h.click('#tplNow');
+  assert(!grid.classList.contains('hide'), '点那一格要展开');
+  assert.match(h.get('tplNow').textContent, /收起/, '展开了那一格要提示能收起');
+  await h.click('#fmt [data-v="retro"]');
+  assert(grid.classList.contains('hide'), '选完要自动收起');
+  assert.equal(h.evaluate('CFG.format'), 'retro');
+  assert.match(h.get('tplNow').textContent, /retro/, '那一格要换成新选的');
+  assert.match(h.get('tplNow').textContent, /换一个/, '收起后要写回「换一个」');
   await start(h);
   h.jobStates.set('job-a', {project_id: 'aa', stage: 'tts', stage8: 2, progress: 10});
   await h.tick();
   assert.equal(h.get('vg-bigstage').textContent, '正在生成你的视频');
+  assert.equal(h.get('vg-step').textContent, '第 2/8 步 · AI 配音', '进度条上要写清当前环节');
+  h.jobStates.set('job-a', {project_id: 'aa', stage: 'render', stage8: 5, progress: 54});
+  await h.tick();
+  assert.equal(h.get('vg-step').textContent, '第 5/8 步 · 画面渲染', '环节要跟着任务走');
   assert.equal(h.document.querySelectorAll('#vg-stages, .vg-stage, .vg-artifact, .vg-progress').length, 0,
     '用户不需要逐阶段细节，只要一根总进度条');
 });
