@@ -139,7 +139,7 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
         llm_used = False
     else:
         if use_llm:
-            spec = llm.design_shots(content.script, sent_payload, asset_payload)
+            spec = llm.design_shots(content.script, sent_payload, asset_payload, template=template)
         plan = build_plan_llm(content, manifest, clauses, spec["shots"],
                               spans=u_spans, interior=interior_units,
                               edge_spans=edge) if spec else None

@@ -113,13 +113,33 @@ DIRECTOR_SYSTEM = (
 
 
 def design_shots(script: str, sentences: list[dict], assets: list[dict],
-                 max_cards: int = 4, provider: str = "deepseek") -> dict | None:
+                 max_cards: int = 4, provider: str = "deepseek",
+                 template: str | None = None) -> dict | None:
     """LLM 分镜规划：句子分组 + 素材分配 + 设计卡选择与文案，一次调用完成。
 
     sentences: [{index, text}]（不含首尾——首尾由片头卡/金句卡固定承担）
     assets:    [{index, kind, tags, summary}]
     returns {"shots": [{sentences, asset, card, chapterLabel, ...copy}]} or None.
     """
+    if template == "zhigu":
+        # 智谷三段式专项：中段全出血画面 + 舞台动作（chips/tree/table）
+        payload["智谷三段式专项"] = {
+            "说明": "这条片子用智谷三段式模板：顶带大标题不动、底带字幕不动，"
+                    "中段是全出血画面，在「实拍素材」和「图形动作」之间快速切换。"
+                    "节奏必须密：每 2-4 秒换一个画面事件。",
+            "每个镜头可输出 stage 字段（可选，默认不输出＝纯实拍镜头）": {
+                "chips": "句子点名了并列事物/动作时给 1-3 个 ≤6 字短词，"
+                         "如 [\"查资料\",\"写报告\",\"做PPT\"]；黄底黑字弹出，别超过 3 个",
+                "tree": "句子在介绍「一个主体 + 它下面的几个东西」时给："
+                        "{center:{title:'≤8字主体', sub:'≤12字'}, children:['≤6字', ≤4 个]}，"
+                        "画面会是中间主卡+虚线连到子项胶囊",
+                "table": "句子在讲榜单/数据对比时给：{title:'≤10字', "
+                         "rows:[{name:'≤8字', value:'数字+单位', delta:'+x%', highlight:true?}，3-5 行]}，"
+                         "把要强调的一行设 highlight:true",
+            },
+            "硬要求": "全片至少 1/3 的镜头带 stage 动作；重要数字句优先用 table；"
+                     "介绍产品/公司/版本优先用 tree；其余保持纯实拍（不要为了用而用）",
+        }
     conf = PROVIDERS.get(provider)
     if not conf or not conf["key"]:
         return None

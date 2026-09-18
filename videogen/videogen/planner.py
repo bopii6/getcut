@@ -360,6 +360,11 @@ def build_plan_llm(content: Content, manifest: Manifest, clauses, shots_spec,
             card_count += 1
         entry["asset"] = ai
         entry["chapterLabel"] = (spec.get("chapterLabel") or "")[:4]
+        # 智谷三段式：舞台动作字段（chips/tree/table）随镜头直通，不认识也不能丢
+        stage = {k: spec.get(k) for k in ("chips", "tree", "table")
+                 if spec.get(k) not in (None, "", [])}
+        if stage:
+            entry["stage"] = stage
         entries.append(entry)
 
     if covered != interior:
@@ -394,7 +399,8 @@ def build_plan_llm(content: Content, manifest: Manifest, clauses, shots_spec,
             label = e["chapterLabel"] or (a.tags[0] if a and a.tags else "")
             shot_list.append(Shot(kind="footage", asset_path=a.file if a else None,
                                   sent_indexes=list(e["sents"]), start_ms=start, end_ms=e["end"],
-                                  chapter_label=label))
+                                  chapter_label=label,
+                                  overlay=({"stage": e["stage"]} if e.get("stage") else {})))
     shot_list.append(Shot(kind="quote_card", asset_path=None, sent_indexes=[],
                           start_ms=max(shot_list[-1].end_ms, last_span[0]), end_ms=last_span[1]))
     # 智能替换：非人物图片镜头若有"标签重合的未用视频"，换成视频（提高动态占比）。

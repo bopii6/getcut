@@ -71,6 +71,24 @@ def build_props(bundle: Path, plan: Plan, content: Content,
                 if not dst.exists() or dst.stat().st_size != src.stat().st_size:
                     shutil.copyfile(src, dst)
         o = shot.overlay or {}
+        if template == "zhigu":
+            # 智谷三段式：舞台动作字段直通；开场钩子借一段素材打底（b-roll + 黄胶囊）
+            st = o.get("stage") if isinstance(o, dict) else None
+            if isinstance(st, dict) and st:
+                s["stage"] = st
+            if shot.kind == "title_card" and not s.get("media"):
+                nxt = next((x for x in plan.shots if x.asset_path), None)
+                if nxt and nxt.asset_path:
+                    src = bundle / nxt.asset_path
+                    if src.is_file():
+                        rel = str(nxt.asset_path).replace("\\", "/").strip("/")
+                        uniq = f"{bundle.name}__{rel}".replace("/", "__")
+                        s["media"] = uniq
+                        s["mediaKind"] = "image" if src.suffix.lower() in IMAGE_EXTS else "video"
+                        used_media.add(uniq)
+                        dst = media_dir / uniq
+                        if not dst.exists() or dst.stat().st_size != src.stat().st_size:
+                            shutil.copyfile(src, dst)
         if shot.kind == "title_card":
             s["overlay"] = {"label": title_card.get("label", ""), "keyword": title_card.get("keyword", ""),
                             "code": "SIGNAL / 01"}

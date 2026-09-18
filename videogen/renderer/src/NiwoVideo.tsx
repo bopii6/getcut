@@ -68,6 +68,20 @@ export type ShotOverlay = {
   card?: {title: string; body: string};
   rows?: {code: string; text: string}[];
 };
+export type ZhiguTable = {
+  title?: string;
+  rows?: {name?: string; sub?: string; value?: string; delta?: string; highlight?: boolean}[];
+  tooltip?: string;
+};
+export type ZhiguStage = {
+  /** 关键词芯片：黄底黑字，一排弹出 */
+  chips?: string[];
+  /** 关系树：中间主卡 + 虚线连子项胶囊 */
+  tree?: {center?: {title?: string; sub?: string; logo?: string};
+          children?: ({title?: string; logo?: string} | string)[]};
+  /** 榜单卡：标题条 + 行，高亮一行 + 弹出说明 */
+  table?: ZhiguTable;
+};
 export type Shot = {
   kind: 'title_card' | 'quote_card' | 'footage' | 'callout' | 'panel';
   media?: string;
@@ -77,6 +91,8 @@ export type Shot = {
   chapterLabel?: string;
   code?: string;
   overlay?: ShotOverlay;
+  /** 智谷三段式：舞台动作字段（chips/tree/table） */
+  stage?: ZhiguStage;
 };
 export type NiwoProps = {
   durationInFrames: number;
