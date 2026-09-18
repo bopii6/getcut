@@ -94,9 +94,9 @@ def _smtp_send(to: str, code: str, purpose: str = "注册") -> None:
     port = int(config.EMAIL_SMTP_PORT or "465")
     user, pwd = config.EMAIL_SMTP_USER, config.EMAIL_SMTP_PASS
     msg = MIMEText(
-        f"你的 videogen {purpose}验证码是 {code}，{CODE_TTL // 60} 分钟内有效。\n\n"
+        f"你的 GetCut {purpose}验证码是 {code}，{CODE_TTL // 60} 分钟内有效。\n\n"
         "如果这不是你本人的操作，请忽略本邮件。", "plain", "utf-8")
-    msg["Subject"] = Header(f"videogen {purpose}验证码", "utf-8")
+    msg["Subject"] = Header(f"GetCut {purpose}验证码", "utf-8")
     msg["From"] = config.EMAIL_FROM or user
     msg["To"] = to
     if port == "465" or str(port) == "465":

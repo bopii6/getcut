@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  videogen 工作台 · 深色工作台（全站一套色，对齐 design-mockups/refined-flow/DESIGN.md）
+  GetCut 工作台 · 深色工作台（全站一套色，对齐 design-mockups/refined-flow/DESIGN.md）
   设计立场：
     · 页底 #14161B + 一个紫强调色 #B7AAFF（选中 / CTA / 进度）；制作间与作品库同一套变量
     · 左侧悬浮图标栏 + 顶栏中央项目切换胶囊 + 制作间 01→04 步骤条
@@ -13,8 +13,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14161B">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231C1F26'/%3E%3Ctext x='30' y='44' font-family='sans-serif' font-size='34' font-weight='900' fill='%23B7AAFF' text-anchor='middle'%3EV%3C/text%3E%3Ccircle cx='49' cy='16' r='6' fill='%23B7AAFF'/%3E%3C/svg%3E">
-<title>videogen · 工作台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231C1F26'/%3E%3Ctext x='30' y='44' font-family='sans-serif' font-size='34' font-weight='900' fill='%23B7AAFF' text-anchor='middle'%3EG%3C/text%3E%3Ccircle cx='49' cy='16' r='6' fill='%23B7AAFF'/%3E%3C/svg%3E">
+<title>GetCut · 工作台</title>
 <style>
 @font-face{
   font-family:"Display";
@@ -696,7 +696,7 @@ body.vg-production .top{background:#14161be8}
   <div class="maincol">
     <header class="top">
       <div class="in">
-        <h1><a href="#/" id="brand" title="回到首页"><b>videogen</b> 视频工作台</a></h1>
+        <h1><a href="#/" id="brand" title="回到首页"><b>GetCut</b> 视频工作台</a></h1>
         <div class="switcher hide" id="switcher"></div>
         <span class="sp"></span>
         <div class="tact">
@@ -926,10 +926,10 @@ function renderAuth(mode){
   const canRegister = AUTHST.smtp || AUTHST.dev_email;
   stopPoll();
   clearInterval(codeTimer);
-  document.title = (reg ? "注册" : rst ? "重设密码" : "登录") + " · videogen";
+  document.title = (reg ? "注册" : rst ? "重设密码" : "登录") + " · GetCut";
   $("main").innerHTML = `<div class="view"><div class="auth"><div class="card">
-    <div class="aw"><span class="mark">V</span></div>
-    <h1>${reg ? "注册 videogen" : rst ? "重设密码" : "欢迎回来"}</h1>
+    <div class="aw"><span class="mark">G</span></div>
+    <h1>${reg ? "注册 GetCut" : rst ? "重设密码" : "欢迎回来"}</h1>
     <p class="sub">${reg ? "把一篇文案变成能发的竖屏短片" : rst ? "邮箱验证码验证是你本人，然后设个新密码" : "登录后继续做你的片子"}</p>
     ${rst ? "" : `<div class="atabs">
       <button class="${reg ? "on" : ""}" data-m="register">注册</button>
@@ -1190,7 +1190,7 @@ async function renderHome(){
   leaveFlow(); CUR = null;
   const epoch = viewEpoch;
   paintSwitcher(false);
-  document.title = "videogen · 从一个压缩包，开始制作";
+  document.title = "GetCut · 从一个压缩包，开始制作";
   $("main").innerHTML = SKELETON_HOME;
   let ps = [];
   try { ps = await api("/api/projects"); }
@@ -1434,7 +1434,7 @@ async function renderProject(requestedView){
   if (!CUR) return goHome();
   leaveFlow();
   const epoch = viewEpoch, project = CUR, pid = project.project_id;
-  document.title = (project.title || "项目") + " · videogen";
+  document.title = (project.title || "项目") + " · GetCut";
   $("main").innerHTML = SKELETON_HOME;
   let bundle = null, bundleError = "", jobs = null, authError = false;
   await Promise.all([

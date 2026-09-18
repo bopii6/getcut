@@ -42,7 +42,7 @@ MAX_EXTRACT_BYTES = 2 * 1024 * 1024 * 1024    # 解压后总上限 2GB（防 zip
 SUPPORTED_FORMATS = set(TEMPLATES) | set(TEMPLATE_ALIAS)
 MAX_JOBS_KEPT = 80                            # jobs.json 只留最近这么多条，防无限膨胀
 
-app = FastAPI(title="videogen studio")
+app = FastAPI(title="GetCut studio")
 JOBS: dict[str, dict] = {}
 JOBS_FILE = ROOT / "jobs.json"
 REG = ROOT / "registry.json"
@@ -616,7 +616,7 @@ def jianying_draft_zip(pid: str, rid: str, request: Request):
 
     voice = mf.get("voice")
     title = (mf.get("title") or "成片").replace(" ", "_")[:24]
-    fname = f"videogen-剪映草稿-{title}-{rid[:6]}.zip"
+    fname = f"GetCut-剪映草稿-{title}-{rid[:6]}.zip"
     try:
         with tempfile.TemporaryDirectory() as td:
             zpath = _P(td) / "draft.zip"
