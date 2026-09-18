@@ -23,7 +23,7 @@ import uvicorn
 from fastapi import FastAPI, File, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-from . import auth, config
+from . import auth, config, preview
 from .schemas import Content, Manifest
 
 ROOT = config.ROOT
@@ -60,7 +60,11 @@ _RUNNING_STAGES = ("tts", "plan", "props", "render", "audio", "mux", "verify")
 
 
 def _queue_ahead(job_id: str) -> int:
-    """排在 job_id 前面的任务数 = 排队在我之前的 + 正在渲染的。"""
+    """排在 job_id 前面的任务数 = 排队在我之前的 + 正在渲染的。
+
+    之前只数排队中的，导致"一个在渲染、一个刚排上"时对用户说"马上开始"，
+    实际前面还有整整一炉。并发>1 时同样成立。
+    """
     try:
         waiting = _QUEUE_HEAD.index(job_id)
     except ValueError:
@@ -135,7 +139,7 @@ def _bundle_owner(name: str) -> str | None:
 
 
 def _bundle_visible(name: str, request: Request) -> bool:
-    """素材包也按归属隔离：自己的、自己项目正在用的、或管理员。
+    """素材包也是按归属隔离的：自己的、自己项目正在用的、或管理员。
 
     本次改动之前上传的素材包没有归属记录（无主），只对管理员可见；
     但如果它已经被某个自己可见的项目挂上（老项目），仍然放行，避免历史项目打不开。
@@ -474,6 +478,99 @@ def create_project(request: Request, body: dict = None):
         return {"project_id": pid}
 
 
+# ---------- 分镜预览（渲染前先看每镜画面） ----------
+
+def _preview_auth_ok(pid: str, request: Request) -> bool:
+    with _LOCK:
+        target = next((p for p in _reg()["projects"]
+                       if p["project_id"] == pid), None)
+    if not target or not _project_visible(target, request):
+        return False
+    return True
+
+
+def _preview_render_body(body: dict) -> dict:
+    """预演入参校验：素材包目录 + 渲染配置。"""
+    bundle = body.get("bundle")
+    if not bundle:
+        raise ValueError("缺少素材包")
+    bundle_dir = _resolve_bundle(bundle)
+    _resolve_bgm(body.get("bgm"))
+    fmt = body.get("format") or DEFAULT_TEMPLATE
+    if fmt not in SUPPORTED_FORMATS:
+        raise ValueError(f"模板 '{fmt}' 不存在")
+    return {"bundle_dir": bundle_dir, "bundle": bundle,
+            "voice": body.get("voice") or None,
+            "rate": _normalize_rate(body.get("rate")),
+            "format": fmt,
+            "subtitles": bool(body.get("subtitles", True)),
+            "sources": bool(body.get("sources", True)),
+            "theme": body.get("theme") or "auto",
+            "disclaimer": body.get("disclaimer")}
+
+
+@app.post("/api/projects/{pid}/preview/plan")
+def preview_plan(pid: str, body: dict, request: Request):
+    """启动预演（TTS+分镜+props，不渲染成片）。返回当前状态。"""
+    if not _preview_auth_ok(pid, request):
+        return JSONResponse({"error": "项目不存在"}, status_code=404)
+    try:
+        rb = _preview_render_body(body)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    st = preview.preview_state(pid)
+    if st["state"] == "running":
+        return st
+    # 配置与已存预演不一致时重跑
+    saved = preview.load_plan(pid)
+    if saved and st["state"] == "ready":
+        same = all(saved.get(k) == rb.get(k) for k in ("voice", "rate", "format", "subtitles", "sources"))
+        if same:
+            return {"state": "ready", "progress": 100, "error": None}
+        preview.invalidate(pid)
+    threading.Thread(target=preview.run_preview, args=(pid, rb), daemon=True).start()
+    return {"state": "running", "progress": 0, "error": None}
+
+
+@app.get("/api/projects/{pid}/preview/status")
+def preview_status(pid: str, request: Request):
+    if not _preview_auth_ok(pid, request):
+        return JSONResponse({"error": "项目不存在"}, status_code=404)
+    return preview.preview_state(pid)
+
+
+@app.post("/api/projects/{pid}/preview/shots")
+def preview_shots(pid: str, body: dict, request: Request):
+    """分镜页数据：逐镜头静帧按需出图（每张 1-3 秒）。"""
+    if not _preview_auth_ok(pid, request):
+        return JSONResponse({"error": "项目不存在"}, status_code=404)
+    st = preview.preview_state(pid)
+    if st["state"] != "ready":
+        return JSONResponse({"error": "预演未就绪", "state": st["state"]}, status_code=409)
+    bundle = body.get("bundle") or ""
+    d = (WORKSPACES / bundle).resolve()
+    if not bundle or WORKSPACES.resolve() not in d.parents:
+        return JSONResponse({"error": "素材包不合法"}, status_code=400)
+    return preview.build_preview_payload(pid, {"bundle": bundle})
+
+
+@app.get("/api/projects/{pid}/preview/stills/{name}")
+def preview_still(pid: str, name: str):
+    f = (preview.preview_dir(pid) / "stills" / name).resolve()
+    if not f.is_file() or preview.preview_dir(pid).resolve() not in f.parents:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(f, media_type="image/jpeg")
+
+
+@app.post("/api/projects/{pid}/preview/invalidate")
+def preview_invalidate(pid: str, body: dict, request: Request):
+    """配置/素材变更后丢弃预演数据。"""
+    if not _preview_auth_ok(pid, request):
+        return JSONResponse({"error": "项目不存在"}, status_code=404)
+    preview.invalidate(pid)
+    return {"ok": True}
+
+
 @app.get("/api/projects/{pid}/renders/{rid}/jianying-draft")
 def jianying_draft_zip(pid: str, rid: str, request: Request):
     """把指定成片打包成剪映专业版草稿 zip（分镜切段 + 可编辑字幕[关字幕渲染时]）。"""
@@ -759,6 +856,7 @@ def job_status(job_id: str):
         out["queued_pos"] = ahead
         out["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
     t0 = out.get("t0")
+    # 跑完/失败后冻结耗时，否则"已用"会一直涨（回来再看变成几十小时）
     out["elapsed"] = int((out.get("t_end") or time.time()) - t0) if t0 else None
     # 分镜剧照（渲染开始前先拍好，渲染中陆续可见）
     stills = sorted(OUTPUTS.glob(f"{job_id}-still-*.jpg")) if OUTPUTS.is_dir() else []

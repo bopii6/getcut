@@ -8,6 +8,7 @@ import json
 import os
 import shutil
 import subprocess
+import threading
 from pathlib import Path
 
 from .planner import Plan
@@ -176,6 +177,41 @@ def render_stills(props: dict, out_dir: Path, prefix: str,
         except Exception:
             pass
     return made
+
+
+# 渲染器共享状态（props.json / visual_out.mp4）互斥；预览出图与正式渲染共用
+_STILL_LOCK = threading.Lock()
+
+
+def render_still_frame(props: dict, out_path: Path, frame: int,
+                       quality: int = 80) -> bool:
+    """渲染 props 的第 frame 帧（分镜预览单帧）；成功返回 True。
+
+    用独立的 props_still.json：正式渲染的 props.json 不能被并发改写。
+    输出必须是绝对路径——子进程 cwd 是 renderer/，相对路径会写错位置。
+    """
+    cli_js = RENDERER / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"
+    node = shutil.which("node")
+    if not cli_js.is_file() or not node:
+        return False
+    total = int(props.get("durationInFrames") or 0)
+    if total <= 1:
+        return False
+    out_path = Path(out_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with _STILL_LOCK:
+        props_still = RENDERER / "props_still.json"
+        props_still.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
+        cmd = [node, str(cli_js), "still", "main", str(out_path),
+               "--frame", str(max(0, min(total - 1, frame))),
+               "--props=props_still.json",
+               "--image-format=jpeg", "--jpeg-quality", str(quality), "--log=error"]
+        try:
+            p = subprocess.run(cmd, cwd=str(RENDERER), capture_output=True,
+                               text=True, timeout=120)
+            return p.returncode == 0 and out_path.is_file() and out_path.stat().st_size > 0
+        except Exception:
+            return False
 
 
 def render_draft_layers(props: dict, frames: list[dict], base_out: Path, card_dir: Path,

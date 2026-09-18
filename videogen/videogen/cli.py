@@ -176,15 +176,36 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     duration_s = plan.duration_ms / 1000.0
 
     if renderer == "remotion":
-        # Remotion renders the full visual track (layout, subs, overlays)
-        report("props", 26, "正在设计画面版式")
-        props = remotion_render.build_props(
-            bundle, plan, content,
-            title_card={"label": title_label, "keyword": title_kw},
-            quote_card={"label": q_label, "quote": q_text},
-            theme=getattr(plan, "theme", {}),
-            show_subtitles=show_subtitles, show_sources=show_sources,
-            disclaimer=disclaimer, template=template)
+        # 预演复用：分镜预览已落盘 props.json（且配音已生成）时直接用它，
+        # 保证预览所见与成片一致。helper 未就绪或数据不全时静默回落到正常路径。
+        pre_props = None
+        if job_id:
+            try:
+                from . import preview as _preview
+                saved = _preview.load_plan(job_id)
+                pdir = _preview.preview_dir(job_id)
+                if saved and (pdir / "props.json").is_file():
+                    cand = json.loads((pdir / "props.json").read_text(encoding="utf-8"))
+                    pmp3 = pdir / "tts" / "voice.mp3"
+                    if cand and pmp3.is_file():
+                        pre_props = cand
+                        mp3 = pmp3
+                        duration_s = (saved.get("duration_ms") or duration_s * 1000) / 1000.0
+            except Exception:
+                pre_props = None
+        if pre_props is None:
+            # 正常路径：按导演分镜重新设计画面版式（TTS/分镜已在上面算好）
+            report("props", 26, "正在设计画面版式")
+            props = remotion_render.build_props(
+                bundle, plan, content,
+                title_card={"label": title_label, "keyword": title_kw},
+                quote_card={"label": q_label, "quote": q_text},
+                theme=getattr(plan, "theme", {}),
+                show_subtitles=show_subtitles, show_sources=show_sources,
+                disclaimer=disclaimer, template=template)
+        else:
+            report("props", 30, "使用分镜预览确认过的画面设计")
+            props = pre_props
         # 草稿分轨要用同一份 props：拷到 work 里存档（renderer/props.json 会被下次渲染覆盖）
         try:
             (work / "props.json").write_text(
