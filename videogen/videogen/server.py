@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hmac as _hmac
+import html
 import json
 import math
 import os
@@ -306,6 +307,79 @@ def bgm_file(name: str):
     return FileResponse(f, media_type="audio/mpeg")
 
 
+@app.get("/api/sfx/{name}")
+def sfx_file(name: str):
+    """音效试听/播放：只允许 assets/sfx 下的音频。"""
+    f = (ROOT / "assets" / "sfx" / name).resolve()
+    root = (ROOT / "assets" / "sfx").resolve()
+    if root not in f.parents or f.suffix.lower() not in (".mp3", ".wav", ".m4a") or not f.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(f, media_type="audio/mpeg")
+
+
+# 音效分类的中文名与"什么时候响"，试听页按这个分组
+_SFX_LABEL = {
+    "open": ("开场", "片头起手那一下"),
+    "cut": ("镜头切换", "每换一个画面轻切一声"),
+    "card": ("卡片弹出", "设计卡/胶囊/榜单弹出来时"),
+    "number": ("数字落点", "数字、数字卡冒出来时"),
+    "emphasis": ("重点强调", "金句、要用力砸一下的地方"),
+    "end": ("收尾", "最后收住"),
+}
+
+
+@app.get("/sfx-preview", response_class=HTMLResponse)
+def sfx_preview():
+    """音效试听页：按分类列出库里的每一条，点一下就能听。
+
+    存在的理由：出片的人（也就是我）听不到声音，音效"像不像那么回事"只能由人耳朵验收。
+    换音效 = 把 mp3 丢进 assets/sfx/ 并在 library.json 加一条，这里会自动出现。
+    """
+    lib = ROOT / "assets" / "sfx"
+    items: list[dict] = []
+    try:
+        items = json.loads((lib / "library.json").read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        items = []
+    rows: dict[str, list[str]] = {}
+    for it in items:
+        cat = it.get("category") or "其他"
+        if cat == "legacy":
+            continue
+        f = lib / it["file"]
+        if not f.is_file():
+            continue
+        rows.setdefault(cat, []).append(
+            f'<li><audio controls preload="none" src="/api/sfx/{html.escape(it["file"])}"></audio>'
+            f'<b>{html.escape(it["file"])}</b>'
+            f'<small>{it.get("bytes", 0) // 1024} KB · {html.escape(str(it.get("source", "")))}</small></li>')
+    order = [c for c in _SFX_LABEL if c in rows] + [c for c in rows if c not in _SFX_LABEL]
+    body = "".join(
+        f'<section><h2>{html.escape(_SFX_LABEL.get(c, (c, ""))[0])}'
+        f'<small>{html.escape(_SFX_LABEL.get(c, ("", ""))[1])}　{len(rows[c])} 条</small></h2>'
+        f'<ul>{"".join(rows[c])}</ul></section>'
+        for c in order)
+    total = sum(len(v) for v in rows.values())
+    return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>音效试听 · 共 {total} 条</title><style>
+body{{margin:0;padding:32px 24px 64px;background:#12141c;color:#e3e5f0;
+  font:14px/1.6 "Microsoft YaHei","Segoe UI",sans-serif}}
+h1{{font-size:22px;margin:0 0 6px}}p.sub{{color:#98a0b6;margin:0 0 26px}}
+h2{{font-size:16px;margin:30px 0 12px;display:flex;align-items:baseline;gap:12px}}
+h2 small{{font-weight:400;color:#98a0b6;font-size:12px}}
+ul{{list-style:none;margin:0;padding:0;display:grid;gap:10px}}
+li{{display:flex;align-items:center;gap:14px;background:#1a1d29;border:1px solid #2a2f3f;
+  border-radius:10px;padding:12px 16px}}
+li b{{font-size:13px;font-weight:600}}li small{{color:#98a0b6;font-size:12px;margin-left:auto}}
+audio{{height:34px}}
+</style></head><body>
+<h1>音效试听</h1>
+<p class="sub">共 {total} 条。哪条不合适就在对话里点它的文件名，我换掉。
+音效是"什么时候弹出一个东西就响一下"，音量统一压在解说之下。</p>
+{body}</body></html>"""
+
+
 def _jobs_load() -> None:
     if JOBS_FILE.is_file():
         try:
@@ -382,12 +456,16 @@ def index() -> str:
 
 @app.get("/templates/{name}")
 def template_thumb(name: str):
-    """渲染模板的真实静帧缩略图（工作台模板选择器用）。"""
+    """模板素材：真实静帧封面 tpl-<id>.png，和样片 sample-<id>.mp4（选择器里点一下就能看）。
+
+    由 tools/make_template_previews.py 一键生成，模板改了就重跑那条命令。
+    """
     root = (STATIC / "templates").resolve()
     f = (root / name).resolve()
     if not f.is_file() or root not in f.parents:
         return JSONResponse({"error": "not found"}, status_code=404)
-    return FileResponse(f, media_type="image/png")
+    media = "video/mp4" if f.suffix.lower() == ".mp4" else "image/png"
+    return FileResponse(f, media_type=media)
 
 
 @app.get("/fonts/{name}")

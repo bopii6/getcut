@@ -22,13 +22,12 @@ async function start(h) {
   await h.flush();
 }
 // 设置直接摆在确认页上（模板/配音/音乐/音效），点渲染之前就能定
-async function configure(h, {format, voice, rate, sfx, subtitles, sources, bgm, disclaimer}) {
-  const wanted = [format, voice, rate, sfx, subtitles, sources, bgm, disclaimer].some(v => v !== undefined);
+async function configure(h, {format, voice, sfx, subtitles, sources, bgm, disclaimer}) {
+  const wanted = [format, voice, sfx, subtitles, sources, bgm, disclaimer].some(v => v !== undefined);
   if (!wanted) return;
   await h.flush(); // music select 的 onchange 在 /api/music 解析后才挂上
   if (format !== undefined) h.click('#fmt [data-v="' + format + '"]');
   if (voice !== undefined) h.click('#voiceSeg [data-v="' + voice + '"]');
-  if (rate !== undefined) h.click('#rateSeg [data-r="' + rate + '"]');
   if (sfx !== undefined) h.click('#sfxSeg [data-v="' + sfx + '"]');
   if (subtitles !== undefined) h.click('.swt[data-k="subtitles"]');
   if (sources !== undefined) h.click('.swt[data-k="sources"]');
@@ -43,7 +42,7 @@ async function configure(h, {format, voice, rate, sfx, subtitles, sources, bgm, 
 test('production boot loads templates and projects entirely through mocked fetch', async t => {
   const h = await setup(t);
   assert(h.get('topNew'), '顶栏必须常驻「新建项目」入口');
-  assert.equal(h.evaluate('TPLS.length'), 7);
+  assert.equal(h.evaluate('TPLS.length'), 6);
   assert(h.requests.some(r => r.url === '/api/templates'));
   assert(h.requests.some(r => r.url === '/api/projects'));
 });
@@ -51,24 +50,32 @@ test('production boot loads templates and projects entirely through mocked fetch
 test('actual configuration controls serialize the exact production build payload', async t => {
   const h = await setup(t);
   await h.openProject();
-  await configure(h, {format: 'finance', voice: 'zh-CN-XiaoxiaoNeural', rate: 125,
+  await configure(h, {format: 'data', voice: 'zh-CN-XiaoxiaoNeural',
     sfx: 'off', subtitles: false, sources: false, bgm: 'assets/music/test.mp3',
     disclaimer: '  离线测试免责声明  '});
   h.respond('POST', '/api/build', {job: 'job-a'});
   await h.click('#go');
   await h.flush();
   assert.equal(builds(h).length, 1);
+  // 节奏由服务端定死（1.1 倍）：请求体里不再有 rate
   assert.deepEqual(JSON.parse(builds(h)[0].body), {
-    project_id: 'aa', bundle: 'bundle-a', voice: 'zh-CN-XiaoxiaoNeural', rate: '125',
+    project_id: 'aa', bundle: 'bundle-a', voice: 'zh-CN-XiaoxiaoNeural',
     bgm: 'assets/music/test.mp3', sfx: false, sfxMode: 'off', subtitles: false,
-    sources: false, format: 'finance', disclaimer: '离线测试免责声明', useLlm: true
+    sources: false, format: 'data', disclaimer: '离线测试免责声明', useLlm: true
   });
   assert.equal(builds(h)[0].headers['Content-Type'], 'application/json');
   assert.equal(h.localStorage.getItem('vg.job.aa'), 'job-a');
 });
 
+test('节奏不给用户调：确认页上没有语速控件', async t => {
+  const h = await setup(t);
+  await h.openProject();
+  assert.equal(h.document.querySelector('#rateSeg'), null, '语速选择器必须已下线');
+  assert.equal(h.document.querySelector('#rateTxt'), null);
+});
+
 test('all sound effect modes preserve production sfx boolean semantics', async t => {
-  for (const mode of ['off', 'hook', 'accent', 'full']) {
+  for (const mode of ['off', 'all']) {
     const h = await setup(t);
     await h.openProject();
     await configure(h, {sfx: mode});
@@ -80,17 +87,17 @@ test('all sound effect modes preserve production sfx boolean semantics', async t
 });
 
 test('persisted configuration loads without reading real user storage', async t => {
-  const h = await setup(t, {storage: {'vg.cfg': JSON.stringify({format: 'retro', voice: 'zh-CN-YunjianNeural', rate: 90})}});
+  const h = await setup(t, {storage: {'vg.cfg': JSON.stringify({format: 'poster', voice: 'zh-CN-YunjianNeural'})}});
   await h.openProject();
-  assert(h.document.querySelector('#fmt [data-v="retro"]').classList.contains('on'));
+  assert(h.document.querySelector('#fmt [data-v="poster"]').classList.contains('on'));
   assert(h.document.querySelector('#voiceSeg [data-v="zh-CN-YunjianNeural"]').classList.contains('on'));
-  assert(h.document.querySelector('#rateSeg [data-r="90"]').classList.contains('on'));
 });
 
 test('malformed saved configuration safely falls back to defaults', async t => {
   const h = await setup(t, {storage: {'vg.cfg': '{bad-json'}});
   assert.equal(h.evaluate('CFG.format'), 'editorial');
-  assert.equal(h.evaluate('CFG.rate'), 100);
+  assert.equal(h.evaluate('CFG.sfxMode'), 'all');
+  assert.equal(h.evaluate('CFG.rate'), undefined);
 });
 
 test('duplicate starts during submission and queued task issue just one POST', async t => {
@@ -161,7 +168,7 @@ test('generation view keeps the decision before the render and shows no per-stag
   assert(h.get('voiceSeg'), '确认页要能直接选配音');
   assert(h.get('bgm'), '确认页要能直接选背景音乐');
   assert(h.get('sfxSeg'), '确认页要能直接选音效');
-  assert.equal(h.document.querySelectorAll('.vg-choices .tpl').length, 7, '模板要摆在页面上，不是弹窗里');
+  assert.equal(h.document.querySelectorAll('.vg-choices .tpl').length, 6, '模板要摆在页面上，不是弹窗里');
   // 确认页只确认不改稿：素材与文案收成一条状态，原文只在弹窗里看一眼
   assert.match(h.get('vg-view').textContent, /素材已读入/);
   assert.equal(h.document.querySelectorAll('#vg-view .vg-fulltext').length, 0, '文稿不应铺在页面上');
@@ -173,10 +180,10 @@ test('generation view keeps the decision before the render and shows no per-stag
   await h.click('#tplNow');
   assert(!grid.classList.contains('hide'), '点那一格要展开');
   assert.match(h.get('tplNow').textContent, /收起/, '展开了那一格要提示能收起');
-  await h.click('#fmt [data-v="retro"]');
+  await h.click('#fmt [data-v="poster"]');
   assert(grid.classList.contains('hide'), '选完要自动收起');
-  assert.equal(h.evaluate('CFG.format'), 'retro');
-  assert.match(h.get('tplNow').textContent, /retro/, '那一格要换成新选的');
+  assert.equal(h.evaluate('CFG.format'), 'poster');
+  assert.match(h.get('tplNow').textContent, /poster/, '那一格要换成新选的');
   assert.match(h.get('tplNow').textContent, /换一个/, '收起后要写回「换一个」');
   await start(h);
   h.jobStates.set('job-a', {project_id: 'aa', stage: 'tts', stage8: 2, progress: 10});

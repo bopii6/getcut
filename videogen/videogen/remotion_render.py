@@ -89,11 +89,15 @@ def build_props(bundle: Path, plan: Plan, content: Content,
                         dst = media_dir / uniq
                         if not dst.exists() or dst.stat().st_size != src.stat().st_size:
                             shutil.copyfile(src, dst)
+        # 片头卡/金句卡：分镜图纸自带文案时优先用它（复刻片、模板样片都是手写的）；
+        # 常规出片走 LLM/规则，shot.overlay 是空的，仍用调用方传来的 title_card / quote_card。
         if shot.kind == "title_card":
-            s["overlay"] = {"label": title_card.get("label", ""), "keyword": title_card.get("keyword", ""),
+            s["overlay"] = {"label": o.get("label") or title_card.get("label", ""),
+                            "keyword": o.get("keyword") or o.get("title") or title_card.get("keyword", ""),
                             "code": "SIGNAL / 01"}
         elif shot.kind == "quote_card":
-            s["overlay"] = {"label": quote_card.get("label", ""), "quote": quote_card.get("quote", "")}
+            s["overlay"] = {"label": o.get("label") or quote_card.get("label", ""),
+                            "quote": o.get("quote") or o.get("title") or quote_card.get("quote", "")}
         elif shot.kind == "callout":
             s["overlay"] = {"label": o.get("label") or s.get("chapterLabel", "") or "关键数据",
                             "number": o.get("number", ""),
@@ -242,15 +246,17 @@ def render_draft_layers(props: dict, frames: list[dict], base_out: Path, card_di
     node = shutil.which("node")
     if not script.is_file() or not node:
         return False
-    props_path = RENDERER / "props_draft.json"
-    frames_path = RENDERER / "draft_frames.json"
+    # 输出路径必须转绝对：node 脚本的 cwd 是 renderer/，相对路径会写到别处，
+    # 于是这里检查"文件在不在"永远为假 → 好端端的分轨草稿被判定成"渲染不完整"而退回单轨。
+    props_path = (RENDERER / "props_draft.json").resolve()
+    frames_path = (RENDERER / "draft_frames.json").resolve()
     props_path.write_text(json.dumps(props, ensure_ascii=False), encoding="utf-8")
     frames_path.write_text(json.dumps(frames, ensure_ascii=False), encoding="utf-8")
-    base_out = Path(base_out)
+    base_out = Path(base_out).resolve()
     base_out.parent.mkdir(parents=True, exist_ok=True)
-    card_dir = Path(card_dir)
+    card_dir = Path(card_dir).resolve()
     card_dir.mkdir(parents=True, exist_ok=True)
-    texts_out = Path(texts_out)
+    texts_out = Path(texts_out).resolve()
     cmd = [node, str(script), str(props_path), str(base_out), str(card_dir),
            str(frames_path), str(texts_out)]
     log_path = RENDERER / "draft_stills.log"

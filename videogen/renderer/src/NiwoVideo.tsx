@@ -144,19 +144,15 @@ const setExportMode = (m: ExportMode) => {
 export const hideMedia = () => EXPORT_MODE !== 'full';
 export const isCard = () => EXPORT_MODE === 'card';
 export const isBase = () => EXPORT_MODE === 'base';
-/** 内层面板几何：与 EditorialVideo 中的面板 rect 保持一致 */
-const PANEL_RECT = {left: 115, top: 596, width: 849, height: 844, radius: 16};
-/** 面板内媒体窗几何（ShotView 用）：相对面板左上角 */
-const MEDIA_WINDOW = {left: 36, top: 71, width: 778, height: 440};
+/**
+ * 版式几何一律走皮肤（renderer/src/layouts.json）：一次渲染 = 一个模板，
+ * T.geo 在渲染入口由 applySkin 赋值，所以这里只做取值不存常量。
+ */
+const paperRect = () => T.geo.paper!;
+const panelRect = () => T.geo.panel!;
+const mediaWindow = () => T.geo.mediaWin!;
 /** 媒体窗在整帧里的 rect（= 面板 rect + 窗口相对偏移）：素材轨的落点 */
-export const MEDIA_RECT = {
-  left: PANEL_RECT.left + MEDIA_WINDOW.left,
-  top: PANEL_RECT.top + MEDIA_WINDOW.top,
-  width: MEDIA_WINDOW.width,
-  height: MEDIA_WINDOW.height,
-};
-/** 纸卡 rect（editorial 版面） */
-const PAPER_RECT = {left: 91, top: 124, width: 892, height: 1432, radius: 26};
+const mediaRect = () => T.geo.mediaRect!;
 
 type Rect = {left: number; top: number; width: number; height: number};
 
@@ -242,8 +238,17 @@ const Tick: React.CSSProperties = {
   },
 };
 
+/**
+ * 入场动效用的帧号：把模板的入场快慢折算成时间轴压缩。
+ * 各卡片里的入场帧号是按 9 帧写死的；模板把 motionFrames 调小（节奏更快）时，
+ * 这里整体加速，不用逐个改组件里的字面量。ANIM_BASE=9 时与历史行为完全一致。
+ */
+const ANIM_BASE = 9;
+const animFactor = () => ANIM_BASE / Math.max(2, T.motionFrames || ANIM_BASE);
+export const useAnimFrame = () => useCurrentFrame() * animFactor();
+
 const Label: React.FC<{text: string; delay?: number}> = ({text, delay = 0}) => {
-  const frame = useCurrentFrame();
+  const frame = useAnimFrame();
   const o = interpolate(frame, [delay, delay + 10], [0, 1], {extrapolateRight: 'clamp'});
   return (
     <div style={{display: 'flex', alignItems: 'center', opacity: o}}>
@@ -294,7 +299,7 @@ const RedRule: React.FC<{width: number; delay?: number; style?: React.CSSPropert
 
 // ---------------- designed overlays ----------------
 const TitleCard: React.FC<{spec: ShotOverlay; fps: number}> = ({spec, fps}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const w = 849;
   const h = 844;
   const cx = w / 2;
@@ -385,7 +390,7 @@ const TitleCard: React.FC<{spec: ShotOverlay; fps: number}> = ({spec, fps}) => {
 };
 
 const QuoteCard: React.FC<{spec: ShotOverlay}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const o = interpolate(f, [8, 30], [0, 1], {extrapolateRight: 'clamp'});
   return (
     <div style={{position: 'absolute', inset: 0, background: T.panel, overflow: 'hidden'}}>
@@ -411,7 +416,7 @@ const QuoteCard: React.FC<{spec: ShotOverlay}> = ({spec}) => {
 };
 
 const NumberCallout: React.FC<{spec: ShotOverlay}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const barH = interpolate(f, [4, 12], [0, 240], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const numO = interpolate(f, [10, 22], [0, 1], {extrapolateRight: 'clamp'});
   const numX = interpolate(f, [10, 22], [30, 0], {extrapolateRight: 'clamp'});
@@ -460,7 +465,7 @@ const NumberCallout: React.FC<{spec: ShotOverlay}> = ({spec}) => {
 };
 
 const PacePanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const tO = interpolate(f, [4, 14], [0, 1], {extrapolateRight: 'clamp'});
   const cardY = interpolate(f, [12, 24], [40, 0], {extrapolateRight: 'clamp'});
   const cardO = interpolate(f, [12, 24], [0, 1], {extrapolateRight: 'clamp'});
@@ -523,7 +528,7 @@ const PacePanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
 };
 
 const ComparePanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const tO = interpolate(f, [4, 14], [0, 1], {extrapolateRight: 'clamp'});
   const colO = interpolate(f, [24, 36], [0, 1], {extrapolateRight: 'clamp'});
   const ruleW = interpolate(f, [34, 50], [0, 320], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
@@ -580,7 +585,7 @@ const ComparePanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
 };
 
 const FactPanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const cardY = interpolate(f, [10, 22], [36, 0], {extrapolateRight: 'clamp'});
   const cardO = interpolate(f, [10, 22], [0, 1], {extrapolateRight: 'clamp'});
   return (
@@ -611,7 +616,7 @@ const FactPanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
 };
 
 const StatementPanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const tO = interpolate(f, [4, 14], [0, 1], {extrapolateRight: 'clamp'});
   return (
     <div style={{position: 'absolute', inset: 0, background: T.scrim}}>
@@ -644,7 +649,7 @@ const StatementPanel: React.FC<{spec: ShotOverlay}> = ({spec}) => {
 };
 
 const StatementMedia: React.FC<{spec: ShotOverlay; media?: string}> = ({spec, media}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const fps = useVideoConfig().fps;
   const tO = interpolate(f, [4, 14], [0, 1], {extrapolateRight: 'clamp'});
   const appear = msToF((spec.appearMs ?? 3500) as number, fps);
@@ -747,11 +752,11 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
     <div
       style={{
         position: 'absolute',
-        left: PANEL_RECT.left,
-        top: PANEL_RECT.top,
-        width: PANEL_RECT.width,
-        height: PANEL_RECT.height,
-        borderRadius: PANEL_RECT.radius,
+        left: panelRect().left,
+        top: panelRect().top,
+        width: panelRect().width,
+        height: panelRect().height,
+        borderRadius: T.panelRadius,
         background: hideMedia() ? 'transparent' : T.panel,
         overflow: 'hidden',
       }}
@@ -768,10 +773,10 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
           <div
             style={{
               position: 'absolute',
-              left: MEDIA_WINDOW.left,
-              top: MEDIA_WINDOW.top,
-              width: MEDIA_WINDOW.width,
-              height: MEDIA_WINDOW.height,
+              left: mediaWindow().left,
+              top: mediaWindow().top,
+              width: mediaWindow().width,
+              height: mediaWindow().height,
               overflow: 'hidden',
               opacity: interpolate(shotFrame, [0, (globalThis as any).__motionFrames || 7], [0, 1], {extrapolateRight: 'clamp'}),
               transform: `scale(${interpolate(shotFrame, [0, ((globalThis as any).__motionFrames || 7) + 2], [1.05, 1.0], {extrapolateRight: 'clamp'})})`,
@@ -896,6 +901,7 @@ const Background: React.FC = () => (
 );
 
 const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({lines}) => {
+  const H = T.geo.headline;
   return (
     <div style={{position: 'absolute', left: 0, top: 0, width: '100%'}}>
       {lines.map((line, i) => {
@@ -905,10 +911,10 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
               key={i}
               style={{
                 ...heavy,
-                fontSize: 88,
+                fontSize: H.size,
                 color: T.ink,
                 textAlign: 'center',
-                marginTop: i === 0 ? 210 : 14,
+                marginTop: i === 0 ? H.top : H.lineGap ?? 14,
               }}
             >
               {line.text}
@@ -922,9 +928,9 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
         // 后面还有字时若仍 flex:1，会把后半句挤出画面。这种情况改为按内容排布并整体居中，
         // 同时按整行可见宽度缩字号，保证再长的标题也放得下。
         const stretch = !after;
-        const budget = 840;
-        const totalW = estW(before, 88) + estW(line.highlight, 88) + estW(after, 88) + (stretch ? 0 : 48);
-        const fs = stretch ? 88 : Math.min(88, Math.max(46, (budget / Math.max(totalW, 1)) * 88));
+        const budget = H.budget ?? 840;
+        const totalW = estW(before, H.size) + estW(line.highlight, H.size) + estW(after, H.size) + (stretch ? 0 : 48);
+        const fs = stretch ? H.size : Math.min(H.size, Math.max(46, (budget / Math.max(totalW, 1)) * H.size));
         return (
           <div
             key={i}
@@ -932,8 +938,8 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: stretch ? 'flex-start' : 'center',
-              marginTop: 14,
-              paddingLeft: stretch ? 115 : 40,
+              marginTop: H.lineGap ?? 14,
+              paddingLeft: stretch ? panelRect().left : 40,
               paddingRight: 22,
             }}
           >
@@ -951,7 +957,7 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                height: 104,
+                height: H.highlightHeight ?? 104,
               }}
             >
               <div style={{position: 'absolute', left: 2, top: 0, bottom: 0, width: 10, background: T.red}} />
@@ -967,16 +973,19 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
   );
 };
 
-const Footer: React.FC<{sources: string[]; disclaimer: string}> = ({sources, disclaimer}) => (
-  <div style={{position: 'absolute', left: 0, top: 1600, width: '100%', textAlign: 'center'}}>
+const Footer: React.FC<{sources: string[]; disclaimer: string}> = ({sources, disclaimer}) => {
+  const F = T.geo.footer;
+  return (
+  <div style={{position: 'absolute', left: 0, top: F.top, width: '100%', textAlign: 'center'}}>
     {sources.length ? (
-      <div style={{fontSize: fitSize('资料来源：' + sources.join(' ｜ '), 27, 1010), color: T.gray, marginBottom: 12, whiteSpace: 'nowrap'}}>
+      <div style={{fontSize: fitSize('资料来源：' + sources.join(' ｜ '), F.size, F.width), color: T.gray, marginBottom: 12, whiteSpace: 'nowrap'}}>
         资料来源：{sources.join(' ｜ ')}
       </div>
     ) : null}
-    {disclaimer ? <div style={{fontSize: fitSize(disclaimer, 27, 1010), color: T.gray, whiteSpace: 'nowrap'}}>{disclaimer}</div> : null}
+    {disclaimer ? <div style={{fontSize: fitSize(disclaimer, F.size, F.width), color: T.gray, whiteSpace: 'nowrap'}}>{disclaimer}</div> : null}
   </div>
-);
+  );
+};
 
 export const buildSubtitleChunks = (clauses: Clause[]) => {
   // long clauses are split into <=12-char chunk cards, timing proportional
@@ -1017,12 +1026,12 @@ const Subtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
     <div
       style={{
         position: 'absolute',
-        left: 60,
-        right: 60,
-        top: 1282,
+        left: T.geo.subtitle.side ?? 60,
+        right: T.geo.subtitle.side ?? 60,
+        top: T.geo.subtitle.top,
         textAlign: 'center',
         ...heavy,
-        fontSize: 70,
+        fontSize: T.geo.subtitle.size,
         color: T.white,
         textShadow: '0 2px 10px rgba(0,0,0,0.45)',
       }}
@@ -1062,23 +1071,26 @@ const PortraitMedia: React.FC<{shot: Shot; index: number}> = ({shot, index}) => 
 };
 
 const PortraitSectionLabel: React.FC<{text: string}> = ({text}) => {
+  const S = T.geo.sectionLabel ?? {left: 64, top: 84, size: 28};
   if (!text) return null;
   return (
-    <div style={{position: 'absolute', left: 64, top: 84, display: 'flex', alignItems: 'center',
+    <div style={{position: 'absolute', left: S.left, top: S.top, display: 'flex', alignItems: 'center',
       textShadow: '0 2px 10px rgba(0,0,0,0.7)'}}>
       <span style={{...Tick, height: 28}} />
-      <span style={{...heavy, fontSize: 28, color: T.white, letterSpacing: 1}}>{text}</span>
+      <span style={{...heavy, fontSize: S.size, color: T.white, letterSpacing: 1}}>{text}</span>
     </div>
   );
 };
 
-const PortraitHeadline: React.FC<{lines: {text: string; highlight?: string}[]}> = ({lines}) => (
-  <div style={{position: 'absolute', left: 0, top: 150, width: '100%'}}>
+const PortraitHeadline: React.FC<{lines: {text: string; highlight?: string}[]}> = ({lines}) => {
+  const H = T.geo.headline;
+  return (
+  <div style={{position: 'absolute', left: 0, top: H.top, width: '100%'}}>
     {lines.map((l, i) => {
       const parts = l.highlight && l.text.includes(l.highlight) ? l.text.split(l.highlight) : null;
       return (
-        <div key={i} style={{...heavy, fontSize: 76, color: T.white, textAlign: 'center',
-          marginTop: i === 0 ? 0 : 12, textShadow: '0 3px 18px rgba(0,0,0,0.65)'}}>
+        <div key={i} style={{...heavy, fontSize: H.size, color: T.white, textAlign: 'center',
+          marginTop: i === 0 ? 0 : H.lineGap ?? 12, textShadow: '0 3px 18px rgba(0,0,0,0.65)'}}>
           {parts ? (
             <>
               {parts[0]}
@@ -1091,7 +1103,8 @@ const PortraitHeadline: React.FC<{lines: {text: string; highlight?: string}[]}> 
       );
     })}
   </div>
-);
+  );
+};
 
 const PortraitSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
   const frame = useCurrentFrame();
@@ -1100,29 +1113,31 @@ const PortraitSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   return (
-    <div style={{position: 'absolute', left: 80, right: 80, bottom: 330, textAlign: 'center',
-      ...heavy, fontSize: 62, color: T.white, textShadow: '0 3px 16px rgba(0,0,0,0.75)'}}>
+    <div style={{position: 'absolute', left: T.geo.subtitle.side ?? 80, right: T.geo.subtitle.side ?? 80,
+      bottom: T.geo.subtitle.bottom, textAlign: 'center',
+      ...heavy, fontSize: T.geo.subtitle.size, color: T.white, textShadow: '0 3px 16px rgba(0,0,0,0.75)'}}>
       {active.text}
     </div>
   );
 };
 
 const PortraitCard: React.FC<{spec: Record<string, any>}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
+  const C = T.geo.card ?? {side: 110, topPct: 40, size: 54, titleSize: 26, subSize: 30};
   const o = interpolate(f, [0, 10], [0, 1], {extrapolateRight: 'clamp'});
   const y = interpolate(f, [0, 14], [24, 0], {extrapolateRight: 'clamp'});
   const main = spec.amount || spec.title || spec.card?.title || spec.number || spec.card_title || spec.name || '';
   const sub = spec.desc || spec.subtitle || spec.card?.body || spec.card_body || spec.caption || '';
   const showCompare = spec.left || spec.right;
   return (
-    <div style={{position: 'absolute', left: 110, right: 110, top: '40%', transform: `translateY(${y}px)`,
+    <div style={{position: 'absolute', left: C.side, right: C.side, top: `${C.topPct}%`, transform: `translateY(${y}px)`,
       opacity: o, background: T.cardWhite, border: `2px solid ${T.red}`, borderRadius: T.cardRadius,
       padding: '30px 34px', boxShadow: '0 18px 50px rgba(0,0,0,0.5)'}}>
       {spec.label ? (
-        <div style={{...heavy, fontSize: 26, color: T.redBright, marginBottom: 12, letterSpacing: 1}}>{spec.label}</div>
+        <div style={{...heavy, fontSize: C.titleSize, color: T.redBright, marginBottom: 12, letterSpacing: 1}}>{spec.label}</div>
       ) : null}
-      {main ? <div style={{...heavy, fontSize: 54, color: T.white, lineHeight: 1.15}}>{main}</div> : null}
-      {sub ? <div style={{fontSize: 30, color: T.cardMuted, marginTop: 10}}>{sub}</div> : null}
+      {main ? <div style={{...heavy, fontSize: C.size, color: T.white, lineHeight: 1.15}}>{main}</div> : null}
+      {sub ? <div style={{fontSize: C.subSize, color: T.cardMuted, marginTop: 10}}>{sub}</div> : null}
       {showCompare ? (
         <div style={{display: 'flex', gap: 22, marginTop: 18}}>
           {[spec.left, spec.right].map((side, i) => side ? (
@@ -1143,7 +1158,8 @@ const PortraitBigText: React.FC<{label?: string; main?: string; sub?: string; ce
   sub,
   centerY,
 }) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
+  const B = T.geo.bigText ?? {size: 108, subSize: 34, side: 110};
   const o = interpolate(f, [0, 12], [0, 1], {extrapolateRight: 'clamp'});
   // centerY：在带底部信息条的骨架里，大标题要居中到上半区，避免压住信息条
   const box: React.CSSProperties =
@@ -1151,11 +1167,11 @@ const PortraitBigText: React.FC<{label?: string; main?: string; sub?: string; ce
       ? {position: 'absolute', inset: 0}
       : {position: 'absolute', left: 0, right: 0, top: centerY - 420, height: 840};
   return (
-    <AbsoluteFill style={{...box, justifyContent: 'center', alignItems: 'center', opacity: o, padding: '0 110px'}}>
+    <AbsoluteFill style={{...box, justifyContent: 'center', alignItems: 'center', opacity: o, padding: `0 ${B.side}px`}}>
       {label ? <div style={{...heavy, fontSize: 30, color: T.redBright, marginBottom: 22, letterSpacing: 2}}>{label}</div> : null}
-      {main ? <div style={{...heavy, fontSize: 108, color: T.white, textAlign: 'center', lineHeight: 1.1,
+      {main ? <div style={{...heavy, fontSize: B.size, color: T.white, textAlign: 'center', lineHeight: 1.1,
         textShadow: '0 4px 22px rgba(0,0,0,0.7)'}}>{main}</div> : null}
-      {sub ? <div style={{fontSize: 34, color: T.onMedia, marginTop: 22, textAlign: 'center'}}>{sub}</div> : null}
+      {sub ? <div style={{fontSize: B.subSize, color: T.onMedia, marginTop: 22, textAlign: 'center'}}>{sub}</div> : null}
     </AbsoluteFill>
   );
 };
@@ -1183,20 +1199,23 @@ const PortraitShot: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
   );
 };
 
-const PortraitFooter: React.FC<{sources: string[]; disclaimer: string}> = ({sources, disclaimer}) => (
-  <div style={{position: 'absolute', left: 0, top: 1690, width: '100%', textAlign: 'center'}}>
+const PortraitFooter: React.FC<{sources: string[]; disclaimer: string}> = ({sources, disclaimer}) => {
+  const F = T.geo.footer;
+  return (
+  <div style={{position: 'absolute', left: 0, top: F.top, width: '100%', textAlign: 'center'}}>
     {sources.length ? (
-      <div style={{fontSize: fitSize('资料来源：' + sources.join(' ｜ '), 24, 980), color: T.gray,
+      <div style={{fontSize: fitSize('资料来源：' + sources.join(' ｜ '), F.size, F.width), color: T.gray,
         marginBottom: 10, whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.8)'}}>
         资料来源：{sources.join(' ｜ ')}
       </div>
     ) : null}
     {disclaimer ? (
-      <div style={{fontSize: fitSize(disclaimer, 24, 980), color: T.grayDim,
+      <div style={{fontSize: fitSize(disclaimer, F.size, F.width), color: T.grayDim,
         whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.8)'}}>{disclaimer}</div>
     ) : null}
   </div>
-);
+  );
+};
 
 const PortraitVideo: React.FC<NiwoProps> = (props) => (
   <AbsoluteFill data-vg-frame="1"
@@ -1217,61 +1236,83 @@ const PortraitVideo: React.FC<NiwoProps> = (props) => (
 const TextProbe: React.FC<{url?: string; tag?: string}> = ({url, tag}) => {
   const [handle] = React.useState(() => delayRender('draft text probe'));
   React.useEffect(() => {
-    const items: Record<string, unknown>[] = [];
-    const seen = new Set<string>();
-    // 画面原点：Remotion 会把画面整体放在缩放容器里，rect 是屏幕坐标，需要换算
-    const frame = document.querySelector('[data-vg-frame]') as HTMLElement | null;
-    const fr = frame ? frame.getBoundingClientRect() : {x: 0, y: 0};
-    // 关掉「文字透明」再量，拿到设计里的真实字色；量完恢复
-    const hideStyle = document.getElementById('vg-hide-text') as HTMLStyleElement | null;
-    if (hideStyle) hideStyle.disabled = true;
-    const walk = (el: Element) => {
-      const node = el as HTMLElement;
-      const box = node.getBoundingClientRect();
-      if (box.width > 0.5 && box.height > 0.5) {
-        for (const child of Array.from(node.childNodes)) {
-          if (child.nodeType !== 3) continue;
-          const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
-          if (!text) continue;
-          const cs = getComputedStyle(node);
-          if (parseFloat(cs.fontSize) < 6) continue;
-          // 用 Range 量「文字本身」的框：元素框常是整行宽度，不能代表文字位置
-          const range = document.createRange();
-          range.selectNodeContents(child);
-          const r = range.getBoundingClientRect();
-          if (r.width <= 0.5 || r.height <= 0.5) continue;
-          const key = `${text}|${Math.round(r.x)}|${Math.round(r.y)}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          items.push({
-            text, x: r.x - fr.x, y: r.y - fr.y, w: r.width, h: r.height,
-            size: parseFloat(cs.fontSize),
-            weight: parseInt(cs.fontWeight, 10) || 400,
-            color: cs.color,
-            align: cs.textAlign,
-          });
+    let cancelled = false;
+
+    const measure = () => {
+      const items: Record<string, unknown>[] = [];
+      const seen = new Set<string>();
+      // 画面原点：Remotion 会把画面整体放在缩放容器里，rect 是屏幕坐标，需要换算
+      const frame = document.querySelector('[data-vg-frame]') as HTMLElement | null;
+      const fr = frame ? frame.getBoundingClientRect() : {x: 0, y: 0};
+      // 关掉「文字透明」再量，拿到设计里的真实字色；量完恢复
+      const hideStyle = document.getElementById('vg-hide-text') as HTMLStyleElement | null;
+      if (hideStyle) hideStyle.disabled = true;
+      const walk = (el: Element) => {
+        const node = el as HTMLElement;
+        const box = node.getBoundingClientRect();
+        if (box.width > 0.5 && box.height > 0.5) {
+          for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType !== 3) continue;
+            const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
+            if (!text) continue;
+            const cs = getComputedStyle(node);
+            if (parseFloat(cs.fontSize) < 6) continue;
+            // 用 Range 量「文字本身」的框：元素框常是整行宽度，不能代表文字位置
+            const range = document.createRange();
+            range.selectNodeContents(child);
+            const r = range.getBoundingClientRect();
+            if (r.width <= 0.5 || r.height <= 0.5) continue;
+            const key = `${text}|${Math.round(r.x)}|${Math.round(r.y)}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            items.push({
+              text, x: r.x - fr.x, y: r.y - fr.y, w: r.width, h: r.height,
+              size: parseFloat(cs.fontSize),
+              weight: parseInt(cs.fontWeight, 10) || 400,
+              color: cs.color,
+              align: cs.textAlign,
+            });
+          }
         }
+        for (const c of Array.from(el.children)) walk(c);
+      };
+      walk(document.body);
+      if (hideStyle) hideStyle.disabled = false;
+      const done = () => continueRender(handle);
+      if (url) {
+        const payload = JSON.stringify({tag, items});
+        // 通道 A：no-cors POST
+        fetch(url, {method: 'POST', mode: 'no-cors', body: payload}).then(done).catch(done);
+        // 通道 B：图片信标（file:// 页面也能发）
+        try {
+          const img = new Image();
+          const b64 = btoa(unescape(encodeURIComponent(payload)));
+          img.src = `${url}?chunk=${encodeURIComponent(b64)}`;
+        } catch (err) {
+          /* 忽略 */
+        }
+      } else {
+        done();
       }
-      for (const c of Array.from(el.children)) walk(c);
     };
-    walk(document.body);
-    if (hideStyle) hideStyle.disabled = false;
-    const done = () => continueRender(handle);
-    if (url) {
-      const payload = JSON.stringify({tag, items});
-      // 通道 A：no-cors POST
-      fetch(url, {method: 'POST', mode: 'no-cors', body: payload}).then(done).catch(done);
-      // 通道 B：图片信标（file:// 页面也能发）
-      try {
-        const img = new Image();
-        const b64 = btoa(unescape(encodeURIComponent(payload)));
-        img.src = `${url}?chunk=${encodeURIComponent(b64)}`;
-      } catch (err) {
-        /* 忽略 */
-      }
-    } else {
-      done();
-    }
+
+    // 等字体与布局都稳定再量：大字报/字幕这类用 bottom、百分比定位的元素，
+    // 容器尺寸还没落定就量会得到负坐标和错误的宽高（剪映里文字会飘到画面外）。
+    const fontsReady =
+      typeof document !== 'undefined' && (document as Document & {fonts?: FontFaceSet}).fonts
+        ? (document as Document & {fonts: FontFaceSet}).fonts.ready
+        : Promise.resolve();
+    Promise.resolve(fontsReady)
+      .then(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))))
+      .then(() => {
+        if (!cancelled) measure();
+      })
+      .catch(() => {
+        if (!cancelled) measure();
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
@@ -1323,6 +1364,22 @@ export const NiwoVideo: React.FC<NiwoProps> = (props) => {
       </>
     );
   }
+  if (skin.layout === 'poster') {
+    return (
+      <>
+        {probe}
+        <PosterVideo {...props} />
+      </>
+    );
+  }
+  if (skin.layout === 'data') {
+    return (
+      <>
+        {probe}
+        <DataVideo {...props} />
+      </>
+    );
+  }
   return (
     <>
       {probe}
@@ -1338,7 +1395,7 @@ const EditorialVideo: React.FC<{props: NiwoProps}> = ({props}) => (
     <FontFace />
     {/* 页面底：card 模式不出（卡片层要能叠在素材上） */}
     {isCard() ? null : isBase() ? (
-      <ChromeClip hole={MEDIA_RECT}>
+      <ChromeClip hole={mediaRect()}>
         <Background />
       </ChromeClip>
     ) : (
@@ -1347,9 +1404,9 @@ const EditorialVideo: React.FC<{props: NiwoProps}> = ({props}) => (
     {/* paper card：card 模式不出；base 模式留出媒体窗的洞 */}
     {isCard() ? null : isBase() ? (
       <RectWithHole
-        rect={PAPER_RECT}
-        hole={MEDIA_RECT}
-        radius={PAPER_RECT.radius}
+        rect={paperRect()}
+        hole={mediaRect()}
+        radius={paperRect().radius}
         fill={{background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)`}}
         style={{boxShadow: T.paperShadow}}
       />
@@ -1357,11 +1414,11 @@ const EditorialVideo: React.FC<{props: NiwoProps}> = ({props}) => (
       <div
         style={{
           position: 'absolute',
-          left: PAPER_RECT.left,
-          top: PAPER_RECT.top,
-          width: PAPER_RECT.width,
-          height: PAPER_RECT.height,
-          borderRadius: PAPER_RECT.radius,
+          left: paperRect().left,
+          top: paperRect().top,
+          width: paperRect().width,
+          height: paperRect().height,
+          borderRadius: paperRect().radius,
           background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)`,
           boxShadow: T.paperShadow,
           overflow: 'hidden',
@@ -1379,15 +1436,15 @@ const EditorialVideo: React.FC<{props: NiwoProps}> = ({props}) => (
     {isCard() ? null : <HeadlineBand lines={props.headline.lines} />}
     {/* inner panel：分轨导出时改成带媒体窗留洞的面板（card 模式不出） */}
     {isCard() ? null : isBase() ? (
-      <RectWithHole rect={PANEL_RECT} hole={MEDIA_RECT} radius={T.panelRadius} fill={{background: T.panel}} />
+      <RectWithHole rect={panelRect()} hole={mediaRect()} radius={T.panelRadius} fill={{background: T.panel}} />
     ) : (
       <div
         style={{
           position: 'absolute',
-          left: PANEL_RECT.left,
-          top: PANEL_RECT.top,
-          width: PANEL_RECT.width,
-          height: PANEL_RECT.height,
+          left: panelRect().left,
+          top: panelRect().top,
+          width: panelRect().width,
+          height: panelRect().height,
           borderRadius: T.panelRadius,
           background: T.panel,
         }}
@@ -1405,7 +1462,7 @@ const EditorialVideo: React.FC<{props: NiwoProps}> = ({props}) => (
 // ---------------- lower layout（满屏素材 + 底部实色信息条） ----------------
 const LowerVideo: React.FC<{props: NiwoProps}> = (props) => (
   <AbsoluteFill data-vg-frame="1"
-    style={{background: hideMedia() ? 'transparent' : '#000', fontFamily: T.font}}>
+    style={{background: hideMedia() ? 'transparent' : T.pageBg ?? '#000', fontFamily: T.font}}>
     <FontFace />
     {isBase() ? null : props.shots.map((shot, i) => (
       <LowerShot key={i} shot={shot} index={i} />
@@ -1428,14 +1485,14 @@ const LowerShot: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
         <AbsoluteFill style={{background: T.scrim}} />
         {shot.kind === 'title_card' ? (
           <PortraitBigText
-            centerY={560}
+            centerY={T.geo.contentCenterY ?? 560}
             label={shot.overlay?.label}
             main={shot.overlay?.number || shot.overlay?.keyword || shot.overlay?.title}
           />
         ) : null}
         {shot.kind === 'quote_card' ? (
           <PortraitBigText
-            centerY={560}
+            centerY={T.geo.contentCenterY ?? 560}
             label={shot.overlay?.label}
             main={shot.overlay?.quote || shot.overlay?.title}
           />
@@ -1447,16 +1504,18 @@ const LowerShot: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
 };
 
 /** 底部实色信息条：播报式 lower third */
-const LowerBar: React.FC<{lines: {text: string; highlight?: string}[]}> = ({lines}) => (
+const LowerBar: React.FC<{lines: {text: string; highlight?: string}[]}> = ({lines}) => {
+  const B = T.geo.headline;
+  return (
   <div
     style={{
       position: 'absolute',
       left: 0,
-      top: 1160,
+      top: B.top,
       width: '100%',
-      background: 'rgba(3,8,16,0.94)',
-      borderTop: `6px solid ${T.accent}`,
-      padding: '26px 0 30px 0',
+      background: T.barBg ?? 'rgba(3,8,16,0.94)',
+      borderTop: `${B.borderTop ?? 6}px solid ${T.accent}`,
+      padding: `${B.padTop ?? 26}px 0 ${B.padBottom ?? 30}px 0`,
     }}
   >
     {lines.map((l, i) => {
@@ -1466,11 +1525,11 @@ const LowerBar: React.FC<{lines: {text: string; highlight?: string}[]}> = ({line
           key={i}
           style={{
             ...heavy,
-            fontSize: i === 0 ? 68 : 60,
+            fontSize: i === 0 ? B.size : B.size2 ?? B.size - 8,
             color: i === 0 ? T.white : T.highlightInk,
             textAlign: 'left',
-            paddingLeft: 64,
-            paddingRight: 64,
+            paddingLeft: B.padLeft ?? 64,
+            paddingRight: B.padLeft ?? 64,
             marginTop: i === 0 ? 0 : 10,
           }}
         >
@@ -1496,7 +1555,8 @@ const LowerBar: React.FC<{lines: {text: string; highlight?: string}[]}> = ({line
       );
     })}
   </div>
-);
+  );
+};
 
 const LowerSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
   const frame = useCurrentFrame();
@@ -1505,13 +1565,14 @@ const LowerSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   return (
-    <div style={{position: 'absolute', left: 70, right: 70, bottom: 800, textAlign: 'center'}}>
+    <div style={{position: 'absolute', left: T.geo.subtitle.side ?? 70, right: T.geo.subtitle.side ?? 70,
+      bottom: T.geo.subtitle.bottom, textAlign: 'center'}}>
       <span
         style={{
           ...heavy,
-          fontSize: 58,
+          fontSize: T.geo.subtitle.size,
           color: T.white,
-          background: 'rgba(3,8,16,0.74)',
+          background: T.barSubBg ?? 'rgba(3,8,16,0.74)',
           padding: '6px 22px 12px 22px',
           borderRadius: 8,
           lineHeight: 1.3,
@@ -1524,10 +1585,416 @@ const LowerSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
 };
 
 
+// ---------------- poster：大字报（一句一屏） ----------------
+// 跟 bleed 的区别：左对齐、字更大（geo.bigText.size）、关键字压高亮色块、
+// 底部实色字幕带、顶部一行小引题。片头卡是整屏纯色块，是最"炸"的一套。
+
+/** 从镜头 overlay 里取「小标 / 主字 / 副字」——各版式的卡字段名不同，统一兜一遍 */
+const overlayText = (spec: Record<string, any> = {}) => ({
+  label: spec.label || '',
+  main: spec.amount || spec.number || spec.quote || spec.title || spec.keyword
+        || spec.card_title || spec.name || '',
+  sub: spec.desc || spec.subtitle || spec.caption || spec.card_body || '',
+});
+
+const PosterKicker: React.FC<{text: string}> = ({text}) => {
+  const f = useAnimFrame();
+  const o = interpolate(f, [0, 8], [0, 1], {extrapolateRight: 'clamp'});
+  if (!text) return null;
+  return (
+    <div style={{position: 'absolute', left: 90, bottom: 320, opacity: o}}>
+      <span style={{...heavy, fontSize: 30, color: T.onAccent, background: T.accent,
+        padding: '4px 16px 8px 16px', letterSpacing: 2}}>{text}</span>
+    </div>
+  );
+};
+
+const PosterBig: React.FC<{label?: string; main?: string; sub?: string; onBlock?: boolean}> = ({
+  label, main, sub, onBlock,
+}) => {
+  const f = useAnimFrame();
+  const B = T.geo.bigText ?? {size: 168, subSize: 40, side: 90};
+  const o = interpolate(f, [0, 9], [0, 1], {extrapolateRight: 'clamp'});
+  const y = interpolate(f, [0, 13], [44, 0], {extrapolateRight: 'clamp'});
+  return (
+    <AbsoluteFill style={{justifyContent: 'center', alignItems: 'flex-start',
+      padding: `0 ${B.side}px`, opacity: o, transform: `translateY(${y}px)`}}>
+      {label ? (
+        <div style={{...heavy, fontSize: 34, color: T.onAccent, background: T.accentSoft,
+          padding: '2px 14px 6px 14px', marginBottom: 30, letterSpacing: 3}}>{label}</div>
+      ) : null}
+      {main ? (
+        <div style={{...heavy, fontSize: B.size, color: onBlock ? T.onAccent : T.white, lineHeight: 1.1,
+          textShadow: onBlock ? 'none' : '0 6px 30px rgba(0,0,0,0.85)'}}>
+          <span style={{background: onBlock ? 'transparent' : T.accent, padding: '0 18px 10px 18px',
+            boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone'}}>{main}</span>
+        </div>
+      ) : null}
+      {sub ? (
+        <div style={{fontSize: B.subSize, color: T.onMedia, marginTop: 32, lineHeight: 1.45,
+          textShadow: '0 3px 16px rgba(0,0,0,0.85)'}}>{sub}</div>
+      ) : null}
+    </AbsoluteFill>
+  );
+};
+
+const PosterCard: React.FC<{spec: Record<string, any>}> = ({spec}) => {
+  const f = useAnimFrame();
+  const C = T.geo.card ?? {side: 80, topPct: 34, size: 72, subSize: 36};
+  const o = interpolate(f, [0, 8], [0, 1], {extrapolateRight: 'clamp'});
+  const y = interpolate(f, [0, 12], [30, 0], {extrapolateRight: 'clamp'});
+  const t = overlayText(spec);
+  const compare = spec.left || spec.right;
+  return (
+    <div style={{position: 'absolute', left: C.side, right: C.side, top: `${C.topPct}%`,
+      opacity: o, transform: `translateY(${y}px)`}}>
+      <div style={{background: T.accent, padding: '34px 38px 38px 38px'}}>
+        {t.label ? (
+          <div style={{...heavy, fontSize: 30, color: T.onAccent, opacity: 0.8, letterSpacing: 3}}>{t.label}</div>
+        ) : null}
+        {t.main ? (
+          <div style={{...heavy, fontSize: C.size, color: T.onAccent, lineHeight: 1.1, marginTop: 4}}>{t.main}</div>
+        ) : null}
+        {t.sub ? (
+          <div style={{fontSize: C.subSize ?? 36, color: T.onAccent, opacity: 0.92, marginTop: 14}}>{t.sub}</div>
+        ) : null}
+      </div>
+      {compare ? (
+        <div style={{display: 'flex', gap: 0, marginTop: 6}}>
+          {[spec.left, spec.right].map((side, i) => side ? (
+            <div key={i} style={{flex: 1, background: i === 0 ? T.cardWhite : T.accent, padding: '22px 24px 26px 24px'}}>
+              <div style={{...heavy, fontSize: 30, color: i === 0 ? T.redBright : T.onAccent}}>{side.head}</div>
+              <div style={{fontSize: 32, color: i === 0 ? T.cardInk : T.onAccent, marginTop: 8}}>{side.body}</div>
+            </div>
+          ) : null)}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const PosterShot: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
+  const fps = useVideoConfig().fps;
+  const from = msToF(shot.startMs, fps);
+  const dur = msToF(shot.endMs - shot.startMs, fps) + 1;
+  const solid = shot.kind === 'title_card';         // 片头卡：整屏纯色 + 超大标题
+  const isDesign = shot.kind === 'panel' || shot.kind === 'callout';
+  const t = overlayText((shot.overlay ?? {}) as Record<string, any>);
+  return (
+    <Sequence from={from} durationInFrames={dur}>
+      <AbsoluteFill style={{overflow: 'hidden'}}>
+        {solid ? (
+          <AbsoluteFill style={{background: `linear-gradient(150deg, ${T.accent} 0%, ${T.accentSoft} 100%)`}} />
+        ) : (
+          <>
+            <PortraitMedia shot={shot} index={index} />
+            <AbsoluteFill style={{background: 'rgba(10,10,12,0.60)'}} />
+          </>
+        )}
+        {solid || shot.kind === 'quote_card' ? (
+          <PosterBig label={t.label} main={t.main} sub={t.sub} onBlock={solid} />
+        ) : null}
+        {isDesign ? <PosterCard spec={(shot.overlay ?? {}) as Record<string, any>} /> : null}
+        {shot.kind === 'footage' && shot.chapterLabel ? <PosterKicker text={shot.chapterLabel} /> : null}
+      </AbsoluteFill>
+    </Sequence>
+  );
+};
+
+const PosterHeadline: React.FC<{lines: {text: string; highlight?: string}[]}> = ({lines}) => {
+  const H = T.geo.headline;
+  if (!lines.length) return null;
+  const [first, ...rest] = lines;
+  return (
+    <div style={{position: 'absolute', left: 0, top: H.top, width: '100%', padding: '0 90px', boxSizing: 'border-box'}}>
+      <div style={{...heavy, fontSize: H.size, color: T.white, lineHeight: 1.12,
+        textShadow: '0 4px 20px rgba(0,0,0,0.85)'}}>{first.text}</div>
+      {rest.map((l, i) => (
+        <div key={i} style={{...heavy, fontSize: Math.round(H.size * 0.6), color: T.accentSoft,
+          marginTop: H.lineGap ?? 14, textShadow: '0 4px 20px rgba(0,0,0,0.85)'}}>{l.text}</div>
+      ))}
+    </div>
+  );
+};
+
+const PosterSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
+  const frame = useCurrentFrame();
+  const fps = useVideoConfig().fps;
+  const t = (frame / fps) * 1000;
+  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  if (!active || hideMedia()) return null;
+  const S = T.geo.subtitle;
+  return (
+    <div style={{position: 'absolute', left: 0, right: 0, bottom: S.bottom, background: T.barBg ?? 'rgba(10,10,12,0.86)',
+      borderTop: `5px solid ${T.accent}`, padding: '22px 90px 26px 90px'}}>
+      <span style={{...heavy, fontSize: S.size, color: T.white, lineHeight: 1.25}}>{active.text}</span>
+    </div>
+  );
+};
+
+const PosterFooter: React.FC<{sources: string[]; disclaimer: string}> = ({sources, disclaimer}) => {
+  const F = T.geo.footer;
+  return (
+    <div style={{position: 'absolute', left: 0, top: F.top, width: '100%', textAlign: 'center'}}>
+      {sources.length ? (
+        <div style={{fontSize: fitSize('资料来源：' + sources.join(' ｜ '), F.size, F.width), color: T.gray,
+          whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.9)'}}>
+          资料来源：{sources.join(' ｜ ')}
+        </div>
+      ) : null}
+      {disclaimer ? (
+        <div style={{fontSize: fitSize(disclaimer, F.size, F.width), color: T.grayDim,
+          marginTop: 8, whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.9)'}}>{disclaimer}</div>
+      ) : null}
+    </div>
+  );
+};
+
+/**
+ * 字幕底衬（只出在底板层）：分轨草稿里字幕是剪映文本轨，只有字没有底。
+ * 这条带子的高度是恒定的——字幕切分不超过 12 字，74px 字号下一行放得下——
+ * 所以可以精确地烘进底板，草稿看起来才和成片一致。
+ */
+const PosterSubtitlePlate: React.FC = () => {
+  const S = T.geo.subtitle;
+  const plateH = 22 + 26 + Math.round(S.size * 1.25);
+  return (
+    <div style={{position: 'absolute', left: 0, right: 0, bottom: S.bottom,
+      height: plateH, background: T.barBg ?? 'rgba(10,10,12,0.86)',
+      borderTop: `5px solid ${T.accent}`}} />
+  );
+};
+
+const PosterVideo: React.FC<NiwoProps> = (props) => (
+  <AbsoluteFill data-vg-frame="1"
+    style={{background: hideMedia() ? 'transparent' : T.pageBg ?? T.bgTop, fontFamily: T.font}}>
+    <FontFace />
+    {isCard() ? null : isBase() ? <PosterSubtitlePlate /> : null}
+    {isBase() ? null : props.shots.map((shot, i) => (
+      <PosterShot key={i} shot={shot} index={i} />
+    ))}
+    {isCard() ? null : <PosterHeadline lines={props.headline.lines} />}
+    {props.showSubtitles !== false ? <PosterSubtitles clauses={props.clauses} /> : null}
+    {isCard() ? null : <PosterFooter sources={props.sources} disclaimer={props.disclaimer} />}
+  </AbsoluteFill>
+);
+
+// ---------------- data：数据面板（左数据 / 右素材的双栏板） ----------------
+// 跟别的骨架最不一样的地方：素材不是铺满，而是嵌在面板右半边的窗口里，
+// 左边留给数据卡/榜单/金句。整条片子的"界面感"最强。
+
+const DataHeader: React.FC<{lines: {text: string; highlight?: string}[]}> = ({lines}) => {
+  const H = T.geo.headline;
+  if (!lines.length) return null;
+  return (
+    <div style={{position: 'absolute', left: 0, top: H.top, width: '100%', padding: '0 70px', boxSizing: 'border-box'}}>
+      {lines.map((l, i) => {
+        const parts = l.highlight && l.text.includes(l.highlight) ? l.text.split(l.highlight) : null;
+        return (
+          <div key={i} style={{...heavy, fontSize: i === 0 ? H.size : Math.round(H.size * 0.78),
+            color: i === 0 ? T.ink : T.mutedInk, lineHeight: 1.15,
+            marginTop: i === 0 ? 0 : H.lineGap ?? 12}}>
+            {parts ? (
+              <>
+                {parts[0]}
+                <span style={{background: T.highlightBg, color: T.highlightInk, padding: '0 10px 4px', marginLeft: 6}}>
+                  {l.highlight}</span>
+                {parts[1]}
+              </>
+            ) : l.text}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/** 素材镜头左栏：把这一拍正在念的话摊在面板上，像仪表盘的当前读数 */
+const DataRunningText: React.FC<{text: string; chapterLabel?: string}> = ({text, chapterLabel}) => {
+  const f = useAnimFrame();
+  const P = T.geo.panel!;
+  const W = T.geo.mediaWin ?? {left: 40};
+  const o = interpolate(f, [0, 8], [0, 1], {extrapolateRight: 'clamp'});
+  const y = interpolate(f, [0, 12], [18, 0], {extrapolateRight: 'clamp'});
+  return (
+    <div style={{position: 'absolute', left: P.left + 46, top: P.top + 56,
+      width: Math.max(200, W.left - 92), opacity: o, transform: `translateY(${y}px)`}}>
+      {chapterLabel ? (
+        <div style={{...heavy, fontSize: 24, color: T.onAccent, background: T.accent,
+          display: 'inline-block', padding: '3px 12px 7px 12px', letterSpacing: 2, marginBottom: 20}}>
+          {chapterLabel}</div>
+      ) : null}
+      <div style={{...heavy, fontSize: 56, color: T.ink, lineHeight: 1.32}}>{text}</div>
+      <div style={{width: 120, height: 8, background: T.accent, marginTop: 26}} />
+    </div>
+  );
+};
+
+const DataCard: React.FC<{spec: Record<string, any>; kind: string; chapterLabel?: string}> = ({
+  spec, kind, chapterLabel,
+}) => {
+  const f = useAnimFrame();
+  const C = T.geo.card ?? {size: 62, subSize: 32};
+  const P = T.geo.panel!;
+  const W = T.geo.mediaWin ?? {left: 40};
+  const o = interpolate(f, [0, 8], [0, 1], {extrapolateRight: 'clamp'});
+  const y = interpolate(f, [0, 12], [22, 0], {extrapolateRight: 'clamp'});
+  const t = overlayText(spec);
+  const rows: {name?: string; value?: string; delta?: string; text?: string; highlight?: boolean}[] =
+    spec.rows || spec.table?.rows || [];
+  const big = kind === 'title_card' || kind === 'quote_card';
+  return (
+    <div style={{position: 'absolute', left: P.left + 46, top: P.top + 56,
+      width: Math.max(200, W.left - 92), opacity: o, transform: `translateY(${y}px)`}}>
+      {chapterLabel ? (
+        <div style={{...heavy, fontSize: 24, color: T.accentSoft, letterSpacing: 3, marginBottom: 14}}>{chapterLabel}</div>
+      ) : null}
+      {t.label ? (
+        <div style={{...heavy, fontSize: 28, color: T.onAccent, background: T.accent,
+          display: 'inline-block', padding: '2px 12px 6px 12px', marginBottom: 16}}>{t.label}</div>
+      ) : null}
+      {t.main ? (
+        <div style={{...heavy, fontSize: big ? C.size : C.size + 16, color: T.ink, lineHeight: 1.12}}>{t.main}</div>
+      ) : null}
+      {t.sub ? (
+        <div style={{fontSize: C.subSize ?? 32, color: T.mutedInk, marginTop: 12, lineHeight: 1.4}}>{t.sub}</div>
+      ) : null}
+      {rows.length ? (
+        <div style={{marginTop: 20, borderTop: `2px solid ${T.cardLine}`}}>
+          {rows.slice(0, 5).map((r, i) => (
+            <div key={i} style={{display: 'flex', alignItems: 'baseline', gap: 10, padding: '10px 0',
+              borderBottom: `1px solid ${T.cardLine}`, background: r.highlight ? hexA(T.accent, 0.16) : 'transparent'}}>
+              <span style={{...heavy, fontSize: 30, color: T.ink, flex: 1}}>{r.name || r.text}</span>
+              {r.value ? <span style={{...heavy, fontSize: 32, color: r.highlight ? T.accent : T.ink}}>{r.value}</span> : null}
+              {r.delta ? <span style={{fontSize: 26, color: T.teal, width: 96, textAlign: 'right'}}>{r.delta}</span> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {spec.left || spec.right ? (
+        <div style={{marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12}}>
+          {[spec.left, spec.right].map((side, i) => side ? (
+            <div key={i} style={{background: hexA(i === 0 ? T.cardInk : T.accent, 0.10),
+              borderLeft: `5px solid ${i === 0 ? T.teal : T.accent}`, padding: '14px 16px'}}>
+              <div style={{...heavy, fontSize: 28, color: i === 0 ? T.ink : T.accent}}>{side.head}</div>
+              <div style={{fontSize: 28, color: T.mutedInk, marginTop: 4}}>{side.body}</div>
+            </div>
+          ) : null)}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const DataShot: React.FC<{shot: Shot; index: number; runningText: string}> = ({shot, index, runningText}) => {
+  const fps = useVideoConfig().fps;
+  const from = msToF(shot.startMs, fps);
+  const dur = msToF(shot.endMs - shot.startMs, fps) + 1;
+  const P = T.geo.panel!;
+  const W = T.geo.mediaWin!;
+  const showCard = shot.kind !== 'footage';
+  return (
+    <Sequence from={from} durationInFrames={dur}>
+      <AbsoluteFill style={{overflow: 'hidden'}}>
+        {/* 媒体窗：素材轨的落点。card 层不放底衬——卡片层在素材之上，一层灰底会把画面糊掉 */}
+        <div style={{position: 'absolute', left: P.left + W.left, top: P.top + W.top,
+          width: W.width, height: W.height, overflow: 'hidden', borderRadius: 12,
+          background: isCard() ? 'transparent' : hexA(T.cardInk, 0.06)}}>
+          <PortraitMedia shot={shot} index={index} />
+        </div>
+        {showCard ? (
+          <DataCard spec={(shot.overlay ?? {}) as Record<string, any>}
+                    kind={shot.kind} chapterLabel={shot.chapterLabel} />
+        ) : (
+          <DataRunningText text={runningText} chapterLabel={shot.chapterLabel} />
+        )}
+      </AbsoluteFill>
+    </Sequence>
+  );
+};
+
+/** 面板底部的进度轨：当前拍到第几拍，像仪表盘的位置读数 */
+const DataProgress: React.FC<{shots: Shot[]}> = ({shots}) => {
+  const frame = useCurrentFrame();
+  const fps = useVideoConfig().fps;
+  const t = (frame / fps) * 1000;
+  const P = T.geo.panel!;
+  const idx = shots.findIndex((s) => t >= s.startMs && t < s.endMs);
+  if (!shots.length) return null;
+  const cur = Math.max(0, idx);
+  return (
+    <div style={{position: 'absolute', left: P.left + 46, top: P.top + P.height - 96,
+      width: P.width - 92, display: 'flex', alignItems: 'center', gap: 16}}>
+      <span style={{...heavy, fontSize: 26, color: T.mutedInk, letterSpacing: 1}}>
+        {String(cur + 1).padStart(2, '0')}<span style={{opacity: 0.5}}> / {String(shots.length).padStart(2, '0')}</span>
+      </span>
+      <div style={{display: 'flex', gap: 4, flex: 1}}>
+        {shots.map((_, i) => (
+          <span key={i} style={{flex: 1, height: 10, background: i <= cur ? T.accent : T.cardLine}} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const DataVideo: React.FC<NiwoProps> = (props) => {
+  const runningOf = (s: Shot) => props.clauses
+    .filter((c) => c.endMs > s.startMs && c.startMs < s.endMs)
+    .map((c) => c.text).join('');
+  const P = T.geo.panel!;
+  const hole = mediaRect();
+  return (
+    <AbsoluteFill data-vg-frame="1"
+      style={{background: hideMedia() ? 'transparent' : T.pageBg ?? T.bgTop, fontFamily: T.font}}>
+      <FontFace />
+      {/* 页面底：分轨导出时底板压在素材之上，必须挖掉媒体窗，否则素材整块被盖住 */}
+      {isCard() ? null : isBase() ? (
+        <ChromeClip hole={hole}>
+          <AbsoluteFill style={{background: T.pageBg ?? T.bgTop}} />
+        </ChromeClip>
+      ) : null}
+      {/* 面板：card 层不出——它是整片不变的包装层，出在卡片层会把素材和底板一起盖住 */}
+      {isCard() ? null : isBase() ? (
+        <RectWithHole rect={P} hole={hole} radius={P.radius ?? 20} fill={{background: T.panel}} />
+      ) : (
+        <div style={{position: 'absolute', left: P.left, top: P.top,
+          width: P.width, height: P.height,
+          borderRadius: P.radius ?? 20, background: T.panel,
+          border: `1px solid ${T.cardLine}`, boxShadow: T.paperShadow}} />
+      )}
+      {isBase() ? null : props.shots.map((shot, i) => (
+        <DataShot key={i} shot={shot} index={i} runningText={runningOf(shot)} />
+      ))}
+      {/* 进度轨每镜一个状态，要跟着卡片层走（base 只有一张静止帧，放进去会定格） */}
+      {isBase() ? null : <DataProgress shots={props.shots} />}
+      {isCard() ? null : <DataHeader lines={props.headline.lines} />}
+      {props.showSubtitles !== false ? <DataSubtitles clauses={props.clauses} /> : null}
+      {isCard() ? null : <Footer sources={props.sources} disclaimer={props.disclaimer} />}
+    </AbsoluteFill>
+  );
+};
+
+const DataSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
+  const frame = useCurrentFrame();
+  const fps = useVideoConfig().fps;
+  const t = (frame / fps) * 1000;
+  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  if (!active || hideMedia()) return null;
+  const S = T.geo.subtitle;
+  return (
+    <div style={{position: 'absolute', left: S.side ?? 80, right: S.side ?? 80, bottom: S.bottom, textAlign: 'center'}}>
+      <span style={{...heavy, fontSize: S.size, color: T.white, background: T.barSubBg ?? 'rgba(6,12,20,0.80)',
+        borderLeft: `6px solid ${T.accent}`, padding: '10px 26px 14px 26px', lineHeight: 1.3}}>
+        {active.text}
+      </span>
+    </div>
+  );
+};
+
 // ---------------- v11 new card templates (from demo research) ----------------
 
 const StatCard: React.FC<{spec: any}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const o = interpolate(f, [4, 14], [0, 1], {extrapolateRight: 'clamp'});
   const numO = interpolate(f, [12, 24], [0, 1], {extrapolateRight: 'clamp'});
   const numY = interpolate(f, [12, 24], [24, 0], {extrapolateRight: 'clamp'});
@@ -1553,7 +2020,7 @@ const StatCard: React.FC<{spec: any}> = ({spec}) => {
 };
 
 const Branches: React.FC<{spec: any}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const srcO = interpolate(f, [4, 12], [0, 1], {extrapolateRight: 'clamp'});
   const targets = spec.targets ?? [];
   return (
@@ -1594,7 +2061,7 @@ const Branches: React.FC<{spec: any}> = ({spec}) => {
 };
 
 const PersonCard: React.FC<{spec: any}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const o = interpolate(f, [6, 18], [0, 1], {extrapolateRight: 'clamp'});
   const cardX = interpolate(f, [10, 22], [-60, 0], {extrapolateRight: 'clamp'});
   return (
@@ -1617,7 +2084,7 @@ const PersonCard: React.FC<{spec: any}> = ({spec}) => {
 };
 
 const Timeline3: React.FC<{spec: any}> = ({spec}) => {
-  const f = useCurrentFrame();
+  const f = useAnimFrame();
   const cols = spec.cols ?? [];
   return (
     <div style={{position: 'absolute', inset: 0, background: T.scrim}}>

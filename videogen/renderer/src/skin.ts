@@ -9,13 +9,36 @@
  * （Remotion 官方推荐 Context，这里沿用代码库既有的 T 写法以降低改动面。）
  */
 
-export type LayoutKind = 'editorial' | 'bleed' | 'lower' | 'zhigu';
+import LAYOUTS from './layouts.json';
+
+export type LayoutKind = 'editorial' | 'bleed' | 'lower' | 'poster' | 'data' | 'zhigu';
 export type DecorKind = 'grain' | 'grid' | 'none';
+
+/** 版式几何：从 layouts.json 读（TS 与 Python 共用同一份，防漂移） */
+export type Rect = {left: number; top: number; width: number; height: number; radius?: number};
+export type Geo = {
+  layout: LayoutKind;
+  paper?: Rect;
+  panel?: Rect;
+  mediaWin?: Rect;
+  headline: {top: number; size: number; lineGap?: number; [k: string]: unknown};
+  subtitle: {top?: number; bottom?: number; size: number; side?: number; [k: string]: unknown};
+  footer: {top: number; size: number; width: number};
+  bigText?: {size: number; subSize: number; side: number};
+  card?: {side: number; topPct: number; size: number; titleSize?: number; subSize?: number};
+  sectionLabel?: {left: number; top: number; size: number};
+  columns?: {left: Rect; right: Rect};
+  contentCenterY?: number;
+  /** 派生：媒体窗在整帧里的位置 = panel + mediaWin（素材轨的落点） */
+  mediaRect?: Rect;
+};
 
 export type Skin = {
   name: string;
   /** 骨架：元素怎么摆 */
   layout: LayoutKind;
+  /** 版式几何（新增模板时也可只覆盖需要的项） */
+  geo: Geo;
 
   // ---------- 画布 ----------
   bgTop: string;
@@ -74,6 +97,14 @@ export type Skin = {
   highlightBg: string;
   highlightInk: string;
 
+  // ---------- 底部信息条（lower 骨架专用） ----------
+  /** 信息条底色；不给就用默认深色（老模板维持原样） */
+  barBg?: string;
+  /** 信息条式字幕的底 */
+  barSubBg?: string;
+  /** 满屏骨架的页面底色（默认纯黑） */
+  pageBg?: string;
+
   // ---------- 字体 ----------
   font: string;
   fontMono: string;
@@ -91,7 +122,7 @@ const LIGHT = "'SSHLight','Noto Sans SC','Source Han Sans CN',sans-serif";
 const MONO = "'Consolas','DejaVu Sans Mono','Liberation Mono',monospace";
 
 /** 杂志编辑：现有基线，暖灰纸卡 + 锈红 */
-const editorial: Skin = {
+const editorial: Omit<Skin, 'geo'> = {
   name: '杂志编辑版',
   layout: 'editorial',
   bgTop: '#1c1a18',
@@ -135,7 +166,7 @@ const editorial: Skin = {
 };
 
 /** 财经数据：深蓝黑终端感 + 青蓝数据色 + 网格 */
-const finance: Skin = {
+const finance: Omit<Skin, 'geo'> = {
   name: '财经数据版',
   layout: 'editorial',
   bgTop: '#0b1622',
@@ -179,7 +210,7 @@ const finance: Skin = {
 };
 
 /** 极简白：纯白 + 黑字 + 零装饰 + 大留白 */
-const minimal: Skin = {
+const minimal: Omit<Skin, 'geo'> = {
   name: '极简白版',
   layout: 'editorial',
   bgTop: '#f1f1ef',
@@ -223,7 +254,7 @@ const minimal: Skin = {
 };
 
 /** 全出血沉浸：素材铺满，只有一层渐变压字 */
-const bleed: Skin = {
+const bleed: Omit<Skin, 'geo'> = {
   name: '全出血沉浸版',
   layout: 'bleed',
   bgTop: '#000000',
@@ -268,7 +299,7 @@ const bleed: Skin = {
 };
 
 /** 新闻播报：深蓝 + 正红，底部实色信息条 */
-const news: Skin = {
+const news: Omit<Skin, 'geo'> = {
   name: '新闻播报版',
   layout: 'lower',
   bgTop: '#07101f',
@@ -313,7 +344,7 @@ const news: Skin = {
 };
 
 /** 复古人文：米黄纸 + 陶土红 + 重颗粒 + 暗角 */
-const retro: Skin = {
+const retro: Omit<Skin, 'geo'> = {
   name: '复古人文版',
   layout: 'editorial',
   bgTop: '#2a231a',
@@ -357,7 +388,7 @@ const retro: Skin = {
 };
 
 /** 竖屏满屏：旧版 portrait，保留兼容（骨架等同 bleed，配色沿用旧默认） */
-const portrait: Skin = {
+const portrait: Omit<Skin, 'geo'> = {
   ...bleed,
   name: '竖屏满屏',
   accent: '#a44231',
@@ -371,7 +402,7 @@ const portrait: Skin = {
 };
 
 /** 智谷三段式：顶带大标题 / 中段近白舞台 / 底带字幕，三段全程钉死 */
-const zhigu: Skin = {
+const zhigu: Omit<Skin, 'geo'> = {
   name: '智谷三段式',
   layout: 'zhigu',
   bgTop: '#0c0f14',
@@ -413,16 +444,118 @@ const zhigu: Skin = {
   motionFrames: 5,
 };
 
-export const SKINS: Record<string, Skin> = {
-  editorial,
-  finance,
-  minimal,
-  bleed,
-  news,
-  retro,
-  portrait,
-  zhigu,
+/** 大字报：黑底 + 荧光黄 + 左对齐超大字，一句一屏，冲击力优先 */
+const poster: Omit<Skin, 'geo'> = {
+  name: '大字报版',
+  layout: 'poster',
+  bgTop: '#0d0d0f',
+  bgBottom: '#0d0d0f',
+  decor: 'none',
+  vignette: false,
+  pageBg: '#0d0d0f',
+  barBg: 'rgba(13,13,15,0.88)',
+  paperTop: '#141416',
+  paper: '#141416',
+  paperBottom: '#101012',
+  paperTexture: 'none',
+  paperShadow: 'none',
+  panel: '#141416',
+  panelRadius: 4,
+  cardRadius: 4,
+  ink: '#f4f4f6',
+  onMedia: '#ffffff',
+  mutedInk: '#b9bac2',
+  codeInk: '#8d8f99',
+  white: '#ffffff',
+  gray: '#a9aab3',
+  grayDim: '#7c7e88',
+  accent: '#ffd400',
+  accentSoft: '#ffe457',
+  onAccent: '#101014',
+  teal: '#4ea8ff',
+  cardWhite: '#141416',
+  cardInk: '#f4f4f6',
+  cardMuted: '#a9aab3',
+  cardLine: '#2a2b30',
+  chipBg: 'rgba(255,212,0,0.92)',
+  timelineBg: '#1a1b1f',
+  slotBg: '#1a1b1f',
+  scrim: 'rgba(10,10,12,0.62)',
+  calloutScrim: 'rgba(10,10,12,0.72)',
+  highlightBg: '#ffd400',
+  highlightInk: '#101014',
+  font: SANS,
+  fontMono: MONO,
+  motionFrames: 5,
 };
+
+/** 数据面板：浅色仪表盘 + 左数据右素材的双栏，全是深色/细节版式里唯一的亮底 */
+const data: Omit<Skin, 'geo'> = {
+  name: '数据面板版',
+  layout: 'data',
+  bgTop: '#eceff4',
+  bgBottom: '#e4e8ef',
+  decor: 'none',
+  vignette: false,
+  pageBg: '#e9edf3',
+  barBg: 'rgba(20,24,31,0.90)',
+  barSubBg: 'rgba(20,24,31,0.88)',
+  paperTop: '#ffffff',
+  paper: '#f7f8fa',
+  paperBottom: '#eef1f5',
+  paperTexture: 'none',
+  paperShadow: '0 8px 26px rgba(24,32,48,0.10)',
+  panel: '#ffffff',
+  panelRadius: 20,
+  cardRadius: 10,
+  ink: '#14181f',
+  onMedia: '#ffffff',
+  mutedInk: '#5b6472',
+  codeInk: '#7a8494',
+  white: '#ffffff',
+  gray: '#5b6472',
+  grayDim: '#7a8494',
+  accent: '#2f6fed',
+  accentSoft: '#6b9bff',
+  onAccent: '#ffffff',
+  teal: '#16a34a',
+  cardWhite: '#ffffff',
+  cardInk: '#14181f',
+  cardMuted: '#5b6472',
+  cardLine: '#d8dde6',
+  chipBg: 'rgba(47,111,237,0.12)',
+  timelineBg: '#eef1f5',
+  slotBg: '#f1f4f8',
+  scrim: 'rgba(20,24,31,0.45)',
+  calloutScrim: 'rgba(20,24,31,0.55)',
+  highlightBg: '#2f6fed',
+  highlightInk: '#ffffff',
+  font: SANS,
+  fontMono: MONO,
+  motionFrames: 6,
+};
+
+const GEOMETRY = LAYOUTS as unknown as Record<string, Geo>;
+
+/** 取某个模板的版式几何：优先按模板 id，其次按骨架，最后回落 editorial */
+function buildGeo(id: string, layout: string): Geo {
+  const geo: Geo = {...(GEOMETRY[id] ?? GEOMETRY[layout] ?? GEOMETRY.editorial)};
+  if (geo.panel && geo.mediaWin) {
+    geo.mediaRect = {
+      left: geo.panel.left + geo.mediaWin.left,
+      top: geo.panel.top + geo.mediaWin.top,
+      width: geo.mediaWin.width,
+      height: geo.mediaWin.height,
+    };
+  }
+  return geo;
+}
+
+export const SKINS: Record<string, Skin> = Object.fromEntries(
+  Object.entries({editorial, finance, minimal, bleed, news, retro, portrait, zhigu, poster, data}).map(
+    ([id, s]) => [id, {...s, geo: buildGeo(id, s.layout)}],
+  ),
+) as Record<string, Skin>;
 
 /** 旧 format 别名 → 新模板 id */
 export const FORMAT_ALIAS: Record<string, string> = {
@@ -440,8 +573,8 @@ export function resolveSkin(template?: string): Skin {
  * T：模块级可变 token 表。组件直接读 T.xxx，渲染入口按皮肤赋值。
  * red / redBright 是历史别名，等同 accent / accentSoft。
  */
-export const T = {
-  ...editorial,
+export const T: Skin & {red: string; redBright: string} = {
+  ...(SKINS.editorial as Skin),
   red: editorial.accent,
   redBright: editorial.accentSoft,
 };

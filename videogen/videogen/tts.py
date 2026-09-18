@@ -10,7 +10,9 @@ from pathlib import Path
 import edge_tts
 
 VOICE = "zh-CN-YunxiNeural"
-RATE = "+15%"
+# 全片节奏固定 1.1 倍：不给用户调（界面上没有语速选项）。整条时间轴派生自 TTS，
+# 所以这里一动，分镜、字幕、音效挂点、画面总帧数会一起跟着变。
+RATE = "+10%"
 
 
 # edge-tts exposes no phoneme API, so pronunciation overrides are applied as

@@ -607,6 +607,9 @@ body.vg-production .top{background:#14161be8}
 .vg-confirm{max-width:900px}
 /* 顶部只留一条"素材已读入"：这一步是确认，不是编辑 */
 .vg-packbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:0 2px 15px;border-bottom:1px solid var(--line);color:var(--ink-2);font-size:13.5px}
+/* 模板样片：点模板弹出来直接播，竖屏 9:16，高度按视口收 */
+.vg-sample video{width:auto;max-width:100%;max-height:62vh;display:block;margin:0 auto;border-radius:10px;background:#000}
+.vg-sample #tplVidHint{text-align:center;margin-top:12px}
 .vg-packbar b{color:var(--ink);font-weight:650}
 .vg-packok{display:inline-flex;align-items:center;gap:7px;color:#9bceb8;font-weight:650}
 .vg-packok i{font-style:normal;width:18px;height:18px;border-radius:50%;background:#2b4a3d;color:#b9e6d0;display:grid;place-items:center;font-size:11px;flex:none}
@@ -758,9 +761,11 @@ const mediaUrl = (bundle, file) =>
 let CUR = null;                                    // 当前项目
 let CURB = null;                                   // 当前项目的素材包详情
 let CFG = null;                                    // 渲染配置（跨项目记忆）
-const CFG_DEF = { voice:"zh-CN-YunxiNeural", rate:100, bgm:"", sfxMode:"hook",
+const CFG_DEF = { voice:"zh-CN-YunxiNeural", bgm:"", sfxMode:"all",
                   subtitles:true, sources:true, format:"editorial",
                   disclaimer:"本片内容基于公开报道与公开资料整理，观点仅供参考，不构成任何投资建议" };
+/* 节奏固定 1.1 倍（服务端定死，界面不给调）；这里只用于时长预估的口径 */
+const PACE = 1.1;
 function loadCfg(){ try { CFG = Object.assign({}, CFG_DEF, JSON.parse(localStorage.getItem("vg.cfg") || "{}")); }
   catch (e) { CFG = Object.assign({}, CFG_DEF); } }
 function saveCfg(){ localStorage.setItem("vg.cfg", JSON.stringify(CFG)); paintFlowFooter(); }
@@ -769,15 +774,19 @@ loadCfg();
 /* 模板缩略与说明（模板清单以 /api/templates 为准） */
 const TPL_VIS = {
   editorial:{bg:"#1c1a18", paper:"#e4e2e0", acc:"#a44231", hint:"纸卡 + 标题带 + 信息卡，信息量最足"},
+  news:     {bg:"#07101f", paper:"#eef2f7", acc:"#c8102e", hint:"深蓝正红 + 底部信息条，适合时政、突发"},
+  data:     {bg:"#e9edf3", paper:"#ffffff", acc:"#2f6fed", hint:"浅色仪表盘：左边数据右边素材，界面感最强"},
+  poster:   {bg:"#0d0d0f", paper:"#141416", acc:"#ffd400", hint:"黑底荧光黄、一句一屏的超大字，冲击力优先"},
+  bleed:    {bg:"#000000", paper:"#111111", acc:"#f0b429", hint:"素材铺满全屏，沉浸感强"},
+  zhigu:    {bg:"#0b0e13", paper:"#f4f3ee", acc:"#ffd93d", hint:"三段式：顶带标题 / 中间舞台动作 / 底带字幕"},
   finance:  {bg:"#0b1622", paper:"#12202f", acc:"#2ea8d8", hint:"深蓝终端感 + 网格，适合行情、财报"},
   minimal:  {bg:"#f1f1ef", paper:"#ffffff", acc:"#111111", hint:"纯白极简大字，留白多"},
-  bleed:    {bg:"#000000", paper:"#111111", acc:"#f0b429", hint:"素材铺满全屏，沉浸感强"},
-  news:     {bg:"#07101f", paper:"#eef2f7", acc:"#c8102e", hint:"深蓝正红 + 信息条，适合时政、突发"},
   retro:    {bg:"#2a231a", paper:"#ece0c9", acc:"#b3542e", hint:"米黄纸 + 颗粒暗角，适合人物、历史"},
   portrait: {bg:"#000000", paper:"#1a1817", acc:"#a44231", hint:"9:16 满屏，素材直接铺满"},
 };
-/* 真实缩略图：Remotion 对每个模板渲染的静帧（server /templates/ 路由），CSS 小样作兜底 */
+/* 真实缩略图与样片：由 tools/make_template_previews.py 一键生成（server /templates/ 路由） */
 const TPL_IMG = (id) => "/templates/tpl-" + id + ".png";
+const TPL_SAMPLE = (id) => "/templates/sample-" + id + ".mp4";
 /* 每个模板画一张 CSS 小样海报，选模板时一眼看懂长相 */
 function tplMock(id, v){
   const ink = (a) => `rgba(26,23,18,${a})`;
@@ -807,6 +816,23 @@ function tplMock(id, v){
       <i class="mk-band b" style="background:${v.acc}"></i>
       <i class="mk-ln" style="background:${pap(.45)};top:64%"></i>
       <i class="mk-ln s" style="background:${pap(.25)};left:8%"></i>`;
+    case "poster": return `
+      <i class="mk-v" style="background:${pap(.07)}"></i>
+      <i class="mk-band" style="background:${v.acc};top:38%;height:13%;left:8%;width:84%"></i>
+      <i class="mk-band" style="background:${v.acc};top:52%;height:13%;left:8%;width:62%"></i>
+      <i class="mk-cap" style="background:${pap(.5)}"></i>`;
+    case "data": return `
+      <i class="mk-card" style="background:${v.paper};height:56%;top:24%"></i>
+      <i class="mk-num" style="background:${v.acc};left:10%;top:36%;width:30%;height:8%"></i>
+      <i class="mk-ln" style="background:${ink(.45)};left:10%;top:48%;width:30%;height:5%"></i>
+      <i class="mk-ln s" style="background:${ink(.25)};left:10%;top:56%;width:22%"></i>
+      <i class="mk-vidfull" style="background:linear-gradient(150deg,${ink(.12)},${ink(.04)});left:48%;top:30%;width:44%;height:44%"></i>`;
+    case "zhigu": return `
+      <i class="mk-v" style="background:${pap(.10)};height:22%"></i>
+      <i class="mk-card" style="background:${v.paper};height:46%;top:26%"></i>
+      <i class="mk-band" style="background:${v.acc};top:38%;height:9%;left:24%;width:52%"></i>
+      <i class="mk-band" style="background:${v.acc};top:52%;height:9%;left:34%;width:32%"></i>
+      <i class="mk-cap" style="background:${pap(.45)};top:80%"></i>`;
     case "retro": return `
       <i class="mk-vig" style="background:radial-gradient(120% 90% at 50% 35%,transparent 52%,${ink(.4)})"></i>
       <i class="mk-seal" style="background:${v.acc}"></i>
@@ -831,8 +857,11 @@ async function loadTemplates(){
     }
   }catch(e){}
 }
+/* 音色（edge-tts 中文音色；试听走 /api/voice-preview，服务端按需合成后缓存） */
 const VOICE = {"zh-CN-YunxiNeural":"云希 · 清爽男声","zh-CN-YunjianNeural":"云健 · 浑厚男声",
-  "zh-CN-YunyangNeural":"云扬 · 新闻男声","zh-CN-XiaoxiaoNeural":"晓晓 · 女声"};
+  "zh-CN-YunyangNeural":"云扬 · 新闻男声","zh-CN-YunxiaNeural":"云夏 · 少年男声",
+  "zh-CN-XiaoxiaoNeural":"晓晓 · 温暖女声","zh-CN-XiaoyiNeural":"晓伊 · 年轻女声",
+  "zh-CN-liaoning-XiaobeiNeural":"晓北 · 东北口音","zh-CN-shaanxi-XiaoniNeural":"晓妮 · 陕西口音"};
 const voiceLabel = () => VOICE[CFG.voice] || CFG.voice;
 
 const STAGE8 = ["读取素材","AI 配音","分镜规划","画面设计","画面渲染","音效混音","画面校验","完成"];
@@ -1494,7 +1523,7 @@ function paintFlow(){
 function paintFlowFooter(){
   const el = $("vg-footer"); if (!el || !FLOW) return;
   const busy = flowBusy(), view = FLOW.view, status = FLOW.status || {};
-  const est = CURB ? `预计成片 ${mmss(CURB.estSeconds / (CFG.rate/100))} · 生成约 ${renderEstimate(CURB.estSeconds / (CFG.rate/100))}` : "";
+  const est = CURB ? `预计成片 ${mmss(CURB.estSeconds / PACE)} · 生成约 ${renderEstimate(CURB.estSeconds / PACE)}` : "";
   // 底栏那句话要跟着"这一步在干什么"走：成片都出来了就别再报渲染预估
   const line = busy ? "正在后台生成，页面可以关掉"
     : view === "export" ? "成片已就绪，可直接下载"
@@ -1616,6 +1645,33 @@ function openFlowDialog(title, html){
   d.addEventListener("click", e => { if (e.target === d){ const r = d.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeFlowDialog(); } });
   document.body.appendChild(d); d.showModal(); return d;
 }
+/* 点模板 = 直接放这套模板的样片：同一段演示内容在 6 套模板下的真片，
+   用户看对眼再定（样片由 tools/make_template_previews.py 生成，模板改了重跑那条命令）。 */
+function openTplSample(id){
+  const t = TPLS.find(x => x.id === id) || {id: id, name: id};
+  const v = TPL_VIS[id] || {};
+  const d = openFlowDialog("「" + t.name + "」样片", `<div class="vg-sample">
+    <video id="tplVid" controls playsinline preload="metadata" src="${TPL_SAMPLE(id)}"></video>
+    <p class="vg-notes" id="tplVidHint">${esc(v.hint || "这套就是推荐样式")}　·　同一段演示内容在这套模板下出的真片，约 17 秒。</p>
+  </div>`);
+  const ft = d.querySelector(".vg-dialog-foot");
+  if (ft) ft.innerHTML = `<button class="btn line sm" data-close>先不看</button>
+    <button class="btn sm" id="tplVidUse">就用这个模板</button>`;
+  d.querySelectorAll("[data-close]").forEach(el => el.onclick = closeFlowDialog);
+  const use = d.querySelector("#tplVidUse");
+  if (use) use.onclick = () => { closeFlowDialog(); toast("已选用「" + t.name + "」"); };
+  const vd = d.querySelector("#tplVid");
+  if (vd){
+    vd.onerror = () => {
+      vd.remove();
+      const h = d.querySelector("#tplVidHint");
+      if (h) h.textContent = "这套模板的样片还没生成（跑 tools/make_template_previews.py 补上）。";
+    };
+    const p = vd.play();                    // 点开就是想看效果，能自动播就播
+    if (p && p.catch) p.catch(() => {});
+  }
+  return d;
+}
 /* 设置现在常驻确认页；这里只留给"生成中/导出页想改设置"的老入口一个兜底 */
 function openFlowConfig(){
   if (!FLOW || !CURB) return;
@@ -1730,17 +1786,13 @@ function renderRail(b){
       <div class="vg-row-c"><div class="pills" id="voiceSeg"></div></div>
     </div>
     <div class="vg-row">
-      <div class="vg-row-t">语速<small><span id="rateTxt">${(CFG.rate/100).toFixed(2)}×</span> · 成片约 <b id="estTxt">—</b></small></div>
-      <div class="vg-row-c"><div class="pills" id="rateSeg"></div></div>
-    </div>
-    <div class="vg-row">
       <div class="vg-row-t">背景音乐<small>可以先试听</small></div>
       <div class="vg-row-c"><div class="row2"><select id="bgm" aria-label="背景音乐" style="flex:1;max-width:none;min-width:0"></select>
         <button class="btn sm line" id="bgmPrev" title="试听当前选中的曲子">▶ 试听</button></div></div>
     </div>
     <details class="disc vg-more"><summary>更多设置：音效、字幕、来源声明、免责声明</summary>
       <div class="disc-b">
-        <div class="grp"><div class="gh">智能音效</div><div class="pills" id="sfxSeg"></div></div>
+        <div class="grp"><div class="gh">智能音效<small style="font-weight:400;color:var(--ink-3);margin-left:6px">换画面、卡片弹出、数字落点、金句都会响</small></div><div class="pills" id="sfxSeg"></div></div>
         <div class="grp" style="margin-top:8px"><div class="field"><span class="t">字幕</span>
           <button class="swt ${CFG.subtitles ? "on" : ""}" data-k="subtitles" role="switch"
             aria-checked="${CFG.subtitles}" aria-label="字幕"><i></i></button></div>
@@ -1823,6 +1875,7 @@ function paintConfig(b){
     o.classList.add("on"); CFG.format = o.dataset.v; saveCfg();
     fmt.classList.add("hide");              // 选完就收起来：只占一格
     paintTplNow();
+    openTplSample(o.dataset.v);             // 点模板 = 直接放这套模板的样片，看对眼再定
   });
   paintTplNow();
   // 音色
@@ -1838,20 +1891,9 @@ function paintConfig(b){
     e.stopPropagation();
     preview(qs("/api/voice-preview?voice=" + encodeURIComponent(pv.dataset.v)));
   });
-  // 语速
-  const setRate = (r) => {
-    r = Math.max(60, Math.min(200, r)); CFG.rate = r; saveCfg();
-    $("rateTxt").textContent = (r/100).toFixed(2) + "×";
-    updateEst(b);
-    $("rateSeg").querySelectorAll(".pill").forEach(x => x.classList.toggle("on", +x.dataset.r === r));
-  };
-  const rs = $("rateSeg");
-  rs.innerHTML = [80,90,100,110,125].map(r =>
-    `<button class="pill ${r === CFG.rate ? "on" : ""}" data-r="${r}">${(r/100).toFixed(2)}×</button>`).join("");
-  rs.querySelectorAll(".pill").forEach(p => p.onclick = () => setRate(+p.dataset.r));
   // 音效档位
   const sfxSeg = $("sfxSeg");
-  const SFX = [["off","关闭"],["hook","仅开场"],["accent","开场+卡片"],["full","全片"]];
+  const SFX = [["off","关闭"],["all","全开"]];
   sfxSeg.innerHTML = SFX.map(([v, t]) =>
     `<button class="pill ${CFG.sfxMode === v ? "on" : ""}" data-v="${v}">${t}</button>`).join("");
   sfxSeg.querySelectorAll(".pill").forEach(p => p.onclick = () => {
@@ -1881,7 +1923,7 @@ function paintConfig(b){
   updateEst(b);
 }
 function updateEst(b){
-  const est = b ? Math.round(b.estSeconds / (CFG.rate/100)) : null;
+  const est = b ? Math.round(b.estSeconds / PACE) : null;
   const t = $("estTxt"); if (t) t.textContent = est == null ? "—" : mmss(est);
 }
 
@@ -1893,7 +1935,7 @@ async function startRender(b){
   if (!CUR.bundle || !b || !String(b.script || "").trim()){ toast("请先导入并确认完整文案"); return; }
   if (!FLOW || FLOW.view !== "confirm" || b !== CURB) return;
   const pid = CUR.project_id, epoch = viewEpoch, bundle = CUR.bundle;
-  const payload = {project_id:pid,bundle,voice:CFG.voice,rate:String(CFG.rate),bgm:CFG.bgm,
+  const payload = {project_id:pid,bundle,voice:CFG.voice,bgm:CFG.bgm,
     sfx:CFG.sfxMode !== "off",sfxMode:CFG.sfxMode,subtitles:CFG.subtitles !== false,
     sources:CFG.sources !== false,format:CFG.format,
     disclaimer:String(CFG.disclaimer || "").trim() || undefined,useLlm:true};

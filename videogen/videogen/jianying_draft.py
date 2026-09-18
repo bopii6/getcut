@@ -350,7 +350,9 @@ def build_multitrack_content(plan: dict) -> dict:
         sfx_segs.append(_segment_base(am["id"], _trange(float(ev.get("at_ms") or 0.0), dur),
                                       source=_trange(0, dur), speed_id=sid,
                                       render_index=RENDER_SFX,
-                                      volume=float(ev.get("volume") or 0.5), visual=False))
+                                      # 音量键：volume 是现行写法，vol 是旧清单里的写法
+                                      volume=float(ev.get("volume") or ev.get("vol") or 0.5),
+                                      visual=False))
 
     tracks = []
     if media_segs:

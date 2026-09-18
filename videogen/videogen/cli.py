@@ -91,7 +91,8 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
           sfx_mode: str = "full",
           show_subtitles: bool = True, show_sources: bool = True,
           theme: str = "auto", disclaimer: str | None = None,
-          use_llm: bool = True, job_id: str | None = None) -> Path:
+          use_llm: bool = True, job_id: str | None = None,
+          vision: bool = True) -> Path:
     def report(stage: str, pct: int, detail: str | None = None) -> None:
         if progress:
             try:
@@ -142,7 +143,7 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
             spec = llm.design_shots(content.script, sent_payload, asset_payload, template=template)
         plan = build_plan_llm(content, manifest, clauses, spec["shots"],
                               spans=u_spans, interior=interior_units,
-                              edge_spans=edge) if spec else None
+                              edge_spans=edge, template=template) if spec else None
         llm_used = plan is not None
         if plan is not None and spec.get("theme"):
             plan.theme = spec["theme"]
@@ -259,22 +260,11 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
 
     # audio(sfx) -> mux -> verify
     mode = sfx_mode if sfx else "off"
-    sfx_bank = compose.synth_sfx(work) if mode != "off" else {}
-    # 档位：off 无｜hook 仅开场｜accent 开场+设计卡轻点｜full 再加金句强调
-    sfx_events = []
-    if mode != "off" and "open" in sfx_bank:
-        sfx_events.append((0.08, sfx_bank["open"], 0.5))
-    if mode in ("accent", "full") and not clone:
-        for shot in plan.shots:
-            if len(sfx_events) >= 5:
-                break
-            if shot.kind in ("panel", "callout") and "card" in sfx_bank:
-                sfx_events.append((shot.start_ms / 1000.0 + 0.03, sfx_bank["card"], 0.4))
-    if mode == "full" and not clone:
-        quote = next((q for q in plan.shots if q.kind == "quote_card"), None)
-        if quote and "emphasis" in sfx_bank:
-            sfx_events.append((quote.start_ms / 1000.0 + 0.05, sfx_bank["emphasis"], 0.45))
-    report("audio", 88, "正在合成音效与背景音乐")
+    # 音效：按"画面什么时候弹出一个东西"逐事件挂（开场/切换/卡片/数字/金句/结尾），
+    # 不再有"全片最多 5 声"的老上限；音量由 compose.SFX_LEVELS 统一压在解说之下
+    sfx_bank = compose.sfx_bank() if mode != "off" else {}
+    sfx_events = compose.plan_sfx_events(plan, sfx_bank, mode=mode)
+    report("audio", 88, f"正在合成音效与背景音乐（{len(sfx_events)} 处声音）")
     # 风格包 -> 默认 BGM（用户没指定时按形态气质自动配）
     if bgm is None:
         pack_bgm = {"data": "bgm-electronic", "opinion": "bgm-trap",
@@ -330,7 +320,11 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                     shutil.copyfile(f, path)
                 except Exception:
                     path = f
-            sfx_rows.append({"at_ms": at_s * 1000.0, "file": str(path), "vol": vol})
+            # volume/vol 两个键都写：剪映草稿读 volume，旧的草稿构建读 vol（此前只写了 vol，
+            # 草稿里音效音量永远回落 50%、长度永远 1 秒）
+            sfx_rows.append({"at_ms": at_s * 1000.0, "file": str(path),
+                             "volume": vol, "vol": vol,
+                             "duration_ms": _sfx_duration_ms(path)})
         shot_rows = []
         props_shots = (props.get("shots") if renderer == "remotion" and props else None) or []
         for i, s in enumerate(plan.shots):
@@ -361,13 +355,25 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
 
     summaries = {a.file: a.summary for a in manifest.assets}
     report("verify", 0, "正在逐镜校验画面")
-    vreport = verify.verify(out_mp4, plan, work, vision=True,
+    vreport = verify.verify(out_mp4, plan, work, vision=vision,
                             summaries=summaries, bundle=bundle,
                             progress=lambda p, d=None: report("verify", p, d))
     print(f"renderer: {renderer} | director: {'llm' if llm_used else 'rules'} | shots: {len(plan.shots)} | clauses: {len(plan.clauses)} | "
           f"duration: {duration_s:.1f}s -> {out_mp4}")
     print("verify:", "OK" if vreport["ok"] else "FAILED", vreport["errors"], vreport["warnings"])
     return out_mp4
+
+
+def _sfx_duration_ms(path: Path, default: float = 1000.0) -> float:
+    """音效时长（毫秒）：剪映草稿要把音效片段按真实长度摆上时间线。"""
+    try:
+        p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                            "-of", "csv=p=0", str(path)],
+                           capture_output=True, text=True, timeout=20)
+        val = float((p.stdout or "").strip())
+        return val * 1000.0 if val > 0 else default
+    except Exception:  # noqa: BLE001 - 量不到就按 1 秒摆，不影响出片
+        return default
 
 
 def build_draft_zip(video: Path, out_zip: Path | None = None, progress=None,

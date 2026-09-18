@@ -166,10 +166,14 @@ def run_preview(project_id: str, body: dict) -> None:
         asset_payload = [{"index": i, "kind": a.kind, "tags": a.tags, "summary": a.summary}
                          for i, a in enumerate(manifest.assets)]
 
-        spec = llm.design_shots(content.script, sent_payload, asset_payload)
+        template = TEMPLATE_ALIAS.get(body.get("format") or DEFAULT_TEMPLATE,
+                                      body.get("format") or DEFAULT_TEMPLATE)
+        if template not in TEMPLATES:
+            template = DEFAULT_TEMPLATE
+        spec = llm.design_shots(content.script, sent_payload, asset_payload, template=template)
         plan = build_plan_llm(content, manifest, clauses, spec["shots"],
                               spans=u_spans, interior=interior_units,
-                              edge_spans=edge) if spec else None
+                              edge_spans=edge, template=template) if spec else None
         if plan is not None and spec.get("theme"):
             plan.theme = spec["theme"]
         if plan is not None and spec.get("style_pack"):
@@ -198,9 +202,6 @@ def run_preview(project_id: str, body: dict) -> None:
         if theme and theme != "auto" and theme.startswith("#"):
             plan.theme = {"accent": theme, "accentSoft": _lighten(theme)}
 
-        template = TEMPLATE_ALIAS.get(body.get("format") or DEFAULT_TEMPLATE, body.get("format") or DEFAULT_TEMPLATE)
-        if template not in TEMPLATES:
-            template = DEFAULT_TEMPLATE
         set_state(60, "正在设计画面版式")
         props = remotion_render.build_props(
             bundle_dir, plan, content,

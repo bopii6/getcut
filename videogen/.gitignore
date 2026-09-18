@@ -40,3 +40,6 @@ renderer/draft_stills.log
 # 账号体系本地存储（不入库）
 .videogen-users.json
 .videogen-auth-secret
+
+# 音效归一化缓存（一条音效只跑一次 loudnorm，可再生）
+assets/sfx/.norm/

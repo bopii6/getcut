@@ -17,26 +17,52 @@ import subprocess
 from pathlib import Path
 
 FRAME_W, FRAME_H = 1080, 1920
-# editorial 版面的媒体窗（帧坐标）
-MEDIA_RECT_EDITORIAL = (151, 667, 778, 440)
 # 媒体窗入场动画在成片里是 ~7 帧淡入，草稿里也给素材加个短淡入，观感接近
 FADE_IN_S = 0.20
 
-LAYOUT_OF = {
-    "editorial": "editorial", "finance": "editorial", "minimal": "editorial",
-    "retro": "editorial", "bleed": "bleed", "portrait": "bleed",
-    "news": "lower", "portrait_editorial": "editorial", "portrait_full": "bleed",
-}
-# 包装层只有一个洞（editorial 媒体窗）；满屏版面没有洞
+# 版式几何的唯一来源：renderer/src/layouts.json（TS 渲染器读同一份）。
+# 改模板的纸卡/面板/媒体窗尺寸只需要改那个文件，草稿的洞与素材位自动跟上。
+_LAYOUTS_PATH = Path(__file__).resolve().parent.parent / "renderer" / "src" / "layouts.json"
+_layouts_cache: dict | None = None
+
+
+def _layouts() -> dict:
+    global _layouts_cache
+    if _layouts_cache is None:
+        try:
+            _layouts_cache = json.loads(_LAYOUTS_PATH.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 - 配置缺失时退化为满屏，不阻断出片
+            _layouts_cache = {}
+    return _layouts_cache
+
+
+# 媒体窗挖洞的变体（只有它需要在底板上留洞）
 CLONE_VARIANTS = {"statement_media"}
+
+# 旧 format 别名 → 现模板 id
+_ID_ALIAS = {"portrait_editorial": "editorial", "portrait_full": "portrait"}
+
+
+def _normalize_id(fmt: str) -> str:
+    key = (fmt or "").strip()
+    return _ID_ALIAS.get(key, key)
 
 
 def layout_of(fmt: str) -> str:
-    return LAYOUT_OF.get((fmt or "").strip(), "editorial")
+    """模板 id → 骨架名。旧别名先归一，未知模板回落 editorial。"""
+    key = _normalize_id(fmt)
+    entry = _layouts().get(key) or {}
+    return entry.get("layout") or "editorial"
 
 
-def media_rect(layout: str) -> tuple[int, int, int, int]:
-    return MEDIA_RECT_EDITORIAL if layout == "editorial" else (0, 0, FRAME_W, FRAME_H)
+def media_rect(fmt: str) -> tuple[int, int, int, int]:
+    """该模板媒体窗在整帧里的 (x, y, w, h)：只有带内嵌媒体窗的骨架才有洞，其余满屏。"""
+    entry = _layouts().get(_normalize_id(fmt)) or _layouts().get("editorial") or {}
+    panel, win = entry.get("panel"), entry.get("mediaWin")
+    if panel and win:
+        return (panel["left"] + win["left"], panel["top"] + win["top"],
+                win["width"], win["height"])
+    return (0, 0, FRAME_W, FRAME_H)
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> None:
@@ -155,7 +181,7 @@ def build_draft_assets(manifest: dict, folder: Path, props: dict,
     clauses = manifest.get("clauses") or []
     fmt = manifest.get("format") or ""
     layout = layout_of(fmt)
-    rect = media_rect(layout)
+    rect = media_rect(fmt)
     fps = int(manifest.get("fps") or 30)
     duration_ms = float(manifest.get("duration_ms") or 0.0)
     total_frames = max(1, int(round(duration_ms / 1000.0 * fps)))
@@ -236,7 +262,8 @@ def build_draft_assets(manifest: dict, folder: Path, props: dict,
         name = f"audio/sfx_{i:02d}{src.suffix.lower() or '.mp3'}"
         shutil.copy2(src, folder / name)
         sfx_entries.append({"at_ms": float(ev.get("at_ms") or 0.0), "file": name,
-                            "volume": float(ev.get("vol") or 0.5), "name": src.stem,
+                            "volume": float(ev.get("volume") or ev.get("vol") or 0.5),
+                            "name": src.stem,
                             "duration_ms": _probe_ms(folder / name)})
 
     plan = {

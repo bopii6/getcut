@@ -72,7 +72,7 @@ async function createHarness({storage = {}} = {}) {
   function respond(method, url, handler) { routes.set(method + ' ' + url, handler); }
   respond('GET', '/api/me', {email: 'offline@example.invalid'});
   respond('GET', '/api/auth/status', {locked: false, smtp: false, dev_email: false, token_auth: false});
-  respond('GET', '/api/templates', {default: 'editorial', templates: ['editorial', 'finance', 'minimal', 'bleed', 'news', 'retro', 'portrait'].map(id => ({id, name: id}))});
+  respond('GET', '/api/templates', {default: 'editorial', templates: ['editorial', 'news', 'data', 'poster', 'bleed', 'zhigu'].map(id => ({id, name: id}))});
   respond('GET', '/api/projects', () => projects);
   respond('GET', '/api/jobs', {concurrency: 1, active: [], recent: []});
   respond('GET', '/api/bundles', projects.map(p => ({name: p.bundle, assets: 1, updated: '2026-01-01'})));

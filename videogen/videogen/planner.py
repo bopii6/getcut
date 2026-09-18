@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import templates
 from .schemas import Content, Manifest
 
 SENT_SPLIT = re.compile(r"[。！？；]")
@@ -39,6 +40,132 @@ class Plan:
     duration_ms: float = 0.0
     theme: dict = field(default_factory=dict)
     style_pack: str = ""
+
+
+# ---------- 节奏：由规则算，不由大模型决定 ----------
+# 大模型只看得见文字、看不见"这句话在耳朵里多长"，所以它的镜头切分总会忽长忽短。
+# 这里做的是：把它给的每个单元的设计（素材/卡/章节标签）记下来，然后**按真实时间轴
+# 重新分块**——每块落在 target~cap 之间。大模型仍然决定"说什么、配什么画面、用哪张卡"，
+# 只是不再决定"切多长"。
+#
+# 参数是拿真实配音标定的：中文口播的"逗号级子句"平均 2.2-2.3 秒，所以两段成镜约 4.5 秒。
+# cap 要放到 4800 才能让"两段一镜"成立——卡在 4200 时两段就超限，只能一段一镜（2.2 秒），
+# 那是更快但比参考片碎的节奏。实测这套参数平均 3.6 秒/拍，与参考片（3.6 秒/拍）一致。
+TARGET_MS = 3800
+SHOT_CAP_MS = 4800
+# 一张设计卡至少要配这么长的画面，太短就不给它单独开一块了
+_MIN_BLOCK_MS = 2100
+
+
+def normalize_rhythm(shots_spec: list[dict], spans: dict, interior: list[int],
+                     target_ms: int = TARGET_MS, cap_ms: int = SHOT_CAP_MS) -> list[dict]:
+    """按时间轴重新分块，让每个镜头落在 target~cap 之间。
+
+    - 设计（素材/卡/章节标签）来自大模型：每块继承「块首那个单元」的设计，
+      设计卡所属的单元会被优先当成块边界（保住它的露出时机），除非那会让上一块太短。
+    - 顺序与覆盖范围按定义不变，下游的"必须不重不漏"校验照旧通过。
+    """
+    design = _unit_design(shots_spec)
+    # 只重切模型真正给了设计的单元：它漏掉的单元不要在这里补，
+    # 否则会把"漏讲"悄悄抹平——下游的覆盖校验该拒就拒，退回规则分镜。
+    units = [u for u in interior if u in spans and u in design]
+    if not units:
+        return shots_spec
+
+    blocks: list[list[int]] = []
+    cur: list[int] = []
+    for u in units:
+        if cur:
+            dur = spans[u][1] - spans[cur[0]][0]
+            cur_dur = spans[cur[-1]][1] - spans[cur[0]][0]
+            # 块首带设计卡的单元：只要上一块已经够长，就在这里断开，让卡从新块开始
+            anchor = bool((design.get(u) or {}).get("card")) and cur_dur >= _MIN_BLOCK_MS
+            if dur > cap_ms or cur_dur >= target_ms or anchor:
+                blocks.append(cur)
+                cur = []
+        cur.append(u)
+    if cur:
+        blocks.append(cur)
+
+    out: list[dict] = []
+    for block in blocks:
+        spec = dict(design.get(block[0]) or {})
+        spec["sentences"] = block
+        out.append(spec)
+    return out
+
+
+def _unit_design(shots_spec: list[dict]) -> dict[int, dict]:
+    """单元 index → 该单元所在镜头带的设计字段。
+
+    一个镜头里只有**首个单元**继承全部设计（含设计卡）；其余单元只继承
+    素材与章节标签——设计卡是画面上的一次弹出，不该跟着整段复制。
+    """
+    out: dict[int, dict] = {}
+    for spec in shots_spec:
+        sents = _as_ints(spec.get("sentences"))
+        if not sents:
+            continue
+        full = {k: v for k, v in spec.items() if k != "sentences"}
+        light = {k: v for k, v in full.items() if k in ("asset", "chapterLabel")}
+        for k, u in enumerate(sents):
+            out[u] = full if k == 0 else light
+    return out
+
+
+def _as_ints(raw) -> list[int]:
+    try:
+        return [int(i) for i in (raw or [])]
+    except (TypeError, ValueError):
+        return []
+
+
+def split_long_shots(shots_spec: list[dict], spans: dict, cap_ms: int = SHOT_CAP_MS) -> list[dict]:
+    """把超过 cap 的镜头按单元对半切开（单单元镜头切不动，原样保留）。
+
+    切分只按顺序拆分句子列表，不复制设计卡——后半段只留句子/素材/章节标签，
+    否则同一张卡会连着出两次。切完顺序与覆盖范围不变，下游校验照旧通过。
+    """
+    out: list[dict] = []
+    for spec in shots_spec:
+        out.extend(_split_one(spec, spans, cap_ms))
+    return out
+
+
+def _split_one(spec: dict, spans: dict, cap_ms: int) -> list[dict]:
+    try:
+        sents = [int(i) for i in spec.get("sentences", [])]
+    except (TypeError, ValueError):
+        return [spec]
+    if len(sents) < 2:
+        return [spec]
+    first, last = sents[0], sents[-1]
+    if first not in spans or last not in spans:
+        return [spec]
+    if spans[last][1] - spans[first][0] <= cap_ms:
+        return [spec]
+    mid = len(sents) // 2
+    head = dict(spec)
+    head["sentences"] = sents[:mid]
+    tail = {k: v for k, v in spec.items() if k in ("sentences", "asset", "chapterLabel")}
+    tail["sentences"] = sents[mid:]
+    return _split_one(head, spans, cap_ms) + _split_one(tail, spans, cap_ms)
+
+
+def _clause_chunks(cs: list[Clause], cap_ms: int) -> list[tuple[float, float]]:
+    """按 cap 把连续子句分组（规则分镜用）：返回首尾相接的 [(start_ms, end_ms), ...]。
+
+    贪心从头攒，攒满 cap 就断一刀；单个子句自身超长时无法再切，原样成镜。
+    """
+    if not cs:
+        return []
+    out: list[list[float]] = [[cs[0].start_ms, cs[0].end_ms]]
+    for c in cs[1:]:
+        if c.end_ms - out[-1][0] > cap_ms:
+            out.append([c.start_ms, c.end_ms])
+        else:
+            out[-1][1] = c.end_ms
+    return [(a, b) for a, b in out]
 
 
 def split_clauses(content: Content) -> list[tuple[int, str]]:
@@ -141,6 +268,13 @@ def build_plan(content: Content, manifest: Manifest, clauses: list[Clause]) -> P
             else:
                 a = assets[ai]
                 label = a.tags[0] if a.tags else a.summary[:4]
+                # 节奏保险丝：整句太长时按子句再切几刀，画面每 ~4 秒换一次
+                chunks = _clause_chunks(cs, SHOT_CAP_MS)
+                if len(chunks) > 1:
+                    for cs_start, cs_end in chunks:
+                        plan.shots.append(Shot(kind="footage", asset_path=a.file, sent_indexes=[i],
+                                               start_ms=cs_start, end_ms=cs_end, chapter_label=label))
+                    continue
                 shot = Shot(kind="footage", asset_path=a.file, sent_indexes=[i],
                             start_ms=start, end_ms=end, chapter_label=label)
         plan.shots.append(shot)
@@ -301,11 +435,13 @@ _CARD_FIELDS = {"callout": ("label", "number", "caption"),
 
 
 def build_plan_llm(content: Content, manifest: Manifest, clauses, shots_spec,
-                   spans=None, interior=None, edge_spans=None) -> Plan | None:
+                   spans=None, interior=None, edge_spans=None,
+                   template: str = "") -> Plan | None:
     """Construct a Plan from the LLM director's shot list, with validation.
 
     spans/interior/edge_spans：可传入"子句单元"制的切分（镜头可细化到 3-5 秒）；
     不传则退回整句制。edge_spans = (首句span, 末句span) 用于片头/金句卡。
+    template：模板 id——用来做「这套模板画不出来的卡一律回落」的校验。
     Returns None when the spec fails validation (caller falls back to rules)."""
     if spans is None:
         spans = sentence_spans(clauses)
@@ -317,6 +453,7 @@ def build_plan_llm(content: Content, manifest: Manifest, clauses, shots_spec,
     ids = sorted(spans)
     if not ids or not shots_spec:
         return None
+    shots_spec = normalize_rhythm(shots_spec, spans, interior)
     n_assets = len(manifest.assets)
 
     covered: list[int] = []
@@ -334,6 +471,12 @@ def build_plan_llm(content: Content, manifest: Manifest, clauses, shots_spec,
             return None
         start, end = spans[first][0], spans[last][1]
         card = spec.get("card")
+        # 模板语汇校验：这套模板画不出来的卡一律回落成普通镜头。
+        # 提示词里已经把取值收成枚举，这里是最后一道兜底——宁可少一张卡，
+        # 也不要出现一张渲染出来是空块的设计卡。
+        allowed_cards = templates.template_cards(template) if template else None
+        if card and allowed_cards is not None and card not in allowed_cards:
+            card = None
         entry = {"sents": sents, "start": start, "end": end}
         if card in _CARD_FIELDS and card_count < 5 and not prev_has_card:
             fields = {f: spec.get(f) for f in _CARD_FIELDS[card]

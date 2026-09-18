@@ -8,11 +8,18 @@ back to the rule-based copy if the API fails.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import requests
 
-from . import config
+from . import config, templates
+
+
+def _rule_card(line: str) -> str | None:
+    """从提示词的一行"card=xxx 用于…"里取出卡名；不是卡片规则行就返回 None。"""
+    m = re.match(r"\s*card=([a-z_]+)", line or "")
+    return m.group(1) if m else None
 
 PROVIDERS = {
     "deepseek": {
@@ -121,25 +128,6 @@ def design_shots(script: str, sentences: list[dict], assets: list[dict],
     assets:    [{index, kind, tags, summary}]
     returns {"shots": [{sentences, asset, card, chapterLabel, ...copy}]} or None.
     """
-    if template == "zhigu":
-        # 智谷三段式专项：中段全出血画面 + 舞台动作（chips/tree/table）
-        payload["智谷三段式专项"] = {
-            "说明": "这条片子用智谷三段式模板：顶带大标题不动、底带字幕不动，"
-                    "中段是全出血画面，在「实拍素材」和「图形动作」之间快速切换。"
-                    "节奏必须密：每 2-4 秒换一个画面事件。",
-            "每个镜头可输出 stage 字段（可选，默认不输出＝纯实拍镜头）": {
-                "chips": "句子点名了并列事物/动作时给 1-3 个 ≤6 字短词，"
-                         "如 [\"查资料\",\"写报告\",\"做PPT\"]；黄底黑字弹出，别超过 3 个",
-                "tree": "句子在介绍「一个主体 + 它下面的几个东西」时给："
-                        "{center:{title:'≤8字主体', sub:'≤12字'}, children:['≤6字', ≤4 个]}，"
-                        "画面会是中间主卡+虚线连到子项胶囊",
-                "table": "句子在讲榜单/数据对比时给：{title:'≤10字', "
-                         "rows:[{name:'≤8字', value:'数字+单位', delta:'+x%', highlight:true?}，3-5 行]}，"
-                         "把要强调的一行设 highlight:true",
-            },
-            "硬要求": "全片至少 1/3 的镜头带 stage 动作；重要数字句优先用 table；"
-                     "介绍产品/公司/版本优先用 tree；其余保持纯实拍（不要为了用而用）",
-        }
     conf = PROVIDERS.get(provider)
     if not conf or not conf["key"]:
         return None
@@ -151,23 +139,20 @@ def design_shots(script: str, sentences: list[dict], assets: list[dict],
             "说明": "按选题气质四选一，不同主题要选不同风格包，让每条片子的形态都不一样",
             "选项": {
                 "data": "数据快报——行情/财报/市场题材。偏爱 数据卡(stat)/对比卡(compare)/数字标注(callout)，"
-                        "镜头短促 3-4 秒，节奏快",
-                "profile": "人物特写——人物故事/访谈题材。偏爱 人物卡(person)/事实卡(fact)，"
-                           "镜头 4-5 秒，稳重",
-                "investigation": "深度复盘——事件复盘/调查报告。偏爱 时间线(timeline)/关系图(branches)/事实卡，"
-                                 "镜头 4-6 秒",
-                "opinion": "观点锐评——争议话题/评论。偏爱 大字卡(statement)/对比卡/清单，"
-                           "镜头 3-4 秒快切，冲击力优先",
+                        "镜头可略短 3.5 秒左右",
+                "profile": "人物特写——人物故事/访谈题材。偏爱 人物卡(person)/事实卡(fact)，稳重",
+                "investigation": "深度复盘——事件复盘/调查报告。偏爱 时间线(timeline)/关系图(branches)/事实卡",
+                "opinion": "观点锐评——争议话题/评论。偏爱 大字卡(statement)/对比卡/清单，冲击力优先",
             },
             "输出": "在 theme 同级输出 style_pack 字段（值为 data/profile/investigation/opinion）",
-            "节奏硬要求": "data/opinion 每镜 1-2 个子句单元（3-4 秒）；profile/investigation 每镜 2 个单元（4-6 秒）。"
-                        "90 秒片总镜头数应为 18-26 个；宁可多切镜头，也不要出现超过 6 秒不换画面",
+            "节奏硬要求": "每个镜头 3.5-4.5 秒；4.8 秒是硬上限（超了会被强制再切一刀）。"
+                        "90 秒的片子应是 20-25 个镜头。这是固定节奏，不要自行加快或放慢",
         },
         "分镜规则": [
-            "输入是**子句单元**（逗号级短句，各带 index）：把 1-3 个语义连贯的子句组成一个镜头，"
+            "输入是**子句单元**（逗号级短句，各带 index）：把 2-3 个语义连贯的子句组成一个镜头，"
             "按顺序覆盖所有单元且不重叠。永远不要把一个单元拆开跨镜头",
-            "节奏：普通镜头配 1-2 个单元（约 3-5 秒），重要转折可用 3 个；"
-            "目标不是句号对齐，而是每 3-5 秒换一次画面——全片镜头数应为 18-26 个",
+            "节奏：普通镜头配 2 个单元（3.5-4.5 秒），最多 3 个；"
+            "目标不是句号对齐，而是每 4 秒左右换一次画面——全片镜头数应为 20-25 个",
             "每组指定一个素材 index（只能用素材清单里的 index）",
             "素材匹配优先级（重要）：先看画面主体是否对得上——句子讲具体人物时必须用该人物的素材"
             "（人物照片比不相关的视频更好）；讲市场行情用行情素材；讲网络安全用安全类素材；"
@@ -222,6 +207,49 @@ def design_shots(script: str, sentences: list[dict], assets: list[dict],
                           "设计卡也只保留自己类型需要的字段，不要输出无关字段，更不要出现'仅xx'这类占位文字",
         },
     }
+    # ---------- 模板语汇：把「这套模板能用哪些画面语言」收进提示词 ----------
+    # 以前这里是一段 if template == "zhigu"，加一套模板就得改这个函数。现在模板的定义
+    # 在 videogen/templates.py：能画哪几种卡、有没有舞台动作、给导演的专项说明。
+    # 边界要清楚：模板**只限定可用的画面语言**，不规定"第几拍该出什么"——
+    # 哪一句配哪种卡仍由导演按内容判断，它只是挑不出这套模板画不出来的东西。
+    vocab_note = templates.director_note(template)
+    if vocab_note:
+        payload["模板专项"] = vocab_note
+
+    cards = templates.template_cards(template)
+    shot_fmt = payload["输出格式"]["shots"][0]
+    if cards and cards != templates.template_cards("editorial"):
+        # 不支持的卡从规则里删掉，并把取值收成枚举
+        payload["分镜规则"] = [ln for ln in payload["分镜规则"]
+                                if _rule_card(ln) is None or _rule_card(ln) in cards]
+        shot_fmt["card"] = " 或 ".join([*cards, "null"])
+        quota = templates.template_quota(template)
+        if quota:
+            lo, hi, kinds = quota
+            for i, ln in enumerate(payload["分镜规则"]):
+                if ln.startswith("设计卡数量硬要求"):
+                    payload["分镜规则"][i] = (
+                        f"设计卡数量：全片 {lo}-{hi} 张，类型从 {'/'.join(cards)} 里挑，"
+                        f"至少用 {kinds} 种不同的；其余为普通实拍镜头")
+                    break
+
+    modes = templates.template_modes(template)
+    if modes:
+        descriptions = templates.mode_descriptions(template)
+        payload["舞台动作（本模板特有）"] = {
+            "说明": "这套模板的中段在「实拍素材」和「图形动作」之间切换，"
+                    "每个镜头可选输出 stage 字段（不输出＝纯实拍镜头）",
+            "可选的 stage 动作": {m: descriptions.get(m, "") for m in modes},
+            "硬要求": "全片至少 1/3 的镜头带 stage 动作；"
+                     "重要数字句优先用 table，介绍产品/公司/版本优先用 tree；"
+                     "其余保持纯实拍（不要为了用而用）",
+        }
+        # 通用的「输出格式」段写着"普通镜头只保留四个字段"，会把 stage 挤掉——对本模板放行
+        shot_fmt["stage"] = "带舞台动作的镜头给：" + " / ".join(f"{m} 对象" for m in modes)
+        payload["输出格式"]["重要"] = (
+            "普通实拍镜头保留 sentences/asset/card/chapterLabel 四个字段，"
+            "有舞台动作的镜头再加一个 stage 字段；设计卡只保留自己类型需要的字段，"
+            "不要输出无关字段，更不要出现'仅xx'这类占位文字")
     last_err = None
     for attempt in range(2):
         try:

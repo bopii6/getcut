@@ -61,5 +61,85 @@
   "mood": "舒缓·收尾",
   "source": "https://mixkit.co/free-stock-music/tag/chill/",
   "license": "Mixkit Free Stock Music License"
+ },
+ {
+  "file": "bgm-ambient-127.mp3",
+  "genre": "ambient",
+  "mood": "氛围·舒缓",
+  "mixkit_id": "127",
+  "title": "Mixkit ambient #127",
+  "source": "https://mixkit.co/free-stock-music/ambient/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1201321
+ },
+ {
+  "file": "bgm-atmospheres-188.mp3",
+  "genre": "atmospheres",
+  "mood": "空间·辽阔",
+  "mixkit_id": "188",
+  "title": "Mixkit atmospheres #188",
+  "source": "https://mixkit.co/free-stock-music/atmospheres/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1201321
+ },
+ {
+  "file": "bgm-classical-601.mp3",
+  "genre": "classical",
+  "mood": "古典·叙事",
+  "mixkit_id": "601",
+  "title": "Mixkit classical #601",
+  "source": "https://mixkit.co/free-stock-music/classical/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1201513
+ },
+ {
+  "file": "bgm-jazz-868.mp3",
+  "genre": "jazz",
+  "mood": "爵士·从容",
+  "mixkit_id": "868",
+  "title": "Mixkit acid-jazz #868",
+  "source": "https://mixkit.co/free-stock-music/acid-jazz/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1201258
+ },
+ {
+  "file": "bgm-breakbeat-706.mp3",
+  "genre": "breakbeat",
+  "mood": "碎拍·动感",
+  "mixkit_id": "706",
+  "title": "Mixkit breakbeat #706",
+  "source": "https://mixkit.co/free-stock-music/breakbeat/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1201258
+ },
+ {
+  "file": "bgm-funk-872.mp3",
+  "genre": "funk",
+  "mood": "律动·轻松",
+  "mixkit_id": "872",
+  "title": "Mixkit funk #872",
+  "source": "https://mixkit.co/free-stock-music/funk/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1201258
+ },
+ {
+  "file": "bgm-rock-51.mp3",
+  "genre": "rock",
+  "mood": "摇滚·力度",
+  "mixkit_id": "51",
+  "title": "Mixkit rock #51",
+  "source": "https://mixkit.co/free-stock-music/rock/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1201385
+ },
+ {
+  "file": "bgm-orchestral-587.mp3",
+  "genre": "orchestral",
+  "mood": "管弦·推进",
+  "mixkit_id": "587",
+  "title": "Mixkit orchestral #587",
+  "source": "https://mixkit.co/free-stock-music/orchestral/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1201513
  }
 ]

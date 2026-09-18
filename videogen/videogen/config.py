@@ -72,15 +72,17 @@ STATIC = ROOT / "server_static"
 RENDERER = ROOT / "renderer"
 
 # ---------- 渲染模板 ----------
-# id 与 renderer/src/skin.ts 的 SKINS 一一对应：一个模板 = 骨架(layout) × 皮肤(配色/字体/装饰/动效)。
+# id 与 renderer/src/skin.ts 的 SKINS 一一对应：一个模板 = 骨架(layout) × 皮肤(配色/字体/装饰/动效) × 版式几何(layouts.json)。
+#
+# 上架的是「一眼能看出区别」的那几套：注意 finance/minimal/retro/portrait 虽然仍有定义，
+# 但它们是 editorial/bleed 的换皮版（版式完全一样），先不上架——等它们做出自己的版式再放回来，
+# 否则选择器里一堆长得一样的模板，用户挑不出差别。
 TEMPLATES: dict[str, str] = {
-    "editorial": "竖屏信息版 · 杂志编辑",
-    "finance": "财经数据版",
-    "minimal": "极简白版",
-    "bleed": "全出血沉浸版",
+    "editorial": "杂志编辑版",
     "news": "新闻播报版",
-    "retro": "复古人文版",
-    "portrait": "竖屏满屏",
+    "data": "数据面板版",
+    "poster": "大字报版",
+    "bleed": "全出血沉浸版",
     "zhigu": "智谷三段式",
 }
 # 旧 format 取值 → 新模板 id（兼容早前发出的请求）
