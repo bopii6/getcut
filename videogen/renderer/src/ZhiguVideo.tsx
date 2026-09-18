@@ -225,15 +225,16 @@ const MediaStage: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
   const src = staticFile(`media/${shot.media}`);
   const dur = msToF(shot.endMs - shot.startMs, fps) + 1;
   if (shot.mediaKind === 'image') {
-    const zoom = interpolate(frame, [0, dur], index % 2 === 0 ? [1.03, 1.13] : [1.13, 1.03], {
+    // 白底舞台 + contain：截图/图表整张摆进来（智谷的截图卡是整张放，不裁边）
+    const zoom = interpolate(frame, [0, dur], index % 2 === 0 ? [1.0, 1.06] : [1.06, 1.0], {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     });
     return (
-      <AbsoluteFill style={{overflow: 'hidden'}}>
+      <AbsoluteFill style={{overflow: 'hidden', background: '#ffffff'}}>
         <Img
           src={src}
-          style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})`}}
+          style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', transform: `scale(${zoom})`}}
         />
       </AbsoluteFill>
     );
