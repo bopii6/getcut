@@ -59,3 +59,20 @@ Thumbs.db
 
 # wrangler ±¾µØ»º´æ
 .wrangler/
+
+# ---- local runtime state / secrets (created when running the server locally) ----
+.videogen-auth-secret
+.videogen-users.json
+bundles.json
+server_local.log
+videogen/server_local.log
+videogen/registry.json
+
+# ---- local test / verification artifacts ----
+gui-test-screenshots/
+videogen/reinstall_test/
+èµ°æŸ¥åˆ¹è½¦2/
+
+# ---- scratch copies under _tools ----
+_tools/_cand/
+_tools/_cand2/
