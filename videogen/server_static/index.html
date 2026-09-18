@@ -572,7 +572,8 @@ body.vg-production .top{background:#14161be8}
 .vg-script{background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden}.vg-hook{padding:20px 24px;border-bottom:1px solid var(--line)}.vg-hook small{color:var(--ink-2);font-size:11px}.vg-hook h2{font-size:24px;font-weight:600;line-height:1.5;margin-top:7px}.vg-hook mark{background:none;color:#d0c7ff}.vg-reader{padding:18px 24px;max-height:370px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:2;color:#ced4df}.vg-scriptfoot{padding:11px 24px;color:var(--ink-2);font-size:11px;border-top:1px solid var(--line)}
 .vg-gallery{display:grid;grid-template-columns:1.4fr 1fr;grid-auto-rows:142px;gap:8px}.vg-gallery .vg-asset:first-child{grid-row:span 2}.vg-asset{position:relative;border-radius:6px;overflow:hidden;background:var(--sunken);text-align:left;min-width:0}.vg-asset img,.vg-asset video{width:100%;height:100%;object-fit:cover}.vg-asset span{position:absolute;bottom:0;left:0;right:0;padding:30px 11px 9px;background:linear-gradient(transparent,#0000 4%,#000d 62%);color:#fff;font-size:12px;text-shadow:0 1px 3px #000b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vg-asset small{display:grid;place-items:center;height:100%;color:var(--ink-2)}
 .vg-assets-all{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.vg-assets-all .vg-asset{height:155px}.vg-notes{color:var(--ink-2);font-size:12px;border-top:1px solid var(--line);margin-top:17px;padding-top:13px;white-space:pre-wrap;overflow-wrap:anywhere}.vg-notes button{color:var(--acc);padding:6px 0;text-decoration:underline;text-underline-offset:4px}.vg-empty{min-height:230px;background:var(--surface);border:1px dashed var(--line2);border-radius:9px;padding:32px;display:flex;flex-direction:column;justify-content:center;gap:12px}.vg-empty h3{font-size:19px;font-weight:600}.vg-empty p{font-size:13px;color:var(--ink-2);line-height:1.9;max-width:56em;white-space:pre-wrap;overflow-wrap:anywhere}
-.vg-dropwrap{display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-items:start;max-width:760px}
+.vg-dropwrap{display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-items:start;max-width:760px;margin:0 auto;text-align:center}
+.vg-dropwrap .vg-importer{justify-content:center}
 .vg-drop{display:flex;flex-direction:column;align-items:center;gap:9px;width:100%;padding:46px 24px;border:1px dashed var(--line2);border-radius:11px;background:var(--surface);text-align:center}
 .vg-drop:hover,.vg-drop.over{border-color:var(--acc);background:#232131}
 .vg-drop[disabled]{opacity:.55;cursor:default}.vg-drop[disabled]:hover{border-color:var(--line2);background:var(--surface)}
@@ -1459,7 +1460,10 @@ async function renderProject(requestedView){
   const wantHash = "#/project/" + pid + "/" + FLOW.view;
   if (location.hash !== wantHash) setHash(wantHash);
   job = lastJob = FLOW.jobId;
-  paintSwitcher(true, project.title || "项目", bundle ? (bundle.assets || []).length + " 素材 · 预计 " + mmss(bundle.estSeconds) : "尚未读取素材");
+  // 胶囊只在"这个项目已经有素材"时才出现。空项目（刚建、还没读素材）时它只写得出
+  // 「新建项目 / 尚未读取素材」，像个不会干活的假按钮，用户会问"这是干嘛的"。
+  if (bundle) paintSwitcher(true, project.title || "项目", (bundle.assets || []).length + " 素材 · 预计 " + mmss(bundle.estSeconds));
+  else paintSwitcher(false);
   paintFlow();
   if (FLOW.jobId){ localStorage.setItem("vg.job." + pid, FLOW.jobId); startPoll(); }
 }

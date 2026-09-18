@@ -332,3 +332,13 @@ test('late poll response cannot paint another project or clear its active task',
   assert.equal(h.evaluate('FLOW.status.stage'), 'queued', 'Project bb must keep its own live status');
   assert(!h.document.body.textContent.includes('obsolete failure'));
 });
+
+test('顶栏项目胶囊只在项目里已经有素材时出现，空项目不显示', async t => {
+  const h = await setup(t);
+  await h.openProject();  // 默认项目带 bundle-a，有素材
+  assert(!h.get('switcher').classList.contains('hide'),
+    '读到素材时要显示：项目名 + N 素材 + 切换项目才有内容可写');
+  await h.openProject({...h.projects[0], bundle: null, title: '新建项目'});  // 刚建、还没读素材
+  assert(h.get('switcher').classList.contains('hide'),
+    '空项目里它只写得出「新建项目 / 尚未读取素材」，看着像个假按钮，必须藏起来');
+});
