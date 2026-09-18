@@ -9,7 +9,7 @@
  * （Remotion 官方推荐 Context，这里沿用代码库既有的 T 写法以降低改动面。）
  */
 
-export type LayoutKind = 'editorial' | 'bleed' | 'lower';
+export type LayoutKind = 'editorial' | 'bleed' | 'lower' | 'zhigu';
 export type DecorKind = 'grain' | 'grid' | 'none';
 
 export type Skin = {
@@ -370,6 +370,49 @@ const portrait: Skin = {
   motionFrames: 9,
 };
 
+/** 智谷三段式：顶带大标题 / 中段近白舞台 / 底带字幕，三段全程钉死 */
+const zhigu: Skin = {
+  name: '智谷三段式',
+  layout: 'zhigu',
+  bgTop: '#0c0f14',
+  bgBottom: '#0c0f14',
+  decor: 'none',
+  vignette: false,
+  paperTop: '#ffffff',
+  paper: '#ffffff',
+  paperBottom: '#f2f1ed',
+  paperTexture: 'none',
+  paperShadow: '0 18px 44px rgba(0,0,0,0.45)',
+  panel: '#ffffff',
+  panelRadius: 20,
+  cardRadius: 16,
+  ink: '#171a20',
+  onMedia: '#ffffff',
+  mutedInk: '#5c6470',
+  codeInk: '#8a93a1',
+  white: '#ffffff',
+  gray: '#aab2bd',
+  grayDim: '#6d7684',
+  accent: '#ffd93d',
+  accentSoft: '#ffe680',
+  onAccent: '#171a20',
+  teal: '#34d399',
+  cardWhite: '#ffffff',
+  cardInk: '#171a20',
+  cardMuted: '#5c6470',
+  cardLine: '#e7e5dd',
+  chipBg: 'rgba(255,217,61,0.92)',
+  timelineBg: '#171a20',
+  slotBg: '#f0efe9',
+  scrim: 'linear-gradient(180deg, rgba(6,8,12,0.55), rgba(6,8,12,0.15) 40%, rgba(6,8,12,0.75))',
+  calloutScrim: 'linear-gradient(180deg, rgba(6,8,12,0.7), rgba(6,8,12,0.2))',
+  highlightBg: '#ffd93d',
+  highlightInk: '#171a20',
+  font: SANS,
+  fontMono: MONO,
+  motionFrames: 5,
+};
+
 export const SKINS: Record<string, Skin> = {
   editorial,
   finance,
@@ -378,6 +421,7 @@ export const SKINS: Record<string, Skin> = {
   news,
   retro,
   portrait,
+  zhigu,
 };
 
 /** 旧 format 别名 → 新模板 id */

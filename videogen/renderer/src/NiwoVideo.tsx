@@ -13,6 +13,7 @@ import {
   useVideoConfig,
 } from 'remotion';
 import {T, resolveSkin, applySkin, type Skin} from './skin';
+import {ZhiguVideo} from './ZhiguVideo';
 
 // ---------------- tokens ----------------
 // T 与皮肤定义在 ./skin，渲染入口按 props.template 调 applySkin 赋值。
@@ -27,7 +28,7 @@ const FONTS: {family: string; file: string; weight: string; loadWeight: string}[
   {family: 'SSHLight', file: 'fonts/NotoSansSC-Light.otf', weight: '100 900', loadWeight: '300'},
 ];
 
-const FontFace: React.FC = () => {
+export const FontFace: React.FC = () => {
   const [handle] = React.useState(() => delayRender('loading font'));
   // 只等当前皮肤真正用到的那一款，避免每次渲染都拖三份 CJK 字体
   const used = FONTS.filter((f) => (T.font || '').includes(f.family));
@@ -124,9 +125,9 @@ const setExportMode = (m: ExportMode) => {
   EXPORT_MODE = m;
 };
 /** 素材/字幕是否隐藏（分轨导出时） */
-const hideMedia = () => EXPORT_MODE !== 'full';
-const isCard = () => EXPORT_MODE === 'card';
-const isBase = () => EXPORT_MODE === 'base';
+export const hideMedia = () => EXPORT_MODE !== 'full';
+export const isCard = () => EXPORT_MODE === 'card';
+export const isBase = () => EXPORT_MODE === 'base';
 /** 内层面板几何：与 EditorialVideo 中的面板 rect 保持一致 */
 const PANEL_RECT = {left: 115, top: 596, width: 849, height: 844, radius: 16};
 /** 面板内媒体窗几何（ShotView 用）：相对面板左上角 */
@@ -961,7 +962,7 @@ const Footer: React.FC<{sources: string[]; disclaimer: string}> = ({sources, dis
   </div>
 );
 
-const buildSubtitleChunks = (clauses: Clause[]) => {
+export const buildSubtitleChunks = (clauses: Clause[]) => {
   // long clauses are split into <=12-char chunk cards, timing proportional
   // to character count (matches the reference: short constant-size cards)
   const chunks: {text: string; startMs: number; endMs: number}[] = [];
@@ -1287,6 +1288,14 @@ export const NiwoVideo: React.FC<NiwoProps> = (props) => {
       <>
         {probe}
         <PortraitVideo {...props} />
+      </>
+    );
+  }
+  if (skin.layout === 'zhigu') {
+    return (
+      <>
+        {probe}
+        <ZhiguVideo {...props} />
       </>
     );
   }

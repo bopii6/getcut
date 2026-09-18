@@ -81,6 +81,7 @@ TEMPLATES: dict[str, str] = {
     "news": "新闻播报版",
     "retro": "复古人文版",
     "portrait": "竖屏满屏",
+    "zhigu": "智谷三段式",
 }
 # 旧 format 取值 → 新模板 id（兼容早前发出的请求）
 TEMPLATE_ALIAS: dict[str, str] = {
