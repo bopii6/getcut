@@ -609,14 +609,51 @@ def auth_logout(response: Response):
     return {"ok": True}
 
 
+@app.post("/api/auth/change-password")
+def auth_change_password(body: dict, request: Request):
+    """登录状态下改密码：验当前密码 → 设新密码（会话不用重发，签名里没有密码）。"""
+    email = _session_email(request)
+    if not email:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    time.sleep(0.4)   # 和登录一样拖一下，防在线爆破旧密码
+    try:
+        auth.change_password(email, body.get("old_password", ""),
+                             body.get("new_password", ""))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {"ok": True}
+
+
 @app.get("/api/me")
 def me(request: Request):
     email = _session_email(request)
     if not email:
         return JSONResponse({"error": "未登录"}, status_code=401)
     tier = auth.user_tier(email)
-    return {"email": email, "tier": tier, "tier_label": auth.TIER_LABEL.get(tier, tier),
-            "is_admin": auth.is_admin(email)}
+    prof = auth.get_profile(email)
+    out = {"email": email, "tier": tier, "tier_label": auth.TIER_LABEL.get(tier, tier),
+           "is_admin": auth.is_admin(email),
+           "nickname": prof["nickname"], "avatar": prof["avatar"],
+           "created": prof["created"], "avatars": auth.AVATARS}
+    if tier == "free":
+        # 免费档把今天还剩几条说出来，权益卡里直接展示（付费档不限次）
+        used = (_usage_load().get(email) or {}).get(time.strftime("%Y-%m-%d"), 0)
+        out["builds_today"] = used
+        out["free_daily_builds"] = config.FREE_DAILY_BUILDS
+    return out
+
+
+@app.put("/api/me")
+def me_update(body: dict, request: Request):
+    """改自己的资料（昵称/头像）。只收这两个字段，改密码走 /api/auth/change-password。"""
+    email = _session_email(request)
+    if not email:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    try:
+        prof = auth.set_profile(email, body.get("nickname"), body.get("avatar"))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {"ok": True, "nickname": prof["nickname"], "avatar": prof["avatar"]}
 
 
 # ---------- 档位 / 卡密 / 定价页 ----------

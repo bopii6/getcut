@@ -70,7 +70,9 @@ async function createHarness({storage = {}} = {}) {
   const projects = [project(), project('bb', 'bundle-b')];
   const jobStates = new Map([['job-a', queued()], ['job-b', queued('bb')]]);
   function respond(method, url, handler) { routes.set(method + ' ' + url, handler); }
-  respond('GET', '/api/me', {email: 'offline@example.invalid', tier: 'premium', tier_label: '高级版', is_admin: false});
+  respond('GET', '/api/me', {email: 'offline@example.invalid', tier: 'premium', tier_label: '高级版', is_admin: false,
+    nickname: '创作者4231', avatar: '🦊', created: '2026-09-01',
+    avatars: ['🦊', '🐼', '🐯', '🦁', '🐸', '🦉', '🐬', '🐨', '🚀', '⚡', '🌈', '🎬']});
   respond('GET', '/api/auth/status', {locked: false, smtp: false, dev_email: false, token_auth: false});
   respond('GET', '/api/voices', {voices: ['zh-CN-YunxiNeural', 'zh-CN-YunjianNeural', 'zh-CN-XiaoxiaoNeural']
     .map(id => ({id, label: id, provider: 'edge'})), dashscope: false, default: 'zh-CN-YunxiNeural'});

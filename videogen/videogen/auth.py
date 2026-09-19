@@ -266,6 +266,70 @@ def tier_at_least(email: str | None, need: str) -> bool:
     return TIER_RANK[user_tier(email)] >= TIER_RANK.get(need, 99)
 
 
+# ---------- 资料（昵称 / 头像） ----------
+# 头像是 12 个预设表情，没有图片上传：自托管产品不值得为此开存储面。
+# 默认值按邮箱哈希确定性生成——老账号没有这两个字段也不怕，读出来就是默认值，
+# 第一次改资料才落盘，所以不需要数据迁移。
+AVATARS = ["🦊", "🐼", "🐯", "🦁", "🐸", "🦉", "🐬", "🐨", "🚀", "⚡", "🌈", "🎬"]
+NICKNAME_MAX = 16
+
+
+def _hash_int(seed: str) -> int:
+    return int(hashlib.sha256(seed.encode("utf-8")).hexdigest(), 16)
+
+
+def _default_nickname(email: str) -> str:
+    return f"创作者{_hash_int(_norm_email(email)) % 9000 + 1000}"
+
+
+def _default_avatar(email: str) -> str:
+    return AVATARS[_hash_int("av:" + _norm_email(email)) % len(AVATARS)]
+
+
+def get_profile(email: str) -> dict:
+    """昵称与头像（含注册时间，账号页展示用）。没登录/没这人也给确定性默认值。"""
+    email = _norm_email(email)
+    rec = next((u for u in _load_users() if u["email"] == email), None)
+    nickname = (rec or {}).get("nickname") or _default_nickname(email)
+    avatar = (rec or {}).get("avatar")
+    return {
+        "nickname": str(nickname).strip()[:NICKNAME_MAX] or _default_nickname(email),
+        "avatar": avatar if avatar in AVATARS else _default_avatar(email),
+        "created": (rec or {}).get("created") or "",
+    }
+
+
+def set_profile(email: str, nickname: str | None = None,
+                avatar: str | None = None) -> dict:
+    """改昵称/头像。非法输入抛 ValueError（信息可直接给前端）。"""
+    email = _norm_email(email)
+    users = _load_users()
+    user = next((u for u in users if u["email"] == email), None)
+    if user is None:
+        raise ValueError("先登录再改资料")
+    if nickname is not None:
+        nickname = str(nickname).strip()
+        if not nickname:
+            raise ValueError("昵称不能是空的")
+        if len(nickname) > NICKNAME_MAX:
+            raise ValueError(f"昵称最多 {NICKNAME_MAX} 个字")
+        user["nickname"] = nickname
+    if avatar is not None:
+        if avatar not in AVATARS:
+            raise ValueError("头像不在可选列表里")
+        user["avatar"] = avatar
+    user["profile_updated"] = time.strftime("%Y-%m-%d %H:%M")
+    _save_users(users)
+    return get_profile(email)
+
+
+def change_password(email: str, old: str, new: str) -> None:
+    """登录状态下改密码：必须先验当前密码。非法输入抛 ValueError。"""
+    if not verify_login(email, old or ""):
+        raise ValueError("当前密码不对")
+    set_password(email, new)
+
+
 # ---------- 会话签名 ----------
 
 def _secret() -> bytes:

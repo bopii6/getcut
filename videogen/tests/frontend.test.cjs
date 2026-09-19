@@ -386,14 +386,22 @@ test('顶栏项目胶囊只在项目里已经有素材时出现，空项目不�
     '空项目里它只写得出「新建项目 / 尚未读取素材」，看着像个假按钮，必须藏起来');
 });
 
-test('档位与定价：顶栏有档位徽标，免费档先拦剪映导出并弹定价', async t => {
+test('档位与定价：顶栏「我的」入口带档位徽标，免费档先拦剪映导出并弹定价', async t => {
   const h = await setup(t);
   // 把当前用户降成免费档（harness 默认是高级版，方便老用例跑通）
-  h.respond('GET', '/api/me', {email: 'offline@example.invalid', tier: 'free', tier_label: '免费版', is_admin: false});
+  h.respond('GET', '/api/me', {email: 'offline@example.invalid', tier: 'free', tier_label: '免费版', is_admin: false,
+    nickname: '创作者1234', avatar: '🐼', created: '2026-09-01',
+    avatars: ['🦊', '🐼'], free_daily_builds: 2, builds_today: 1});
   await h.evaluate('ME = null; boot()'); await h.flush();
-  assert(h.get('tierChip'), '登录后顶栏要有档位徽标');
-  assert.equal(h.get('tierChip').textContent, '免费版');
-  assert(h.get('topUpgrade'), '免费档要有升级按钮');
+  assert(h.get('meBtn'), '登录后顶栏要有「我的」入口');
+  assert(h.get('meBtn').textContent.includes('创作者1234'), '入口显示昵称而不是邮箱');
+  assert(!h.get('meBtn').textContent.includes('offline@example.invalid'), '邮箱不能直接摆在顶栏');
+  assert(h.get('meBtn').textContent.includes('免费版'), '档位徽标要可见');
+  h.click('#meBtn'); await h.flush();
+  assert(h.get('meMenu'), '点开要有「我的」菜单');
+  assert(h.get('meMenu').textContent.includes('已用 1 / 2 条'), '免费档要展示今日额度');
+  assert(h.get('mePricing'), '免费档菜单里要有升级/兑换入口');
+  h.evaluate('closeMeMenu()');
   await h.openProject();
   await start(h);
   h.projects[0].renders = [{id: 'job-a', file: 'fixture-job-a.mp4', ts: '2026-01-01 12:00'}];
@@ -403,6 +411,53 @@ test('档位与定价：顶栏有档位徽标，免费档先拦剪映导出并�
   h.click('#jyBtn'); await h.flush();
   assert(h.document.querySelector('.price-box'), '免费档点剪映导出要弹定价弹窗');
   assert(!h.requests.some(r => r.url.endsWith('/jianying-import')), '没付钱不能真的发导入请求');
+});
+
+test('「我的」菜单：权益说明齐全，高级版不出现升级项，任务与退出都收进菜单', async t => {
+  const h = await setup(t);
+  await h.flush();
+  h.click('#meBtn'); await h.flush();
+  const menu = h.get('meMenu');
+  assert(menu, '点开头像要弹「我的」菜单');
+  assert(menu.textContent.includes('offline@example.invalid'), '邮箱在菜单里可见（顶栏不摆）');
+  assert(menu.textContent.includes('高级版 · 永久'), '档位徽标要写清买断制');
+  assert(menu.textContent.includes('剪映草稿导出'), '高级版权益要列到剪映导出');
+  assert(h.get('mePricing') && h.get('mePricing').textContent.includes('我的权益'), '高级版是「我的权益」不是升级');
+  assert(h.get('meTasks') && h.get('meLogout'), '任务与退出都在菜单里');
+  h.click('#meTasks'); await h.flush();
+  assert(!h.get('meMenu'), '点任务要收起菜单');
+  assert(h.get('tasksPanel') && !h.get('tasksPanel').classList.contains('hide'), '要顺手打开任务面板');
+});
+
+test('账号设置：头像预设可选，保存资料走 PUT /api/me，改密码走 change-password', async t => {
+  const h = await setup(t);
+  await h.flush();
+  h.click('#meBtn'); await h.flush();
+  h.click('#meSettings'); await h.flush();
+  const box = h.document.querySelector('[aria-label="账号设置"]');
+  assert(box, '账号设置弹窗要打开');
+  assert(h.document.querySelectorAll('#acAvs button').length >= 12, '头像预设要摆出来一排');
+  assert(h.get('acNick').value === '创作者4231', '昵称预填当前值');
+  h.evaluate(`document.getElementById('acAvs').onclick({target: document.querySelector('#acAvs button[data-av="🚀"]')})`);
+  assert.equal(h.get('acPrev').textContent, '🚀', '点头像要即时预览');
+  h.get('acNick').value = '老王';
+  h.get('acNick').oninput({target: h.get('acNick')});
+  h.respond('PUT', '/api/me', {ok: true, nickname: '老王', avatar: '🚀'});
+  h.click('#acSave'); await h.flush();
+  const put = h.requests.find(r => r.url === '/api/me' && r.method === 'PUT');
+  assert(put, '保存资料要发 PUT /api/me');
+  assert.deepEqual(JSON.parse(put.body), {nickname: '老王', avatar: '🚀'}, '昵称与选中的头像一起提交');
+  assert.equal(h.evaluate('ME.nickname'), '老王', '保存后本地 ME 要刷新');
+  assert(h.get('meBtn').textContent.includes('老王'), '顶栏立刻用新昵称');
+  assert.equal(h.get('meBtn').querySelector('.me-av').textContent, '🚀', '顶栏立刻用新头像');
+  h.get('acOld').value = 'old-pass-123';
+  h.get('acNew').value = 'new-pass-456';
+  h.respond('POST', '/api/auth/change-password', {ok: true});
+  h.click('#acPwGo'); await h.flush();
+  const pw = h.requests.find(r => r.url === '/api/auth/change-password');
+  assert(pw, '改密码要有专门接口');
+  assert.deepEqual(JSON.parse(pw.body), {old_password: 'old-pass-123', new_password: 'new-pass-456'});
+  assert(h.get('acPwMsg').textContent.includes('密码已更新'), '成功提示要说清下次登录用新密码');
 });
 
 test('定价弹窗：价格/微信/收款码占位按 /api/pricing 渲染，兑换卡密走 POST', async t => {

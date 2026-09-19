@@ -537,6 +537,50 @@ textarea:focus{outline:none;border-color:var(--acc)}
 .redeem-row input{flex:1}
 .tier-chip{border:1px solid var(--line2);border-radius:999px;font-size:11.5px;padding:4px 10px;color:var(--ink-2);cursor:pointer;background:none}
 .tier-chip.tier-premium{border-color:var(--acc);color:var(--acc)}
+/* ── 顶栏「我的」入口 + 下拉菜单 + 账号设置 ── */
+.me-btn{display:inline-flex;align-items:center;gap:9px;min-height:38px;padding:0 12px 0 5px;
+  border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line2);
+  cursor:pointer;color:var(--ink);font-size:13px;font-weight:600;transition:box-shadow .15s}
+.me-btn:hover{box-shadow:inset 0 0 0 1px #6c62a8}
+.me-av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  font-size:15px;background:var(--acc-soft);flex:none;line-height:1}
+.me-btn .who{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me-btn .tier-chip{cursor:inherit}
+.me-menu{position:fixed;top:62px;right:20px;z-index:70;width:308px;max-width:calc(100vw - 24px);
+  background:var(--surface);border:1px solid var(--line2);border-radius:14px;
+  box-shadow:var(--sh-2);overflow:hidden;animation:rise .18s var(--ease) both}
+.me-head{display:flex;align-items:center;gap:12px;padding:15px 16px;border-bottom:1px solid var(--line)}
+.me-head .me-av{width:44px;height:44px;font-size:22px}
+.me-head b{display:block;font-size:15px}
+.me-head small{display:block;color:var(--ink-3);font-size:12px;max-width:210px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.me-benefit{margin:12px 14px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface2)}
+.me-benefit .mb-row{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  font-size:12.5px;color:var(--ink-2)}
+.me-benefit .mb-row+.mb-row{margin-top:8px}
+.me-benefit .mb-note{font-size:12px;color:var(--ink-3);line-height:1.65;margin-top:9px;
+  padding-top:9px;border-top:1px dashed var(--line)}
+.me-item{display:flex;width:100%;align-items:center;gap:10px;text-align:left;padding:11px 16px;
+  font-size:13.5px;font-weight:600;color:var(--ink-2);border-top:1px solid var(--line)}
+.me-item:hover{background:var(--sunken);color:var(--ink)}
+.me-item .mi{font-style:normal;width:20px;text-align:center;flex:none}
+.me-item .mr{margin-left:auto;color:var(--ink-3);font-size:11.5px;font-weight:400}
+.me-item.go{color:var(--acc)}
+.me-item.warn{color:var(--err)}
+.me-avbig{width:64px;height:64px;font-size:32px;border-radius:50%;display:grid;place-items:center;
+  background:var(--acc-soft);margin:0 auto;cursor:pointer;line-height:1}
+.av-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0 4px}
+.av-grid button{width:44px;height:44px;border-radius:12px;font-size:22px;display:grid;place-items:center;
+  background:var(--surface2);border:1.5px solid transparent;cursor:pointer;transition:border-color .12s}
+.av-grid button:hover{border-color:var(--line2)}
+.av-grid button[aria-pressed=true]{border-color:var(--acc);background:var(--acc-soft)}
+.acct-sec{border-top:1px dashed var(--line2);margin-top:16px;padding-top:14px}
+.acct-sec h4{font-size:13px;margin:0 0 10px;color:var(--ink-2)}
+.acct-meta{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink-2);
+  padding:6px 2px}
+.acct-meta b{color:var(--ink);font-weight:600;text-align:right;overflow-wrap:anywhere}
+@media(max-width:640px){.me-btn .who{display:none}.me-menu{right:12px}}
 .lic-list{max-height:180px;overflow:auto;font-size:12px;color:var(--ink-2);margin-top:8px;border:1px solid var(--line);border-radius:8px}
 .lic-list div{display:flex;justify-content:space-between;gap:8px;padding:5px 10px;border-bottom:1px solid var(--line)}
 .lic-list div:last-child{border-bottom:0}
@@ -1539,6 +1583,7 @@ async function submitLogin(){
 }
 function paintAccount(){
   const el = $("account"); if (!el) return;
+  closeMeMenu();
   const visitor = !ME;
   $("topNew").style.display = visitor ? "none" : "";
   $("tasksBtn").style.display = visitor ? "none" : "";
@@ -1550,17 +1595,157 @@ function paintAccount(){
     $("topReg").onclick = () => { AUTHMODE = "register"; showAuth(); };
     return;
   }
-  el.innerHTML = `<span class="who">${esc(ME.email)}</span>
-    <button class="tier-chip tier-${esc(ME.tier || "free")}" id="tierChip"
-      title="档位与升级">${esc(ME.tier_label || "免费版")}</button>
-    ${ME.tier === "premium" ? "" : `<button class="btn sm" id="topUpgrade">升级</button>`}
-    <button class="ghost" id="logoutBtn">退出</button>`;
-  $("tierChip").onclick = () => openPricing();
-  const up = $("topUpgrade"); if (up) up.onclick = () => openPricing();
-  $("logoutBtn").onclick = async () => {
+  // 账号相关收进一个「我的」入口：头像 + 昵称 + 档位徽标，点开才是权益/设置/退出
+  el.innerHTML = `<button class="me-btn" id="meBtn" aria-haspopup="menu"
+      aria-expanded="false" title="账号与权益">
+    <span class="me-av" aria-hidden="true">${esc(ME.avatar || "🦊")}</span>
+    <span class="who">${esc(ME.nickname || "创作者")}</span>
+    <span class="tier-chip tier-${esc(ME.tier || "free")}">${esc(ME.tier_label || "免费版")}</span>
+  </button>`;
+  $("meBtn").onclick = (e) => { e.stopPropagation(); toggleMeMenu(); };
+}
+
+/* ── 「我的」下拉菜单 ── */
+function closeMeMenu(){
+  const m = $("meMenu"); if (m) m.remove();
+  const b = $("meBtn"); if (b) b.setAttribute("aria-expanded", "false");
+}
+function meBenefitNote(tier){
+  if (tier === "premium") return "基础版权益全部包含：无水印出片 + 品牌套件（自有 Logo/品牌色/片尾卡）+ 剪映草稿导出 + 声音克隆 + 栏目化。永久有效。";
+  if (tier === "basic") return "出片不限量、无 GetCut 水印，六套模板与音色任选，永久有效。想解锁品牌套件和剪映精剪，升高级版。";
+  return "每天有免费出片额度，成片带 GetCut 水印。兑换卡密或升级后立即去水印。";
+}
+function toggleMeMenu(){
+  if ($("meMenu")) { closeMeMenu(); return; }
+  const tier = ME.tier || "free";
+  const m = document.createElement("div");
+  m.className = "me-menu"; m.id = "meMenu"; m.setAttribute("role", "menu");
+  m.innerHTML = `
+    <div class="me-head">
+      <span class="me-av" aria-hidden="true">${esc(ME.avatar || "🦊")}</span>
+      <span style="min-width:0">
+        <b>${esc(ME.nickname || "创作者")}</b>
+        <small title="${esc(ME.email)}">${esc(ME.email)}</small>
+      </span>
+    </div>
+    <div class="me-benefit">
+      <div class="mb-row"><span>当前档位</span>
+        <span class="tier-chip tier-${esc(tier)}">${esc(ME.tier_label || "免费版")}${tier !== "free" ? " · 永久" : ""}</span></div>
+      ${tier === "free" && typeof ME.free_daily_builds === "number"
+        ? `<div class="mb-row"><span>今日免费额度</span><b style="color:var(--ink)">已用 ${ME.builds_today || 0} / ${ME.free_daily_builds} 条</b></div>` : ""}
+      <p class="mb-note">${meBenefitNote(tier)}</p>
+    </div>
+    <button class="me-item" id="meSettings" role="menuitem"><i class="mi">⚙</i>账号设置<i class="mr">昵称 · 头像 · 密码</i></button>
+    ${tier === "premium" ? `<button class="me-item" id="mePricing" role="menuitem"><i class="mi">◆</i>我的权益</button>`
+        : `<button class="me-item go" id="mePricing" role="menuitem"><i class="mi">⚡</i>升级 / 兑换卡密</button>`}
+    <button class="me-item" id="meTasks" role="menuitem"><i class="mi">🖼</i>渲染任务<i class="mr">排队与进度</i></button>
+    <button class="me-item warn" id="meLogout" role="menuitem"><i class="mi">⎋</i>退出登录</button>`;
+  document.body.appendChild(m);
+  $("meBtn").setAttribute("aria-expanded", "true");
+  m.addEventListener("click", (e) => e.stopPropagation());
+  $("meSettings").onclick = () => { closeMeMenu(); openAccount(); };
+  $("mePricing").onclick = () => { closeMeMenu(); openPricing(); };
+  $("meTasks").onclick = () => { closeMeMenu(); toggleTasksPanel(); };
+  $("meLogout").onclick = async () => {
+    closeMeMenu();
     try { await api("/api/auth/logout", {method:"POST"}); } catch (e) {}
     ME = null; paintAccount(); showAuth();
   };
+}
+document.addEventListener("click", (e) => {
+  if (!$("meMenu")) return;
+  const t = e.target;
+  if (t.closest && (t.closest("#meMenu") || t.closest("#meBtn"))) return;
+  closeMeMenu();
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMeMenu(); });
+
+/* ── 账号设置：改昵称 / 选头像 / 改密码 ── */
+function openAccount(){
+  closeMeMenu();
+  const m = document.createElement("div"); m.className = "modal";
+  const avs = ME.avatars && ME.avatars.length ? ME.avatars : ["🦊","🐼","🐯","🦁","🐸","🦉","🐬","🐨","🚀","⚡","🌈","🎬"];
+  m.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-label="账号设置" style="width:460px;max-width:calc(100vw - 32px)">
+    <h3>账号设置</h3>
+    <p>换个头像和名字，出片报告里认得出是你。</p>
+    <div class="me-avbig" id="acPrev" aria-hidden="true">${esc(ME.avatar || avs[0])}</div>
+    <div class="av-grid" id="acAvs" role="radiogroup" aria-label="选择头像">
+      ${avs.map(a => `<button type="button" data-av="${esc(a)}" aria-pressed="${a === (ME.avatar || avs[0])}"
+        title="选这个头像">${esc(a)}</button>`).join("")}
+    </div>
+    <div style="margin-top:14px">
+      <label for="acNick" style="font-size:12.5px;color:var(--ink-2)">昵称</label>
+      <input type="text" id="acNick" maxlength="16" value="${esc(ME.nickname || "")}"
+        placeholder="最多 16 个字" style="margin-top:6px">
+      <p id="acNickCnt" style="font-size:11.5px;color:var(--ink-3);margin:6px 0 0;text-align:right">${(ME.nickname || "").length}/16</p>
+    </div>
+    <div class="acct-sec">
+      <h4>账号信息</h4>
+      <div class="acct-meta"><span>登录邮箱</span><b>${esc(ME.email)}</b></div>
+      <div class="acct-meta"><span>当前档位</span><b>${esc(ME.tier_label || "免费版")}${ME.tier !== "free" ? " · 永久有效" : ""}</b></div>
+      ${ME.created ? `<div class="acct-meta"><span>注册时间</span><b>${esc(ME.created)}</b></div>` : ""}
+    </div>
+    <div class="acct-sec">
+      <h4>修改密码</h4>
+      <input type="password" id="acOld" placeholder="当前密码" autocomplete="current-password" style="margin-bottom:8px">
+      <input type="password" id="acNew" placeholder="新密码（至少 8 位）" autocomplete="new-password">
+      <p id="acPwMsg" style="font-size:12.5px;margin:8px 0 0;min-height:1em"></p>
+      <button class="btn sm line" id="acPwGo" style="margin-top:8px">更新密码</button>
+    </div>
+    <p id="acMsg" style="font-size:12.5px;margin:12px 0 0;min-height:1em"></p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn sm line" id="acClose">关闭</button>
+      <button class="btn sm" id="acSave">保存资料</button></div>
+  </div>`;
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  const close = () => { m.remove(); document.removeEventListener("keydown", onKey); };
+  m.querySelector("#acClose").onclick = close;
+  m.onclick = (e) => { if (e.target === m) close(); };
+  document.addEventListener("keydown", onKey);
+  let picked = ME.avatar || avs[0];
+  m.querySelector("#acAvs").onclick = (e) => {
+    const b = e.target.closest && e.target.closest("button[data-av]");
+    if (!b) return;
+    picked = b.dataset.av;
+    m.querySelector("#acPrev").textContent = picked;
+    m.querySelectorAll("#acAvs button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+  };
+  const nick = m.querySelector("#acNick");
+  nick.oninput = () => { m.querySelector("#acNickCnt").textContent = `${nick.value.length}/16`; };
+  m.querySelector("#acSave").onclick = async () => {
+    const btn = m.querySelector("#acSave"), msg = m.querySelector("#acMsg");
+    btn.disabled = true; btn.textContent = "保存中…"; msg.textContent = "";
+    try {
+      const r = await api("/api/me", { method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: nick.value, avatar: picked }) });
+      ME.nickname = r.nickname; ME.avatar = r.avatar;
+      paintAccount();
+      msg.style.color = "var(--ok)"; msg.textContent = "资料已保存。";
+      toast("资料已保存");
+    } catch (e) {
+      msg.style.color = "var(--err)"; msg.textContent = e.message || "保存失败";
+    }
+    btn.disabled = false; btn.textContent = "保存资料";
+  };
+  m.querySelector("#acPwGo").onclick = async () => {
+    const btn = m.querySelector("#acPwGo"), msg = m.querySelector("#acPwMsg");
+    const oldv = m.querySelector("#acOld").value, newv = m.querySelector("#acNew").value;
+    btn.disabled = true; msg.style.color = ""; msg.textContent = "";
+    try {
+      await api("/api/auth/change-password", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ old_password: oldv, new_password: newv }) });
+      msg.style.color = "var(--ok)"; msg.textContent = "密码已更新，下次登录用新密码。";
+      m.querySelector("#acOld").value = ""; m.querySelector("#acNew").value = "";
+      toast("密码已更新");
+    } catch (e) {
+      msg.style.color = "var(--err)"; msg.textContent = e.message || "修改失败";
+    }
+    btn.disabled = false;
+  };
+  document.body.appendChild(m);
+  nick.focus();
 }
 
 /* ── 定价 / 卡密兑换 / 管理面板 ── */
@@ -2779,11 +2964,12 @@ async function boot(){
   refreshTasks();
   setInterval(refreshTasks, 4000);
 }
-$("tasksBtn").onclick = () => {
+function toggleTasksPanel(){
   TASKS_OPEN = !TASKS_OPEN;
   $("tasksPanel").classList.toggle("hide", !TASKS_OPEN);
   refreshTasks();
-};
+}
+$("tasksBtn").onclick = toggleTasksPanel;
 document.addEventListener("click", (e) => {
   if (!TASKS_OPEN) return;
   const t = e.target;
