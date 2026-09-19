@@ -50,7 +50,9 @@ def _headline_props(content: Content) -> dict:
 def build_props(bundle: Path, plan: Plan, content: Content,
                 title_card: dict, quote_card: dict, theme: dict | None = None,
                 show_subtitles: bool = True, show_sources: bool = True,
-                disclaimer: str | None = None, template: str = "editorial") -> dict:
+                disclaimer: str | None = None, template: str = "editorial",
+                watermark: bool = True, brand: dict | None = None,
+                series: dict | None = None) -> dict:
     plan.theme = theme or {}
     media_dir = RENDERER / "public" / "media"
     media_dir.mkdir(parents=True, exist_ok=True)
@@ -71,6 +73,11 @@ def build_props(bundle: Path, plan: Plan, content: Content,
                 if not dst.exists() or dst.stat().st_size != src.stat().st_size:
                     shutil.copyfile(src, dst)
         o = shot.overlay or {}
+        if template == "macro":
+            # 宏观棱镜式：不吃素材，一拍=一章；macroStage 直通（背景在 props 组装处统一给）
+            st = o.get("macro") if isinstance(o, dict) else None
+            if isinstance(st, dict) and st:
+                s["macroStage"] = st
         if template == "zhigu":
             # 智谷三段式：舞台动作字段直通；开场钩子借一段素材打底（b-roll + 黄胶囊）
             st = o.get("stage") if isinstance(o, dict) else None
@@ -135,7 +142,7 @@ def build_props(bundle: Path, plan: Plan, content: Content,
                                 "title": o.get("title", ""), "subtitle": o.get("subtitle", ""),
                                 "badge": o.get("badge", ""), "rightNote": o.get("rightNote", ""),
                                 "rows": o.get("rows", [])}
-        elif shot.overlay:
+        elif shot.overlay and "macro" not in shot.overlay:
             # clone 模式：镜头自带完整 overlay（如 statement_media）
             s["overlay"] = {**shot.overlay}
         else:
@@ -152,11 +159,31 @@ def build_props(bundle: Path, plan: Plan, content: Content,
         "disclaimer": DISCLAIMER if disclaimer is None else disclaimer,
         "showSubtitles": show_subtitles,
         "template": template,
+        "watermark": watermark,
         "shots": shots,
         "clauses": [{"text": c.text, "startMs": round(c.start_ms), "endMs": round(c.end_ms)}
                     for c in plan.clauses],
     }
+    if template == "macro":
+        # macro：顶部金标题=选题标题；暗背景=导演从素材挑的图（拷进渲染器），没有就用自带 K 线底图。
+        # 长标题在标点处取一段做系列名（原片的顶部标题都是 ≤12 字的短栏目名）
+        props_out["headline"] = {"lines": [{"text": _macro_series_title(content.title)}]}
+        bg_rel = getattr(plan, "bg_asset", None)
+        if bg_rel:
+            src = bundle / bg_rel
+            if src.is_file():
+                uniq = f"{bundle.name}__macrobg{src.suffix.lower()}"
+                dst = media_dir / uniq
+                if not dst.exists() or dst.stat().st_size != src.stat().st_size:
+                    shutil.copyfile(src, dst)
+                used_media.add(uniq)  # 别让下面的残留清理把刚拷的背景删了
+                props_out["bgImage"] = uniq
+        props_out.setdefault("bgImage", "rep__macro_bg.jpg")
+        props_out["channelName"] = "@宏观棱镜"
+    if series and series.get("badge"):
+        props_out["series"] = {"badge": str(series["badge"])[:24]}
     props_out = {k: v for k, v in props_out.items() if v is not None}
+    apply_brand(props_out, bundle, brand)
     # 清理本素材包上一轮残留的媒体文件（避免磁盘无界增长）
     prefix = f"{bundle.name}__"
     for old in media_dir.glob(f"{prefix}*"):
@@ -166,6 +193,52 @@ def build_props(bundle: Path, plan: Plan, content: Content,
             except OSError:
                 pass
     return props_out
+
+
+def _macro_series_title(title: str) -> str:
+    """选题标题 → 顶部系列名：在标点处分段，取最长且 ≤14 字的一段；都太长就截断加省略号。"""
+    parts: list[str] = [title]
+    for sep in ("：", ":", "，", ",", "｜", "|", "！"):
+        parts = [p for seg in parts for p in seg.split(sep)]
+    parts = [p.strip() for p in parts if p.strip()]
+    fit = [p for p in parts if 4 <= len(p) <= 14]
+    if fit:
+        return max(fit, key=len)
+    return title[:14] + ("…" if len(title) > 14 else "")
+
+
+def apply_brand(props: dict, bundle: Path, brand: dict | None) -> None:
+    """把品牌套件写进 props（已成的 props 也能补，预演复用路径用）。
+
+    Logo 拷进 renderer/public/brand/<key>.png 走 staticFile；水印开 = 水印位置
+    摆自己的 Logo（关 = 干净成片）；片尾卡字段整体塞进 props["brand"]。
+    """
+    if not brand:
+        return
+    logo_rel = None
+    key = brand.get("logo_key")
+    if key:
+        from . import brand as brand_kit
+        src = brand_kit.resolve_logo(key)
+        if src is not None:
+            dst_dir = RENDERER / "public" / "brand"
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            dst = dst_dir / f"{key}.png"
+            if not dst.exists() or dst.stat().st_size != src.stat().st_size:
+                shutil.copyfile(src, dst)
+            logo_rel = f"brand/{key}.png"
+    spec: dict = {}
+    if logo_rel:
+        spec["logo"] = logo_rel
+    if brand.get("slogan"):
+        spec["slogan"] = str(brand["slogan"])
+    if brand.get("contact"):
+        spec["contact"] = str(brand["contact"])
+    start = brand.get("end_card_start_ms")
+    if start is not None:
+        spec["endCardStartMs"] = int(start)
+    if spec:
+        props["brand"] = spec
 
 
 def render_stills(props: dict, out_dir: Path, prefix: str,
@@ -288,10 +361,13 @@ def render_visual(props: dict, out_path: Path, timeout: int = 1800,
     #   x264-preset=veryfast    —— 同画质，文件略大
     #   concurrency             —— 默认只吃一半核；用满核数（Remotion 上限=核数），实测 4 核最快
     conc = max(2, min(4, os.cpu_count() or 2))
+    # crf 23：Remotion 默认（18）在动效重的模板上会放飞码率——实测智谷三段式
+    # 91 秒的片子能到 81MB（7 Mbps），发出去、传上平台都嫌大。23 在竖屏信息类里
+    # 观感几乎无差别，体积能砍到 1/3 左右。
     cmd = [node, str(cli_js), "render", "main", rel_out,
            "--props=props.json",
            "--image-format=jpeg", "--jpeg-quality=95",
-           "--x264-preset=veryfast", f"--concurrency={conc}"]
+           "--crf=23", "--x264-preset=veryfast", f"--concurrency={conc}"]
     import re as _re
     import time as _time
     # stdout 重定向到文件而非管道：Remotion 的 Chrome 子进程会继承管道句柄，

@@ -13,6 +13,7 @@ import time
 import uuid
 from pathlib import Path
 
+from . import brand as brand_kit
 from . import config, llm, remotion_render, tts
 from .config import DEFAULT_TEMPLATE, TEMPLATE_ALIAS, TEMPLATES
 from .planner import (align_timeline, build_plan, build_plan_llm, clause_units,
@@ -170,21 +171,35 @@ def run_preview(project_id: str, body: dict) -> None:
                                       body.get("format") or DEFAULT_TEMPLATE)
         if template not in TEMPLATES:
             template = DEFAULT_TEMPLATE
-        spec = llm.design_shots(content.script, sent_payload, asset_payload, template=template)
-        plan = build_plan_llm(content, manifest, clauses, spec["shots"],
-                              spans=u_spans, interior=interior_units,
-                              edge_spans=edge, template=template) if spec else None
-        if plan is not None and spec.get("theme"):
-            plan.theme = spec["theme"]
-        if plan is not None and spec.get("style_pack"):
-            plan.style_pack = spec["style_pack"]
+        if template == "macro":
+            # 宏观棱镜式：按章规划，不吃素材/设计卡（与 cli.build 的 macro 分支一致）
+            from .planner import build_plan_macro
+            chapters = llm.design_chapters(
+                content.script,
+                [{"index": u["index"], "text": u["text"]} for u in units],
+                asset_payload)
+            plan = build_plan_macro(content, clauses, units, chapters)
+            if chapters and isinstance(chapters.get("bg_asset"), int) \
+                    and 0 <= chapters["bg_asset"] < len(manifest.assets) \
+                    and manifest.assets[chapters["bg_asset"]].kind == "image":
+                plan.bg_asset = manifest.assets[chapters["bg_asset"]].file
+        else:
+            spec = llm.design_shots(content.script, sent_payload, asset_payload, template=template)
+            plan = build_plan_llm(content, manifest, clauses, spec["shots"],
+                                  spans=u_spans, interior=interior_units,
+                                  edge_spans=edge, template=template) if spec else None
+            if plan is not None and spec.get("theme"):
+                plan.theme = spec["theme"]
+            if plan is not None and spec.get("style_pack"):
+                plan.style_pack = spec["style_pack"]
         if plan is None:
             plan = build_plan(content, manifest, clauses)
 
         title_label = "AI 观察｜突发信号"
         title_kw = _keyword_of(content.script, content.title[:4])
         q_label, q_text = _quote_of(content.script)
-        refined = llm.refine_copy(
+        # macro 的文案在章节规划里一次成型，标题/金句卡不存在，跳过这次改写调用
+        refined = None if template == "macro" else llm.refine_copy(
             content.script,
             [{"index": i, "kind": s.kind, "variant": (s.overlay or {}).get("variant"),
               "sentence": "", "current": s.overlay}
@@ -201,6 +216,7 @@ def run_preview(project_id: str, body: dict) -> None:
         theme = body.get("theme") or "auto"
         if theme and theme != "auto" and theme.startswith("#"):
             plan.theme = {"accent": theme, "accentSoft": _lighten(theme)}
+        brand = brand_kit.apply_to_plan(plan, body.get("brand"))
 
         set_state(60, "正在设计画面版式")
         props = remotion_render.build_props(
@@ -211,7 +227,9 @@ def run_preview(project_id: str, body: dict) -> None:
             show_subtitles=bool(body.get("subtitles", True)),
             show_sources=bool(body.get("sources", True)),
             disclaimer=body.get("disclaimer"),
-            template=template)
+            template=template,
+            watermark=body.get("watermark", True) is not False,
+            brand=brand)
         d = preview_dir(project_id)
         d.mkdir(parents=True, exist_ok=True)
         (d / "props.json").write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")

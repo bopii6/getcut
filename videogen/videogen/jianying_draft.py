@@ -586,6 +586,31 @@ def jianying_draft_dir() -> Path:
             / "User Data" / "Projects" / "com.lveditor.draft")
 
 
+def prepare_draft(video: Path, manifest: dict, progress=None) -> Path | None:
+    """确保这条成片的分轨草稿资产已备好（切素材 / 渲底板与卡片层 / 切片配音）。
+
+    渲染一结束就在后台跑这一步：等用户走到导出页，草稿通常已经就绪，点「一键导入剪映」
+    秒装——不用再让用户干等 1-2 分钟。已经是新的就直接复用。
+    返回草稿目录；不需要（旧成片没有 props）或失败时返回 None。
+    """
+    from . import draft_build
+
+    video = Path(video)
+    plan_dir = Path(manifest.get("draft_dir") or draft_dir_for(video))
+    try:
+        if draft_build.load_plan(plan_dir) and draft_build.plan_fresh(plan_dir, video):
+            return plan_dir
+        props_path = manifest.get("props")
+        if not props_path or not Path(props_path).is_file():
+            return None
+        props = json.loads(Path(props_path).read_text(encoding="utf-8"))
+        draft_build.build_draft_assets(manifest, plan_dir, props, progress=progress)
+        return plan_dir
+    except Exception as exc:  # noqa: BLE001 - 备草稿失败不该影响成片与下载
+        print(f"draft prepare skipped: {exc}")
+        return None
+
+
 def install_draft(zip_path: Path, dest_root: Path | None = None) -> Path:
     """把草稿 zip 装进剪映草稿库（等价于「一键导入剪映.bat」，但带 JSON 校验）。
 

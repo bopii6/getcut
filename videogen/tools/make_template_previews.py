@@ -45,6 +45,10 @@ def thumb_frame(props: dict) -> int:
     shots = props.get("shots") or []
     pick = next((s for s in shots if s.get("kind") in ("panel", "callout") and s.get("overlay")), None)
     if pick is None:
+        # macro：挑一个带图形动作（条形/大数字/卡链…）的章
+        pick = next((s for s in shots
+                     if (s.get("macroStage") or {}).get("block", {}).get("type")), None)
+    if pick is None:
         pick = next((s for s in shots if s.get("kind") == "title_card"), None)
     if pick is None:
         pick = shots[0] if shots else None
@@ -78,9 +82,15 @@ def main() -> int:
     for tid in ids:
         print(f"\n=== {tid} · {config.TEMPLATES[tid]} ===", flush=True)
         if not args.no_video:
-            cli.build(BUNDLE, OUT_DIR / f"sample-{tid}.mp4", clone=STORYBOARD, format=tid,
-                      bgm=bgm, sfx=True, sfx_mode="all", use_llm=False, vision=False,
-                      progress=lambda st, p, d=None: print(f"  [{p:3d}%] {d or st}", flush=True))
+            if tid == "macro":
+                # macro 走 LLM 章节规划（clone 图纸是智谷式分镜，macro 不认）
+                cli.build(BUNDLE, OUT_DIR / f"sample-{tid}.mp4", format=tid,
+                          bgm=bgm, sfx=True, sfx_mode="all", use_llm=True, vision=False,
+                          progress=lambda st, p, d=None: print(f"  [{p:3d}%] {d or st}", flush=True))
+            else:
+                cli.build(BUNDLE, OUT_DIR / f"sample-{tid}.mp4", clone=STORYBOARD, format=tid,
+                          bgm=bgm, sfx=True, sfx_mode="all", use_llm=False, vision=False,
+                          progress=lambda st, p, d=None: print(f"  [{p:3d}%] {d or st}", flush=True))
             # 渲染会顺手在成片旁写剪映草稿清单/资产目录——样片不需要，清掉免得混进静态目录
             for leftover in (OUT_DIR / f"sample-{tid}.draft.json", OUT_DIR / f"sample-{tid}.draftsrc"):
                 if leftover.is_dir():

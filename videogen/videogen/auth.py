@@ -37,6 +37,23 @@ RESEND_COOLDOWN = 60    # 两次发送至少间隔 60 秒
 MAX_ATTEMPTS = 5        # 一个验证码最多试 5 次
 _codes: dict[str, dict] = {}
 
+# 按 IP 限发：验证码接口是公开的，单邮箱冷却挡不住"换邮箱轰炸"，
+# 会烧掉发信邮箱的配额甚至被封号。每 IP 每小时最多发 10 封（内存记账，重启清零）。
+IP_SEND_LIMIT = 10
+IP_SEND_WINDOW = 3600
+_ip_sends: dict[str, list[float]] = {}
+
+
+def ip_can_send(ip: str) -> bool:
+    now = time.time()
+    recent = [t for t in _ip_sends.get(ip, []) if now - t < IP_SEND_WINDOW]
+    _ip_sends[ip] = recent
+    return len(recent) < IP_SEND_LIMIT
+
+
+def ip_record_send(ip: str) -> None:
+    _ip_sends.setdefault(ip, []).append(time.time())
+
 
 def _norm_email(email: str) -> str:
     return (email or "").strip().lower()
@@ -212,6 +229,41 @@ def verify_login(email: str, password: str) -> bool:
 
 def _hash_password(password: str, salt: bytes, iters: int = PBKDF2_ITERS) -> bytes:
     return hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iters)
+
+
+# ---------- 档位（卡密买断制） ----------
+TIER_RANK = {"free": 0, "basic": 1, "premium": 2}
+TIER_LABEL = {"free": "免费版", "basic": "基础版", "premium": "高级版"}
+
+
+def user_tier(email: str | None) -> str:
+    """用户档位。管理员视为高级版（自己人看得到全部功能）。没登录 = free。"""
+    email = _norm_email(email)
+    if not email:
+        return "free"
+    for u in _load_users():
+        if u["email"] == email:
+            if u.get("role") == "admin":
+                return "premium"
+            return u.get("tier") if u.get("tier") in TIER_RANK else "free"
+    return "free"
+
+
+def set_tier(email: str, tier: str) -> None:
+    if tier not in TIER_RANK:
+        raise ValueError(f"未知档位 {tier}")
+    email = _norm_email(email)
+    users = _load_users()
+    user = next((u for u in users if u["email"] == email), None)
+    if user is None:
+        raise ValueError("这个邮箱还没注册过")
+    user["tier"] = tier
+    user["tier_since"] = time.strftime("%Y-%m-%d %H:%M")
+    _save_users(users)
+
+
+def tier_at_least(email: str | None, need: str) -> bool:
+    return TIER_RANK[user_tier(email)] >= TIER_RANK.get(need, 99)
 
 
 # ---------- 会话签名 ----------

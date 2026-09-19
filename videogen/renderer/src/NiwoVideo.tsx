@@ -14,6 +14,7 @@ import {
 } from 'remotion';
 import {T, resolveSkin, applySkin, type Skin} from './skin';
 import {ZhiguVideo} from './ZhiguVideo';
+import {MacroVideo} from './MacroVideo';
 
 // ---------------- tokens ----------------
 // T 与皮肤定义在 ./skin，渲染入口按 props.template 调 applySkin 赋值。
@@ -82,6 +83,16 @@ export type ZhiguStage = {
   /** 榜单卡：标题条 + 行，高亮一行 + 弹出说明 */
   table?: ZhiguTable;
 };
+/** macro 章节的宽松形状（精确类型在 MacroVideo.tsx，这里只做字段透传） */
+export type MacroStageLike = {
+  mode: 'macro';
+  kicker?: string;
+  title: string;
+  sub?: string;
+  block?: Record<string, unknown>;
+  caption?: {text: string; atMs: number};
+  rule?: boolean;
+};
 export type Shot = {
   kind: 'title_card' | 'quote_card' | 'footage' | 'callout' | 'panel';
   media?: string;
@@ -93,6 +104,8 @@ export type Shot = {
   overlay?: ShotOverlay;
   /** 智谷三段式：舞台动作字段（chips/tree/table） */
   stage?: ZhiguStage;
+  /** macro（宏观棱镜复刻）：整拍就是一个章节（kicker/标题/块） */
+  macroStage?: MacroStageLike;
 };
 export type NiwoProps = {
   durationInFrames: number;
@@ -105,6 +118,25 @@ export type NiwoProps = {
   showSubtitles?: boolean;
   /** 模板 id：editorial / finance / minimal / bleed / news / retro / portrait */
   template?: string;
+  /** 右上角品牌水印「Powered by GetCut」；false = 不出 */
+  watermark?: boolean;
+  /** 栏目化（高级档）：第 X 期角标（左上角，全程显示） */
+  series?: {
+    badge?: string;
+  };
+  /** 品牌套件（高级档）：用户的 Logo/Slogan/联系方式 + 片尾卡窗口 */
+  brand?: {
+    /** renderer/public 下的相对路径（brand/<key>.png） */
+    logo?: string;
+    slogan?: string;
+    contact?: string;
+    /** 片尾卡从这一毫秒淡入（这一段时长是片尾额外加的） */
+    endCardStartMs?: number;
+  };
+  /** macro 模板：全程钉死的暗背景图（renderer/public/media 下的文件名） */
+  bgImage?: string;
+  /** macro 模板：频道名（左上标 + 波形件下方签名） */
+  channelName?: string;
   shots: Shot[];
   clauses: Clause[];
   /**
@@ -1318,6 +1350,89 @@ const TextProbe: React.FC<{url?: string; tag?: string}> = ({url, tag}) => {
   return null;
 };
 
+/**
+ * 品牌水印：六套模板共用，画在最上层，位置固定在右上角。
+ * 为什么是右上角：竖屏平台自己的按钮在下边，而六套模板的底部都被字幕/信息条/页脚占着，
+ * 右上角是唯一六套都空着的地方。用深色半透明底 + 白字，浅色模板（数据面板）上也看得清。
+ * 分轨导出时只压进底板层（card 层不画），否则每张卡片上都会叠一个。
+ */
+const Watermark: React.FC<{logo?: string}> = ({logo}) => (
+  <div
+    style={{
+      position: 'absolute', top: 34, right: 38, display: 'flex', alignItems: 'center', gap: 9,
+      padding: logo ? '6px 10px' : '7px 13px', borderRadius: 9, background: 'rgba(10,10,14,0.46)',
+      color: '#ffffff', fontFamily: T.font, lineHeight: 1,
+    }}
+  >
+    {logo ? (
+      // 品牌套件：右上角摆用户自己的 Logo（等比缩进 34px 高的胶囊里）
+      <Img src={staticFile(logo)} alt="" style={{height: 30, maxWidth: 150, objectFit: 'contain', display: 'block'}} />
+    ) : (
+      <>
+        <span style={{width: 15, height: 15, borderRadius: 5, background: '#B7AAFF', display: 'inline-block'}} />
+        <span style={{fontSize: 21, fontWeight: 700, letterSpacing: 0.4, whiteSpace: 'nowrap'}}>
+          Powered by <span style={{color: '#C9BEFF'}}>GetCut</span>
+        </span>
+      </>
+    )}
+  </div>
+);
+
+/**
+ * 栏目角标（高级档）：左上角"第 X 期"，和水印（右上）对称，全程常驻。
+ * 让一个账号的十条片子看起来是同一个栏目——这是 IP 感的来源。
+ */
+const SeriesBadge: React.FC<{text: string}> = ({text}) => (
+  <div style={{
+    position: 'absolute', top: 34, left: 38, padding: '9px 16px', borderRadius: 9,
+    background: 'rgba(10,10,14,0.46)', color: '#ffffff', fontFamily: T.font,
+    fontSize: 21, fontWeight: 700, letterSpacing: 0.5, lineHeight: 1, whiteSpace: 'nowrap',
+  }}>
+    {text}
+  </div>
+);
+
+/**
+ * 品牌片尾卡（高级档）：片尾额外加的 2.9 秒，Logo + Slogan + 联系方式，
+ * 淡入压住最后一镜的收尾呼吸。六套模板共用（顶层组件，不进各 layout）。
+ */
+const BrandEndCard: React.FC<{spec: NonNullable<NiwoProps['brand']>}> = ({spec}) => {
+  const frame = useCurrentFrame();
+  const {fps, width} = useVideoConfig();
+  const t = (frame * 1000) / fps;
+  const start = spec.endCardStartMs ?? 0;
+  if (t < start) return null;
+  const k = Math.min(1, (t - start) / 380);   // 0→1 淡入
+  const ease = 1 - Math.pow(1 - k, 3);
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, background: '#101217',
+      opacity: ease, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26,
+        transform: `translateY(${(1 - ease) * 26}px)`, padding: `0 ${width * 0.08}px`,
+      }}>
+        {spec.logo ? (
+          <Img src={staticFile(spec.logo)} alt="" style={{maxHeight: 190, maxWidth: '60%', objectFit: 'contain', display: 'block'}} />
+        ) : null}
+        {spec.slogan ? (
+          <div style={{fontFamily: T.font, fontSize: 46, fontWeight: 900, color: '#F4F5F8',
+            textAlign: 'center', lineHeight: 1.45, letterSpacing: 0.5}}>
+            {spec.slogan}
+          </div>
+        ) : null}
+        {spec.contact ? (
+          <div style={{fontFamily: T.font, fontSize: 27, fontWeight: 600, color: '#AAB3C1',
+            textAlign: 'center', whiteSpace: 'nowrap'}}>
+            {spec.contact}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
 // ---------------- root video ----------------
 export const NiwoVideo: React.FC<NiwoProps> = (props) => {
   // 模板决定整套配色 / 字体 / 装饰 / 动效节奏。必须在子组件渲染前赋值。
@@ -1340,50 +1455,21 @@ export const NiwoVideo: React.FC<NiwoProps> = (props) => {
         <TextProbe url={props.probeUrl} tag={props.probeTag} />
       </>
     ) : null;
-  if (skin.layout === 'bleed') {
-    return (
-      <>
-        {probe}
-        <PortraitVideo {...props} />
-      </>
-    );
-  }
-  if (skin.layout === 'zhigu') {
-    return (
-      <>
-        {probe}
-        <ZhiguVideo {...props} />
-      </>
-    );
-  }
-  if (skin.layout === 'lower') {
-    return (
-      <>
-        {probe}
-        <LowerVideo {...props} />
-      </>
-    );
-  }
-  if (skin.layout === 'poster') {
-    return (
-      <>
-        {probe}
-        <PosterVideo {...props} />
-      </>
-    );
-  }
-  if (skin.layout === 'data') {
-    return (
-      <>
-        {probe}
-        <DataVideo {...props} />
-      </>
-    );
-  }
+  let body: React.ReactNode;
+  if (skin.layout === 'bleed') body = <PortraitVideo {...props} />;
+  else if (skin.layout === 'zhigu') body = <ZhiguVideo {...props} />;
+  else if (skin.layout === 'macro') body = <MacroVideo {...props} />;
+  else if (skin.layout === 'lower') body = <LowerVideo {...props} />;
+  else if (skin.layout === 'poster') body = <PosterVideo {...props} />;
+  else if (skin.layout === 'data') body = <DataVideo {...props} />;
+  else body = <EditorialVideo props={props} />;
   return (
     <>
       {probe}
-      <EditorialVideo props={props} />
+      {body}
+      {props.series?.badge && !isCard() ? <SeriesBadge text={props.series.badge} /> : null}
+      {props.watermark !== false && !isCard() ? <Watermark logo={props.brand?.logo} /> : null}
+      {props.brand?.endCardStartMs != null && !isCard() ? <BrandEndCard spec={props.brand} /> : null}
     </>
   );
 };

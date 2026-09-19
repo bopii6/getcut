@@ -40,6 +40,8 @@ class Plan:
     duration_ms: float = 0.0
     theme: dict = field(default_factory=dict)
     style_pack: str = ""
+    # macro（宏观棱镜式）：全片暗背景素材（bundle 相对路径），None=用渲染器自带底图
+    bg_asset: str | None = None
 
 
 # ---------- 节奏：由规则算，不由大模型决定 ----------
@@ -583,6 +585,254 @@ def build_plan_llm(content: Content, manifest: Manifest, clauses, shots_spec,
 
 
 # ---------------- clone 模式：按参考片时间轴 1:1 复刻 ----------------
+
+# ---------- macro（宏观棱镜式）：按「章」规划，一拍=一章 ----------
+# macro 的分镜单位不是 4 秒一镜，而是叙述章：导演把子句单元组织成 5-9 章，
+# 章内元素跟着句子逐个弹出。这里负责三件事：校验覆盖、数字防编造、LLM 挂了给兜底章。
+
+_MACRO_BLOCK_TYPES = ("list", "bars", "line", "big", "cards", "grid", "vs", "arrow")
+
+_CN_DIGIT = {"零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
+             "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
+_CN_UNIT = {"十": 10, "百": 100, "千": 1000}
+
+
+def _cn_section(s: str) -> int:
+    """「二百四十三」这类连续段 → 243（不含 万/亿）。"""
+    total, cur = 0, 0
+    for ch in s:
+        if ch in _CN_DIGIT:
+            cur = cur * 10 + _CN_DIGIT[ch] if cur else _CN_DIGIT[ch]
+        elif ch in _CN_UNIT:
+            total += (cur or 1) * _CN_UNIT[ch]
+            cur = 0
+    return total + cur
+
+
+def _cn_to_int(s: str) -> int | None:
+    """「二百四十三亿」→ 243（末尾单位剥掉，留给 display）；纯阿拉伯数字直接转。"""
+    try:
+        return int(s)
+    except ValueError:
+        pass
+    for unit in ("亿", "万"):
+        if s.endswith(unit):
+            s = s[:-1]
+            break
+    if not s:
+        return None
+    if all(ch in "0123456789" for ch in s):
+        return int(s)
+    if all(ch in _CN_DIGIT or ch in _CN_UNIT for ch in s):
+        return _cn_section(s) or None
+    return None
+
+
+def _script_numbers(script: str) -> set[int]:
+    """口播文案里出现过的所有数（阿拉伯+中文数字都算），供图表数字防编造校验。"""
+    pool: set[int] = set()
+    for raw in re.findall(r"[0-9]+(?:\.[0-9]+)?|[零一二两三四五六七八九十百千]+[亿万]?", script):
+        v = _cn_to_int(raw)
+        if v is not None:
+            pool.add(v)
+    return pool
+
+
+def _macro_num_ok(value, pool: set[int]) -> bool:
+    if not isinstance(value, (int, float)):
+        return False
+    v = abs(value)
+    return int(v) in pool or int(round(v * 10)) in pool or int(round(v * 100)) in pool
+
+
+def _sanitize_macro_block(block: dict, pool: set[int]) -> dict | None:
+    """章动作清洗：类型白名单 + 数字校验，不合法的行/点直接丢，丢完为空则整个 block 丢弃。"""
+    if not isinstance(block, dict):
+        return None
+    t = block.get("type")
+    if t not in _MACRO_BLOCK_TYPES:
+        return None
+    if t == "bars":
+        rows = [r for r in (block.get("rows") or []) if isinstance(r, dict)
+                and _macro_num_ok(r.get("value"), pool)]
+        if not rows:
+            return None
+        for r in rows:
+            r.setdefault("display", f"{r['value']:+g}%")
+        return {"type": t, "axis": True, "rows": rows}
+    if t == "line":
+        pts = [p for p in (block.get("points") or []) if isinstance(p, dict)
+               and _macro_num_ok(p.get("y"), pool)]
+        if len(pts) < 4:  # 少于 4 个可信点撑不起一条趋势线
+            return None
+        return {"type": t, "unit": block.get("unit") or "%", "points": pts,
+                "ticks": [x for x in (block.get("ticks") or []) if isinstance(x, (int, float))]
+                or None}
+    if t == "big":
+        num = str(block.get("number") or "")
+        digits = "".join(ch for ch in num if ch.isdigit() or ch == ".")
+        if not digits or not _macro_num_ok(float(digits or 0), pool):
+            return None
+        return {"type": t, "number": num or "0", "label": str(block.get("label") or "")[:10],
+                "deco": block.get("deco") if block.get("deco") in ("dots",) else None}
+    if t == "cards":
+        rows = [{"text": str(r.get("text") or r)[:16] if isinstance(r, dict) else str(r)[:16],
+                 "gold": bool(isinstance(r, dict) and r.get("gold"))}
+                for r in (block.get("rows") or []) if r]
+        return {"type": t, "rows": rows[:4]} if rows else None
+    if t == "grid":
+        items = [{"title": str((r.get("title") if isinstance(r, dict) else r) or "")[:8],
+                  "sub": str((r.get("sub") if isinstance(r, dict) else "") or "")[:10]}
+                 for r in (block.get("items") or []) if r]
+        return {"type": t, "cols": 2, "items": items[:6]} if items else None
+    if t == "vs":
+        l, r = block.get("left") or {}, block.get("right") or {}
+        if not isinstance(l, dict) or not isinstance(r, dict):
+            return None
+
+        def _side(v):
+            # 导演给字段名飘忽（lines/text/head/body/title 都见过），逐个兜底
+            lines = [str(x)[:10] for x in (v.get("lines") or []) if x]
+            for k in ("text", "body", "title"):
+                if not lines and v.get(k):
+                    lines = [str(v[k])[:14]]
+            label = str(v.get("label") or v.get("head") or "")[:6]
+            return {"label": label, "lines": lines[:3]}
+
+        left, right = _side(l), _side(r)
+        if not left["lines"] and not right["lines"]:
+            return None
+        return {"type": t, "left": left, "right": right}
+    if t == "arrow":
+        return {"type": t, "from": str(block.get("from") or "")[:6],
+                "to": str(block.get("to") or "")[:6], "note": str(block.get("note") or "")[:14] or None}
+    if t == "list":
+        # 渲染端统一读 rows（与 cards 同构），LLM 给的 items 在这里归一
+        rows = [{"text": str(r.get("text") if isinstance(r, dict) else r)[:8]}
+                for r in (block.get("items") or block.get("rows") or []) if r]
+        return {"type": t, "rows": rows[:4], "goldLast": bool(block.get("goldLast"))} if rows else None
+    return None
+
+
+def _macro_fallback_chapters(units: list[dict], script: str) -> list[dict]:
+    """LLM 挂了的兜底：每 4 个单元一章，卡链块保证一定有画面。"""
+    chapters = []
+    for i in range(0, len(units), 4):
+        chunk = units[i:i + 4]
+        first = chunk[0]["text"].replace("，", "").replace("。", "")[:9]
+        rows = [{"text": u["text"].replace("，", "")[:14]} for u in chunk[:3]]
+        chapters.append({"kicker": f"{len(chapters) + 1:02d} / 解读", "title": first,
+                         "block": {"type": "cards", "rows": rows}, "rule": True,
+                         "units": [u["index"] for u in chunk]})
+    return chapters
+
+
+def build_plan_macro(content: Content, clauses, units: list[dict],
+                     chapters_spec: dict | None = None) -> Plan:
+    """macro 模板的分镜构建：一拍=一章，覆盖全部子句单元。"""
+    spans = unit_spans(units)
+    ids = [u["index"] for u in units]
+    chapters_raw = None
+    if chapters_spec and isinstance(chapters_spec.get("chapters"), list):
+        raw = chapters_spec["chapters"]
+        # 宽容对齐：LLM 的章节边界偶尔会漏一两个单元/轻微越界，不至于全盘兜底。
+        # 以「每章第一个有效单元」定章界，按 ids 顺序补齐区间，缺失的单元归前一章。
+        starts: list[tuple[int, list]] = []  # (首个有效单元在 ids 中的位置, 章 dict)
+        for ch in raw:
+            if not isinstance(ch, dict):
+                continue
+            us = [u for u in (ch.get("units") or []) if u in spans]
+            if not us:
+                continue
+            pos = next((ids.index(u) for u in us if u in ids), None)
+            if pos is None or (starts and pos <= starts[-1][0]):
+                continue  # 章界必须严格递增，否则章序会乱
+            starts.append((pos, ch))
+        if starts:
+            aligned: list[dict] = []
+            for j, (pos, ch) in enumerate(starts):
+                end_pos = starts[j + 1][0] if j + 1 < len(starts) else len(ids)
+                ch_us = ids[pos:end_pos]
+                if ch_us:
+                    aligned.append({**ch, "units": ch_us})
+            if aligned:
+                chapters_raw = aligned
+            else:
+                print("[macro] 章节覆盖不合法，改用兜底分章")
+    if not chapters_raw:
+        chapters_raw = _macro_fallback_chapters(units, content.script)
+
+    plan = Plan()
+    plan.clauses = list(clauses)
+    pool = _script_numbers(content.script)
+    shots: list[Shot] = []
+    for ci, ch in enumerate(chapters_raw):
+        us = [u for u in ch.get("units") if u in spans]
+        if not us:
+            continue
+        start, end = spans[us[0]][0], spans[us[-1]][1]
+        if ci == len(chapters_raw) - 1:
+            end = max(end, spans[ids[-1]][1])
+        block = _sanitize_macro_block(ch.get("block") or {}, pool)
+        title = str(ch.get("title") or "").strip()[:10]
+        if not title:
+            title = spans[us[0]][2].replace("，", "").replace("。", "")[:9]
+        stage = {"mode": "macro",
+                 "kicker": str(ch.get("kicker") or f"{ci + 1:02d}")[:14],
+                 "title": title,
+                 "sub": str(ch.get("sub") or "").strip()[:16] or None,
+                 "rule": bool(ch.get("rule"))}
+        if block:
+            stage["block"] = block
+            # 元素弹出时刻：按本章单元均分（LLM 不知道毫秒，不逐元素指定）
+            n = max(_macro_block_count(block), len(us))
+            step = (end - start) / max(n, 1)
+            offset = 0
+            if block["type"] == "bars":
+                stage["block"]["rows"] = [dict(r, atMs=round(offset + i * step))
+                                          for i, r in enumerate(stage["block"]["rows"])]
+                offset = len(stage["block"]["rows"]) * step
+            elif block["type"] in ("list", "cards"):
+                rows = [dict(r, atMs=round(offset + i * step))
+                        for i, r in enumerate(stage["block"]["rows"])]
+                if block["type"] == "list" and block.get("goldLast") and rows:
+                    rows[-1]["gold"] = True
+                stage["block"]["rows"] = rows
+                offset = len(rows) * step
+            elif block["type"] == "big":
+                stage["block"]["atMs"] = round(offset)
+            elif block["type"] == "grid":
+                stage["block"]["items"] = [dict(r, atMs=round(offset + i * step))
+                                           for i, r in enumerate(stage["block"]["items"])]
+            elif block["type"] == "vs":
+                stage["block"]["atMs"] = round(offset)
+            elif block["type"] == "arrow":
+                stage["block"]["atMs"] = round(offset)
+            elif block["type"] == "line":
+                stage["block"]["spanMs"] = max(end - start - 300, 1200)
+        if ch.get("caption"):
+            stage["caption"] = {"text": str(ch["caption"])[:16],
+                                "atMs": round(min(max(offset, (end - start) * 0.55), end - start - 200))}
+        shots.append(Shot(kind="footage", asset_path=None, sent_indexes=[],
+                          start_ms=start, end_ms=end + 350, overlay={"macro": stage}))
+    plan.shots = shots
+    plan.duration_ms = shots[-1].end_ms if shots else 0.0
+    return plan
+
+
+def _macro_block_count(block: dict) -> int:
+    if block["type"] == "bars":
+        return len(block.get("rows") or [])
+    if block["type"] == "list":
+        return len(block.get("items") or [])
+    if block["type"] == "cards":
+        return len(block.get("rows") or [])
+    if block["type"] == "grid":
+        return len(block.get("items") or [])
+    if block["type"] == "line":
+        return max(len(block.get("points") or []) // 2, 2)
+    return 1
+
 
 def build_plan_clone(content: Content, clauses, timeline: dict,
                      manifest: Manifest, bundle: Path) -> Plan:

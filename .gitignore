@@ -76,3 +76,18 @@ videogen/reinstall_test/
 # ---- scratch copies under _tools ----
 _tools/_cand/
 _tools/_cand2/
+
+# ================= 2026-09-19 上线审查补充 =================
+# 试玩素材包随代码走（其中 mp4 不吃全局 *.mp4 忽略）
+!videogen/samples/**/*.mp4
+# 会话/审查产物与本地运行时状态
+.zcode/
+videogen/_audit_tmp/
+videogen/renderer/props_still.json
+videogen/renderer/public/brand/
+videogen/renderer/_patch_brand.py
+.videogen-brand/
+.videogen-try.json
+.videogen-licenses.json
+.videogen-usage.json
+对比-f35/

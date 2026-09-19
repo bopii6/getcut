@@ -1,0 +1,141 @@
+{
+ "schema_version": 1,
+ "generated_by": "build_try_bundles.py",
+ "notes": "试玩用短素材包（约 15 秒）：给落地页的新访客试做一条片子用。素材授权见 manifest.json。",
+ "assets": [
+  {
+   "file": "images/01-f35-flight.jpg",
+   "kind": "image",
+   "summary": "F-35A 战斗机在空中飞行，机身与尾焰清晰",
+   "tags": [
+    "F-35",
+    "战斗机",
+    "飞行",
+    "美国"
+   ],
+   "script_anchor": "四十八架F-35战斗机",
+   "source_url": "https://commons.wikimedia.org/wiki/File:F-35_Heritage_Flight_Team_performs_in_Bell_Fort_Worth_Alliance_AirShow.jpg",
+   "license": "Public domain"
+  },
+  {
+   "file": "images/09-mbs.jpg",
+   "kind": "image",
+   "summary": "沙特王储穆罕默德·本·萨勒曼出席活动，正面清晰",
+   "tags": [
+    "沙特",
+    "王储",
+    "人物",
+    "中东"
+   ],
+   "script_anchor": "对沙特的军售",
+   "source_url": "https://commons.wikimedia.org/wiki/File:Mohammed_bin_Salman_and_Vladimir_Putin.jpg",
+   "license": "CC BY 4.0"
+  },
+  {
+   "file": "images/13-capitol.jpg",
+   "kind": "image",
+   "summary": "美国国会大厦正面，穹顶与台阶清晰",
+   "tags": [
+    "国会",
+    "华盛顿",
+    "美国政治"
+   ],
+   "script_anchor": "还要国会批准",
+   "source_url": "https://commons.wikimedia.org/wiki/File:2018-03-25_%E2%80%93_United_States_Capitol_West_Front,_viewed_from_the_Newseum_terrace_%E2%80%93_Washington,_D.C.,_United_States.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "file": "images/41-riyadh2.jpg",
+   "kind": "image",
+   "summary": "利雅得阿卜杜拉国王金融区或城市建筑群",
+   "tags": [
+    "利雅得",
+    "沙特",
+    "城市",
+    "天际线"
+   ],
+   "script_anchor": "对沙特的军售",
+   "source_url": "https://commons.wikimedia.org/wiki/File:Riyadh_Skyline_showing_the_King_Abdullah_Financial_District_(KAFD)_and_the_famous_Kingdom_Tower_.jpg",
+   "license": "CC BY-SA 4.0"
+  },
+  {
+   "file": "images/39-redsea2.jpg",
+   "kind": "image",
+   "summary": "巨型集装箱船在运河或海上航行，船体与集装箱清晰",
+   "tags": [
+    "货轮",
+    "集装箱",
+    "航运",
+    "红海"
+   ],
+   "script_anchor": "外溢到红海方向",
+   "source_url": "https://commons.wikimedia.org/wiki/File:Container_Ship_%27Ever_Given%27_stuck_in_the_Suez_Canal,_Egypt_-_March_24th,_2021_cropped.jpg",
+   "license": "CC BY 2.0"
+  },
+  {
+   "file": "images/37-trump.jpg",
+   "kind": "image",
+   "summary": "特朗普公开活动照，正面清晰",
+   "tags": [
+    "特朗普",
+    "美国总统",
+    "人物"
+   ],
+   "script_anchor": "特朗普被问到伊朗战争",
+   "source_url": "https://commons.wikimedia.org/wiki/File:Donald_Trump_official_portrait.jpg",
+   "license": "Public domain"
+  },
+  {
+   "file": "videos/25-jet-v.mp4",
+   "kind": "video",
+   "summary": "战斗机在空中飞行或编队通场",
+   "tags": [
+    "战斗机",
+    "飞行",
+    "军机"
+   ],
+   "script_anchor": "四十八架F-35战斗机",
+   "source_url": "https://www.pexels.com/video/air-show-of-fighter-planes-1585497/",
+   "license": "Pexels License"
+  },
+  {
+   "file": "videos/31-wash-v.mp4",
+   "kind": "video",
+   "summary": "华盛顿特区政府建筑与街区",
+   "tags": [
+    "华盛顿",
+    "政府",
+    "美国"
+   ],
+   "script_anchor": "还要国会批准",
+   "source_url": "https://www.pexels.com/video/iconic-view-of-the-us-capitol-building-29188237/",
+   "license": "Pexels License"
+  },
+  {
+   "file": "videos/29-ship-v.mp4",
+   "kind": "video",
+   "summary": "集装箱货轮在海上航行，航运场景",
+   "tags": [
+    "货轮",
+    "航运",
+    "海运"
+   ],
+   "script_anchor": "外溢到红海方向",
+   "source_url": "https://www.pexels.com/video/red-cargo-ship-on-elbe-river-in-germany-38288270/",
+   "license": "Pexels License"
+  },
+  {
+   "file": "videos/27-city-v.mp4",
+   "kind": "video",
+   "summary": "中东城市高空航拍，密集高楼",
+   "tags": [
+    "城市",
+    "航拍",
+    "中东"
+   ],
+   "script_anchor": "对沙特的军售",
+   "source_url": "https://www.pexels.com/video/aerial-view-of-beirut-twin-towers-skyline-32949185/",
+   "license": "Pexels License"
+  }
+ ]
+}

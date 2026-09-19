@@ -40,6 +40,22 @@ ALIYUN_ACCESS_KEY = _legacy_key("ALIYUN_ACCESS_KEY", "aliyun_key.txt")
 PEXELS_API_KEY = _legacy_key("PEXELS_API_KEY", "pexels_key.txt")
 PIXABAY_API_KEY = _legacy_key("PIXABAY_API_KEY", "pixabay_key.txt")
 
+# 阿里云百炼（DashScope）密钥：CosyVoice 配音用。没配 = 退回 edge-tts 音色。
+DASHSCOPE_API_KEY = _legacy_key("DASHSCOPE_API_KEY", "dashscope_key.txt")
+# 配音渠道："auto"（配了百炼就走百炼，否则 edge）/ "dashscope" / "edge"
+TTS_PROVIDER = _env("TTS_PROVIDER") or "auto"
+# 自托管部署的模型名（换新版模型时不用改代码）
+TTS_MODEL = _env("TTS_MODEL") or "cosyvoice-v2"
+
+# ---------- 档位与销售（卡密买断制） ----------
+# 档位：free（注册未付费，每天免费额度 + 带水印）/ basic（¥399 永久基础版）
+#      / premium（¥599 永久高级版 = 基础 + 剪映导出 + 品牌套件 + 声音克隆[规划中]）
+PRICES = {"basic": int(_env("PRICE_BASIC") or "399"), "premium": int(_env("PRICE_PREMIUM") or "599")}
+# 免费注册档每天能出几条片（管理员在 admin 面板生成的卡密无此限制）
+FREE_DAILY_BUILDS = int(_env("FREE_DAILY_BUILDS") or "2")
+# 直播间销售：用户付款后加这个微信号拿卡密（展示在定价页）
+SALES_WECHAT_ID = _env("SALES_WECHAT_ID")
+
 # 工作台扫描素材包的根目录（默认 videogen 的上级目录）
 WORKSPACES = Path(_env("VIDEOGEN_WORKSPACE") or ROOT.parent).resolve()
 
@@ -50,6 +66,11 @@ AUTH_TOKEN = _env("VIDEOGEN_TOKEN")
 # 账号体系（邮箱密码登录）存储位置：默认放工作区（云上是持久卷，重启不丢）
 USERS_FILE = _env("VIDEOGEN_USERS_FILE") or str(WORKSPACES / ".videogen-users.json")
 AUTH_SECRET_FILE = _env("VIDEOGEN_AUTH_SECRET") or str(WORKSPACES / ".videogen-auth-secret")
+# 卡密与用量记账（工作区持久卷）
+LICENSES_FILE = _env("VIDEOGEN_LICENSES_FILE") or str(WORKSPACES / ".videogen-licenses.json")
+USAGE_FILE = _env("VIDEOGEN_USAGE_FILE") or str(WORKSPACES / ".videogen-usage.json")
+# 定价页收款码图片（微信/支付宝），管理员在后台上传，落在这里
+QR_DIR = Path(_env("VIDEOGEN_QR_DIR") or str(WORKSPACES / ".videogen-qr"))
 
 # 发信邮箱（注册验证码）。任意支持 SMTP 的邮箱均可（QQ/163/企业邮箱）：
 #   EMAIL_SMTP_HOST=smtp.qq.com  EMAIL_SMTP_PORT=465（SSL）
@@ -84,6 +105,7 @@ TEMPLATES: dict[str, str] = {
     "poster": "大字报版",
     "bleed": "全出血沉浸版",
     "zhigu": "智谷三段式",
+    "macro": "宏观棱镜",
 }
 # 旧 format 取值 → 新模板 id（兼容早前发出的请求）
 TEMPLATE_ALIAS: dict[str, str] = {

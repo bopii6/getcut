@@ -9,11 +9,13 @@ import json
 import shutil
 from pathlib import Path
 
+from . import brand as brand_kit
 from . import compose, llm, overlays, remotion_render, subtitle, tts, verify
 from .config import DEFAULT_TEMPLATE, TEMPLATE_ALIAS, TEMPLATES
 from .config import OUTPUTS as _OUTPUTS
 from .planner import (align_timeline, build_plan, build_plan_clone, build_plan_llm,
-                      clause_units, split_clauses, sentence_spans, unit_spans)
+                      build_plan_macro, clause_units, split_clauses, sentence_spans,
+                      unit_spans)
 from .schemas import Content, Manifest, HIGHLIGHT
 
 WORK = Path(__file__).resolve().parent.parent / "work"
@@ -92,7 +94,8 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
           show_subtitles: bool = True, show_sources: bool = True,
           theme: str = "auto", disclaimer: str | None = None,
           use_llm: bool = True, job_id: str | None = None,
-          vision: bool = True) -> Path:
+          vision: bool = True, watermark: bool = True,
+          brand: dict | None = None, series: dict | None = None) -> Path:
     def report(stage: str, pct: int, detail: str | None = None) -> None:
         if progress:
             try:
@@ -111,6 +114,14 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
 
     content = Content.load(bundle / "content.json")
     manifest = Manifest.load(bundle / "manifest.json")
+    # 栏目化（高级档）：固定开场白拼在口播稿最前面——它走完整管线（配音/字幕/分镜），
+    # 开场白正好盖在标题卡画面上，和"大家好我是 XX"的真实观感一致
+    if brand and brand.get("opening"):
+        content.script = brand["opening"].strip() + "\n" + content.script
+    user_terms = (brand or {}).get("terms") or {}
+    if user_terms:
+        content.pronunciations = {**(content.pronunciations or {}), **user_terms}
+    badge = str((series or {}).get("badge") or "").strip()[:24]
 
     # 1) TTS + timeline
     report("tts", 8, "正在合成配音（通常 30–90 秒）")
@@ -138,6 +149,23 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                                 json.loads(Path(clone).read_text(encoding="utf-8")),
                                 manifest, bundle)
         llm_used = False
+    elif template == "macro":
+        # 宏观棱镜式：按「章」规划，不吃素材、不出设计卡；LLM 挂了走兜底章
+        report("plan", 18, "AI 导演正在按章规划宏观解读")
+        chapters = None
+        if use_llm:
+            units_all = clause_units(clauses)
+            payload_units = [{"index": u["index"], "text": u["text"]} for u in units_all]
+            asset_choices = [{"index": i, "kind": a.kind, "tags": a.tags, "summary": a.summary}
+                             for i, a in enumerate(manifest.assets)]
+            chapters = llm.design_chapters(content.script, payload_units, asset_choices)
+        plan = build_plan_macro(content, clauses, clause_units(clauses), chapters)
+        if chapters and isinstance(chapters.get("bg_asset"), int):
+            assets_all = manifest.assets
+            if 0 <= chapters["bg_asset"] < len(assets_all) \
+                    and assets_all[chapters["bg_asset"]].kind == "image":
+                plan.bg_asset = assets_all[chapters["bg_asset"]].file
+        llm_used = chapters is not None
     else:
         if use_llm:
             spec = llm.design_shots(content.script, sent_payload, asset_payload, template=template)
@@ -156,7 +184,8 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     title_kw = _keyword_of(content.script, content.title[:4])
     q_label, q_text = _quote_of(content.script)
     # 标题/金句文案优先走 LLM 改写（规则版本仅作兜底），避免固定关键词只适配单条片子
-    if use_llm:
+    # macro 的文案在章节规划里一次成型，标题/金句卡也不存在，不需要这次改写
+    if use_llm and template != "macro":
         refined = llm.refine_copy(
             content.script,
             [{"index": i, "kind": s.kind, "variant": (s.overlay or {}).get("variant"),
@@ -174,6 +203,8 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     # 用户显式指定主题色时覆盖
     if theme and theme != "auto" and theme.startswith("#"):
         plan.theme = {"accent": theme, "accentSoft": _lighten(theme)}
+    # 品牌套件（高级档）最后压上来：品牌色盖过一切主题色，片尾卡加时长
+    brand = brand_kit.apply_to_plan(plan, brand)
     duration_s = plan.duration_ms / 1000.0
 
     if renderer == "remotion":
@@ -203,7 +234,8 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                 quote_card={"label": q_label, "quote": q_text},
                 theme=getattr(plan, "theme", {}),
                 show_subtitles=show_subtitles, show_sources=show_sources,
-                disclaimer=disclaimer, template=template)
+                disclaimer=disclaimer, template=template, watermark=watermark,
+                brand=brand, series={"badge": badge} if badge else None)
         else:
             report("props", 30, "使用分镜预览确认过的画面设计")
             props = pre_props

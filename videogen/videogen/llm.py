@@ -264,6 +264,74 @@ def design_shots(script: str, sentences: list[dict], assets: list[dict],
     return None
 
 
+def design_chapters(script: str, units: list[dict], assets: list[dict],
+                    provider: str = "deepseek") -> dict | None:
+    """macro（宏观棱镜式）专用导演：把子句单元组织成「章」，一章一种图形动作。
+
+    与 design_shots 的区别：macro 不按 4 秒一镜切素材，而是按叙述逻辑分章
+    （3-8 个单元一章），章内元素跟着句子逐个弹出。素材只用来挑一张当暗背景。
+    returns {"bg_asset": int|None, "chapters": [{kicker,title,sub,caption,rule,
+              block:{type,...}, units:[index,...]}]} or None.
+    """
+    conf = PROVIDERS.get(provider)
+    if not conf or not conf["key"]:
+        return None
+    payload = {
+        "口播文案": script,
+        "子句单元": units,
+        "素材清单（只用来挑一张当全片暗背景，选最有选题氛围的一张图）": assets,
+        "章节规则": [
+            "输入是**子句单元**（逗号级短句，各带 index）：把语义连贯的 3-8 个单元组成一章，"
+            "按顺序覆盖所有单元且不重叠，一个单元不能拆开",
+            "全片 5-9 章。开头一章=钩子（一句话论点+3 个关键词，block 用 list）；"
+            "结尾一章=总结+提问互动+口号（block 用 list，末行 gold）；中间按内容分章",
+            "每章输出 kicker（如 01 / 消费 或 总览 或 02 / TRANSMISSION）、"
+            "title（金色论点大标题 ≤9 字）、sub（限定语 ≤14 字，可选）",
+            "每章一种正文动作 block.type，从 list/bars/line/big/cards/grid/vs/arrow 里按内容挑："
+            "并列要点=list；一组正负数据=bars；时间趋势(≥6 个时点)=line；单个关键数字=big；"
+            "推理链/递进=cards；并列概念=grid；两个阵营对照=vs；时滞传导=arrow。"
+            "一章没有合适的动作就不给 block（纯标题章），但全片至少 2/3 的章要有 block",
+            "数据铁律：bars/line/big 里的数字只能来自口播文案里出现的数字，"
+            "严禁编造或换算文案里没有的数。文案没给时间趋势就别用 line。"
+            "注意文案可能把数字写成中文（如「二百四十三亿美元」），"
+            "block 里请换算成阿拉伯数字输出（value: 243, display: '+243亿美元'），"
+            "校验不过的行会被整行丢弃",
+            "可选输出 caption（本章收束的一句金线小字 ≤14 字）和 rule:true（章尾金色分隔线，"
+            "中间章节建议给）",
+            "可选输出 bg_asset：从素材清单挑一个 index 当全片暗背景（优先氛围图）",
+        ],
+        "输出格式": {"bg_asset": 0,
+                    "chapters": [{"kicker": "01 / 消费", "title": "消费迈不开",
+                                  "sub": "今年前8个月 · 同比变化",
+                                  "block": {"type": "bars", "rows": [
+                                      {"name": "出口", "value": 14.6, "display": "+14.6%"}]},
+                                  "caption": "可选", "rule": True, "units": [3, 4, 5]}],
+                    "block 字段（type 对应的固定字段名，照抄别造新名字）": {
+                        "list": {"items": ["≤8字", "..."]},
+                        "bars": {"rows": [{"name": "名称", "value": 14.6, "display": "+14.6%"}]},
+                        "line": {"unit": "%", "ticks": [10, 0, -10], "points": [{"x": "3月", "y": 1.7}]},
+                        "big": {"number": "+2.7%", "label": "是什么", "deco": "dots?"},
+                        "cards": {"rows": [{"text": "≤14字", "gold": False}]},
+                        "grid": {"items": [{"title": "≤6字", "sub": "≤10字"}]},
+                        "vs": {"left": {"label": "≤6字", "lines": ["≤10字"]},
+                               "right": {"label": "≤6字", "lines": ["≤10字"]}},
+                        "arrow": {"from": "≤6字", "to": "≤6字", "note": "≤14字"},
+                    }},
+    }
+    last_err = None
+    for attempt in range(2):
+        try:
+            text = _chat(conf, json.dumps(payload, ensure_ascii=False))
+            data = _parse_json(text)
+            if isinstance(data, dict) and isinstance(data.get("chapters"), list) and data["chapters"]:
+                return data
+            last_err = ValueError("bad shape")
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+    print(f"[llm] chapter planning failed, falling back to rules: {last_err}")
+    return None
+
+
 def vision_check(image_path: Path, question: str, timeout: int = 60) -> dict | None:
     """视觉校验（对齐 niwo checking_visuals）：用 GLM-4V 看一帧画面并回答。
 

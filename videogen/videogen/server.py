@@ -14,6 +14,8 @@ import math
 import os
 import shutil
 import queue
+import re
+import subprocess
 import threading
 import time
 import uuid
@@ -24,7 +26,9 @@ import uvicorn
 from fastapi import FastAPI, File, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-from . import auth, config, preview
+from . import auth, config, licenses, preview
+from . import brand as brand_kit
+from . import tts as tts_mod
 from .schemas import Content, Manifest
 
 ROOT = config.ROOT
@@ -60,6 +64,147 @@ _QUEUE_HEAD: list = []   # 排队中的 job_id（FIFO 顺序）
 _RUNNING_STAGES = ("tts", "plan", "props", "render", "audio", "mux", "verify")
 
 
+# 正在后台备草稿的成片路径：前端据此显示"草稿准备中"还是"已备好"
+DRAFT_PREP: set[str] = set()
+
+
+def _prebuild_draft(video) -> None:
+    """渲染完成后在后台把剪映草稿资产备好（失败不影响任何事，导出时还会再试）。"""
+    key = str(video)
+    DRAFT_PREP.add(key)
+    try:
+        from . import jianying_draft as jyd
+        mf = jyd.load_manifest(video)
+        if mf:
+            jyd.prepare_draft(video, mf)
+    except Exception as exc:  # noqa: BLE001
+        print(f"draft prebuild skipped: {exc}")
+    finally:
+        DRAFT_PREP.discard(key)
+
+
+def _downscale_720(src: Path, dst: Path) -> bool:
+    """试玩样片降到 720×1280（低清版），失败返回 False。"""
+    ff = shutil.which("ffmpeg")
+    if not ff:
+        return False
+    try:
+        p = subprocess.run([ff, "-y", "-v", "error", "-i", str(src),
+                            "-vf", "scale=720:1280", "-c:v", "libx264", "-crf", "26",
+                            "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "copy",
+                            "-movflags", "+faststart", str(dst)],
+                           capture_output=True, text=True, timeout=300)
+        return p.returncode == 0 and dst.is_file() and dst.stat().st_size > 0
+    except Exception as exc:  # noqa: BLE001
+        print(f"try downscale failed: {exc}")
+        return False
+
+
+def _sweep_try_files(keep: int = 20) -> None:
+    """试玩样片只留最近 keep 个，别把磁盘堆满。"""
+    try:
+        files = sorted(OUTPUTS.glob("try-*.mp4"), key=lambda f: f.stat().st_mtime, reverse=True)
+        for f in files[keep:]:
+            f.unlink(missing_ok=True)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for") or ""
+    return (fwd.split(",")[0].strip() or (request.client.host if request.client else "") or "?")
+
+
+@app.get("/api/try/topics")
+def try_topics_list():
+    """试玩选题（公开）：落地页据此渲染"选一个选题试做"的卡片。"""
+    from . import try_topics
+    out = []
+    for t in try_topics.TOPICS:
+        try:
+            try_topics.bundle_dir(t)          # 素材包不在就不给它上架
+        except ValueError:
+            continue
+        out.append({"id": t["id"], "title": t["title"], "subtitle": t["subtitle"],
+                    "template": t["template"]})
+    return {"topics": out, "templates": [{"id": k, "name": v} for k, v in TEMPLATES.items()],
+            "cookie_limit": try_topics.COOKIE_LIMIT, "ip_limit": try_topics.IP_LIMIT}
+
+
+@app.post("/api/try")
+def try_render(request: Request, body: dict = None):
+    """提交一次试玩渲染（公开，限流）。
+
+    只认选题 id；模板只认 TEMPLATES 里的；出片是十几秒的低清带水印样片。
+    """
+    from . import try_topics
+
+    body = body or {}
+    t = try_topics.topic(str(body.get("topic") or ""))
+    if t is None:
+        return JSONResponse({"error": "没有这个试玩选题"}, status_code=404)
+    fmt = str(body.get("template") or t["template"])
+    if fmt not in TEMPLATES:
+        fmt = t["template"]
+    try:
+        bdir = try_topics.bundle_dir(t)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+    cookie = request.cookies.get("vg_try") or ""
+    ip = _client_ip(request)
+    ok, why = try_topics.guard(WORKSPACES, ip, cookie)
+    if not ok:
+        return JSONResponse({"error": why, "limited": True}, status_code=429)
+
+    job_id = uuid.uuid4().hex[:12]
+    with _LOCK:
+        ahead = _queue_ahead(job_id)
+        JOBS[job_id] = {"stage": "queued", "stage8": 1, "progress": 3, "error": None,
+                        "video": None, "project_id": None,
+                        "try": {"topic": t["id"], "title": t["title"], "template": fmt},
+                        "detail": ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "已加入队列",
+                        "t0": time.time()}
+        _jobs_save()
+        _QUEUE_HEAD.append(job_id)
+        _PENDING[job_id] = {"try": True, "try_bundle_dir": str(bdir), "format": fmt,
+                            "watermark": True, "useLlm": True, "sfx": True, "sfxMode": "all"}
+    _RENDER_QUEUE.put(job_id)
+    issued = cookie or uuid.uuid4().hex
+    try_topics.remember_cookie(WORKSPACES, issued)   # 发出去的 cookie 立刻记账，下次来就拦得住
+    resp = JSONResponse({"job": job_id, "topic": t["id"], "template": fmt})
+    resp.set_cookie("vg_try", issued, max_age=180 * 24 * 3600, httponly=True, samesite="lax")
+    return resp
+
+
+@app.get("/api/try/{job_id}")
+def try_status(job_id: str):
+    """试玩进度（公开）：只回进度和样片链接，不回任何内部路径。"""
+    j = JOBS.get(job_id)
+    if not j or not j.get("try"):
+        return JSONResponse({"error": "任务不存在"}, status_code=404)
+    stage = j.get("stage")
+    meta = j.get("try") or {}
+    return {"stage": stage, "stage8": j.get("stage8"), "progress": j.get("progress"),
+            "topic": meta.get("topic"), "template": meta.get("template"),
+            "title": meta.get("title"),
+            "queued_pos": _queue_ahead(job_id) if stage == "queued" else 0,
+            "video": f"/try/{job_id}.mp4" if j.get("try_video") else None,
+            "error": j.get("error")}
+
+
+@app.get("/try/{name}")
+def try_video(name: str):
+    """试玩样片（公开）：文件名就是任务 id，路径不从用户输入里取。"""
+    jid = name[:-4] if name.endswith(".mp4") else name
+    if not re.fullmatch(r"[0-9a-f]{6,24}", jid):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    v = (JOBS.get(jid) or {}).get("try_video")
+    if not v or not Path(v).is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(v, media_type="video/mp4", filename=f"GetCut-试玩-{jid}.mp4")
+
+
 def _queue_ahead(job_id: str) -> int:
     """排在 job_id 前面的任务数 = 排队在我之前的 + 正在渲染的。
 
@@ -82,14 +227,18 @@ _PENDING: dict = {}      # job_id -> body（入队暂存，开跑时取出）
 #   3. 开放模式：既没建过账号也没配令牌 → 本机自用不拦
 # 页面外壳、字体、健康检查、登录接口本身保持公开。
 SESSION_COOKIE = "vg_session"
-_PUBLIC_PATHS = {"/", "/index.html", "/healthz",
+_PUBLIC_PATHS = {"/", "/index.html", "/healthz", "/api/templates",
                  "/api/auth/status", "/api/auth/login", "/api/auth/register",
-                 "/api/auth/send-code", "/api/auth/reset-code", "/api/auth/reset"}
+                 "/api/auth/send-code", "/api/auth/reset-code", "/api/auth/reset",
+                 "/api/pricing"}
 
 
 def _is_public(path: str) -> bool:
     return (path in _PUBLIC_PATHS or path.startswith("/fonts/")
-            or path.startswith("/templates/"))
+            or path.startswith("/templates/")
+            or path.startswith("/api/qr/")
+            # 试玩：新访客没账号也要能看选题、提交试做、看进度、拿样片
+            or path.startswith("/api/try") or path.startswith("/try/"))
 
 
 def _token_ok(request: Request) -> bool:
@@ -168,10 +317,196 @@ def _project_visible(p: dict, request: Request) -> bool:
     return bool(email) and p.get("owner") == email
 
 
+def _job_visible(j: dict, request: Request) -> bool:
+    """任务（进度/成片/剧照）按归属隔离：试玩样片本就是公开引流物，其余只给
+    提交者本人/管理员/开放模式。改动前入库的老任务没有 owner，退回按项目归属判。"""
+    if j.get("try"):
+        return True
+    if _is_adminish(request):
+        return True
+    if not AUTH_TOKEN and not auth.has_users():
+        return True          # 开放模式（本机自用）
+    email = _session_email(request)
+    owner = j.get("owner")
+    if owner is not None:
+        return bool(email) and email == owner
+    pid = j.get("project_id")
+    if not pid:
+        return False
+    with _LOCK:
+        p = next((p for p in _reg()["projects"] if p["project_id"] == pid), None)
+    return bool(p) and _project_visible(p, request)
+
+
 def _request_authed(request: Request) -> bool:
     if _token_ok(request) or _session_email(request):
         return True
     return not AUTH_TOKEN and not auth.has_users()   # 开放模式
+
+
+def _open_mode() -> bool:
+    """本机自用开放模式：没配访问令牌也没建过账号。此时不设付费墙。"""
+    return not AUTH_TOKEN and not auth.has_users()
+
+
+# ---------- 免费档每日出片额度 ----------
+USAGE_FILE = Path(config.USAGE_FILE)
+
+
+def _usage_load() -> dict:
+    if USAGE_FILE.is_file():
+        try:
+            data = json.loads(USAGE_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except Exception:  # noqa: BLE001 - 账本坏了当没记，别把出片挂掉
+            pass
+    return {}
+
+
+def _usage_bump(email: str) -> int:
+    """记一次出片，返回今天已用次数。只留最近 3 天，防文件长大。"""
+    today = time.strftime("%Y-%m-%d")
+    keep = {today, time.strftime("%Y-%m-%d", time.localtime(time.time() - 86400)),
+            time.strftime("%Y-%m-%d", time.localtime(time.time() - 172800))}
+    with _LOCK:
+        data = _usage_load()
+        user = {d: n for d, n in (data.get(email) or {}).items() if d in keep}
+        user[today] = int(user.get(today, 0)) + 1
+        data[email] = user
+        try:
+            USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            USAGE_FILE.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+        return user[today]
+
+
+def _tier_of(request: Request) -> str:
+    return auth.user_tier(_session_email(request))
+
+
+def _brand_for(email: str | None) -> dict | None:
+    """高级档：当前用户的品牌套件出片参数。免费/未登录/没设置 = None。"""
+    if not email or not auth.tier_at_least(email, "premium"):
+        return None
+    return brand_kit.for_build(email)
+
+
+# ---------- 品牌套件（高级档） ----------
+
+@app.get("/api/brand")
+def brand_get(request: Request):
+    """自己的品牌资料（任何登录用户可读，前端好显示引导；写操作才要高级档）。"""
+    email = _session_email(request)
+    if not email:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    return {"brand": brand_kit.load(email) or {}, "premium": auth.tier_at_least(email, "premium"),
+            "has_logo": brand_kit.logo_path(email) is not None}
+
+
+@app.put("/api/brand")
+def brand_put(body: dict, request: Request):
+    email = _session_email(request)
+    if not auth.tier_at_least(email, "premium"):
+        return JSONResponse({"error": "品牌套件是高级版功能", "tier_required": "premium"},
+                            status_code=402)
+    data = brand_kit.save(email or "", body)
+    return {"ok": True, "brand": data}
+
+
+@app.post("/api/brand/logo")
+def brand_logo_upload(request: Request, file: UploadFile = None):
+    email = _session_email(request)
+    if not auth.tier_at_least(email, "premium"):
+        return JSONResponse({"error": "品牌套件是高级版功能", "tier_required": "premium"},
+                            status_code=402)
+    if file is None:
+        return JSONResponse({"error": "缺少文件"}, status_code=400)
+    data = file.file.read(brand_kit.MAX_LOGO + 1)
+    try:
+        out = brand_kit.set_logo(email or "", data)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {"ok": True, **out}
+
+
+@app.delete("/api/brand/logo")
+def brand_logo_delete(request: Request):
+    email = _session_email(request)
+    if not auth.tier_at_least(email, "premium"):
+        return JSONResponse({"error": "品牌套件是高级版功能", "tier_required": "premium"},
+                            status_code=402)
+    brand_kit.clear_logo(email or "")
+    return {"ok": True}
+
+
+# ---------- 我的声音（声音复刻，高级档） ----------
+
+@app.get("/api/voice-clone")
+def voice_clone_get(request: Request):
+    email = _session_email(request)
+    if not email:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    c = brand_kit.clone_info(email)
+    return {"premium": auth.tier_at_least(email, "premium"),
+            "dashscope": tts_mod.dashscope_ready(),
+            "clone": c, "has_voice": bool(c)}
+
+
+@app.post("/api/voice-clone")
+async def voice_clone_create(request: Request, file: UploadFile = None):
+    """上传录音（webm/ogg/m4a/mp3）→ ffmpeg 转码 → 百炼声音复刻 → 存 voice_id。"""
+    email = _session_email(request)
+    if not auth.tier_at_least(email, "premium"):
+        return JSONResponse({"error": "声音克隆是高级版功能", "tier_required": "premium"},
+                            status_code=402)
+    if not tts_mod.dashscope_ready():
+        return JSONResponse({"error": "配音服务尚未配置（等站长开通百炼）"}, status_code=503)
+    if file is None:
+        return JSONResponse({"error": "缺少录音文件"}, status_code=400)
+    raw = await file.read()
+    if len(raw) > 20 * 1024 * 1024:
+        return JSONResponse({"error": "录音别超过 20MB（30 秒足够了）"}, status_code=400)
+    import tempfile
+    from . import voice_clone as vc
+    with tempfile.TemporaryDirectory() as td:
+        src = Path(td) / "raw.upload"
+        src.write_bytes(raw)
+        mp3 = Path(td) / "sample.mp3"
+        try:
+            vc.convert_audio(src, mp3)
+        except vc.CloneError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+        try:
+            voice_id = vc.enroll(mp3, f"getcut-{brand_kit._key(email)}")
+        except vc.CloneError as e:
+            return JSONResponse({"error": str(e)}, status_code=502)
+    brand_kit.set_clone(email, voice_id, mp3.read_bytes())
+    return {"ok": True, "voice_id": voice_id}
+
+
+@app.delete("/api/voice-clone")
+def voice_clone_delete(request: Request):
+    email = _session_email(request)
+    if not auth.tier_at_least(email, "premium"):
+        return JSONResponse({"error": "声音克隆是高级版功能", "tier_required": "premium"},
+                            status_code=402)
+    vid = brand_kit.clear_clone(email or "")
+    if vid:
+        from . import voice_clone as vc
+        vc.remove(vid)   # 尽力而为
+    return {"ok": True}
+
+
+@app.get("/api/brand/logo")
+def brand_logo_get(request: Request):
+    """自己的 Logo 图（前端预览用）。"""
+    email = _session_email(request)
+    p = brand_kit.logo_path(email or "")
+    if not p:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(p, media_type="image/png")
 
 
 @app.middleware("http")
@@ -201,11 +536,14 @@ def auth_status():
 
 
 @app.post("/api/auth/send-code")
-def auth_send_code(body: dict):
-    """注册第一步：给邮箱发验证码。60 秒冷却，10 分钟有效。"""
+def auth_send_code(body: dict, request: Request):
+    """注册第一步：给邮箱发验证码。60 秒冷却，10 分钟有效；每 IP 每小时限 10 封。"""
+    if not auth.ip_can_send(_client_ip(request)):
+        return JSONResponse({"error": "这个网络发验证码太频繁了，一小时后再试"}, status_code=429)
     ok, msg = auth.issue_code(body.get("email", ""))
     if not ok:
         return JSONResponse({"error": msg}, status_code=400)
+    auth.ip_record_send(_client_ip(request))
     return {"ok": True, "message": msg}
 
 
@@ -226,14 +564,17 @@ def auth_register(body: dict, request: Request, response: Response):
 
 
 @app.post("/api/auth/reset-code")
-def auth_reset_code(body: dict):
+def auth_reset_code(body: dict, request: Request):
     """忘记密码第一步：给已注册邮箱发验证码（邮箱没注册就直接说清楚）。"""
     email = body.get("email", "")
     if not auth.user_exists(email):
         return JSONResponse({"error": "这个邮箱还没注册过，先注册吧"}, status_code=400)
+    if not auth.ip_can_send(_client_ip(request)):
+        return JSONResponse({"error": "这个网络发验证码太频繁了，一小时后再试"}, status_code=429)
     ok, msg = auth.issue_code(email, purpose="重设密码")
     if not ok:
         return JSONResponse({"error": msg}, status_code=400)
+    auth.ip_record_send(_client_ip(request))
     return {"ok": True, "message": msg}
 
 
@@ -273,25 +614,142 @@ def me(request: Request):
     email = _session_email(request)
     if not email:
         return JSONResponse({"error": "未登录"}, status_code=401)
-    return {"email": email}
+    tier = auth.user_tier(email)
+    return {"email": email, "tier": tier, "tier_label": auth.TIER_LABEL.get(tier, tier),
+            "is_admin": auth.is_admin(email)}
+
+
+# ---------- 档位 / 卡密 / 定价页 ----------
+
+@app.get("/api/pricing")
+def pricing(request: Request):
+    """定价页数据（公开）：价格、站长微信、收款码在不在。"""
+    email = _session_email(request)
+    wechat_qr = (config.QR_DIR / "wechat").is_file()
+    alipay_qr = (config.QR_DIR / "alipay").is_file()
+    return {"prices": config.PRICES, "wechat_id": config.SALES_WECHAT_ID or "",
+            "qr": {"wechat": wechat_qr, "alipay": alipay_qr},
+            "free_daily_builds": config.FREE_DAILY_BUILDS,
+            "tier": auth.user_tier(email), "email": email or "",
+            "is_admin": auth.is_admin(email)}
+
+
+@app.post("/api/license/redeem")
+def license_redeem(body: dict, request: Request):
+    """卡密兑换：登录用户输码，服务端给账号打档位标记。"""
+    email = _session_email(request)
+    if not email:
+        return JSONResponse({"error": "先登录再兑换"}, status_code=401)
+    # 简单防爆破：连续失败 5 次后强制歇 60 秒
+    global _REDEEM_FAILS
+    now = time.time()
+    fails = [f for f in _REDEEM_FAILS.get(email, []) if now - f < 60]
+    if len(fails) >= 5:
+        return JSONResponse({"error": "试错太多次了，一分钟后再来"}, status_code=429)
+    ok, msg, tier = licenses.redeem(email, body.get("code", ""))
+    if not ok:
+        fails.append(now)
+        _REDEEM_FAILS[email] = fails
+        return JSONResponse({"error": msg}, status_code=400)
+    _REDEEM_FAILS.pop(email, None)
+    return {"ok": True, "message": msg, "tier": tier,
+            "tier_label": auth.TIER_LABEL.get(tier, tier)}
+
+
+_REDEEM_FAILS: dict[str, list] = {}
+
+
+@app.get("/api/admin/licenses")
+def admin_list_licenses(request: Request):
+    if not _is_adminish(request):
+        return JSONResponse({"error": "只有管理员能看"}, status_code=403)
+    return {"stats": licenses.stats(), "codes": licenses.list_codes()}
+
+
+@app.post("/api/admin/licenses/gen")
+def admin_gen_licenses(body: dict, request: Request):
+    """给直播间备货：生成 N 张卡密，明文只在这一步返回，赶紧复制走。"""
+    if not _is_adminish(request):
+        return JSONResponse({"error": "只有管理员能生成"}, status_code=403)
+    try:
+        codes = licenses.generate(str(body.get("tier") or ""), int(body.get("count") or 0),
+                                  str(body.get("note") or ""))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return {"codes": codes, "stats": licenses.stats()}
+
+
+_QR_MEDIA = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg"}
+
+
+@app.post("/api/admin/qr")
+def admin_upload_qr(request: Request, which: str = "wechat", file: UploadFile = None):
+    """上传收款码（wechat / alipay）。图片落工作区持久卷，重启不丢。"""
+    if not _is_adminish(request):
+        return JSONResponse({"error": "只有管理员能上传"}, status_code=403)
+    if which not in ("wechat", "alipay") or file is None:
+        return JSONResponse({"error": "参数不对"}, status_code=400)
+    data = file.file.read(4 * 1024 * 1024 + 1)
+    if len(data) > 4 * 1024 * 1024:
+        return JSONResponse({"error": "图片别超过 4MB"}, status_code=400)
+    media = next((m for magic, m in _QR_MEDIA.items() if data.startswith(magic)), None)
+    if media is None:
+        return JSONResponse({"error": "只认 PNG / JPG 图片"}, status_code=400)
+    config.QR_DIR.mkdir(parents=True, exist_ok=True)
+    (config.QR_DIR / which).write_bytes(data)
+    return {"ok": True, "which": which, "media": media}
+
+
+@app.get("/api/qr/{which}")
+def qr_image(which: str):
+    """收款码图片（公开，定价页要展示）。"""
+    if which not in ("wechat", "alipay"):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    f = config.QR_DIR / which
+    if not f.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    head = f.read_bytes()[:4]
+    media = next((m for magic, m in _QR_MEDIA.items() if head.startswith(magic)), "image/png")
+    return FileResponse(f, media_type=media)
 
 
 # ---------- 试听（B5）----------
 
+@app.get("/api/voices")
+def voices_list(request: Request):
+    """音色目录：配了百炼密钥就是 CosyVoice 音色；没配则退回 edge 内置目录
+    （界面展示什么，合成时就真的用什么，不挂羊头卖狗肉）。"""
+    ready = tts_mod.dashscope_ready()
+    if not ready:
+        legacy = tts_mod.LEGACY_EDGE_VOICES
+        return {"voices": [{"id": k, "label": v, "provider": "edge"} for k, v in legacy.items()],
+                "dashscope": False, "default": "zh-CN-YunxiNeural"}
+    items = [{"id": vid, "label": v.get("label", vid), "provider": "dashscope"}
+             for vid, v in tts_mod.load_voices().items()]
+    # 我的声音（声音复刻）：克隆过就放进音色列表最前面
+    email = _session_email(request)
+    if email and auth.tier_at_least(email, "premium") and brand_kit.clone_info(email):
+        items.insert(0, {"id": "@clone", "label": "我的声音 · 克隆", "provider": "dashscope"})
+    return {"voices": items, "dashscope": True, "default": tts_mod.VOICE}
+
+
 @app.get("/api/voice-preview")
-def voice_preview(voice: str = "zh-CN-YunxiNeural"):
-    """音色试听：合成一句短样，按音色缓存（首次约 1-2 秒）。"""
-    import asyncio
-    import re as _re
-    import edge_tts
-    safe = _re.sub(r"[^A-Za-z0-9_-]", "", voice)[:64] or "x"
+def voice_preview(voice: str = "xiaoxia"):
+    """音色试听：合成一句短样，按音色+渠道缓存（首次约 1-2 秒）。"""
+    entry = tts_mod.resolve_voice(voice)
+    if entry.get("legacy"):
+        safe = "edge_" + re.sub(r"[^A-Za-z0-9_-]", "", entry.get("edge") or "x")[:60]
+    elif entry.get("provider") == "dashscope" and tts_mod.dashscope_ready():
+        safe = "ds_" + re.sub(r"[^A-Za-z0-9_-]", "", str(entry.get("id") or "x"))[:60]
+    else:
+        safe = "edge_" + re.sub(r"[^A-Za-z0-9_-]", "", str(entry.get("edge") or "x"))[:60]
     d = ROOT / "assets" / "voice_previews"
     d.mkdir(parents=True, exist_ok=True)
     f = d / f"{safe}.mp3"
     if not f.exists() or f.stat().st_size == 0:
         try:
-            asyncio.run(edge_tts.Communicate(
-                "大家好，这是一段配音试听，听听这个声音合不合适。", voice).save(str(f)))
+            tts_mod.synthesize_preview(
+                voice, f, "大家好，这是一段配音试听，听听这个声音合不合适。")
         except Exception as e:  # noqa: BLE001
             return JSONResponse({"error": f"试听合成失败：{e}"}, status_code=502)
     return FileResponse(f, media_type="audio/mpeg")
@@ -567,8 +1025,8 @@ def _preview_auth_ok(pid: str, request: Request) -> bool:
     return True
 
 
-def _preview_render_body(body: dict) -> dict:
-    """预演入参校验：素材包目录 + 渲染配置。"""
+def _preview_render_body(body: dict, request: Request = None) -> dict:
+    """预演入参校验：素材包目录 + 渲染配置。免费档强制带水印（跟成片一个待遇）。"""
     bundle = body.get("bundle")
     if not bundle:
         raise ValueError("缺少素材包")
@@ -577,14 +1035,21 @@ def _preview_render_body(body: dict) -> dict:
     fmt = body.get("format") or DEFAULT_TEMPLATE
     if fmt not in SUPPORTED_FORMATS:
         raise ValueError(f"模板 '{fmt}' 不存在")
+    watermark = body.get("watermark", True) is not False
+    if request is not None and not _open_mode():
+        email = _session_email(request)
+        if email and auth.user_tier(email) == "free":
+            watermark = True
     return {"bundle_dir": bundle_dir, "bundle": bundle,
             "voice": body.get("voice") or None,
             "rate": _normalize_rate(body.get("rate")),
             "format": fmt,
             "subtitles": bool(body.get("subtitles", True)),
             "sources": bool(body.get("sources", True)),
+            "watermark": watermark,
             "theme": body.get("theme") or "auto",
-            "disclaimer": body.get("disclaimer")}
+            "disclaimer": body.get("disclaimer"),
+            "brand": (_brand_for(_session_email(request)) if request is not None else None)}
 
 
 @app.post("/api/projects/{pid}/preview/plan")
@@ -593,7 +1058,7 @@ def preview_plan(pid: str, body: dict, request: Request):
     if not _preview_auth_ok(pid, request):
         return JSONResponse({"error": "项目不存在"}, status_code=404)
     try:
-        rb = _preview_render_body(body)
+        rb = _preview_render_body(body, request)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     st = preview.preview_state(pid)
@@ -602,7 +1067,7 @@ def preview_plan(pid: str, body: dict, request: Request):
     # 配置与已存预演不一致时重跑
     saved = preview.load_plan(pid)
     if saved and st["state"] == "ready":
-        same = all(saved.get(k) == rb.get(k) for k in ("voice", "rate", "format", "subtitles", "sources"))
+        same = all(saved.get(k) == rb.get(k) for k in ("voice", "rate", "format", "subtitles", "sources", "watermark", "brand"))
         if same:
             return {"state": "ready", "progress": 100, "error": None}
         preview.invalidate(pid)
@@ -649,6 +1114,88 @@ def preview_invalidate(pid: str, body: dict, request: Request):
     return {"ok": True}
 
 
+def _render_or_404(pid: str, rid: str, request: Request):
+    """按项目归属取出成片路径；取不到返回 (None, 响应)。"""
+    from pathlib import Path as _P
+    with _LOCK:
+        reg = _reg()
+        target = next((p for p in reg["projects"] if p["project_id"] == pid), None)
+        if not target or not _project_visible(target, request):
+            return None, JSONResponse({"error": "项目不存在"}, status_code=404)
+        render = next((r for r in target.get("renders", []) if r.get("id") == rid), None)
+        if not render:
+            return None, JSONResponse({"error": "成片不存在"}, status_code=404)
+        video = _P(render["file"])
+        if not video.is_file():
+            return None, JSONResponse({"error": "成片文件缺失"}, status_code=404)
+    return video, None
+
+
+@app.get("/api/projects/{pid}/renders/{rid}/jianying-status")
+def jianying_status(pid: str, rid: str, request: Request):
+    """草稿备好了没：渲染完成后系统就在后台备，前端据此显示"秒装"还是"准备中"。"""
+    from . import draft_build
+    from . import jianying_draft as jyd
+
+    video, err = _render_or_404(pid, rid, request)
+    if err:
+        return err
+    plan_dir = jyd.draft_dir_for(video)
+    ready = bool(draft_build.plan_fresh(plan_dir, video))
+    return {"ready": ready, "building": (not ready) and str(video) in DRAFT_PREP,
+            "jianying": jyd.jianying_draft_dir().is_dir()}
+
+
+def _require_premium(request: Request):
+    """高级版付费墙。返回 None 表示放行，否则返回 402 响应。"""
+    if _open_mode():          # 本机自用开放模式不设墙
+        return None
+    if auth.tier_at_least(_session_email(request), "premium"):
+        return None
+    return JSONResponse(
+        {"error": f"导出剪映草稿是高级版功能（¥{config.PRICES['premium']} 永久买断）。"
+                  "点右上角「升级」查看。",
+         "tier_required": "premium"},
+        status_code=402)
+
+
+@app.post("/api/projects/{pid}/renders/{rid}/jianying-import")
+def jianying_import(pid: str, rid: str, request: Request):
+    """一键导入剪映。
+
+    这台机器上装了剪映（能找到草稿库）→ 直接把草稿装进去，用户打开剪映就能看到；
+    没装/不是本机（比如线上服务器）→ 回 {installed:false}，前端退回下载导入包
+    （包里带「一键导入剪映.bat」，解压后双击即可）。
+    """
+    import tempfile
+    from . import jianying_draft as jyd
+
+    if (wall := _require_premium(request)) is not None:
+        return wall
+    video, err = _render_or_404(pid, rid, request)
+    if err:
+        return err
+    mf = jyd.load_manifest(video)
+    if mf is None:
+        return JSONResponse({"error": "这条成片没有草稿清单（旧成片不支持分轨草稿）"}, status_code=400)
+
+    plan_dir = jyd.prepare_draft(video, mf)          # 通常已由后台备好，这里是兜底
+    if plan_dir is None:
+        return JSONResponse({"installed": False, "download": True})
+
+    root = jyd.jianying_draft_dir()
+    if not root.is_dir():
+        # 服务器这一侧没有剪映（线上部署就是这样）：让前端去下载导入包
+        return {"installed": False, "download": True, "reason": "本机找不到剪映草稿目录"}
+
+    voice = mf.get("voice")
+    with tempfile.TemporaryDirectory() as td:
+        zip_path = Path(td) / "draft.zip"
+        jyd.build_zip(mf, video, Path(voice) if voice else None, zip_path)
+        dest = jyd.install_draft(zip_path)
+    return {"installed": True, "name": dest.name}
+
+
 @app.get("/api/projects/{pid}/renders/{rid}/jianying-draft")
 def jianying_draft_zip(pid: str, rid: str, request: Request):
     """把指定成片打包成剪映专业版草稿 zip（分镜切段 + 可编辑字幕[关字幕渲染时]）。"""
@@ -658,6 +1205,8 @@ def jianying_draft_zip(pid: str, rid: str, request: Request):
     from urllib.parse import quote
     from . import jianying_draft as jyd
 
+    if (wall := _require_premium(request)) is not None:
+        return wall
     with _LOCK:
         reg = _reg()
         target = next((p for p in reg["projects"] if p["project_id"] == pid), None)
@@ -855,6 +1404,26 @@ def start_build(body: dict, request: Request):
         _resolve_bgm(body.get("bgm"))
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
+    # 付费墙：免费档每天限量出片且强制带 GetCut 水印；基础/高级版不限量、水印随意。
+    email = _session_email(request)
+    if email and not auth.is_admin(email) and auth.user_tier(email) == "free":
+        body = dict(body)
+        body["watermark"] = True
+        used = _usage_bump(email)
+        if used > config.FREE_DAILY_BUILDS:
+            return JSONResponse(
+                {"error": f"今天的免费额度（每天 {config.FREE_DAILY_BUILDS} 条）用完了。"
+                          f"基础版 ¥{config.PRICES['basic']} 永久不限量——点右上角「升级」看看",
+                 "limited": True},
+                status_code=429)
+    if email:
+        body = dict(body)
+        body["brand"] = _brand_for(email)   # 高级档品牌套件，服务端自动带上（默认配置固化）
+        if body.get("voice") == "@clone":
+            clone = brand_kit.clone_info(email) if auth.tier_at_least(email, "premium") else None
+            body["voice"] = (clone or {}).get("voice_id") or None
+        raw_badge = str((body.get("series") or {}).get("badge") or "").strip()
+        body["series"] = {"badge": raw_badge[:24]} if raw_badge and auth.tier_at_least(email, "premium") else None
     pid = body.get("project_id")
     with _LOCK:
         if pid:
@@ -866,7 +1435,8 @@ def start_build(body: dict, request: Request):
         job_id = uuid.uuid4().hex[:12]
         ahead = _queue_ahead(job_id)
         JOBS[job_id] = {"stage": "queued", "stage8": 1, "progress": 3, "error": None, "video": None,
-                        "project_id": pid, "detail": ("排队中 · 前面还有 %d 个任务" % ahead) if ahead
+                        "project_id": pid, "owner": email,
+                        "detail": ("排队中 · 前面还有 %d 个任务" % ahead) if ahead
                         else "已加入队列", "t0": time.time()}
         _jobs_save()
         _QUEUE_HEAD.append(job_id)
@@ -923,10 +1493,10 @@ def my_jobs(request: Request):
 
 
 @app.get("/api/job/{job_id}")
-def job_status(job_id: str):
+def job_status(job_id: str, request: Request):
     j = JOBS.get(job_id)
-    if j is None:
-        return {"stage": "unknown"}
+    if j is None or not _job_visible(j, request):
+        return {"stage": "unknown"}   # 不存在与无权同形，不泄露任务存在性
     out = dict(j)
     if out.get("stage") == "queued":
         with _LOCK:
@@ -943,9 +1513,12 @@ def job_status(job_id: str):
 
 
 @app.get("/still/{name}")
-def still(name: str):
+def still(name: str, request: Request):
     f = (OUTPUTS / name).resolve()
     if not f.is_file() or OUTPUTS.resolve() not in f.parents:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    jid = name.split("-still-", 1)[0]      # 剧照文件名 = <job_id>-still-<n>.jpg
+    if not _job_visible(JOBS.get(jid) or {}, request):
         return JSONResponse({"error": "not found"}, status_code=404)
     return FileResponse(f, media_type="image/jpeg")
 
@@ -970,7 +1543,10 @@ def music_library():
 
 
 @app.get("/api/latest")
-def latest():
+def latest(request: Request):
+    """最近成片名（前端已不用；留给管理员巡检，普通用户不给跨用户文件名）。"""
+    if not _open_mode() and not _is_adminish(request):
+        return JSONResponse({"error": "not found"}, status_code=404)
     outs = sorted(OUTPUTS.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True) \
         if OUTPUTS.is_dir() else []
     if not outs:
@@ -981,9 +1557,10 @@ def latest():
 
 
 @app.get("/video/{job_id}")
-def video(job_id: str):
-    v = JOBS.get(job_id, {}).get("video")
-    if not v:
+def video(job_id: str, request: Request):
+    j = JOBS.get(job_id)
+    v = (j or {}).get("video")
+    if not v or not _job_visible(j, request):
         return JSONResponse({"error": "not ready"}, status_code=404)
     return FileResponse(v, media_type="video/mp4", filename=Path(v).name)
 
@@ -1078,7 +1655,13 @@ def _worker(job_id: str, body: dict) -> None:
                 _jobs_save()
 
         # 入参先过安全校验（素材包目录 / BGM 路径），不合法直接把任务标记失败
-        bundle_dir = _resolve_bundle(body["bundle"])
+        # 试玩任务由 /api/try 给出已经校验过的绝对路径；其余任务一律只认工作区里的包名
+        if body.get("try") and body.get("try_bundle_dir"):
+            bundle_dir = Path(body["try_bundle_dir"]).resolve()
+            if not (bundle_dir / "content.json").is_file():
+                raise ValueError("试玩素材包缺失")
+        else:
+            bundle_dir = _resolve_bundle(body["bundle"])
         bgm_file = _resolve_bgm(body.get("bgm"))
         out = OUTPUTS / f"{bundle_dir.name}-{job_id}.mp4"
         if True:
@@ -1094,7 +1677,10 @@ def _worker(job_id: str, body: dict) -> None:
                       show_sources=bool(body.get("sources", True)),
                       theme=body.get("theme") or "auto",
                       disclaimer=body.get("disclaimer"),
+                      watermark=body.get("watermark", True) is not False,
                       use_llm=bool(body.get("useLlm", True)),
+                      brand=body.get("brand") or None,
+                      series=body.get("series") or None,
                       job_id=job_id,
                       progress=progress)
         with _LOCK:
@@ -1108,6 +1694,21 @@ def _worker(job_id: str, body: dict) -> None:
                         "ts": time.strftime("%Y/%m/%d %H:%M")})
             _reg_save(reg)
         _cleanup_work(bundle_dir.name)
+        if body.get("try"):
+            # 试玩：降成 720p 带水印的样片给公开链接，原始大文件删掉；不备草稿资产
+            small = OUTPUTS / f"try-{job_id}.mp4"
+            if _downscale_720(out, small):
+                with _LOCK:
+                    JOBS[job_id]["try_video"] = str(small)
+                out.unlink(missing_ok=True)
+                _sweep_try_files()
+            else:
+                with _LOCK:
+                    JOBS[job_id].update(stage="failed", error="样片转码失败，请稍后再试")
+        else:
+            # 成片已经交付，接着在后台把剪映草稿资产备好——用户走到导出页时通常已就绪，
+            # 点「一键导入剪映」秒装，不用再等 1-2 分钟
+            threading.Thread(target=_prebuild_draft, args=(Path(out),), daemon=True).start()
     except Exception as e:  # noqa: BLE001
         with _LOCK:
             JOBS[job_id].update(stage="failed", stage8=8, error=str(e)[-800:], t_end=time.time())

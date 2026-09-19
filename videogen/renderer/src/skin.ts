@@ -11,7 +11,7 @@
 
 import LAYOUTS from './layouts.json';
 
-export type LayoutKind = 'editorial' | 'bleed' | 'lower' | 'poster' | 'data' | 'zhigu';
+export type LayoutKind = 'editorial' | 'bleed' | 'lower' | 'poster' | 'data' | 'zhigu' | 'macro';
 export type DecorKind = 'grain' | 'grid' | 'none';
 
 /** 版式几何：从 layouts.json 读（TS 与 Python 共用同一份，防漂移） */
@@ -535,6 +535,49 @@ const data: Omit<Skin, 'geo'> = {
   motionFrames: 6,
 };
 
+/** macro：宏观棱镜复刻——暗背景 + 金色数据工作室，金色是唯一强调色 */
+const macro: Omit<Skin, 'geo'> = {
+  name: '宏观棱镜版',
+  layout: 'macro',
+  bgTop: '#04080a',
+  bgBottom: '#04080a',
+  decor: 'none',
+  vignette: false,
+  paperTop: '#0a1113',
+  paper: '#081012',
+  paperBottom: '#060b0d',
+  paperTexture: 'none',
+  paperShadow: 'none',
+  panel: '#081012',
+  panelRadius: 6,
+  cardRadius: 6,
+  ink: '#f2f4f3',
+  onMedia: '#ffffff',
+  mutedInk: 'rgba(255,255,255,0.55)',
+  codeInk: 'rgba(255,255,255,0.6)',
+  white: '#ffffff',
+  gray: 'rgba(255,255,255,0.55)',
+  grayDim: 'rgba(255,255,255,0.38)',
+  accent: '#e8a833',
+  accentSoft: '#f2bd5c',
+  onAccent: '#12100a',
+  teal: '#3fbfae',
+  cardWhite: 'rgba(5,10,11,0.55)',
+  cardInk: '#f2f4f3',
+  cardMuted: 'rgba(255,255,255,0.55)',
+  cardLine: 'rgba(255,255,255,0.45)',
+  chipBg: 'rgba(232,168,51,0.92)',
+  timelineBg: 'rgba(5,10,11,0.8)',
+  slotBg: 'rgba(8,16,18,0.85)',
+  scrim: 'rgba(2,7,8,0.86)',
+  calloutScrim: 'rgba(2,7,8,0.7)',
+  highlightBg: '#e8a833',
+  highlightInk: '#12100a',
+  font: SANS,
+  fontMono: MONO,
+  motionFrames: 6,
+};
+
 const GEOMETRY = LAYOUTS as unknown as Record<string, Geo>;
 
 /** 取某个模板的版式几何：优先按模板 id，其次按骨架，最后回落 editorial */
@@ -552,7 +595,7 @@ function buildGeo(id: string, layout: string): Geo {
 }
 
 export const SKINS: Record<string, Skin> = Object.fromEntries(
-  Object.entries({editorial, finance, minimal, bleed, news, retro, portrait, zhigu, poster, data}).map(
+  Object.entries({editorial, finance, minimal, bleed, news, retro, portrait, zhigu, poster, data, macro}).map(
     ([id, s]) => [id, {...s, geo: buildGeo(id, s.layout)}],
   ),
 ) as Record<string, Skin>;

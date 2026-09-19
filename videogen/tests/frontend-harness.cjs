@@ -70,8 +70,12 @@ async function createHarness({storage = {}} = {}) {
   const projects = [project(), project('bb', 'bundle-b')];
   const jobStates = new Map([['job-a', queued()], ['job-b', queued('bb')]]);
   function respond(method, url, handler) { routes.set(method + ' ' + url, handler); }
-  respond('GET', '/api/me', {email: 'offline@example.invalid'});
+  respond('GET', '/api/me', {email: 'offline@example.invalid', tier: 'premium', tier_label: '高级版', is_admin: false});
   respond('GET', '/api/auth/status', {locked: false, smtp: false, dev_email: false, token_auth: false});
+  respond('GET', '/api/voices', {voices: ['zh-CN-YunxiNeural', 'zh-CN-YunjianNeural', 'zh-CN-XiaoxiaoNeural']
+    .map(id => ({id, label: id, provider: 'edge'})), dashscope: false, default: 'zh-CN-YunxiNeural'});
+  respond('GET', '/api/pricing', {prices: {basic: 399, premium: 599}, wechat_id: 'getcut-admin',
+    qr: {wechat: true, alipay: false}, free_daily_builds: 2, tier: 'premium', email: 'offline@example.invalid', is_admin: false});
   respond('GET', '/api/templates', {default: 'editorial', templates: ['editorial', 'news', 'data', 'poster', 'bleed', 'zhigu'].map(id => ({id, name: id}))});
   respond('GET', '/api/projects', () => projects);
   respond('GET', '/api/jobs', {concurrency: 1, active: [], recent: []});
@@ -79,6 +83,10 @@ async function createHarness({storage = {}} = {}) {
   respond('GET', '/api/bundle/bundle-a', bundle('bundle-a'));
   respond('GET', '/api/bundle/bundle-b', bundle('bundle-b'));
   respond('GET', '/api/music', [{file: 'assets/music/test.mp3', name: 'Fixture', mood: 'neutral'}]);
+  respond('GET', '/api/projects/aa/renders/job-a/jianying-status', {ready: true, building: false, jianying: false});
+  respond('POST', '/api/projects/aa/renders/job-a/jianying-import', {installed: true, name: '离线草稿'});
+  // 装不进剪映时前端会去下导入包（qs() 会带 ?token=）
+  respond('GET', '/api/projects/aa/renders/job-a/jianying-draft?token=', {ok: true});
   respond('GET', '/api/job/job-a', () => jobStates.get('job-a'));
   respond('GET', '/api/job/job-b', () => jobStates.get('job-b'));
   const fetch = async (url, options = {}) => {
@@ -93,7 +101,8 @@ async function createHarness({storage = {}} = {}) {
     const value = await (typeof handler === 'function' ? handler(req) : handler);
     const status = value && value.__httpStatus || 200;
     const body = value && value.__httpStatus ? value.body : value;
-    return {ok: status >= 200 && status < 300, status, json: async () => clone(body)};
+    return {ok: status >= 200 && status < 300, status, json: async () => clone(body),
+            blob: async () => ({}), headers: {get: () => null}};
   };
   // No native fetch, XMLHttpRequest, WebSocket, process, require, or filesystem in VM globals.
   // This is an offline test environment, not a hostile-code security sandbox.
