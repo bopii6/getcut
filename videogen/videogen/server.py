@@ -782,8 +782,16 @@ def _preview_file(voice: str) -> Path:
 
 
 @app.get("/api/voice-preview")
-def voice_preview(voice: str = "xiaoxia"):
+def voice_preview(request: Request, voice: str = "xiaoxia"):
     """音色试听：合成一句短样，按音色+渠道缓存（首次约 1-2 秒）。"""
+    if voice == "@clone":
+        # 确认页里「我的声音」以 @clone 占位；试听必须换成当前用户真实的克隆音色 id
+        email = _session_email(request)
+        c = brand_kit.clone_info(email) if email else None
+        if not c or not c.get("voice_id"):
+            return JSONResponse({"error": "还没有克隆声音，先到「我的 → 品牌套装」里录制"},
+                                status_code=404)
+        voice = c["voice_id"]
     f = _preview_file(voice)
     if not f.exists() or f.stat().st_size == 0:
         try:

@@ -1202,7 +1202,11 @@ let AUD = null;
 function preview(url){
   try { if (AUD){ AUD.pause(); AUD = null; } } catch (e) {}
   AUD = new Audio(url);
-  AUD.play().catch(() => toast("浏览器拦了自动播放，再点一次"));
+  const p = AUD.play();
+  if (p && p.catch) p.catch((e) => {
+    // 两种失败分开说：被自动播放策略拦 vs 音频本身没生成出来
+    toast(e && e.name === "NotAllowedError" ? "浏览器拦了自动播放，再点一次" : "试听没生成出来，稍等两秒再点一次");
+  });
 }
 
 /* ================= 账号（邮箱注册 + 密码登录） ================= */
