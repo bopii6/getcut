@@ -1,8 +1,8 @@
-"""品牌套件（高级档）：每用户的 Logo / Slogan / 联系方式 / 品牌色。
+"""品牌套装（高级档）：每用户的 Logo / 我的声音 / 文字水印。
 
 存工作区 .videogen-brand/<email哈希>/（logo.png + brand.json），重启不丢。
-品牌色从 Logo 里自动抠（Pillow 量化取主色，优先饱和度高的），也可手填；
-拼进成片走 cli.build 现成的 theme 直通，不用动模板配色系统。
+片尾卡、固定开场白、品牌色已整体下线（用户拍板：出片不带片尾卡、不要开场白），
+旧字段留在 brand.json 里只是历史数据，管线不再读。
 """
 from __future__ import annotations
 
@@ -18,10 +18,11 @@ from . import config
 DIR = Path(config.WORKSPACES) / ".videogen-brand"
 HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_LOGO = 2 * 1024 * 1024
+MAX_WATERMARK = 16       # 右上角文字水印（如 @阿伟说财经）
 MAX_SLOGAN = 20
 MAX_CONTACT = 30
 MAX_OPENING = 40
-MAX_TERMS = 20          # 发音库上限：词条数
+MAX_TERMS = 20           # 发音库上限：词条数
 PINYIN_RE = re.compile(r"^[a-z0-9 ]+$")
 
 
@@ -52,6 +53,9 @@ def load(email: str) -> dict | None:
 def save(email: str, fields: dict) -> dict:
     """更新文本字段（全量读改写）。非法值直接忽略，不让用户输坏别人的片。"""
     data = load(email) or {}
+    wm = fields.get("watermark_text")
+    if isinstance(wm, str):
+        data["watermark_text"] = wm.strip()[:MAX_WATERMARK]
     text = fields.get("slogan")
     if isinstance(text, str):
         data["slogan"] = text.strip()[:MAX_SLOGAN]
@@ -157,13 +161,7 @@ def for_build(email: str) -> dict | None:
     logo = logo_path(email)
     return {
         "logo_key": _key(email) if logo else None,
-        "slogan": data.get("slogan") or "",
-        "contact": data.get("contact") or "",
-        "opening": data.get("opening") or "",
-        "terms": data.get("terms") or {},
-        "accent": data.get("accent") or "",
-        "use_watermark": data.get("use_watermark", True),
-        "endcard": data.get("endcard", True),
+        "watermark_text": data.get("watermark_text") or "",
     }
 
 
@@ -205,37 +203,11 @@ def resolve_logo(logo_key: str) -> Path | None:
     return p if p.is_file() else None
 
 
-# ---------- 出片侧：把品牌参数压进分镜 ----------
-
-END_CARD_MS = 2900   # 片尾卡时长；整条时间轴派生自 TTS，这里是唯一允许的"额外尾巴"
-
-
-def _lighten_hex(hex_color: str, amount: float = 0.18) -> str:
-    """和 cli._lighten 同一个公式：#rrggbb 亮一档，用于 accentSoft。"""
-    s = (hex_color or "").lstrip("#")
-    if len(s) != 6:
-        return hex_color
-    try:
-        r, g, b = (int(s[i:i + 2], 16) for i in (0, 2, 4))
-    except ValueError:
-        return hex_color
-    mix = lambda c: int(c + (255 - c) * amount)  # noqa: E731
-    return f"#{mix(r):02X}{mix(g):02X}{mix(b):02X}"
-
+# ---------- 出片侧 ----------
 
 def apply_to_plan(plan, brand: dict | None) -> dict | None:
-    """品牌色压过一切主题色；片尾卡在片尾加 END_CARD_MS。
+    """品牌参数不再改分镜：片尾卡（+2.9s）和品牌色覆盖主题都已下线。
 
-    在分镜定稿后、算 duration_s 之前调；返回补了 end_card_start_ms 的 brand。
-    """
-    if not brand:
-        return brand
-    if brand.get("accent"):
-        plan.theme = {"accent": brand["accent"], "accentSoft": _lighten_hex(brand["accent"])}
-    has_card = brand.get("endcard", True) and (
-        brand.get("slogan") or brand.get("contact") or brand.get("logo_key"))
-    if has_card:
-        start = int(plan.duration_ms) - 100   # 借最后一镜收尾呼吸的尾巴 100ms 淡入
-        plan.duration_ms += END_CARD_MS
-        return {**brand, "end_card_start_ms": start}
+    保留函数是因为 cli.build / preview 都还在调；brand 原样透传给渲染端
+    （logo + watermark_text 走 props）。"""
     return brand

@@ -2,8 +2,9 @@
 
 // Run: VIDEOGEN_TEST_DOM=<path-to-linkedom> node --test videogen/tests/frontend.test.cjs
 // Production contract (server.py + server_static/index.html flow views):
-//   /api/build keys: project_id, bundle, voice, rate(String), bgm, sfx(bool), sfxMode,
-//     subtitles, sources, format, disclaimer, useLlm -> {job}
+//   /api/build keys: project_id, bundle, voice, bgm, sfx(bool), sfxMode,
+//     subtitles(恒 true，界面无开关), sources, format, useLlm -> {job}
+//     （series/disclaimer 已下线，前端不再传）
 //   /api/job/:id stages: queued | named stage (stage8 1..8) | failed | done | unknown
 //   Config lives in native <dialog> via [data-setting="style"|"sound"]; build button is #go.
 const test = require('node:test');
@@ -22,22 +23,16 @@ async function start(h) {
   await h.flush();
 }
 // 设置直接摆在确认页上（模板/配音/音乐/音效），点渲染之前就能定
-async function configure(h, {format, voice, sfx, subtitles, sources, watermark, bgm, disclaimer}) {
-  const wanted = [format, voice, sfx, subtitles, sources, watermark, bgm, disclaimer].some(v => v !== undefined);
+async function configure(h, {format, voice, sfx, sources, watermark, bgm}) {
+  const wanted = [format, voice, sfx, sources, watermark, bgm].some(v => v !== undefined);
   if (!wanted) return;
   await h.flush(); // music select 的 onchange 在 /api/music 解析后才挂上
   if (format !== undefined) h.click('#fmt [data-v="' + format + '"]');
   if (voice !== undefined) h.click('#voiceSeg [data-v="' + voice + '"]');
   if (sfx !== undefined) h.click('#sfxSeg [data-v="' + sfx + '"]');
-  if (subtitles !== undefined) h.click('.swt[data-k="subtitles"]');
   if (sources !== undefined) h.click('.swt[data-k="sources"]');
   if (watermark !== undefined) h.click('.swt[data-k="watermark"]');
   if (bgm !== undefined) { h.get('bgm').value = bgm; h.get('bgm').onchange(); }
-  if (disclaimer !== undefined) {
-    const el = h.get('disclaimer');
-    el.value = disclaimer;
-    el.oninput({target: el});
-  }
 }
 
 test('production boot loads templates and projects entirely through mocked fetch', async t => {
@@ -52,8 +47,7 @@ test('actual configuration controls serialize the exact production build payload
   const h = await setup(t);
   await h.openProject();
   await configure(h, {format: 'data', voice: 'zh-CN-XiaoxiaoNeural',
-    sfx: 'off', subtitles: false, sources: false, bgm: 'assets/music/test.mp3',
-    disclaimer: '  离线测试免责声明  '});
+    sfx: 'off', sources: false, bgm: 'assets/music/test.mp3'});
   h.respond('POST', '/api/build', {job: 'job-a'});
   await h.click('#go');
   await h.flush();
@@ -61,9 +55,8 @@ test('actual configuration controls serialize the exact production build payload
   // 节奏由服务端定死（1.1 倍）：请求体里不再有 rate
   assert.deepEqual(JSON.parse(builds(h)[0].body), {
     project_id: 'aa', bundle: 'bundle-a', voice: 'zh-CN-XiaoxiaoNeural',
-    bgm: 'assets/music/test.mp3', sfx: false, sfxMode: 'off', subtitles: false,
-    sources: false, watermark: true, format: 'data', disclaimer: '离线测试免责声明', useLlm: true,
-    series: null
+    bgm: 'assets/music/test.mp3', sfx: false, sfxMode: 'off', subtitles: true,
+    sources: false, watermark: true, format: 'data', useLlm: true
   });
   assert.equal(builds(h)[0].headers['Content-Type'], 'application/json');
   assert.equal(h.localStorage.getItem('vg.job.aa'), 'job-a');
@@ -204,7 +197,7 @@ test('generation view keeps the decision before the render and shows no per-stag
   assert(h.get('voiceSeg'), '确认页要能直接选配音');
   assert(h.get('bgm'), '确认页要能直接选背景音乐');
   assert(h.get('sfxSeg'), '确认页要能直接选音效');
-  assert.equal(h.document.querySelectorAll('.vg-choices .tpl').length, 6, '模板要摆在页面上，不是弹窗里');
+  assert.equal(h.document.querySelectorAll('#fmt .tpl').length, 6, '模板要摆在页面上，不是弹窗里');
   // 确认页只确认不改稿：素材与文案收成一条状态，原文只在弹窗里看一眼
   assert.match(h.get('vg-view').textContent, /素材已读入/);
   assert.equal(h.document.querySelectorAll('#vg-view .vg-fulltext').length, 0, '文稿不应铺在页面上');
@@ -502,33 +495,36 @@ test('音色目录：boot 时拉 /api/voices，百炼没配就回退内置目录
   assert.equal(h.evaluate('CFG.voice'), 'zh-CN-XiaoxiaoNeural', '回退目录的音色要能选');
 });
 
-test('品牌套件：确认页入口按档位分流，高级版弹设置并保存到 /api/brand', async t => {
+test('品牌套装：入口收进「我的」菜单，确认页不再打扰；高级版平铺三件事，水印文字存 /api/brand', async t => {
   const h = await setup(t);
   await h.openProject();
-  const btn = h.get('brandBtn');
-  assert(btn, '确认页要有品牌套件入口');
-  assert.match(btn.textContent, /设置品牌套件/, 'harness 默认 premium：入口是设置按钮');
-  // 先测免费档：换免费用户重画
-  await h.evaluate('ME = {...ME, tier: "free", tier_label: "免费版"}; renderRail(CURB)');
-  assert.match(h.get('brandBtn').textContent, /🔒/, '免费档要带锁');
-  h.click('#brandBtn'); await h.flush();
-  assert(h.document.querySelector('.pp-wrap'), '免费档点品牌套件 → 进权益页');
-  // 再测高级档完整流：真实用户是从权益页回到项目，这里重新进项目让入口按档位重画
+  assert.equal(h.get('brandBtn'), null, '确认页不再有品牌套件入口（用户只管点点点）');
+  assert.equal(h.get('epBadge'), null, '期数角标输入已下线');
+  // 免费档：菜单里带锁，点了进权益页
+  await h.evaluate('ME = {...ME, tier: "free", tier_label: "免费版"}');
+  h.click('#meBtn'); await h.flush();
+  assert.match(h.get('meBrand').textContent, /高级版/, '免费档菜单里品牌套装要带锁');
+  h.click('#meBrand'); await h.flush();
+  assert(h.document.querySelector('.pp-wrap'), '免费档点品牌套装 → 进权益页');
+  // 高级档：菜单点开品牌套装，Logo / 我的声音 / 文字水印 平铺
   await h.evaluate('ME = {...ME, tier: "premium", tier_label: "高级版"}');
-  await h.openProject();
-  assert.match(h.get('brandBtn').textContent, /设置品牌套件/, '高级版入口是设置按钮');
-  h.respond('GET', '/api/brand', {brand: {slogan: '每天懂一点财经', contact: '', accent: '#8B6CFF', use_watermark: true, endcard: true}, premium: true, has_logo: true});
+  h.respond('GET', '/api/brand', {brand: {watermark_text: '@老王看财经'}, premium: true, has_logo: true});
+  h.respond('GET', '/api/voice-clone', {premium: true, dashscope: true, clone: {voice_id: 'v1', created: '2026-09-19 10:00'}, has_voice: true});
   h.respond('PUT', '/api/brand', {ok: true, brand: {}});
-  h.click('#brandBtn'); await h.flush();
-  assert(h.get('bdSlogan'), '高级版要弹品牌设置');
-  assert.equal(h.get('bdSlogan').value, '每天懂一点财经', '已有 slogan 要回填');
-  h.get('bdContact').value = '微信 getcut888';
-  h.click('#bdSave'); await h.flush();
+  h.click('#meBtn'); await h.flush();
+  assert(h.get('meBrand').textContent.includes('Logo'), '高级版菜单里要写清品牌套装里有什么');
+  h.click('#meBrand'); await h.flush();
+  const box = h.document.querySelector('[aria-label="品牌套装"]');
+  assert(box, '高级版要点开品牌套装弹窗');
+  assert(h.get('bkLogo'), 'Logo 上传入口要在');
+  assert(box.textContent.includes('已克隆'), '已克隆状态要显示');
+  assert.equal(h.get('bkWm').value, '@老王看财经', '水印文字要回填');
+  h.get('bkWm').value = '@阿伟说财经';
+  h.get('bkWm').onchange();
+  await h.flush();
   const put = h.requests.find(r => r.url === '/api/brand' && r.method === 'PUT');
-  assert(put, '保存要走 PUT /api/brand');
-  const body = JSON.parse(put.body);
-  assert.equal(body.contact, '微信 getcut888');
-  assert.equal(body.endcard, true, '开关状态要一起存');
+  assert(put, '水印文字要走 PUT /api/brand');
+  assert.deepEqual(JSON.parse(put.body), {watermark_text: '@阿伟说财经'}, '改完即存，不带旧字段');
 });
 
 test('出片请求不带 brand 字段——品牌由服务端按账号自动注入，前端伪造无效', async t => {
@@ -539,18 +535,11 @@ test('出片请求不带 brand 字段——品牌由服务端按账号自动注�
   assert(!('brand' in body), '前端不传 brand');
 });
 
-test('栏目化：premium 填了期数角标随出片提交，免费档输入禁用', async t => {
+test('栏目角标已下线：确认页没有期数输入，出片请求也不带 series', async t => {
   const h = await setup(t);
-  // 免费档：角标输入直接禁用（服务端还会再剥一层，双保险）
-  await h.evaluate('ME = {...ME, tier: "free"}');
   await h.openProject();
-  assert(h.get('epBadge').disabled, '免费档的角标输入要禁用');
-  // premium：填了就随出片提交
-  await h.evaluate('ME = {...ME, tier: "premium"}');
-  await h.openProject();
-  h.get('epBadge').value = '第 12 期';
-  h.get('epBadge').onchange();
+  assert.equal(h.get('epBadge'), null, '期数角标输入已下线');
   await start(h);
   const body = JSON.parse(builds(h)[0].body);
-  assert.equal(body.series.badge, '第 12 期', 'premium 的角标要随出片提交');
+  assert(!('series' in body), '出片请求不再带 series');
 });

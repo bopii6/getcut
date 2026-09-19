@@ -124,14 +124,12 @@ export type NiwoProps = {
   series?: {
     badge?: string;
   };
-  /** 品牌套件（高级档）：用户的 Logo/Slogan/联系方式 + 片尾卡窗口 */
+  /** 品牌套装（高级档）：用户的 Logo + 文字水印（右上角胶囊；片尾卡/品牌色已下线） */
   brand?: {
     /** renderer/public 下的相对路径（brand/<key>.png） */
     logo?: string;
-    slogan?: string;
-    contact?: string;
-    /** 片尾卡从这一毫秒淡入（这一段时长是片尾额外加的） */
-    endCardStartMs?: number;
+    /** 右上角水印文字，如 @阿伟说财经；留空回落 Powered by GetCut */
+    watermarkText?: string;
   };
   /** macro 模板：全程钉死的暗背景图（renderer/public/media 下的文件名） */
   bgImage?: string;
@@ -1356,7 +1354,7 @@ const TextProbe: React.FC<{url?: string; tag?: string}> = ({url, tag}) => {
  * 右上角是唯一六套都空着的地方。用深色半透明底 + 白字，浅色模板（数据面板）上也看得清。
  * 分轨导出时只压进底板层（card 层不画），否则每张卡片上都会叠一个。
  */
-const Watermark: React.FC<{logo?: string}> = ({logo}) => (
+const Watermark: React.FC<{logo?: string; text?: string}> = ({logo, text}) => (
   <div
     style={{
       position: 'absolute', top: 34, right: 38, display: 'flex', alignItems: 'center', gap: 9,
@@ -1365,16 +1363,20 @@ const Watermark: React.FC<{logo?: string}> = ({logo}) => (
     }}
   >
     {logo ? (
-      // 品牌套件：右上角摆用户自己的 Logo（等比缩进 34px 高的胶囊里）
+      // 品牌套装：右上角摆用户自己的 Logo（等比缩进 34px 高的胶囊里）
       <Img src={staticFile(logo)} alt="" style={{height: 30, maxWidth: 150, objectFit: 'contain', display: 'block'}} />
-    ) : (
+    ) : null}
+    {text ? (
+      <span style={{fontSize: 21, fontWeight: 700, letterSpacing: 0.4, whiteSpace: 'nowrap'}}>{text}</span>
+    ) : null}
+    {!logo && !text ? (
       <>
         <span style={{width: 15, height: 15, borderRadius: 5, background: '#B7AAFF', display: 'inline-block'}} />
         <span style={{fontSize: 21, fontWeight: 700, letterSpacing: 0.4, whiteSpace: 'nowrap'}}>
           Powered by <span style={{color: '#C9BEFF'}}>GetCut</span>
         </span>
       </>
-    )}
+    ) : null}
   </div>
 );
 
@@ -1391,47 +1393,6 @@ const SeriesBadge: React.FC<{text: string}> = ({text}) => (
     {text}
   </div>
 );
-
-/**
- * 品牌片尾卡（高级档）：片尾额外加的 2.9 秒，Logo + Slogan + 联系方式，
- * 淡入压住最后一镜的收尾呼吸。六套模板共用（顶层组件，不进各 layout）。
- */
-const BrandEndCard: React.FC<{spec: NonNullable<NiwoProps['brand']>}> = ({spec}) => {
-  const frame = useCurrentFrame();
-  const {fps, width} = useVideoConfig();
-  const t = (frame * 1000) / fps;
-  const start = spec.endCardStartMs ?? 0;
-  if (t < start) return null;
-  const k = Math.min(1, (t - start) / 380);   // 0→1 淡入
-  const ease = 1 - Math.pow(1 - k, 3);
-  return (
-    <div style={{
-      position: 'absolute', inset: 0, background: '#101217',
-      opacity: ease, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26,
-        transform: `translateY(${(1 - ease) * 26}px)`, padding: `0 ${width * 0.08}px`,
-      }}>
-        {spec.logo ? (
-          <Img src={staticFile(spec.logo)} alt="" style={{maxHeight: 190, maxWidth: '60%', objectFit: 'contain', display: 'block'}} />
-        ) : null}
-        {spec.slogan ? (
-          <div style={{fontFamily: T.font, fontSize: 46, fontWeight: 900, color: '#F4F5F8',
-            textAlign: 'center', lineHeight: 1.45, letterSpacing: 0.5}}>
-            {spec.slogan}
-          </div>
-        ) : null}
-        {spec.contact ? (
-          <div style={{fontFamily: T.font, fontSize: 27, fontWeight: 600, color: '#AAB3C1',
-            textAlign: 'center', whiteSpace: 'nowrap'}}>
-            {spec.contact}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-};
 
 // ---------------- root video ----------------
 export const NiwoVideo: React.FC<NiwoProps> = (props) => {
@@ -1468,8 +1429,7 @@ export const NiwoVideo: React.FC<NiwoProps> = (props) => {
       {probe}
       {body}
       {props.series?.badge && !isCard() ? <SeriesBadge text={props.series.badge} /> : null}
-      {props.watermark !== false && !isCard() ? <Watermark logo={props.brand?.logo} /> : null}
-      {props.brand?.endCardStartMs != null && !isCard() ? <BrandEndCard spec={props.brand} /> : null}
+      {props.watermark !== false && !isCard() ? <Watermark logo={props.brand?.logo} text={props.brand?.watermarkText} /> : null}
     </>
   );
 };

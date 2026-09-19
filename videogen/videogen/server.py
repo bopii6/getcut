@@ -237,7 +237,10 @@ def _is_public(path: str) -> bool:
     return (path in _PUBLIC_PATHS or path.startswith("/fonts/")
             or path.startswith("/templates/")
             # 试玩：新访客没账号也要能看选题、提交试做、看进度、拿样片
-            or path.startswith("/api/try") or path.startswith("/try/"))
+            or path.startswith("/api/try") or path.startswith("/try/")
+            # 剪映导入助手：安装器是公开脚本；pull 靠一次性 token 自证（见 _JY_PULL_TOKENS）
+            or path.startswith("/assistant/")
+            or path.startswith("/api/jianying/pull"))
 
 
 def _token_ok(request: Request) -> bool:
@@ -1163,8 +1166,9 @@ def jianying_import(pid: str, rid: str, request: Request):
     """一键导入剪映。
 
     这台机器上装了剪映（能找到草稿库）→ 直接把草稿装进去，用户打开剪映就能看到；
-    没装/不是本机（比如线上服务器）→ 回 {installed:false}，前端退回下载导入包
-    （包里带「一键导入剪映.bat」，解压后双击即可）。
+    没装/不是本机（比如线上服务器）→ 签发一次性 token 让本地小助手来取：
+    浏览器唤起 getcut:// 协议，助手凭 token 从 /api/jianying/pull 拉草稿包装进剪映，
+    全程用户不用下载、解压、跑脚本。
     """
     import tempfile
     from . import jianying_draft as jyd
@@ -1178,14 +1182,23 @@ def jianying_import(pid: str, rid: str, request: Request):
     if mf is None:
         return JSONResponse({"error": "这条成片没有草稿清单（旧成片不支持分轨草稿）"}, status_code=400)
 
-    plan_dir = jyd.prepare_draft(video, mf)          # 通常已由后台备好，这里是兜底
-    if plan_dir is None:
-        return JSONResponse({"installed": False, "download": True})
+    jyd.prepare_draft(video, mf)                 # 通常已由后台备好，这里是兜底
 
     root = jyd.jianying_draft_dir()
     if not root.is_dir():
-        # 服务器这一侧没有剪映（线上部署就是这样）：让前端去下载导入包
-        return {"installed": False, "download": True, "reason": "本机找不到剪映草稿目录"}
+        # 服务器这一侧没有剪映（线上部署就是这样）：签一次性 token 给本地小助手
+        # （prepare_draft 失败也不退回下载：build_zip 自带"整条切片"兜底，照样一键进剪映）
+        token = uuid.uuid4().hex
+        with _LOCK:
+            now = time.time()
+            for k in [k for k, v in _JY_PULL_TOKENS.items() if v["exp"] < now]:
+                _JY_PULL_TOKENS.pop(k, None)
+            _JY_PULL_TOKENS[token] = {
+                "video": str(video), "rid": rid,
+                "title": (mf.get("title") or "成片"),
+                "email": _session_email(request), "exp": now + 300}
+        return {"installed": False, "protocol": True,
+                "pull": f"/api/jianying/pull?t={token}"}
 
     voice = mf.get("voice")
     with tempfile.TemporaryDirectory() as td:
@@ -1193,6 +1206,64 @@ def jianying_import(pid: str, rid: str, request: Request):
         jyd.build_zip(mf, video, Path(voice) if voice else None, zip_path)
         dest = jyd.install_draft(zip_path)
     return {"installed": True, "name": dest.name}
+
+
+# 一次性草稿提取 token（线上"导入到剪映"专用）：小助手没有浏览器会话，
+# 靠它自证身份。5 分钟过期，下载成功即焚，签发前已过高级版付费墙。
+_JY_PULL_TOKENS: dict[str, dict] = {}
+
+
+@app.get("/api/jianying/pull")
+def jianying_pull(t: str = ""):
+    """本地小助手凭一次性 token 拉剪映草稿包（无会话，token 即凭证）。"""
+    info = _JY_PULL_TOKENS.get(t)
+    if not info or info["exp"] < time.time():
+        _JY_PULL_TOKENS.pop(t, None)
+        return JSONResponse(
+            {"error": "导入链接已过期或已使用，请回到页面重新点「一键导入到剪映」"},
+            status_code=403)
+    from . import jianying_draft as jyd
+    from pathlib import Path as _P
+
+    video = _P(info["video"])
+    if not video.is_file():
+        _JY_PULL_TOKENS.pop(t, None)
+        return JSONResponse({"error": "成片文件缺失"}, status_code=404)
+    mf = jyd.load_manifest(video)
+    if mf is None:
+        return JSONResponse({"error": "草稿清单缺失，请回页面重新点「一键导入到剪映」"},
+                            status_code=400)
+    mf["render_id"] = info["rid"]
+    mf.setdefault("title", info["title"])
+    voice = mf.get("voice")
+    try:
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            zpath = _P(td) / "draft.zip"
+            jyd.build_zip(mf, video, _P(voice) if voice else None, zpath)
+            data = zpath.read_bytes()
+    except Exception as exc:  # noqa: BLE001 - 打包失败保留 token，助手重试还能用
+        return JSONResponse({"error": f"草稿打包失败: {exc}"}, status_code=500)
+    _JY_PULL_TOKENS.pop(t, None)      # 下载成功才焚 token
+    fname = f"GetCut-剪映草稿-{info['rid'][:6]}.zip"
+    from urllib.parse import quote
+    return Response(
+        content=data, media_type="application/zip",
+        headers={"Content-Disposition":
+                 "attachment; filename=getcut-draft.zip; "
+                 "filename*=UTF-8''{}".format(quote(fname))})
+
+
+@app.get("/assistant/GetCut-Setup.bat")
+def jianying_assistant_installer():
+    """导入助手安装器（单文件 bat，内嵌 ps1）。公开路由：脚本里没有用户数据。"""
+    f = config.STATIC / "assistant" / "GetCut-Setup.bat"
+    if not f.is_file():
+        return JSONResponse({"error": "安装器未构建：跑 python _tools/build_assistant.py"},
+                            status_code=404)
+    return FileResponse(f, media_type="application/octet-stream",
+                        headers={"Content-Disposition":
+                                 "attachment; filename=GetCut-Setup.bat"})
 
 
 @app.get("/api/projects/{pid}/renders/{rid}/jianying-draft")

@@ -114,10 +114,7 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
 
     content = Content.load(bundle / "content.json")
     manifest = Manifest.load(bundle / "manifest.json")
-    # 栏目化（高级档）：固定开场白拼在口播稿最前面——它走完整管线（配音/字幕/分镜），
-    # 开场白正好盖在标题卡画面上，和"大家好我是 XX"的真实观感一致
-    if brand and brand.get("opening"):
-        content.script = brand["opening"].strip() + "\n" + content.script
+    # 固定开场白已下线（用户拍板：开场不加口播，直接进片）；账号级发音库合并保留
     user_terms = (brand or {}).get("terms") or {}
     if user_terms:
         content.pronunciations = {**(content.pronunciations or {}), **user_terms}

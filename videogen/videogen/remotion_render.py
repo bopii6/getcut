@@ -17,7 +17,7 @@ from .schemas import Content
 RENDERER = Path(__file__).resolve().parent.parent / "renderer"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
-DISCLAIMER = "本片内容基于公开报道与公开资料整理，观点仅供参考，不构成任何投资建议"
+DISCLAIMER = ""   # 免责声明已整体下线；调用方显式传文案才会显示
 
 
 def _report(fn, pct: int, detail: str | None = None) -> None:
@@ -208,10 +208,10 @@ def _macro_series_title(title: str) -> str:
 
 
 def apply_brand(props: dict, bundle: Path, brand: dict | None) -> None:
-    """把品牌套件写进 props（已成的 props 也能补，预演复用路径用）。
+    """把品牌套装写进 props（已成的 props 也能补，预演复用路径用）。
 
-    Logo 拷进 renderer/public/brand/<key>.png 走 staticFile；水印开 = 水印位置
-    摆自己的 Logo（关 = 干净成片）；片尾卡字段整体塞进 props["brand"]。
+    Logo 拷进 renderer/public/brand/<key>.png 走 staticFile；水印胶囊 =
+    传了 Logo 摆 Logo，配 watermark_text 一起出；片尾卡/品牌色已下线。
     """
     if not brand:
         return
@@ -230,13 +230,8 @@ def apply_brand(props: dict, bundle: Path, brand: dict | None) -> None:
     spec: dict = {}
     if logo_rel:
         spec["logo"] = logo_rel
-    if brand.get("slogan"):
-        spec["slogan"] = str(brand["slogan"])
-    if brand.get("contact"):
-        spec["contact"] = str(brand["contact"])
-    start = brand.get("end_card_start_ms")
-    if start is not None:
-        spec["endCardStartMs"] = int(start)
+    if brand.get("watermark_text"):
+        spec["watermarkText"] = str(brand["watermark_text"])
     if spec:
         props["brand"] = spec
 
