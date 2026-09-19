@@ -236,7 +236,6 @@ _PUBLIC_PATHS = {"/", "/index.html", "/healthz", "/api/templates",
 def _is_public(path: str) -> bool:
     return (path in _PUBLIC_PATHS or path.startswith("/fonts/")
             or path.startswith("/templates/")
-            or path.startswith("/api/qr/")
             # 试玩：新访客没账号也要能看选题、提交试做、看进度、拿样片
             or path.startswith("/api/try") or path.startswith("/try/"))
 
@@ -660,12 +659,9 @@ def me_update(body: dict, request: Request):
 
 @app.get("/api/pricing")
 def pricing(request: Request):
-    """定价页数据（公开）：价格、站长微信、收款码在不在。"""
+    """定价页数据（公开）：价格与站长微信。收款码功能已拆（只走微信转账）。"""
     email = _session_email(request)
-    wechat_qr = (config.QR_DIR / "wechat").is_file()
-    alipay_qr = (config.QR_DIR / "alipay").is_file()
     return {"prices": config.PRICES, "wechat_id": config.SALES_WECHAT_ID or "",
-            "qr": {"wechat": wechat_qr, "alipay": alipay_qr},
             "free_daily_builds": config.FREE_DAILY_BUILDS,
             "tier": auth.user_tier(email), "email": email or "",
             "is_admin": auth.is_admin(email)}
@@ -714,40 +710,6 @@ def admin_gen_licenses(body: dict, request: Request):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     return {"codes": codes, "stats": licenses.stats()}
-
-
-_QR_MEDIA = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg"}
-
-
-@app.post("/api/admin/qr")
-def admin_upload_qr(request: Request, which: str = "wechat", file: UploadFile = None):
-    """上传收款码（wechat / alipay）。图片落工作区持久卷，重启不丢。"""
-    if not _is_adminish(request):
-        return JSONResponse({"error": "只有管理员能上传"}, status_code=403)
-    if which not in ("wechat", "alipay") or file is None:
-        return JSONResponse({"error": "参数不对"}, status_code=400)
-    data = file.file.read(4 * 1024 * 1024 + 1)
-    if len(data) > 4 * 1024 * 1024:
-        return JSONResponse({"error": "图片别超过 4MB"}, status_code=400)
-    media = next((m for magic, m in _QR_MEDIA.items() if data.startswith(magic)), None)
-    if media is None:
-        return JSONResponse({"error": "只认 PNG / JPG 图片"}, status_code=400)
-    config.QR_DIR.mkdir(parents=True, exist_ok=True)
-    (config.QR_DIR / which).write_bytes(data)
-    return {"ok": True, "which": which, "media": media}
-
-
-@app.get("/api/qr/{which}")
-def qr_image(which: str):
-    """收款码图片（公开，定价页要展示）。"""
-    if which not in ("wechat", "alipay"):
-        return JSONResponse({"error": "not found"}, status_code=404)
-    f = config.QR_DIR / which
-    if not f.is_file():
-        return JSONResponse({"error": "not found"}, status_code=404)
-    head = f.read_bytes()[:4]
-    media = next((m for magic, m in _QR_MEDIA.items() if head.startswith(magic)), "image/png")
-    return FileResponse(f, media_type=media)
 
 
 # ---------- 试听（B5）----------

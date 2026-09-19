@@ -77,7 +77,7 @@ async function createHarness({storage = {}} = {}) {
   respond('GET', '/api/voices', {voices: ['zh-CN-YunxiNeural', 'zh-CN-YunjianNeural', 'zh-CN-XiaoxiaoNeural']
     .map(id => ({id, label: id, provider: 'edge'})), dashscope: false, default: 'zh-CN-YunxiNeural'});
   respond('GET', '/api/pricing', {prices: {basic: 399, premium: 599}, wechat_id: 'getcut-admin',
-    qr: {wechat: true, alipay: false}, free_daily_builds: 2, tier: 'premium', email: 'offline@example.invalid', is_admin: false});
+    free_daily_builds: 2, tier: 'premium', email: 'offline@example.invalid', is_admin: false});
   respond('GET', '/api/templates', {default: 'editorial', templates: ['editorial', 'news', 'data', 'poster', 'bleed', 'zhigu'].map(id => ({id, name: id}))});
   respond('GET', '/api/projects', () => projects);
   respond('GET', '/api/jobs', {concurrency: 1, active: [], recent: []});

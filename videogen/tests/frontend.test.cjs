@@ -483,8 +483,7 @@ test('权益整页：价格/微信/收款码按 /api/pricing 渲染，兑换卡�
   assert.equal(h.evaluate('location.hash'), '#/pricing', '网址要落到 #/pricing，直播间链接可直达');
   assert(page.textContent.includes('¥399') && page.textContent.includes('¥599'), '两档价格要摆出来');
   assert(page.textContent.includes('getcut-admin'), '创始人微信号要展示（直播间销售流程）');
-  assert(h.document.querySelector('.price-qr img'), 'mock 里微信码存在 → 要渲染成图片');
-  assert(!h.document.querySelector('.price-qr .ph'), '支付宝没传 → 不渲染破图占位，保持页面清爽');
+  assert(!h.document.querySelector('.price-qr'), '收款码功能已整体拆除，页面不该出现二维码位');
   h.get('prCode').value = ' gcp-7k2m-9xq4 ';
   h.respond('POST', '/api/license/redeem', {ok: true, message: '激活成功！你现在是高级版', tier: 'premium', tier_label: '高级版'});
   h.click('#prGo'); await h.flush();

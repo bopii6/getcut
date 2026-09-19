@@ -528,11 +528,6 @@ textarea:focus{outline:none;border-color:var(--acc)}
 .price-steps{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}
 .price-steps span{flex:1;min-width:150px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--ink-2)}
 .price-steps b{color:var(--ink)}
-.price-qr{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 4px}
-.price-qr figure{margin:0;text-align:center}
-.price-qr img,.price-qr .ph{width:150px;height:150px;border-radius:10px;border:1px dashed var(--line2);object-fit:contain;background:#fff;display:block}
-.price-qr .ph{display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:12px;background:var(--surface2)}
-.price-qr figcaption{font-size:12px;color:var(--ink-2);margin-top:6px}
 .redeem-row{display:flex;gap:8px;margin-top:6px}
 .redeem-row input{flex:1}
 .tier-chip{border:1px solid var(--line2);border-radius:999px;font-size:11.5px;padding:4px 10px;color:var(--ink-2);cursor:pointer;background:none}
@@ -1802,8 +1797,6 @@ async function openPricing(){
   const wx = p.wechat_id
     ? `<b>${esc(p.wechat_id)}</b> <button class="btn sm line" id="ppWxCopy">复制</button>`
     : `<b>即将公布</b>`;
-  const qrWechat = p.qr.wechat ? `<figure><img src="${qs("/api/qr/wechat")}&t=${Date.now()}" alt="微信收款码"><figcaption>微信收款</figcaption></figure>` : "";
-  const qrAlipay = p.qr.alipay ? `<figure><img src="${qs("/api/qr/alipay")}&t=${Date.now()}" alt="支付宝收款码"><figcaption>支付宝</figcaption></figure>` : "";
   $("main").innerHTML = `<div class="view pp"><div class="pp-wrap">
     <h1>权益与定价</h1>
     <p class="pp-sub">买断制，一次付费，永久使用。</p>
@@ -1826,10 +1819,9 @@ async function openPricing(){
     </div>
     <div class="pp-how">
       <h2>怎么开通</h2>
-      ${qrWechat || qrAlipay ? `<div class="price-qr">${qrWechat}${qrAlipay}</div>` : ""}
       <ol>
-        <li>${qrWechat ? "按你要的档位扫码付款。" : "微信转账付款，说明要哪一档。"}</li>
-        <li>加创始人微信，发付款截图，马上拿卡密：<span class="pp-wx">微信号 ${wx}</span></li>
+        <li>加创始人微信，说明要哪一档，直接微信转账。<span class="pp-wx">微信号 ${wx}</span></li>
+        <li>发付款截图，马上拿卡密。</li>
         <li>回来输卡密，立即生效。</li>
       </ol>
     </div>
@@ -1906,16 +1898,11 @@ async function paintPricingAdmin(m, p){
   host.innerHTML = `<h4>站长面板（只有你能看到）</h4>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <select id="adTier" style="width:auto"><option value="premium">高级版 ¥${p.prices.premium}</option><option value="basic">基础版 ¥${p.prices.basic}</option></select>
-      <input id="adCount" type="number" min="1" max="200" value="10" style="width:76px">
+      <input id="adCount" type="number" min="1" max="200" value="10" title="一次生成几张卡密" style="width:76px">
       <input id="adNote" placeholder="备注（如 9.20 直播场）" style="flex:1;min-width:140px">
       <button class="btn sm" id="adGen">生成卡密</button>
     </div>
     <div id="adCodes"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
-      <label class="btn sm line" style="cursor:pointer">传微信收款码<input id="adQrW" type="file" accept="image/png,image/jpeg" style="display:none"></label>
-      <label class="btn sm line" style="cursor:pointer">传支付宝收款码<input id="adQrA" type="file" accept="image/png,image/jpeg" style="display:none"></label>
-      <span id="adQrMsg" style="font-size:12px;color:var(--ink-2)"></span>
-    </div>
     <div class="lic-list" id="adList"><div style="border:0">加载中…</div></div>`;
   const list = host.querySelector("#adList");
   const paintList = async () => {
@@ -1946,18 +1933,6 @@ async function paintPricingAdmin(m, p){
     } catch (e) { toast(e.message || "生成失败"); }
     btn.disabled = false; btn.textContent = "生成卡密";
   };
-  const upQr = (inputId, which) => host.querySelector(inputId).onchange = async () => {
-    const inp = host.querySelector(inputId), msg = host.querySelector("#adQrMsg");
-    if (!inp.files || !inp.files[0]) return;
-    const fd = new FormData(); fd.append("file", inp.files[0]);
-    msg.textContent = "上传中…";
-    try {
-      await api(`/api/admin/qr?which=${which}`, { method: "POST", body: fd });
-      msg.textContent = "已上传，定价页立刻生效";
-      openPricing();
-    } catch (e) { msg.textContent = e.message || "上传失败"; }
-  };
-  upQr("#adQrW", "wechat"); upQr("#adQrA", "alipay");
   paintList();
 }
 
@@ -2310,11 +2285,11 @@ function setFlowView(view){
 function paintFlow(){
   if (!FLOW || !CUR) return;
   const view = FLOW.view, b = CURB;
-  const titles = {import:"从一个压缩包，开始制作。",confirm:"确认内容，选好长相",generate:"每一步，都能看到处理了什么",export:"这一版做好了，拿走就行。"};
+  const titles = {import:"从一个压缩包，开始制作。",confirm:"内容已就绪，选好画面和声音",generate:"正在生成你的视频",export:"这一版做好了，拿走就行。"};
   const here = FLOW_STEPS.findIndex(x => x[0] === view);
   $("main").innerHTML = `<div class="view vg-flow">
     <nav class="vg-steps" aria-label="制作流程">${FLOW_STEPS.map(([v,label],i) => `${i ? '<em aria-hidden="true"></em>' : ''}<button data-flow="${v}" ${v === view ? 'aria-current="step"' : ''} class="${i < here ? "vg-done" : ""}" ${v === "confirm" && !b || v === "generate" && !FLOW.jobId || v === "export" && !flowRenders().length && (FLOW.status || {}).stage !== "done" ? 'disabled' : ''}><i aria-hidden="true">${i < here ? "✓" : i+1}</i><span>${label}</span></button>`).join("")}</nav>
-    <div class="vg-context"><div><h1>${titles[view]}</h1><p class="vg-sub">${view === "confirm" ? "文案和素材已经就绪，不用改；选好画面和声音，再开始生成。" : view === "generate" ? "进度到 100% 就能看；页面可以关掉，回来点项目就能接着看。" : view === "export" ? "先看一遍，没问题就下载 MP4；想再剪一遍，导出剪映草稿。" : "导入素材，检查内容，看着它生成，最后下载。"}</p></div></div>
+    <div class="vg-context"><div><h1>${titles[view]}</h1><p class="vg-sub">${view === "confirm" ? "下面每一项都会直接进成片，选好点开始就行。" : view === "generate" ? "页面可以关掉，回来点项目就能接着看。" : view === "export" ? "先看一遍，没问题就下载 MP4；想再剪一遍，导出剪映草稿。" : "导入素材，检查内容，看着它生成，最后下载。"}</p></div></div>
     <div id="vg-view"></div><footer class="vg-footer"><div class="vg-footer-in" id="vg-footer"></div></footer>
   </div>`;
   document.querySelectorAll("[data-flow]").forEach(el => el.onclick = () => setFlowView(el.dataset.flow));

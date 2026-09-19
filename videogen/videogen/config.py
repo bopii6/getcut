@@ -69,8 +69,6 @@ AUTH_SECRET_FILE = _env("VIDEOGEN_AUTH_SECRET") or str(WORKSPACES / ".videogen-a
 # 卡密与用量记账（工作区持久卷）
 LICENSES_FILE = _env("VIDEOGEN_LICENSES_FILE") or str(WORKSPACES / ".videogen-licenses.json")
 USAGE_FILE = _env("VIDEOGEN_USAGE_FILE") or str(WORKSPACES / ".videogen-usage.json")
-# 定价页收款码图片（微信/支付宝），管理员在后台上传，落在这里
-QR_DIR = Path(_env("VIDEOGEN_QR_DIR") or str(WORKSPACES / ".videogen-qr"))
 
 # 发信邮箱（注册验证码）。任意支持 SMTP 的邮箱均可（QQ/163/企业邮箱）：
 #   EMAIL_SMTP_HOST=smtp.qq.com  EMAIL_SMTP_PORT=465（SSL）
