@@ -6,9 +6,11 @@ shots, designed-overlay copy), Remotion renders the editorial TSX template.
 from __future__ import annotations
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
+import time
 from pathlib import Path
 
 from .planner import Plan
@@ -18,6 +20,12 @@ RENDERER = Path(__file__).resolve().parent.parent / "renderer"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 DISCLAIMER = ""   # 免责声明已整体下线；调用方显式传文案才会显示
+
+
+def _safe_key(key: str | None, default: str = "job") -> str:
+    """渲染中间产物文件名里的任务标识：只留安全字符，避免拼路径出事。"""
+    k = re.sub(r"[^0-9A-Za-z_-]", "_", str(key or ""))[:48]
+    return k or default
 
 
 def _report(fn, pct: int, detail: str | None = None) -> None:
@@ -184,14 +192,20 @@ def build_props(bundle: Path, plan: Plan, content: Content,
         props_out["series"] = {"badge": str(series["badge"])[:24]}
     props_out = {k: v for k, v in props_out.items() if v is not None}
     apply_brand(props_out, bundle, brand)
-    # 清理本素材包上一轮残留的媒体文件（避免磁盘无界增长）
+    # 清理本素材包上一轮残留的媒体文件（避免磁盘无界增长）。
+    # 只清"够老"的残留：双通道流水线下，同一素材包可能有别的任务正在渲染、
+    # 还引用着这些文件，按 mtime 护栏避开，超过一天的残留才动。
     prefix = f"{bundle.name}__"
+    now_ts = time.time()
     for old in media_dir.glob(f"{prefix}*"):
-        if old.name not in used_media:
-            try:
-                old.unlink()
-            except OSError:
-                pass
+        if old.name in used_media:
+            continue
+        try:
+            if now_ts - old.stat().st_mtime < 86400:
+                continue
+            old.unlink()
+        except OSError:
+            pass
     return props_out
 
 
@@ -242,7 +256,7 @@ def render_stills(props: dict, out_dir: Path, prefix: str,
 
     每张 still 由 Remotion 单独渲染，单张约 1–3 秒；失败不影响正式渲染。
     """
-    props_path = RENDERER / "props.json"
+    props_path = RENDERER / f"props_still_{_safe_key(prefix, 'still')}.json"
     props_path.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
     cli_js = RENDERER / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"
     node = shutil.which("node")
@@ -253,11 +267,12 @@ def render_stills(props: dict, out_dir: Path, prefix: str,
         return []
     out_dir.mkdir(parents=True, exist_ok=True)
     made: list[Path] = []
+    props_flag = f"--props={props_path.name}"
     for i, ratio in enumerate(ratios, start=1):
         frame = max(0, min(total - 1, int(total * ratio)))
         out = out_dir / f"{prefix}-still-{i}.jpg"
         cmd = [node, str(cli_js), "still", "main", str(out),
-               "--frame", str(frame), "--props=props.json",
+               "--frame", str(frame), props_flag,
                "--image-format=jpeg", "--jpeg-quality", str(quality), "--log=error"]
         try:
             p = subprocess.run(cmd, cwd=str(RENDERER), capture_output=True,
@@ -266,6 +281,10 @@ def render_stills(props: dict, out_dir: Path, prefix: str,
                 made.append(out)
         except Exception:
             pass
+    try:
+        props_path.unlink()
+    except OSError:
+        pass
     return made
 
 
@@ -341,8 +360,11 @@ def render_draft_layers(props: dict, frames: list[dict], base_out: Path, card_di
 
 
 def render_visual(props: dict, out_path: Path, timeout: int = 1800,
-                  progress=None) -> Path:
-    props_path = RENDERER / "props.json"
+                  progress=None, key: str = "job") -> Path:
+    # 渲染中间产物按任务隔离（props/输出/日志各一份）：双通道流水线下允许
+    # 多路渲染同时在跑，共用同一份 props.json/visual_out.mp4 会互相覆盖。
+    key = _safe_key(key, "job")
+    props_path = RENDERER / f"props_{key}.json"
     props_path.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
     cli_js = RENDERER / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"
     node = shutil.which("node")
@@ -350,24 +372,32 @@ def render_visual(props: dict, out_path: Path, timeout: int = 1800,
         raise RuntimeError("Remotion CLI not installed; run npm i in renderer/")
     # relative output inside the renderer dir: avoids cmd-shim mangling of
     # non-ASCII absolute paths when forwarding args
-    rel_out = "visual_out.mp4"
+    rel_out = f"visual_{key}.mp4"
     # 渲染参数（实测于 4 核云主机，画质不变、只影响编码与并行度）：
     #   image-format=jpeg + q95 —— 逐帧截图的编码开销远低于 png，肉眼无差
     #   x264-preset=veryfast    —— 同画质，文件略大
     #   concurrency             —— 默认只吃一半核；用满核数（Remotion 上限=核数），实测 4 核最快
-    conc = max(2, min(4, os.cpu_count() or 2))
+    # 多路并发时每路少开几个 tab，免得内存/CPU 互相挤爆（4 核机器两路各 2 个正合适）
+    default_conc = max(2, min(4, os.cpu_count() or 2))
+    conc = default_conc
+    if os.environ.get("VIDEOGEN_CONCURRENCY"):
+        try:
+            lanes = max(1, int(os.environ["VIDEOGEN_CONCURRENCY"]))
+            conc = max(1, min(default_conc, (os.cpu_count() or 4) // lanes))
+        except ValueError:
+            pass
     # crf 23：Remotion 默认（18）在动效重的模板上会放飞码率——实测智谷三段式
     # 91 秒的片子能到 81MB（7 Mbps），发出去、传上平台都嫌大。23 在竖屏信息类里
     # 观感几乎无差别，体积能砍到 1/3 左右。
     cmd = [node, str(cli_js), "render", "main", rel_out,
-           "--props=props.json",
+           f"--props={props_path.name}",
            "--image-format=jpeg", "--jpeg-quality=95",
            "--crf=23", "--x264-preset=veryfast", f"--concurrency={conc}"]
     import re as _re
     import time as _time
     # stdout 重定向到文件而非管道：Remotion 的 Chrome 子进程会继承管道句柄，
     # 用 PIPE 会在渲染结束后拖住 EOF 数分钟（已实测）。
-    log_path = RENDERER / "render.log"
+    log_path = RENDERER / f"render_{key}.log"
     tail = []
     last_pct = -1
     deadline = _time.time() + timeout
@@ -416,4 +446,8 @@ def render_visual(props: dict, out_path: Path, timeout: int = 1800,
         raise RuntimeError("remotion render failed:" + chr(10) + "".join(tail)[-4000:])
     out_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(produced), str(out_path))
+    try:
+        props_path.unlink()
+    except OSError:
+        pass
     return out_path

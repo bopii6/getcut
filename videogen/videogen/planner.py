@@ -44,6 +44,43 @@ class Plan:
     bg_asset: str | None = None
 
 
+# ---------- Plan <-> JSON ----------
+# 双通道流水线里，预备阶段（配音/分镜）与渲染阶段分两次进程内调用，
+# Plan 靠落盘中转；字段与 dataclass 严格对应，多缺字段都不致命。
+
+def plan_to_dict(plan: Plan) -> dict:
+    return {
+        "duration_ms": plan.duration_ms,
+        "theme": dict(plan.theme or {}),
+        "style_pack": plan.style_pack or "",
+        "bg_asset": plan.bg_asset,
+        "shots": [{"kind": s.kind, "asset_path": s.asset_path,
+                   "sent_indexes": list(s.sent_indexes or []),
+                   "start_ms": s.start_ms, "end_ms": s.end_ms,
+                   "chapter_label": s.chapter_label,
+                   "overlay": dict(s.overlay or {})} for s in plan.shots],
+        "clauses": [{"text": c.text, "sent_index": c.sent_index,
+                     "start_ms": c.start_ms, "end_ms": c.end_ms} for c in plan.clauses],
+    }
+
+
+def plan_from_dict(d: dict) -> Plan:
+    return Plan(
+        shots=[Shot(kind=s.get("kind") or "footage", asset_path=s.get("asset_path"),
+                    sent_indexes=list(s.get("sent_indexes") or []),
+                    start_ms=s.get("start_ms") or 0.0, end_ms=s.get("end_ms") or 0.0,
+                    chapter_label=s.get("chapter_label") or "",
+                    overlay=dict(s.get("overlay") or {})) for s in d.get("shots") or []],
+        clauses=[Clause(text=c.get("text") or "", sent_index=int(c.get("sent_index") or 0),
+                        start_ms=c.get("start_ms") or 0.0, end_ms=c.get("end_ms") or 0.0)
+                 for c in d.get("clauses") or []],
+        duration_ms=d.get("duration_ms") or 0.0,
+        theme=dict(d.get("theme") or {}),
+        style_pack=d.get("style_pack") or "",
+        bg_asset=d.get("bg_asset"),
+    )
+
+
 # ---------- 节奏：由规则算，不由大模型决定 ----------
 # 大模型只看得见文字、看不见"这句话在耳朵里多长"，所以它的镜头切分总会忽长忽短。
 # 这里做的是：把它给的每个单元的设计（素材/卡/章节标签）记下来，然后**按真实时间轴

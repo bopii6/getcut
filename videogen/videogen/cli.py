@@ -1,12 +1,19 @@
 """videogen CLI: bundle in, video out.
 
     python -m videogen build <bundle_dir> -o out.mp4 [--work workdir]
+
+流水线拆成两段（双通道排队的基础）：
+  build_prep   配音(TTS) → AI 分镜(LLM) → 画面版式(props) → 剧照，网络等待为主
+  build_render 画面渲染(Remotion) → 音效混音 → 封装 → 校验，吃 CPU 为主
+两段之间靠 work_dir 里的 props.json / prep.json 落盘中转；build() = 两段顺序执行。
 """
 from __future__ import annotations
 
 import argparse
 import json
 import shutil
+import subprocess
+import threading
 from pathlib import Path
 
 from . import brand as brand_kit
@@ -15,12 +22,22 @@ from .config import DEFAULT_TEMPLATE, TEMPLATE_ALIAS, TEMPLATES
 from .config import OUTPUTS as _OUTPUTS
 from .planner import (align_timeline, build_plan, build_plan_clone, build_plan_llm,
                       build_plan_macro, clause_units, split_clauses, sentence_spans,
-                      unit_spans)
+                      unit_spans, plan_to_dict, plan_from_dict)
 from .schemas import Content, Manifest, HIGHLIGHT
 
 WORK = Path(__file__).resolve().parent.parent / "work"
 
 # 模板注册表见 config.TEMPLATES（与 renderer/src/skin.ts 的 SKINS 一一对应）
+
+
+# TTS 缓存目录按素材包共享（同包重建不重复花钱合成）；同一包并发预备时串行合成
+_TTS_LOCKS: dict[str, threading.Lock] = {}
+_TTS_LOCKS_GUARD = threading.Lock()
+
+
+def _tts_lock(name: str) -> threading.Lock:
+    with _TTS_LOCKS_GUARD:
+        return _TTS_LOCKS.setdefault(name, threading.Lock())
 
 
 # 标题卡关键词兜底：命中脚本里的事件性强动词就用；都没命中退回标题前几字。
@@ -85,17 +102,8 @@ def _quote_of(script: str) -> tuple[str, str]:
     return "划重点", quote
 
 
-def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
-          voice: str | None = None, rate: str | None = None,
-          bgm: Path | None = None, renderer: str = "remotion",
-          progress=None, clone: Path | None = None,
-          format: str = DEFAULT_TEMPLATE, sfx: bool = True,
-          sfx_mode: str = "full",
-          show_subtitles: bool = True, show_sources: bool = True,
-          theme: str = "auto", disclaimer: str | None = None,
-          use_llm: bool = True, job_id: str | None = None,
-          vision: bool = True, watermark: bool = True,
-          brand: dict | None = None, series: dict | None = None) -> Path:
+def _report_of(progress):
+    """统一的进度上报：兼容只接受 (stage, pct) 的旧回调。"""
     def report(stage: str, pct: int, detail: str | None = None) -> None:
         if progress:
             try:
@@ -104,6 +112,24 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                 progress(stage, pct)
             except Exception:
                 pass
+    return report
+
+
+def build_prep(bundle_dir: Path, work_dir: Path | None = None,
+               voice: str | None = None, rate: str | None = None,
+               clone: Path | None = None, format: str = DEFAULT_TEMPLATE,
+               use_llm: bool = True, theme: str = "auto",
+               disclaimer: str | None = None, watermark: bool = True,
+               brand: dict | None = None, series: dict | None = None,
+               job_id: str | None = None, progress=None,
+               show_subtitles: bool = True, show_sources: bool = True,
+               renderer: str = "remotion") -> dict:
+    """流水线前半程：等外部 API 的活（配音/分镜/文案/版式）。
+
+    产物全部落盘到 work_dir，渲染阶段凭 prep.json + props.json 继续，
+    不再发起任何外部请求。返回的 dict 会原样传给 build_render。
+    """
+    report = _report_of(progress)
     bundle = Path(bundle_dir)
     work = Path(work_dir) if work_dir else WORK / bundle.name
     work.mkdir(parents=True, exist_ok=True)
@@ -120,11 +146,13 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
         content.pronunciations = {**(content.pronunciations or {}), **user_terms}
     badge = str((series or {}).get("badge") or "").strip()[:24]
 
-    # 1) TTS + timeline
+    # 1) TTS + timeline（缓存目录按素材包共享：同包重建直接命中缓存，不再扣费）
     report("tts", 8, "正在合成配音（通常 30–90 秒）")
-    mp3, events = tts.synthesize(content.script, content.pronunciations,
-                                 work / "tts", voice=voice or tts.VOICE,
-                                 rate=rate or tts.RATE)
+    tts_dir = work.parent / "_tts" / bundle.name
+    with _tts_lock(bundle.name):
+        mp3, events = tts.synthesize(content.script, content.pronunciations,
+                                     tts_dir, voice=voice or tts.VOICE,
+                                     rate=rate or tts.RATE)
     clauses = align_timeline(split_clauses(content), events)
 
     # storyboard director: LLM plans shots + card copy; rules are the fallback
@@ -204,6 +232,7 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     brand = brand_kit.apply_to_plan(plan, brand)
     duration_s = plan.duration_ms / 1000.0
 
+    props = None
     if renderer == "remotion":
         # 预演复用：分镜预览已落盘 props.json（且配音已生成）时直接用它，
         # 保证预览所见与成片一致。helper 未就绪或数据不全时静默回落到正常路径。
@@ -236,7 +265,7 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
         else:
             report("props", 30, "使用分镜预览确认过的画面设计")
             props = pre_props
-        # 草稿分轨要用同一份 props：拷到 work 里存档（renderer/props.json 会被下次渲染覆盖）
+        # 草稿分轨要用同一份 props：拷到 work 里存档（渲染阶段从这里读）
         try:
             (work / "props.json").write_text(
                 json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -251,13 +280,63 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                     report("props", 38, f"分镜剧照 {len(stills)} 张已就绪")
             except Exception:
                 pass
+
+    prep = {
+        "work_dir": str(work),
+        "bundle_dir": str(bundle),
+        "template": template,
+        "renderer": renderer,
+        "plan": plan_to_dict(plan),
+        # duration_ms = 真正用于混音/封装的时长（预演复用时可能与 plan 里的不同）
+        "duration_ms": duration_s * 1000.0,
+        "voice": str(mp3) if mp3 else None,
+        "llm_used": bool(llm_used),
+        "title_card": {"label": title_label, "keyword": title_kw},
+        "quote_card": {"label": q_label, "quote": q_text},
+    }
+    try:
+        (work / "prep.json").write_text(json.dumps(prep, ensure_ascii=False, indent=1),
+                                        encoding="utf-8")
+    except Exception:
+        pass
+    return prep
+
+
+def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
+                 prep: dict | None = None, bgm: Path | None = None,
+                 renderer: str = "remotion", sfx: bool = True, sfx_mode: str = "full",
+                 show_subtitles: bool = True, show_sources: bool = True,
+                 job_id: str | None = None, progress=None,
+                 vision: bool = True) -> Path:
+    """流水线后半程：吃 CPU 的活（画面渲染/混音/封装/校验），全程不碰外部 API。
+
+    prep = build_prep 的返回（缺省时从 work_dir/prep.json 读，兜底自愈）。
+    """
+    report = _report_of(progress)
+    bundle = Path(bundle_dir)
+    work = Path(work_dir) if work_dir else WORK / bundle.name
+    if prep is None:
+        prep = json.loads((work / "prep.json").read_text(encoding="utf-8"))
+    template = prep.get("template") or "editorial"
+    renderer = prep.get("renderer") or renderer
+    plan = plan_from_dict(prep.get("plan") or {})
+    duration_s = (prep.get("duration_ms") or plan.duration_ms) / 1000.0
+    content = Content.load(bundle / "content.json")
+    manifest = Manifest.load(bundle / "manifest.json")
+
+    if renderer == "remotion":
         report("render", 0, "启动渲染引擎")
+        props = json.loads((work / "props.json").read_text(encoding="utf-8"))
         visual = remotion_render.render_visual(
-            props, work / "visual.mp4",
+            props, work / "visual.mp4", key=str(job_id) if job_id else "cli",
             progress=lambda p, d=None: report("render", max(0, min(p, 100)), d))
         withsubs = visual
     else:
         # legacy PIL compositor (fallback)
+        tc = prep.get("title_card") or {}
+        qc = prep.get("quote_card") or {}
+        title_label, title_kw = tc.get("label", ""), tc.get("keyword", "")
+        q_label, q_text = qc.get("label", ""), qc.get("quote", "")
         hook = content.hook_headline
         lines: list[tuple[str, list[tuple[int, int]]]] = []
         if hook and hook.lines:
@@ -306,6 +385,7 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                 bgm = hit
                 report("audio", 85, f"自动配乐：{bgm.stem}")
 
+    mp3 = Path(prep["voice"]) if prep.get("voice") else None
     audio = compose.mix_audio(mp3, duration_s, work, bgm=bgm, sfx_events=sfx_events,
                               progress=lambda p, d=None: report("audio", p, d))
     out_mp4 = Path(out_mp4)
@@ -379,18 +459,41 @@ def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                       props=str(props_keep) if props_keep else None)
     except Exception as exc:  # 清单失败不影响成片
         print(f"draft manifest skipped: {exc}")
-    except Exception as exc:  # 清单失败不影响成片
-        print(f"draft manifest skipped: {exc}")
 
     summaries = {a.file: a.summary for a in manifest.assets}
     report("verify", 0, "正在逐镜校验画面")
     vreport = verify.verify(out_mp4, plan, work, vision=vision,
                             summaries=summaries, bundle=bundle,
                             progress=lambda p, d=None: report("verify", p, d))
-    print(f"renderer: {renderer} | director: {'llm' if llm_used else 'rules'} | shots: {len(plan.shots)} | clauses: {len(plan.clauses)} | "
+    print(f"renderer: {renderer} | director: {'llm' if prep.get('llm_used') else 'rules'} | "
+          f"shots: {len(plan.shots)} | clauses: {len(plan.clauses)} | "
           f"duration: {duration_s:.1f}s -> {out_mp4}")
     print("verify:", "OK" if vreport["ok"] else "FAILED", vreport["errors"], vreport["warnings"])
     return out_mp4
+
+
+def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
+          voice: str | None = None, rate: str | None = None,
+          bgm: Path | None = None, renderer: str = "remotion",
+          progress=None, clone: Path | None = None,
+          format: str = DEFAULT_TEMPLATE, sfx: bool = True,
+          sfx_mode: str = "full",
+          show_subtitles: bool = True, show_sources: bool = True,
+          theme: str = "auto", disclaimer: str | None = None,
+          use_llm: bool = True, job_id: str | None = None,
+          vision: bool = True, watermark: bool = True,
+          brand: dict | None = None, series: dict | None = None) -> Path:
+    """bundle in, video out：前半程（等 API）+ 后半程（吃 CPU）顺序执行。"""
+    prep = build_prep(bundle_dir, work_dir=work_dir, voice=voice, rate=rate,
+                      clone=clone, format=format, use_llm=use_llm, theme=theme,
+                      disclaimer=disclaimer, watermark=watermark, brand=brand,
+                      series=series, job_id=job_id, progress=progress,
+                      show_subtitles=show_subtitles, show_sources=show_sources,
+                      renderer=renderer)
+    return build_render(bundle_dir, out_mp4, work_dir=work_dir, prep=prep, bgm=bgm,
+                        renderer=renderer, sfx=sfx, sfx_mode=sfx_mode,
+                        show_subtitles=show_subtitles, show_sources=show_sources,
+                        job_id=job_id, progress=progress, vision=vision)
 
 
 def _sfx_duration_ms(path: Path, default: float = 1000.0) -> float:
@@ -450,7 +553,7 @@ def main() -> None:
     b.add_argument("--no-llm", action="store_true", help="禁用 LLM 导演/文案，走规则引擎")
     d = sub.add_parser("draft", help="export a JianYing draft zip for a rendered video")
     d.add_argument("video", type=Path, help="成片 mp4（旁边要有同名 .draft.json）")
-    d.add_argument("-o", "--out", type=Path, default=None, help="输出的草稿 zip 路径")
+    d.add_argument("-o", "--out", type=Path, default=None, help="输出的草稿 zip")
     d.add_argument("--install", action="store_true", help="同时装进剪映草稿库（免手动导入）")
     a = ap.parse_args()
     if a.cmd == "draft":

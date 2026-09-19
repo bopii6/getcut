@@ -183,6 +183,7 @@ async def _dashscope_synth(spoken: str, pv: str, speech_rate: float, out_mp3: Pa
 
     audio = bytearray()
     words: list[dict] = []
+    last_begin = -1.0
     async with websockets.connect(DASHSCOPE_WS_URL, additional_headers=headers,
                                   max_size=None, open_timeout=20) as ws:
         await ws.send(_msg("run-task"))
@@ -221,6 +222,13 @@ async def _dashscope_synth(spoken: str, pv: str, speech_rate: float, out_mp3: Pa
                 for w in sentence.get("words") or []:
                     begin = float(w.get("begin_time") or 0)
                     end = float(w.get("end_time") or begin)
+                    # CosyVoice 的流式回包是"累积重发"：同句已合成词会在后续事件里
+                    # 反复出现（实测 302 次时间回跳，第一词反复出现在 80ms）。
+                    # 只收比上一个词更靠后的时间戳，去重并强制单调，
+                    # 否则时间轴回卷会让分镜画出负时长镜头、渲染直接崩。
+                    if begin <= last_begin:
+                        continue
+                    last_begin = begin
                     words.append({"text": str(w.get("text") or ""),
                                   "offset_ms": begin,
                                   "duration_ms": max(end - begin, 0.0)})

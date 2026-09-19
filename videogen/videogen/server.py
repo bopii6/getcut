@@ -54,15 +54,21 @@ JOBS_FILE = ROOT / "jobs.json"
 REG = ROOT / "registry.json"
 # 全局锁：JOBS / registry / 渲染工作目录都是共享可变状态，串行化写操作
 _LOCK = threading.RLock()
-# 渲染串行化：Remotion 共用 renderer/props.json 与 visual_out.mp4，不能并发
-_RENDER_LOCK = threading.Lock()  # 兼容保留（不再使用）
-# 渲染队列：FIFO，并发数可用 VIDEOGEN_CONCURRENCY 配置（默认 1；每路渲染约占 1-1.5G 内存）
-_RENDER_QUEUE: "queue.Queue[str]" = queue.Queue()
+# 双通道流水线：
+#   prep 通道 —— 配音/分镜/版式（等外部 API 为主），多路并行，不占渲染力
+#   渲染通道 —— 画面渲染/混音（吃 CPU），同时最多 _RENDER_CONCURRENCY 路
+# 渲染中间产物（props_*.json / visual_*.mp4）已按任务隔离，多路互不覆盖。
+_PREP_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_PREP_CONCURRENCY", "2")))
 _RENDER_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_CONCURRENCY", "1")))
-_QUEUE_HEAD: list = []   # 排队中的 job_id（FIFO 顺序）
+_PREP_WAIT: list[str] = []     # 等预备通道的任务（FIFO）
+_RENDER_WAIT: list[dict] = []  # 等渲染灶台的任务：{"job": id, "prio": int, "seq": int}
+_RENDER_SEQ = 0
+_PREP_CV = threading.Condition(_LOCK)
+_RENDER_CV = threading.Condition(_LOCK)
 
 # 正在干活（非排队/非终态）的阶段：算排队位置时要把它们算在"前面"
-_RUNNING_STAGES = ("tts", "plan", "props", "render", "audio", "mux", "verify")
+_ACTIVE_STAGES = ("tts", "plan", "props", "prepped", "render", "audio", "mux", "verify")
+_RENDER_STAGES = ("render", "audio", "mux", "verify")
 
 
 # 正在后台备草稿的成片路径：前端据此显示"草稿准备中"还是"已备好"
@@ -167,10 +173,10 @@ def try_render(request: Request, body: dict = None):
                         "detail": ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "已加入队列",
                         "t0": time.time()}
         _jobs_save()
-        _QUEUE_HEAD.append(job_id)
         _PENDING[job_id] = {"try": True, "try_bundle_dir": str(bdir), "format": fmt,
                             "watermark": True, "useLlm": True, "sfx": True, "sfxMode": "all"}
-    _RENDER_QUEUE.put(job_id)
+        _PREP_WAIT.append(job_id)
+        _PREP_CV.notify()
     issued = cookie or uuid.uuid4().hex
     try_topics.remember_cookie(WORKSPACES, issued)   # 发出去的 cookie 立刻记账，下次来就拦得住
     resp = JSONResponse({"job": job_id, "topic": t["id"], "template": fmt})
@@ -189,7 +195,7 @@ def try_status(job_id: str):
     return {"stage": stage, "stage8": j.get("stage8"), "progress": j.get("progress"),
             "topic": meta.get("topic"), "template": meta.get("template"),
             "title": meta.get("title"),
-            "queued_pos": _queue_ahead(job_id) if stage == "queued" else 0,
+            "queued_pos": _queue_ahead(job_id) if stage in ("queued", "prepped") else 0,
             "video": f"/try/{job_id}.mp4" if j.get("try_video") else None,
             "error": j.get("error")}
 
@@ -207,18 +213,48 @@ def try_video(name: str):
 
 
 def _queue_ahead(job_id: str) -> int:
-    """排在 job_id 前面的任务数 = 排队在我之前的 + 正在渲染的。
+    """排在 job_id 前面的任务数（"前面还有 N 个任务"的展示口径）。
 
-    之前只数排队中的，导致"一个在渲染、一个刚排上"时对用户说"马上开始"，
-    实际前面还有整整一炉。并发>1 时同样成立。
+    queued  = 还没轮上配音：数 prep 通道里在我之前的 + 所有正在干活的
+    prepped = 配音分镜已就绪等灶台：数插在我前面的（付费优先）+ 正在渲染的
     """
-    try:
-        waiting = _QUEUE_HEAD.index(job_id)
-    except ValueError:
-        waiting = 0
-    running = sum(1 for j in JOBS.values() if j.get("stage") in _RUNNING_STAGES)
-    return waiting + running
+    with _LOCK:
+        j = JOBS.get(job_id) or {}
+        stage = j.get("stage")
+        active = sum(1 for x in JOBS.values() if x.get("stage") in _ACTIVE_STAGES)
+        if stage == "prepped":
+            me = next((e for e in _RENDER_WAIT if e["job"] == job_id), None)
+            if me is None:
+                return active
+            ahead = sum(1 for e in _RENDER_WAIT
+                        if e["prio"] > me["prio"]
+                        or (e["prio"] == me["prio"] and e["seq"] < me["seq"]))
+            return ahead + sum(1 for x in JOBS.values() if x.get("stage") in _RENDER_STAGES)
+        if stage == "queued":
+            try:
+                waiting = _PREP_WAIT.index(job_id)
+            except ValueError:
+                waiting = 0
+            return waiting + active
+        return active
 _PENDING: dict = {}      # job_id -> body（入队暂存，开跑时取出）
+
+
+def _job_prio(body: dict, email: str | None) -> int:
+    """渲染灶台的优先级：付费(2) > 免费注册(1) > 试玩(0)。付费用户不跟试玩抢队。"""
+    if body.get("try"):
+        return 0
+    if email and (auth.is_admin(email) or auth.tier_at_least(email, "basic")):
+        return 2
+    return 1
+
+
+def _enqueue_render(job_id: str, prio: int) -> None:
+    global _RENDER_SEQ
+    with _LOCK:
+        _RENDER_SEQ += 1
+        _RENDER_WAIT.append({"job": job_id, "prio": prio, "seq": _RENDER_SEQ})
+        _RENDER_CV.notify()
 
 
 # ── 鉴权 ─────────────────────────────────────────────
@@ -1554,9 +1590,9 @@ def start_build(body: dict, request: Request):
                         "detail": ("排队中 · 前面还有 %d 个任务" % ahead) if ahead
                         else "已加入队列", "t0": time.time()}
         _jobs_save()
-        _QUEUE_HEAD.append(job_id)
         _PENDING[job_id] = body
-    _RENDER_QUEUE.put(job_id)
+        _PREP_WAIT.append(job_id)
+        _PREP_CV.notify()
 
     def _tick():
         # 兜底：真实上报缺位时按渐近曲线缓慢推进，避免进度条看起来卡死
@@ -1596,9 +1632,12 @@ def my_jobs(request: Request):
                     "stage": j.get("stage"), "stage8": j.get("stage8"),
                     "progress": j.get("progress"), "detail": j.get("detail"),
                     "error": j.get("error"), "t0": j.get("t0")}
-            if item["stage"] == "queued":
+            if item["stage"] in ("queued", "prepped"):
                 ahead = _queue_ahead(jid)
-                item["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
+                if item["stage"] == "prepped":
+                    item["detail"] = ("排队渲染中 · 前面还有 %d 条" % ahead) if ahead else "马上开始渲染"
+                else:
+                    item["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
                 item["queued_pos"] = ahead
             items.append(item)
     active = [i for i in items if i["stage"] not in ("done", "failed")]
@@ -1613,11 +1652,14 @@ def job_status(job_id: str, request: Request):
     if j is None or not _job_visible(j, request):
         return {"stage": "unknown"}   # 不存在与无权同形，不泄露任务存在性
     out = dict(j)
-    if out.get("stage") == "queued":
+    if out.get("stage") in ("queued", "prepped"):
         with _LOCK:
             ahead = _queue_ahead(job_id)
         out["queued_pos"] = ahead
-        out["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
+        if out.get("stage") == "prepped":
+            out["detail"] = ("排队渲染中 · 前面还有 %d 条" % ahead) if ahead else "马上开始渲染"
+        else:
+            out["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
     t0 = out.get("t0")
     # 跑完/失败后冻结耗时，否则"已用"会一直涨（回来再看变成几十小时）
     out["elapsed"] = int((out.get("t_end") or time.time()) - t0) if t0 else None
@@ -1712,64 +1754,51 @@ def _resolve_bgm(rel: str | None) -> Path | None:
     return f
 
 
-def _cleanup_work(bundle_name: str) -> None:
-    """成片完成后清掉中间产物（分镜片段/拼接/混音前文件），只留 TTS 缓存。"""
-    d = config.WORK / bundle_name
-    if not d.is_dir():
-        return
-    for p in d.iterdir():
-        if p.name == "tts":
-            continue
-        try:
-            if p.is_dir():
-                shutil.rmtree(p, ignore_errors=True)
-            else:
-                p.unlink()
-        except OSError:
-            pass
-
-
-def _render_worker() -> None:
-    """渲染队列消费者：同时最多 _RENDER_CONCURRENCY 个在跑。"""
-    while True:
-        job_id = _RENDER_QUEUE.get()
-        try:
-            with _LOCK:
-                if job_id in _QUEUE_HEAD:
-                    _QUEUE_HEAD.remove(job_id)
-                body = _PENDING.pop(job_id, None)
-            if not body:
-                continue
-            _worker(job_id, body)
-        except Exception as exc:  # 队列消费者绝不能死
-            print(f"render worker error: {exc}")
-        finally:
-            _RENDER_QUEUE.task_done()
-
-
-def _worker(job_id: str, body: dict) -> None:
-    from . import cli
+def _cleanup_work_dir(work_dir) -> None:
+    """任务级工作目录用完即删（TTS 缓存在共享目录 work/_tts/ 下，不受影响）。"""
     try:
-        def progress(stage: str, pct: int, detail: str | None = None):
-            idx, base = _STAGE_MAP.get(stage, (0, 0))
-            span = {"tts": 14, "plan": 10, "props": 12, "render": 27, "audio": 10, "verify": 6}.get(stage, 8)
-            val = min(base + int(pct / 100 * span), 98)
-            with _LOCK:
-                j = JOBS.get(job_id)
-                if j is None:
-                    return
-                if stage != j["stage"]:
-                    j.update(stage=stage, stage8=idx + 1, progress=max(val, j["progress"] + 1),
-                             t_stage=time.time())
-                elif val > j["progress"]:
-                    j.update(stage8=idx + 1, progress=val)
-                else:
-                    j["stage8"] = idx + 1
-                if detail:
-                    j["detail"] = detail
-                _jobs_save()
+        shutil.rmtree(Path(work_dir), ignore_errors=True)
+    except Exception:
+        pass
 
-        # 入参先过安全校验（素材包目录 / BGM 路径），不合法直接把任务标记失败
+
+def _mark_failed(job_id: str, err) -> None:
+    with _LOCK:
+        j = JOBS.get(job_id)
+        if j and j.get("stage") not in ("done", "failed"):
+            j.update(stage="failed", stage8=8, error=str(err)[-800:], t_end=time.time())
+            _jobs_save()
+
+
+def _progress_reporter(job_id: str):
+    """阶段进度上报：把流水线的真实阶段映射到 8 段进度条。"""
+    def progress(stage: str, pct: int, detail: str | None = None):
+        idx, base = _STAGE_MAP.get(stage, (0, 0))
+        span = {"tts": 14, "plan": 10, "props": 12, "render": 27, "audio": 10, "verify": 6}.get(stage, 8)
+        val = min(base + int(pct / 100 * span), 98)
+        with _LOCK:
+            j = JOBS.get(job_id)
+            if j is None:
+                return
+            if stage != j["stage"]:
+                j.update(stage=stage, stage8=idx + 1, progress=max(val, j["progress"] + 1),
+                         t_stage=time.time())
+            elif val > j["progress"]:
+                j.update(stage8=idx + 1, progress=val)
+            else:
+                j["stage8"] = idx + 1
+            if detail:
+                j["detail"] = detail
+            _jobs_save()
+    return progress
+
+
+def _prep_job(job_id: str, body: dict) -> None:
+    """预备阶段：配音/分镜/版式/剧照——全是等外部 API 的活，不占渲染灶台。"""
+    from . import cli
+    progress = _progress_reporter(job_id)
+    try:
+        # 入参先过安全校验（素材包目录），不合法直接把任务标记失败
         # 试玩任务由 /api/try 给出已经校验过的绝对路径；其余任务一律只认工作区里的包名
         if body.get("try") and body.get("try_bundle_dir"):
             bundle_dir = Path(body["try_bundle_dir"]).resolve()
@@ -1777,27 +1806,55 @@ def _worker(job_id: str, body: dict) -> None:
                 raise ValueError("试玩素材包缺失")
         else:
             bundle_dir = _resolve_bundle(body["bundle"])
-        bgm_file = _resolve_bgm(body.get("bgm"))
+        # 工作目录按任务隔离：同一素材包多任务并发时互不踩（TTS 缓存仍在共享目录）
+        work_dir = config.WORK / f"{bundle_dir.name}--{job_id}"
+        with _LOCK:
+            body["_prep"] = {"work_dir": str(work_dir), "bundle_dir": str(bundle_dir)}
+        cli.build_prep(bundle_dir, work_dir=work_dir,
+                       voice=body.get("voice") or None,
+                       rate=_normalize_rate(body.get("rate")),
+                       format=body.get("format") or DEFAULT_TEMPLATE,
+                       show_subtitles=bool(body.get("subtitles", True)),
+                       show_sources=bool(body.get("sources", True)),
+                       theme=body.get("theme") or "auto",
+                       disclaimer=body.get("disclaimer"),
+                       watermark=body.get("watermark", True) is not False,
+                       use_llm=bool(body.get("useLlm", True)),
+                       brand=body.get("brand") or None,
+                       series=body.get("series") or None,
+                       job_id=job_id, progress=progress)
+        with _LOCK:
+            j = JOBS.get(job_id)
+            if j:
+                j.update(stage="prepped", stage8=5, progress=40, t_stage=time.time(),
+                         detail="配音与分镜已就绪")
+            _jobs_save()
+        _enqueue_render(job_id, _job_prio(body, (JOBS.get(job_id) or {}).get("owner")))
+    except Exception as e:  # noqa: BLE001
+        with _LOCK:
+            prep_meta = body.get("_prep") or {}
+        if prep_meta.get("work_dir"):
+            _cleanup_work_dir(prep_meta["work_dir"])
+        _mark_failed(job_id, e)
+
+
+def _render_job(job_id: str, body: dict) -> None:
+    """渲染阶段：画面渲染/混音/封装/校验——吃 CPU 的活，同时最多 CONCURRENCY 路。"""
+    from . import cli
+    progress = _progress_reporter(job_id)
+    prep_meta = body.get("_prep") or {}
+    work_dir = Path(prep_meta["work_dir"]) if prep_meta.get("work_dir") else None
+    try:
+        bundle_dir = Path(prep_meta.get("bundle_dir") or _resolve_bundle(body["bundle"]))
         out = OUTPUTS / f"{bundle_dir.name}-{job_id}.mp4"
-        if True:
-            cli.build(bundle_dir, out,
-                      voice=body.get("voice") or None,
-                      rate=_normalize_rate(body.get("rate")),
-                      bgm=bgm_file,
-                      renderer=body.get("renderer") or "remotion",
-                      format=body.get("format") or DEFAULT_TEMPLATE,
-                      sfx=bool(body.get("sfx", True)),
-                      sfx_mode=body.get("sfxMode") or ("full" if body.get("sfx", True) else "off"),
-                      show_subtitles=bool(body.get("subtitles", True)),
-                      show_sources=bool(body.get("sources", True)),
-                      theme=body.get("theme") or "auto",
-                      disclaimer=body.get("disclaimer"),
-                      watermark=body.get("watermark", True) is not False,
-                      use_llm=bool(body.get("useLlm", True)),
-                      brand=body.get("brand") or None,
-                      series=body.get("series") or None,
-                      job_id=job_id,
-                      progress=progress)
+        cli.build_render(bundle_dir, out, work_dir=work_dir,
+                         bgm=_resolve_bgm(body.get("bgm")),
+                         renderer=body.get("renderer") or "remotion",
+                         sfx=bool(body.get("sfx", True)),
+                         sfx_mode=body.get("sfxMode") or ("full" if body.get("sfx", True) else "off"),
+                         show_subtitles=bool(body.get("subtitles", True)),
+                         show_sources=bool(body.get("sources", True)),
+                         job_id=job_id, progress=progress)
         with _LOCK:
             JOBS[job_id].update(stage="done", stage8=8, progress=100, video=str(out), t_end=time.time(),
                                 detail="成片已生成")
@@ -1808,7 +1865,6 @@ def _worker(job_id: str, body: dict) -> None:
                     p.setdefault("renders", []).append({"id": job_id, "file": str(out),
                         "ts": time.strftime("%Y/%m/%d %H:%M")})
             _reg_save(reg)
-        _cleanup_work(bundle_dir.name)
         if body.get("try"):
             # 试玩：降成 720p 带水印的样片给公开链接，原始大文件删掉；不备草稿资产
             small = OUTPUTS / f"try-{job_id}.mp4"
@@ -1818,18 +1874,52 @@ def _worker(job_id: str, body: dict) -> None:
                 out.unlink(missing_ok=True)
                 _sweep_try_files()
             else:
-                with _LOCK:
-                    JOBS[job_id].update(stage="failed", error="样片转码失败，请稍后再试")
+                _mark_failed(job_id, "样片转码失败，请稍后再试")
         else:
             # 成片已经交付，接着在后台把剪映草稿资产备好——用户走到导出页时通常已就绪，
             # 点「一键导入剪映」秒装，不用再等 1-2 分钟
             threading.Thread(target=_prebuild_draft, args=(Path(out),), daemon=True).start()
     except Exception as e:  # noqa: BLE001
+        _mark_failed(job_id, e)
+    finally:
+        if work_dir:
+            _cleanup_work_dir(work_dir)
+
+
+def _prep_worker() -> None:
+    """预备通道消费者：同时最多 _PREP_CONCURRENCY 路在备料。"""
+    while True:
         with _LOCK:
-            JOBS[job_id].update(stage="failed", stage8=8, error=str(e)[-800:], t_end=time.time())
-            _jobs_save()
+            while not _PREP_WAIT:
+                _PREP_CV.wait()
+            job_id = _PREP_WAIT.pop(0)
+        body = _PENDING.get(job_id) or {}
+        try:
+            _prep_job(job_id, body)
+        except Exception as exc:  # 队列消费者绝不能死
+            print(f"prep worker error: {exc}")
+            _mark_failed(job_id, exc)
 
 
+def _render_worker() -> None:
+    """渲染灶台消费者：同时最多 _RENDER_CONCURRENCY 路在跑；付费任务优先。"""
+    while True:
+        with _LOCK:
+            while not _RENDER_WAIT:
+                _RENDER_CV.wait()
+            best = min(_RENDER_WAIT, key=lambda e: (-e["prio"], e["seq"]))
+            _RENDER_WAIT.remove(best)
+        job_id = best["job"]
+        body = _PENDING.get(job_id) or {}
+        try:
+            _render_job(job_id, body)
+        except Exception as exc:
+            print(f"render worker error: {exc}")
+            _mark_failed(job_id, exc)
+
+
+for _i in range(_PREP_CONCURRENCY):
+    threading.Thread(target=_prep_worker, daemon=True).start()
 for _i in range(_RENDER_CONCURRENCY):
     threading.Thread(target=_render_worker, daemon=True).start()
 
