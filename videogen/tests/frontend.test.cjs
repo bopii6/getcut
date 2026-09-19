@@ -409,13 +409,16 @@ test('档位与定价：顶栏「我的」入口带档位徽标，免费档先�
   await h.flush();
   assert(h.get('jyBtn').textContent.includes('高级版'), '免费档的剪映按钮要带高级版标记');
   h.click('#jyBtn'); await h.flush();
-  assert(h.document.querySelector('.price-box'), '免费档点剪映导出要弹定价弹窗');
+  assert(h.document.querySelector('.pp-wrap'), '免费档点剪映导出 → 进权益页（不再是弹窗）');
+  assert(h.document.querySelector('.pp-wrap').textContent.includes('卡密兑换'), '权益页要交代卡密');
   assert(!h.requests.some(r => r.url.endsWith('/jianying-import')), '没付钱不能真的发导入请求');
 });
 
-test('「我的」菜单：权益说明齐全，高级版不出现升级项，任务与退出都收进菜单', async t => {
+test('「我的」菜单：权益齐全，顶栏没有独立任务按钮，联系创始人给微信号', async t => {
   const h = await setup(t);
   await h.flush();
+  assert.equal(h.get('tasksBtn'), null, '顶栏不再有独立「任务」按钮（收进我的菜单）');
+  assert(h.get('tasksBadge'), '任务角标长在「我的」入口上');
   h.click('#meBtn'); await h.flush();
   const menu = h.get('meMenu');
   assert(menu, '点开头像要弹「我的」菜单');
@@ -424,9 +427,21 @@ test('「我的」菜单：权益说明齐全，高级版不出现升级项，�
   assert(menu.textContent.includes('剪映草稿导出'), '高级版权益要列到剪映导出');
   assert(h.get('mePricing') && h.get('mePricing').textContent.includes('我的权益'), '高级版是「我的权益」不是升级');
   assert(h.get('meTasks') && h.get('meLogout'), '任务与退出都在菜单里');
+  assert(h.get('meContact'), '要有联系创始人入口');
   h.click('#meTasks'); await h.flush();
   assert(!h.get('meMenu'), '点任务要收起菜单');
   assert(h.get('tasksPanel') && !h.get('tasksPanel').classList.contains('hide'), '要顺手打开任务面板');
+  h.evaluate('closeMeMenu(); toggleTasksPanel()');   // 关面板，别和弹窗抢位
+  await h.flush();
+  h.click('#meBtn'); await h.flush();
+  h.click('#meContact'); await h.flush();
+  const box = h.document.querySelector('[aria-label="联系创始人"]');
+  assert(box, '联系创始人要弹小框');
+  assert(box.textContent.includes('getcut-admin'), '微信号来自 /api/pricing 的 wechat_id');
+  assert(h.get('ctCopy'), '微信号要能一键复制');
+  h.click('#ctCopy'); await h.flush();
+  h.click('#ctClose'); await h.flush();
+  assert(!h.document.querySelector('[aria-label="联系创始人"]'), '关闭要真关');
 });
 
 test('账号设置：头像预设可选，保存资料走 PUT /api/me，改密码走 change-password', async t => {
@@ -460,15 +475,16 @@ test('账号设置：头像预设可选，保存资料走 PUT /api/me，改密�
   assert(h.get('acPwMsg').textContent.includes('密码已更新'), '成功提示要说清下次登录用新密码');
 });
 
-test('定价弹窗：价格/微信/收款码占位按 /api/pricing 渲染，兑换卡密走 POST', async t => {
+test('权益整页：价格/微信/收款码按 /api/pricing 渲染，兑换卡密走 POST，网址落到 #/pricing', async t => {
   const h = await setup(t);
   h.evaluate('openPricing()'); await h.flush();
-  const box = h.document.querySelector('.price-box');
-  assert(box, '要弹出定价弹窗');
-  assert(box.textContent.includes('¥399') && box.textContent.includes('¥599'), '两档价格要摆出来');
-  assert(box.textContent.includes('getcut-admin'), '站长微信号要展示（直播间销售流程）');
+  const page = h.document.querySelector('.pp-wrap');
+  assert(page, '权益页要铺开（不再弹窗）');
+  assert.equal(h.evaluate('location.hash'), '#/pricing', '网址要落到 #/pricing，直播间链接可直达');
+  assert(page.textContent.includes('¥399') && page.textContent.includes('¥599'), '两档价格要摆出来');
+  assert(page.textContent.includes('getcut-admin'), '创始人微信号要展示（直播间销售流程）');
   assert(h.document.querySelector('.price-qr img'), 'mock 里微信码存在 → 要渲染成图片');
-  assert(h.document.querySelector('.price-qr .ph'), '支付宝没传 → 占位提示而不是破图');
+  assert(!h.document.querySelector('.price-qr .ph'), '支付宝没传 → 不渲染破图占位，保持页面清爽');
   h.get('prCode').value = ' gcp-7k2m-9xq4 ';
   h.respond('POST', '/api/license/redeem', {ok: true, message: '激活成功！你现在是高级版', tier: 'premium', tier_label: '高级版'});
   h.click('#prGo'); await h.flush();
@@ -497,9 +513,11 @@ test('品牌套件：确认页入口按档位分流，高级版弹设置并保�
   await h.evaluate('ME = {...ME, tier: "free", tier_label: "免费版"}; renderRail(CURB)');
   assert.match(h.get('brandBtn').textContent, /🔒/, '免费档要带锁');
   h.click('#brandBtn'); await h.flush();
-  assert(h.document.querySelector('.price-box'), '免费档点品牌套件 → 弹定价');
-  // 再测高级档完整流
-  await h.evaluate('ME = {...ME, tier: "premium", tier_label: "高级版"}; renderRail(CURB); document.querySelectorAll(".price-box").forEach(e => e.remove())');
+  assert(h.document.querySelector('.pp-wrap'), '免费档点品牌套件 → 进权益页');
+  // 再测高级档完整流：真实用户是从权益页回到项目，这里重新进项目让入口按档位重画
+  await h.evaluate('ME = {...ME, tier: "premium", tier_label: "高级版"}');
+  await h.openProject();
+  assert.match(h.get('brandBtn').textContent, /设置品牌套件/, '高级版入口是设置按钮');
   h.respond('GET', '/api/brand', {brand: {slogan: '每天懂一点财经', contact: '', accent: '#8B6CFF', use_watermark: true, endcard: true}, premium: true, has_logo: true});
   h.respond('PUT', '/api/brand', {ok: true, brand: {}});
   h.click('#brandBtn'); await h.flush();

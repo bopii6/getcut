@@ -581,6 +581,37 @@ textarea:focus{outline:none;border-color:var(--acc)}
   padding:6px 2px}
 .acct-meta b{color:var(--ink);font-weight:600;text-align:right;overflow-wrap:anywhere}
 @media(max-width:640px){.me-btn .who{display:none}.me-menu{right:12px}}
+/* ── 权益与定价整页（原弹窗已废）── */
+.pp-wrap{max-width:760px;margin:0 auto;padding-top:34px}
+.pp-wrap h1{font-size:30px;font-weight:900;letter-spacing:-.02em}
+.pp .pp-sub{color:var(--ink-2);font-size:14px;margin-top:8px}
+.pp-now{margin:22px 0 14px;padding:13px 16px;border-radius:11px;background:var(--acc-soft);
+  border:1px solid rgba(183,170,255,.25);font-size:14px;color:var(--ink)}
+.pp-now b{color:var(--acc)}
+.pp-tiers{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pp-tier{border:1px solid var(--line2);border-radius:14px;padding:18px;background:var(--surface)}
+.pp-tier.hi{border-color:#6c62a8}
+.pp-tier.mine{box-shadow:0 0 0 1.5px var(--acc)}
+.pp-th{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.pp-th h3{font-size:16.5px}
+.pp-th .amt{font-family:"Display",var(--sans);font-size:24px;font-weight:800}
+.pp-th .amt small{font-size:12px;color:var(--ink-3);font-weight:400;margin-left:2px}
+.pp-tier>p{color:var(--ink-2);font-size:13px;margin:4px 0 10px}
+.pp-tier ul{list-style:none;padding:0;margin:0}
+.pp-tier li{font-size:13.5px;color:var(--ink-2);padding:5px 0 5px 20px;position:relative;line-height:1.5}
+.pp-tier li::before{content:"✓";position:absolute;left:2px;color:var(--acc);font-weight:800}
+.pp-how,.pp-redeem{margin-top:26px;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:18px}
+.pp-how h2,.pp-redeem h2{font-size:15.5px;margin-bottom:10px}
+.pp-how ol{margin:0;padding-left:20px;color:var(--ink-2);font-size:13.8px;line-height:2.1}
+.pp-how .price-qr{margin:2px 0 12px}
+.pp-wx{color:var(--ink)}
+.pp-wx .btn{margin-left:6px;vertical-align:middle}
+.pp-wxbox{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--line2);
+  border-radius:10px;padding:12px 14px;margin:12px 0 0}
+.pp-wxlabel{font-size:12px;color:var(--ink-3);flex:none}
+.pp-wxbox b{font-size:16px;letter-spacing:.02em;flex:1}
+.pp-redeem p{font-size:13px;color:var(--ink-2);margin-bottom:8px}
+@media(max-width:700px){.pp-tiers{grid-template-columns:1fr}}
 .lic-list{max-height:180px;overflow:auto;font-size:12px;color:var(--ink-2);margin-top:8px;border:1px solid var(--line);border-radius:8px}
 .lic-list div{display:flex;justify-content:space-between;gap:8px;padding:5px 10px;border-bottom:1px solid var(--line)}
 .lic-list div:last-child{border-bottom:0}
@@ -933,10 +964,6 @@ body.lp-mode .top{display:none}
         <div class="tact">
           <button class="btn sm line" id="topNew">＋ 新建项目</button>
           <span id="account" style="display:flex;align-items:center;gap:8px"></span>
-          <button class="tasks-btn" id="tasksBtn" title="渲染任务">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="8" x2="18" y2="8"/><line x1="12" y1="8" x2="6" y2="8"/><line x1="18" y1="16" x2="12" y2="16"/><line x1="8" y1="16" x2="6" y2="16"/><rect x="2" y="4" width="20" height="16" rx="3"/></svg>
-            任务<span class="tbadge hide" id="tasksBadge">0</span>
-          </button>
         </div>
       </div>
     </header>
@@ -1586,7 +1613,6 @@ function paintAccount(){
   closeMeMenu();
   const visitor = !ME;
   $("topNew").style.display = visitor ? "none" : "";
-  $("tasksBtn").style.display = visitor ? "none" : "";
   if (visitor){
     el.innerHTML = `<div style="display:flex;gap:8px">
       <button class="btn sm line" id="topLogin">登录</button>
@@ -1601,8 +1627,15 @@ function paintAccount(){
     <span class="me-av" aria-hidden="true">${esc(ME.avatar || "🦊")}</span>
     <span class="who">${esc(ME.nickname || "创作者")}</span>
     <span class="tier-chip tier-${esc(ME.tier || "free")}">${esc(ME.tier_label || "免费版")}</span>
+    <span class="tbadge hide" id="tasksBadge" title="进行中的渲染任务">0</span>
   </button>`;
-  $("meBtn").onclick = (e) => { e.stopPropagation(); toggleMeMenu(); };
+  $("meBtn").onclick = (e) => {
+    e.stopPropagation();
+    // 任务面板和菜单占同一个位置，二选一摊开
+    TASKS_OPEN = false;
+    const tp = $("tasksPanel"); if (tp) tp.classList.add("hide");
+    toggleMeMenu();
+  };
 }
 
 /* ── 「我的」下拉菜单 ── */
@@ -1639,6 +1672,7 @@ function toggleMeMenu(){
     ${tier === "premium" ? `<button class="me-item" id="mePricing" role="menuitem"><i class="mi">◆</i>我的权益</button>`
         : `<button class="me-item go" id="mePricing" role="menuitem"><i class="mi">⚡</i>升级 / 兑换卡密</button>`}
     <button class="me-item" id="meTasks" role="menuitem"><i class="mi">🖼</i>渲染任务<i class="mr">排队与进度</i></button>
+    <button class="me-item" id="meContact" role="menuitem"><i class="mi">💬</i>联系创始人</button>
     <button class="me-item warn" id="meLogout" role="menuitem"><i class="mi">⎋</i>退出登录</button>`;
   document.body.appendChild(m);
   $("meBtn").setAttribute("aria-expanded", "true");
@@ -1646,6 +1680,7 @@ function toggleMeMenu(){
   $("meSettings").onclick = () => { closeMeMenu(); openAccount(); };
   $("mePricing").onclick = () => { closeMeMenu(); openPricing(); };
   $("meTasks").onclick = () => { closeMeMenu(); toggleTasksPanel(); };
+  $("meContact").onclick = () => { closeMeMenu(); openContact(); };
   $("meLogout").onclick = async () => {
     closeMeMenu();
     try { await api("/api/auth/logout", {method:"POST"}); } catch (e) {}
@@ -1748,94 +1783,121 @@ function openAccount(){
   nick.focus();
 }
 
-/* ── 定价 / 卡密兑换 / 管理面板 ── */
+/* ── 权益与定价：整页呈现（原来的弹窗塞了太多东西，砍掉）── */
 async function openPricing(){
+  closeMeMenu();
+  leaveFlow(); CUR = null;
+  setHash("#/pricing");
   let p;
-  try { p = await api("/api/pricing"); } catch (e) { toast("打不开定价页：" + e.message); return; }
-  const premium = (ME && ME.tier) === "premium", basic = (ME && ME.tier) === "basic";
-  const m = document.createElement("div"); m.className = "modal";
-  const li = (t, no) => `<li class="${no ? "no" : ""}">${t}</li>`;
-  m.innerHTML = `<div class="box price-box" role="dialog" aria-modal="true" aria-label="定价">
-    <h3 style="font-size:19px">买断制 · 一次付费，永久使用</h3>
-    <p>基础版把片子做出来，高级版把片子变成「你的」：自己的品牌、自己的声音，还能接着用剪映精剪。</p>
-    <div class="price-tiers">
-      <div class="price-tier">
-        ${basic || premium ? `<span class="cur">已有</span>` : ""}
-        <h4>基础版</h4><div class="amt">¥${p.prices.basic}<small> / 永久</small></div>
-        <ul>
-          ${li("出片全流程：拖素材包 → 自动分镜 → 成片")}
-          ${li("六套模板 + 风格包 + 音效铺满")}
-          ${li("多款音色任选，每天不限量出片")}
-          ${li("成片无 GetCut 水印，随便发")}
-          ${li("导出剪映草稿（八轨分好）", true)}
-          ${li("品牌套件：自有 Logo / 品牌色 / 片尾卡", true)}
-        </ul>
+  try { p = await api("/api/pricing"); } catch (e) {
+    $("main").innerHTML = `<div class="view"><div class="hero"><h1>权益页暂时打不开</h1><p class="sub">${esc(e.message)}</p></div></div>`;
+    return;
+  }
+  if (location.hash !== "#/pricing") return;   // 等待期间用户已经离开这页
+  const tier = (ME && ME.tier) || "free";
+  const premium = tier === "premium", basic = tier === "basic";
+  const nowLine = premium ? "高级版 · 永久有效，全部权益已解锁"
+    : basic ? "基础版 · 永久有效，出片不限量、无水印"
+    : `免费版 · 每天 ${p.free_daily_builds} 条免费额度，成片带 GetCut 水印`;
+  const wx = p.wechat_id
+    ? `<b>${esc(p.wechat_id)}</b> <button class="btn sm line" id="ppWxCopy">复制</button>`
+    : `<b>即将公布</b>`;
+  const qrWechat = p.qr.wechat ? `<figure><img src="${qs("/api/qr/wechat")}&t=${Date.now()}" alt="微信收款码"><figcaption>微信收款</figcaption></figure>` : "";
+  const qrAlipay = p.qr.alipay ? `<figure><img src="${qs("/api/qr/alipay")}&t=${Date.now()}" alt="支付宝收款码"><figcaption>支付宝</figcaption></figure>` : "";
+  $("main").innerHTML = `<div class="view pp"><div class="pp-wrap">
+    <h1>权益与定价</h1>
+    <p class="pp-sub">买断制，一次付费，永久使用。</p>
+    <div class="pp-now">你现在的档位：<b>${nowLine}</b></div>
+    <div class="pp-tiers">
+      <div class="pp-tier${basic ? " mine" : ""}">
+        <div class="pp-th"><h3>基础版</h3><span class="amt">¥${p.prices.basic}<small>/永久</small></span></div>
+        <p>把片子做出来。</p>
+        <ul><li>出片全流程：拖素材包 → 自动分镜 → 成片</li>
+            <li>六套模板、音色任选、出片不限量</li>
+            <li>成片无 GetCut 水印，随便发</li></ul>
       </div>
-      <div class="price-tier hi">
-        ${premium ? `<span class="cur">当前档位</span>` : `<span class="cur" style="background:var(--line2);color:var(--ink)">比基础版只贵 ¥${p.prices.premium - p.prices.basic}</span>`}
-        <h4>高级版</h4><div class="amt">¥${p.prices.premium}<small> / 永久</small></div>
-        <ul>
-          ${li("基础版全部功能")}
-          ${li("导出剪映草稿（八轨分好）")}
-          ${li("品牌套件：自有 Logo / 品牌色 / 片尾卡 / 定制 Slogan")}
-          ${li("声音克隆：用自己的声音配音（上线即用，不用加钱）")}
-          ${li("栏目化：固定开场白 + 第 X 期角标（上线即用）")}
-        </ul>
-      </div>
-    </div>
-    ${premium ? `<p style="margin:10px 0 0">你已经是<b>高级版</b>，永久有效。</p>`
-      : basic ? `<p style="margin:10px 0 0">你是<b>基础版</b>。想升高级版：按高级版价格付款，把 <b>GCP 开头的卡密</b>输在下面就行。</p>`
-      : `<p style="margin:10px 0 0">免费注册每天能出 ${p.free_daily_builds} 条（带水印）；买断卡密即刻解锁，永久有效。</p>`}
-    <div class="price-steps">
-      <span><b>① 扫码付款</b><br>按你要的档位扫下面的码</span>
-      <span><b>② 加微信发付款截图</b><br>微信号：<b>${esc(p.wechat_id || "（站长配置中）")}</b></span>
-      <span><b>③ 拿到卡密，下面兑换</b><br>输进去立刻生效</span>
-    </div>
-    <div class="price-qr">
-      <figure>${p.qr.wechat ? `<img src="${qs("/api/qr/wechat")}&t=${Date.now()}" alt="微信收款码">`
-        : `<div class="ph">微信收款码<br>还没上传</div>`}<figcaption>微信收款</figcaption></figure>
-      <figure>${p.qr.alipay ? `<img src="${qs("/api/qr/alipay")}&t=${Date.now()}" alt="支付宝收款码">`
-        : `<div class="ph">支付宝收款码<br>还没上传</div>`}<figcaption>支付宝</figcaption></figure>
-      <div style="flex:1;min-width:200px">
-        <label style="font-size:13px;font-weight:700">卡密兑换</label>
-        <p style="font-size:12px;margin:4px 0 8px">${ME
-          ? "GCB = 基础版，GCP = 高级版。大小写、横杠都无所谓。"
-          : "先<a href='#' id='prLogin' style='color:var(--acc)'>登录/注册</a>，再回来输卡密。"}</p>
-        ${ME ? `<div class="redeem-row">
-          <input id="prCode" placeholder="GCP-XXXX-XXXX" autocomplete="off" style="font-family:ui-monospace,monospace;text-transform:uppercase">
-          <button class="btn" id="prGo">兑换</button></div>
-          <p id="prMsg" style="font-size:12.5px;margin:8px 0 0"></p>` : ""}
+      <div class="pp-tier hi${premium ? " mine" : ""}">
+        <div class="pp-th"><h3>高级版</h3><span class="amt">¥${p.prices.premium}<small>/永久</small></span></div>
+        <p>把片子变成「你的」。</p>
+        <ul><li>基础版全部权益</li>
+            <li>剪映草稿导出，成片接着精剪</li>
+            <li>品牌套件 + 声音克隆 + 栏目化</li></ul>
       </div>
     </div>
+    <div class="pp-how">
+      <h2>怎么开通</h2>
+      ${qrWechat || qrAlipay ? `<div class="price-qr">${qrWechat}${qrAlipay}</div>` : ""}
+      <ol>
+        <li>${qrWechat ? "按你要的档位扫码付款。" : "微信转账付款，说明要哪一档。"}</li>
+        <li>加创始人微信，发付款截图，马上拿卡密：<span class="pp-wx">微信号 ${wx}</span></li>
+        <li>回来输卡密，立即生效。</li>
+      </ol>
+    </div>
+    ${ME ? `<div class="pp-redeem">
+      <h2>卡密兑换</h2>
+      <p>GCB 开头是基础版，GCP 开头是高级版。大小写、横杠都无所谓。</p>
+      <div class="redeem-row">
+        <input id="prCode" placeholder="GCP-XXXX-XXXX" autocomplete="off" style="font-family:ui-monospace,monospace;text-transform:uppercase">
+        <button class="btn" id="prGo">兑换</button></div>
+      <p id="prMsg" style="font-size:13px;margin-top:10px;min-height:1em"></p>
+    </div>`
+      : `<div class="pp-redeem"><p>先<a href="#" id="prLogin" style="color:var(--acc)">登录/注册</a>，再回来输卡密。</p></div>`}
     <div id="prAdmin"></div>
-    <div class="row" style="justify-content:flex-end">
-      <button class="btn sm line" id="prClose">关闭</button></div>
-  </div>`;
-  const close = () => { m.remove(); if (location.hash === "#/pricing") history.replaceState(null, "", location.pathname); };
-  m.querySelector("#prClose").onclick = close;
-  m.onclick = (e) => { if (e.target === m) close(); };
-  m.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
-  const pl = m.querySelector("#prLogin"); if (pl) pl.onclick = (e) => { e.preventDefault(); close(); AUTHMODE = "login"; showAuth(); };
-  const go = m.querySelector("#prGo");
+  </div></div>`;
+  const root = $("main");
+  const wxCopy = root.querySelector("#ppWxCopy");
+  if (wxCopy) wxCopy.onclick = async () => {
+    try { await navigator.clipboard.writeText(p.wechat_id); toast("已复制，去微信粘贴就行"); }
+    catch (e) { toast("复制失败，手动记一下微信号"); }
+  };
+  const pl = root.querySelector("#prLogin"); if (pl) pl.onclick = (e) => { e.preventDefault(); AUTHMODE = "login"; showAuth(); };
+  const go = root.querySelector("#prGo");
   if (go) go.onclick = async () => {
-    const inp = m.querySelector("#prCode"), msg = m.querySelector("#prMsg");
+    const inp = root.querySelector("#prCode"), msg = root.querySelector("#prMsg");
     const code = (inp.value || "").trim();
     if (!code) { inp.focus(); return; }
     go.disabled = true; go.textContent = "兑换中…"; msg.textContent = "";
     try {
       const r = await api("/api/license/redeem", { method: "POST",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
-      msg.style.color = "var(--acc)"; msg.textContent = r.message;
+      msg.style.color = "var(--ok)"; msg.textContent = r.message;
       ME = await api("/api/me"); paintAccount();
-      toast(r.message); setTimeout(close, 900);
+      toast(r.message); setTimeout(openPricing, 900);   // 重画整页，档位行换成新的
     } catch (e) {
       go.disabled = false; go.textContent = "兑换";
       msg.style.color = ""; msg.textContent = e.message || "兑换失败";
     }
   };
-  paintPricingAdmin(m, p);
+  paintPricingAdmin(root, p);
+}
+
+/* ── 联系创始人：一个小框，就干一件事——把微信号给你 ── */
+async function openContact(){
+  closeMeMenu();
+  let p = null;
+  try { p = await api("/api/pricing"); } catch (e) {}
+  const wx = (p && p.wechat_id) || "";
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="box" role="dialog" aria-modal="true" aria-label="联系创始人" style="width:380px;max-width:calc(100vw - 32px)">
+    <h3>联系创始人</h3>
+    <p>付款开通、卡密有问题、想提功能建议，直接加微信，都在。</p>
+    ${wx ? `<div class="pp-wxbox"><span class="pp-wxlabel">微信号</span><b>${esc(wx)}</b>
+            <button class="btn sm" id="ctCopy">复制</button></div>`
+         : `<p style="color:var(--ink-2)">微信号马上放上来，先在「权益与定价」页留意。</p>`}
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn sm line" id="ctClose">关闭</button></div>
+  </div>`;
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  const close = () => { m.remove(); document.removeEventListener("keydown", onKey); };
+  m.querySelector("#ctClose").onclick = close;
+  m.onclick = (e) => { if (e.target === m) close(); };
+  document.addEventListener("keydown", onKey);
+  const cp = m.querySelector("#ctCopy");
+  if (cp) cp.onclick = async () => {
+    try { await navigator.clipboard.writeText(wx); toast("已复制，去微信粘贴就行"); }
+    catch (e) { toast("复制失败，手动记一下微信号"); }
+  };
   document.body.appendChild(m);
-  const inp = m.querySelector("#prCode"); if (inp && ME) inp.focus();
 }
 async function paintPricingAdmin(m, p){
   if (!p.is_admin) return;
@@ -1892,7 +1954,7 @@ async function paintPricingAdmin(m, p){
     try {
       await api(`/api/admin/qr?which=${which}`, { method: "POST", body: fd });
       msg.textContent = "已上传，定价页立刻生效";
-      m.remove(); openPricing();
+      openPricing();
     } catch (e) { msg.textContent = e.message || "上传失败"; }
   };
   upQr("#adQrW", "wechat"); upQr("#adQrA", "alipay");
@@ -1926,6 +1988,7 @@ async function route(force){
     } catch (e) { if (epoch !== viewEpoch) return; if (e.auth) return showAuth(); }
   }
   if (epoch !== viewEpoch) return;
+  if (location.hash === "#/pricing") return openPricing();   // 直达/返回都能落到权益页
   CUR = null;
   renderHome();
 }
@@ -2949,18 +3012,17 @@ async function boot(){
   try { AUTHST = await api("/api/auth/status"); } catch (e) { AUTHST = {smtp:false, dev_email:false}; }
   paintAccount();
   loadVoiceCatalog();
-  // #/pricing 直达：直播间发的链接，点开就是价格页（登录/落地页之上都能弹）
-  if (location.hash === "#/pricing") openPricing();
-  // 站内已打开时链接再变到 #/pricing 也要能弹（整页加载走上面的 boot 分支）
-  window.addEventListener("hashchange", () => {
-    if (location.hash === "#/pricing") openPricing();
-  });
   // 开放模式（没账号、没令牌、没邮箱服务）= 本机自用，不拦
   // 未登录的访客：先看落地页（能浏览样片、免费试做一条），要上传自己的素材才需要登录
   const gated = AUTHST.locked || AUTHST.smtp || AUTHST.dev_email || AUTHST.token_auth;
-  if (!ME && gated) return renderLanding();
+  if (!ME && gated){
+    renderLanding();
+    // #/pricing 直达（直播间发的链接）：先铺落地页，再换权益页
+    if (location.hash === "#/pricing") openPricing();
+    return;
+  }
   await loadTemplates();
-  route(true);
+  route(true);   // route 认 #/pricing，直达权益页在这里落
   refreshTasks();
   setInterval(refreshTasks, 4000);
 }
@@ -2969,11 +3031,10 @@ function toggleTasksPanel(){
   $("tasksPanel").classList.toggle("hide", !TASKS_OPEN);
   refreshTasks();
 }
-$("tasksBtn").onclick = toggleTasksPanel;
 document.addEventListener("click", (e) => {
   if (!TASKS_OPEN) return;
   const t = e.target;
-  if (t.closest && (t.closest("#tasksPanel") || t.closest("#tasksBtn"))) return;
+  if (t.closest && (t.closest("#tasksPanel") || t.closest("#meBtn"))) return;
   TASKS_OPEN = false;
   $("tasksPanel").classList.add("hide");
 });
