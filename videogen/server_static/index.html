@@ -168,6 +168,34 @@ img,video{display:block}
   box-shadow:0 0 110px rgba(203,184,138,.16),0 28px 80px rgba(0,0,0,.4)}
 .hero .hint{color:var(--ink-2);font-size:14px;margin-top:16px}
 .hero-acts{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+/* 首页 · 前后对比：左边素材包，右边成片，中间箭头——一眼看懂产品是干什么的 */
+.ba{display:flex;align-items:center;justify-content:center;gap:24px;margin:38px auto 0;max-width:760px}
+.ba-col{display:flex;flex-direction:column;align-items:center;gap:12px}
+.ba-tag{font-size:13px;font-weight:700;color:var(--ink-3);letter-spacing:.06em}
+.ba-tag-out{color:var(--acc)}
+.ba-pack{width:300px;padding:15px 17px 11px;text-align:left;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--sh-1)}
+.ba-pack-h{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.ba-pack-h b{font-size:15px;font-weight:750}
+.ba-zipb{display:grid;place-items:center;width:34px;height:34px;border-radius:8px;flex:none;
+  border:1px solid rgba(203,184,138,.35);background:var(--sunken);color:var(--acc);
+  font-family:"Display",var(--sans);font-size:11px;font-weight:900;letter-spacing:.05em}
+.ba-f{display:flex;align-items:center;gap:9px;padding:8px 2px;font-size:13.5px;color:var(--ink-2)}
+.ba-f + .ba-f{border-top:1px dashed var(--line)}
+.ba-f svg{width:16px;height:16px;flex:none;color:var(--ink-3)}
+.ba-f b{margin-left:auto;font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.ba-mid{display:flex;flex-direction:column;align-items:center;gap:8px;flex:none}
+.ba-arrow{width:72px;height:22px;color:var(--acc);animation:baPulse 2.4s ease-in-out infinite}
+@keyframes baPulse{0%,100%{opacity:.5}50%{opacity:1}}
+.ba-how{font-size:12.5px;line-height:1.7;color:var(--ink-3);text-align:center}
+.ba-vid{width:120px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;
+  border:1px solid var(--line2);background:var(--media);box-shadow:var(--sh-1)}
+.ba-vid video{width:100%;height:100%;object-fit:cover}
+@media(max-width:760px){
+  .ba{flex-direction:column;gap:16px;margin-top:30px}
+  .ba-mid{gap:4px}
+  .ba-arrow{transform:rotate(90deg);width:52px;height:18px}
+}
 @media(max-width:760px){.hero h1{font-size:29px}.hero .sub{font-size:15px}.hero .vg-drop{padding:34px 18px}}
 
 .import{display:flex;align-items:center;gap:14px;width:100%;padding:13px 16px;text-align:left;
@@ -444,7 +472,8 @@ textarea:focus{outline:none;border-color:var(--acc)}
 .pp-wrap>*:nth-child(2){animation-delay:.06s}.pp-wrap>*:nth-child(3){animation-delay:.12s}
 .pp-wrap>*:nth-child(4){animation-delay:.18s}.pp-wrap>*:nth-child(5){animation-delay:.24s}
 .pp-wrap>*:nth-child(n+6){animation-delay:.3s}
-.pp-tiers{display:grid;grid-template-columns:1.16fr 1fr;gap:16px;margin-top:30px;align-items:stretch}
+.pp-tiers{display:grid;grid-template-columns:1fr;gap:16px;margin-top:30px;align-items:stretch}
+.pp-tier.hi{max-width:100%}
 .pp-tier{position:relative;border-radius:10px;padding:24px 24px 20px;background:var(--surface);
   border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 30px rgba(0,0,0,.3);
   transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
@@ -3784,7 +3813,7 @@ function closeMeMenu(){
   const b = $("meBtn"); if (b) b.setAttribute("aria-expanded", "false");
 }
 function meBenefitNote(tier){
-  if (tier === "premium") return "基础版权益全部包含：无水印出片 + 品牌套装（自有 Logo/声音克隆/文字水印）+ 剪映草稿导出 + 栏目化。永久有效。";
+  if (tier === "premium") return "无水印出片不限量 + 品牌套装（自有 Logo/文字水印）+ 我的声音克隆 + 剪映草稿导出 + 优先出片。永久有效。";
   if (tier === "basic") return "出片不限量、无 GetCut 水印，六套模板与音色任选，永久有效。想解锁品牌套件和剪映精剪，升高级版。";
   return "每天有免费出片额度，成片带 GetCut 水印。兑换卡密或升级后立即去水印。";
 }
@@ -3950,35 +3979,23 @@ async function openPricing(){
       <p class="pp-sub">没有月费，没有按条收费。今天买断，之后出的每一条片，都不再花一分钱。</p>
       <div class="pp-now">你现在的档位：<b>${nowLine}</b></div>
     </div>
-    <div class="pp-tiers">
+    <div class="pp-tiers pp-single">
       <div class="pp-tier hi">
         <span class="pp-seal" aria-hidden="true">永久<span>有效</span></span>
-        <div class="pp-th"><h3>高级版</h3>${premium ? `<span class="pp-minechip">你在这档</span>` : `<span class="pp-reco">推荐</span>`}</div>
+        <div class="pp-th"><h3>高级版 · 唯一一档</h3>${premium ? `<span class="pp-minechip">你在这档</span>` : ""}</div>
         <div class="pp-amt"><span class="cur">¥</span><span class="num">${p.prices.premium}</span><span class="per">一次付费 · 永久有效</span></div>
-        <p class="pp-one">把片子变成「你的」。</p>
+        <p class="pp-one">把片子做成「你的」，一次买断，不再花一分钱。</p>
         <ul class="pp-feats">
-          <li><b>基础版全部权益</b>，一条不少</li>
-          <li><b>剪映草稿导出</b>——成片接着精剪，导进去就是分好镜的</li>
-          <li><b>品牌套件</b>：你的 Logo、文字水印，每条片自动带上</li>
-          <li><b>声音克隆</b>：录一分钟，以后都用你自己的声音配音</li>
-          <li><b>栏目化模板</b>：同一档节目，每期一个模子</li>
+          <li><b>出片不限量</b>：拖素材包 → 自动分镜 → 成片，随便出</li>
+          <li><b>无 GetCut 水印</b>：可换成自己的 Logo / 文字水印，随便发</li>
+          <li><b>全部模板、全部音色</b>任选</li>
+          <li><b>我的声音</b>：录一分钟，以后每条片都用你自己的声音配音</li>
+          <li><b>品牌套件</b>：自有 Logo + 文字水印，每条片自动带上</li>
+          <li><b>剪映草稿导出</b>：成片接着精剪，导进去就是分好镜的</li>
           <li><b>优先出片</b>：高峰期渲染队列排在免费任务前面，不跟人挤</li>
         </ul>
         <button class="btn" id="ppBuyHi" ${premium ? "disabled" : ""}>${premium ? "已开通 · 当前档位" : "加微信，开通高级版"}</button>
         <p class="pp-under">付款由<b>创始人一对一对接</b>，转账后 5 分钟内发卡密</p>
-      </div>
-      <div class="pp-tier">
-        <div class="pp-th"><h3>基础版</h3>${basic ? `<span class="pp-minechip">你在这档</span>` : ""}</div>
-        <div class="pp-amt"><span class="cur">¥</span><span class="num">${p.prices.basic}</span><span class="per">一次付费 · 永久有效</span></div>
-        <p class="pp-one">把片子做出来。</p>
-        <ul class="pp-feats">
-          <li>出片全流程：拖素材包 → 自动分镜 → 成片</li>
-          <li>六套模板、音色任选、出片不限量</li>
-          <li>成片无 GetCut 水印，随便发</li>
-          <li><b>优先出片</b>：渲染队列排在免费任务前面</li>
-        </ul>
-        <button class="btn line" id="ppBuyBa" ${basic ? "disabled" : ""}>${basic ? "已开通 · 当前档位" : "开通基础版"}</button>
-        <p class="pp-under">随时可补差价升级高级版</p>
       </div>
     </div>
     <p class="pp-free">还在犹豫？每天 ${p.free_daily_builds} 条免费额度，成片带 GetCut 水印——先看效果，再决定。</p>
@@ -4076,7 +4093,7 @@ async function paintPricingAdmin(m, p){
   host.className = "admin-sec";
   host.innerHTML = `<h4>站长面板（只有你能看到）</h4>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <select id="adTier" style="width:auto"><option value="premium">高级版 ¥${p.prices.premium}</option><option value="basic">基础版 ¥${p.prices.basic}</option></select>
+      <select id="adTier" style="width:auto"><option value="premium">高级版 ¥${p.prices.premium}</option></select>
       <input id="adCount" type="number" min="1" max="200" value="10" title="一次生成几张卡密" style="width:76px">
       <input id="adNote" placeholder="备注（如 9.20 直播场）" style="flex:1;min-width:140px">
       <button class="btn sm" id="adGen">生成卡密</button>
@@ -4211,11 +4228,30 @@ async function renderHome(){
         <small>zip 格式 · 最大 512 MB</small>
       </button>
       <input type="file" id="heroZip" accept=".zip" class="hide">
-      <p class="hero-acts">
-        <button class="btn line sm" id="heroFmt">素材包长什么样？</button>
-        <a class="btn line sm" href="/api/sample-bundle" download>下载示例素材包</a>
-      </p>
       <p class="hint">放进来之后会先让你检查内容，点确认才开始生成——不会自动开始。</p>
+      <div class="ba" aria-hidden="true">
+        <div class="ba-col">
+          <span class="ba-tag">你拖进来的</span>
+          <div class="ba-pack">
+            <div class="ba-pack-h"><span class="ba-zipb">ZIP</span><b>素材包</b></div>
+            <div class="ba-f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg>定稿口播文案<b>一篇</b></div>
+            <div class="ba-f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17.5 10 12l4 4 3-3 2.5 2.5"/></svg>相关图片<b>20 来张</b></div>
+            <div class="ba-f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M8 4.5v15M16 4.5v15M3.5 9H8M3.5 15H8M16 9h4.5M16 15h4.5"/></svg>实拍视频片段<b>几段</b></div>
+          </div>
+        </div>
+        <div class="ba-mid">
+          <svg class="ba-arrow" viewBox="0 0 74 22" fill="none"><path d="M2 11h64m0 0-7-7m7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="ba-how">配音 · 分镜 · 字幕 · 音效<br>全自动</span>
+        </div>
+        <div class="ba-col">
+          <span class="ba-tag ba-tag-out">你拿到的</span>
+          <div class="ba-vid"><video muted loop playsinline autoplay preload="metadata"
+            src="/templates/sample-zhigu.mp4" poster="/templates/tpl-zhigu.png"></video></div>
+        </div>
+      </div>
+      <p class="hero-acts">
+        <button class="btn line sm" id="heroSkill">手头没有素材包？让 AI 助手帮你备料</button>
+      </p>
     </section>
     ${recent}
     ${ps.length ? `<section class="rail-sec">
@@ -4224,7 +4260,7 @@ async function renderHome(){
     </section>` : ""}
   </div>`;
   wireImport($("heroDrop"), $("heroZip"), heroStart);
-  $("heroFmt").onclick = openPackFormat;
+  $("heroSkill").onclick = openSkillGuide;
   const pw = $("posters");
   if (pw) rs.slice(0, 12).forEach((r, i) => {
     const el = poster(r);
@@ -4580,7 +4616,7 @@ function paintFlowImport(){
     <section>
       <button class="vg-drop" id="vg-drop" ${busy ? "disabled" : ""}><span class="vg-zip" aria-hidden="true">ZIP</span><b>把素材包拖到这里</b><span>无需解压，文案与素材会一起读入</span><span class="vg-pick" aria-hidden="true">选择 ZIP 文件</span><small>zip 格式 · 最大 512 MB</small></button>
       <input type="file" accept=".zip" id="vg-zip" class="hide">
-      <div class="vg-importer"><button class="btn line" id="vg-bundles" ${busy ? "disabled" : ""}>${CURB ? "更换素材包" : "选用服务器上已有的素材包"}</button><button class="btn line" id="vg-fmt">素材包长什么样？</button><a class="btn line" href="/api/sample-bundle" download>下载示例素材包</a>${CURB ? `<span class="vg-current">当前已选用 ${esc(CURB.name)}</span>` : ""}</div>
+      <div class="vg-importer"><button class="btn line" id="vg-bundles" ${busy ? "disabled" : ""}>${CURB ? "更换素材包" : "选用服务器上已有的素材包"}</button><button class="btn line" id="vg-skill">手头没有素材包？让 AI 帮你备料</button>${CURB ? `<span class="vg-current">当前已选用 ${esc(CURB.name)}</span>` : ""}</div>
       <p id="vg-upload-status" role="status">${FLOW.bundleError ? `<span class="vg-error">${esc(humanError(FLOW.bundleError))}</span>` : busy ? "当前任务完成前不能更换素材。" : ""}</p>
     </section>
     <p class="vg-sub" style="margin-top:18px">放进来之后会先让你检查内容，点确认才开始生成——不会自动开始。</p>
@@ -4600,31 +4636,25 @@ function paintFlowImport(){
     catch(e){ if (flowHere(epoch,pid)){ dropReset(drop, "把素材包拖到这里"); label.textContent = humanError(e.message); drop.disabled = false; $("vg-bundles").disabled = false; } }
   });
   $("vg-bundles").onclick = openBundleModal;
-  $("vg-fmt").onclick = openPackFormat;
+  $("vg-skill").onclick = openSkillGuide;
 }
-/* 素材包格式说明：白话讲清"包里有什么"，再给一段能直接丢给 AI 助手的打包指令 */
-const PACK_BRIEF = "请帮我把下面的内容打包成 GetCut 素材包（zip）：\\n" +
-  "1) 根目录放 content.json，字段：title（标题）、script（口播文案全文）、sources（信息来源数组）；可选 hook_headline.lines（开场大字，用[[文字]]标记高亮词）、pronunciations（特殊读法映射）。\\n" +
-  "2) 根目录放 manifest.json，assets 数组每项：file（相对路径）、kind（image 或 video）、summary（一句话说明）、script_anchor（对应文案里的哪句话）。\\n" +
-  "3) 图片放 images/、视频放 videos/，文件路径与 manifest 一致。\\n" +
-  "4) 直接压成 zip，content.json 必须在压缩包根部，不要多套一层文件夹。";
-function openPackFormat(){
-  const d = openFlowDialog("素材包长什么样", `<div class="fmt-help" style="line-height:1.8">
-    <p>就是一个 <b>zip 压缩包</b>，里面三样东西：</p>
-    <ol style="padding-left:22px;margin:10px 0">
-      <li><b>content.json</b>（必须有）——这条片的口播文案：标题、正文、信息来源。</li>
-      <li><b>manifest.json</b>（必须有）——素材清单：每张图、每段视频是什么，配哪句话。</li>
-      <li><b>images/ 和 videos/</b>——真正的图片和视频文件。</li>
-    </ol>
-    <p>不用手写这些文件——把下面这段说明连同文案一起发给你的 AI 助手，它会替你打好包：</p>
-    <textarea id="fmtBrief" rows="8" readonly style="width:100%" aria-label="打包说明文本">${esc(PACK_BRIEF).replace(/\\n/g, "\n")}</textarea>
-    <p style="margin-top:12px"><button class="btn sm" id="fmtCopy">复制这段说明</button>
-    <a class="btn line sm" href="/api/sample-bundle" download>下载示例素材包，拆开看一眼</a></p>
+/* 「让 AI 帮你备料」：不再解释素材包长什么样，直接给一句能发给任意 AI 助手的安装口令——
+   助手装好 getcut-bundle 技能后，选题、写稿、收素材、打包、投喂全由它干。 */
+const SKILL_URL = "https://github.com/bopii6/getcut-bundle";
+const SKILL_PHRASE = "帮我安装这个技能：" + SKILL_URL;
+function openSkillGuide(){
+  const d = openFlowDialog("没有素材包？让 AI 帮你备料", `<div class="fmt-help" style="line-height:1.9">
+    <p>素材包不用自己动手做。打开任意<b>能执行命令</b>的 AI 助手（ZCode、Claude Code、Cursor 都行），把下面这句话发给它：</p>
+    <textarea id="skillPhrase" rows="2" readonly style="width:100%" aria-label="技能安装口令">${esc(SKILL_PHRASE)}</textarea>
+    <p style="margin-top:12px"><button class="btn sm" id="skillCopy">复制这句话</button>
+    <a class="btn line sm" href="${SKILL_URL}" target="_blank" rel="noopener">看看这个技能是什么</a></p>
+    <p style="margin-top:14px;color:var(--ink-2)">装好技能后，甩给它一个选题或一份材料就行——它把稿子写好、素材找齐、打好包，直接投进你的 GetCut 工作台，你点「确定」就开工。<br>注意：只能聊天不能干活的助手（比如手机 App 里的）做不了这件事。</p>
   </div>`);
-  const cp = d.querySelector("#fmtCopy");
+  const cp = d.querySelector("#skillCopy");
   if (cp) cp.onclick = async () => {
-    try { await navigator.clipboard.writeText(PACK_BRIEF.replace(/\\n/g, "\n")); toast("说明已复制，连同文案一起发给 AI 就行"); }
-    catch (e) { const ta = d.querySelector("#fmtBrief"); if (ta) { ta.select(); } toast("复制失败，全选文本框内容手动复制"); }
+    try { await navigator.clipboard.writeText(SKILL_PHRASE); toast("已复制，去发给你的 AI 助手");
+      cp.textContent = "已复制 ✓"; setTimeout(() => cp.textContent = "复制这句话", 1600); }
+    catch (e) { const ta = d.querySelector("#skillPhrase"); if (ta) ta.select(); toast("复制失败，全选文本框内容手动复制"); }
   };
 }
 function flowAsset(a, index){

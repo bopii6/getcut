@@ -1786,7 +1786,7 @@ def start_build(body: dict, request: Request):
         if used > config.FREE_DAILY_BUILDS:
             return JSONResponse(
                 {"error": f"今天的免费额度（每天 {config.FREE_DAILY_BUILDS} 条）用完了。"
-                          f"基础版 ¥{config.PRICES['basic']} 永久不限量——点右上角「升级」看看",
+                          f"¥{config.PRICES['premium']} 永久买断，不限量去水印——点右上角「升级」看看",
                  "limited": True},
                 status_code=429)
     if email:

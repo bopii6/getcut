@@ -474,7 +474,8 @@ test('权益整页：价格/微信/收款码按 /api/pricing 渲染，兑换卡�
   const page = h.document.querySelector('.pp-wrap');
   assert(page, '权益页要铺开（不再弹窗）');
   assert.equal(h.evaluate('location.hash'), '#/pricing', '网址要落到 #/pricing，直播间链接可直达');
-  assert(page.textContent.includes('¥399') && page.textContent.includes('¥599'), '两档价格要摆出来');
+  assert(page.textContent.includes('¥599'), '唯一一档 ¥599 要摆出来');
+  assert(!page.textContent.includes('¥399'), '399 基础档已下架，页面上不许再出现');
   assert(page.textContent.includes('getcut-admin'), '创始人微信号要展示（直播间销售流程）');
   assert(!h.document.querySelector('.price-qr'), '收款码功能已整体拆除，页面不该出现二维码位');
   h.get('prCode').value = ' gcp-7k2m-9xq4 ';
