@@ -1,0 +1,122 @@
+<!doctype html>
+<!-- GetCut 贵重感样张：同一块界面，三种配色方向。
+     顶部按钮切换 A 玄墨鎏金 / B 紫玉描金 / C 黛板暖玉（浅色）。
+     选定方向后，把该主题的 CSS 变量搬进 server_static/index.html 全站生效。 -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GetCut · 贵重感样张</title>
+<style>
+@font-face{font-family:"Display";src:url("display-subset.woff2") format("woff2");font-weight:900;font-display:swap}
+*{box-sizing:border-box;margin:0}
+body{font-family:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);transition:background .3s}
+/* ---------- 三个方向，只换这组变量 ---------- */
+body[data-theme="A"]{ /* A 玄墨鎏金：黑金俱乐部。紫退场，香槟金当唯一亮色 */
+  --bg:#0F1113; --surface:#171A1D; --surface2:#1F2429;
+  --ink:#F2EFE9; --ink-2:#A8A29A;
+  --line:#2A2F35; --gold:#D8B878; --gold-deep:#B99A5F;
+  --acc:var(--gold); --acc-ink:#221B0C; --acc-soft:rgba(216,184,120,.10);
+  --glow:radial-gradient(70% 42% at 50% -8%, rgba(216,184,120,.14), transparent 70%);
+  --hairline:linear-gradient(90deg,transparent,rgba(216,184,120,.55),transparent);
+}
+body[data-theme="B"]{ /* B 紫玉描金：留住紫，但压成"宝石"——底色更深、紫降饱和、金只做细描边 */
+  --bg:#0B0A11; --surface:#15131F; --surface2:#1E1B2C;
+  --ink:#EDEAF6; --ink-2:#9C96B4;
+  --line:#2C2840; --gold:#CBB88A; --gold-deep:#A6946C;
+  --acc:#A493D6; --acc-ink:#17122B; --acc-soft:rgba(164,147,214,.10);
+  --glow:radial-gradient(70% 42% at 50% -8%, rgba(122,101,196,.20), transparent 70%);
+  --hairline:linear-gradient(90deg,transparent,rgba(203,184,138,.5),transparent);
+}
+body[data-theme="C"]{ /* C 黛板暖玉：浅色印刷感。暖白纸、墨字、铜金点缀——和深色完全两个气质 */
+  --bg:#F4F1EA; --surface:#FBFAF6; --surface2:#ECE7DC;
+  --ink:#211E18; --ink-2:#6E6759;
+  --line:#D8D2C4; --gold:#8F6F3A; --gold-deep:#77592B;
+  --acc:#2E2A22; --acc-ink:#F6F1E4; --acc-soft:rgba(143,111,58,.10);
+  --glow:radial-gradient(70% 42% at 50% -8%, rgba(143,111,58,.10), transparent 70%);
+  --hairline:linear-gradient(90deg,transparent,rgba(143,111,58,.45),transparent);
+}
+/* ---------- 样张内容（三版共用） ---------- */
+.switch{position:fixed;top:14px;right:16px;z-index:9;display:flex;gap:8px}
+.switch button{padding:8px 14px;border-radius:999px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink-2);font-size:13.5px;font-weight:600;cursor:pointer}
+.switch button.on{background:var(--acc);color:var(--acc-ink);border-color:transparent}
+.wrap{max-width:860px;margin:0 auto;padding:72px 28px 64px;position:relative}
+.wrap::before{content:"";position:absolute;inset:0 -40vw 40vh;background:var(--glow);pointer-events:none}
+header{display:flex;align-items:center;gap:10px;margin-bottom:64px}
+.logo{width:30px;height:30px;border-radius:9px;background:var(--acc);display:flex;align-items:center;justify-content:center}
+.logo svg{width:14px;height:14px}
+.brand{font-weight:800;font-size:17px;letter-spacing:.02em}
+.brand small{color:var(--ink-2);font-weight:500;margin-left:8px}
+.kicker{font-size:13.5px;letter-spacing:.32em;color:var(--gold);font-weight:700;margin-bottom:18px}
+h1{font-family:"Display",serif;font-size:52px;line-height:1.22;font-weight:900;letter-spacing:.01em;margin-bottom:14px}
+h1 em{font-style:normal;color:var(--gold)}
+.sub{font-size:16.5px;color:var(--ink-2);margin-bottom:44px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:30px 30px 26px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;top:0;left:8%;right:8%;height:1px;background:var(--hairline)}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+.row h3{font-size:19px;font-weight:750}
+.price{font-family:"Display",serif;font-size:44px;font-weight:900}
+.price small{font-family:inherit;font-size:15px;color:var(--ink-2);font-weight:500;margin-left:6px}
+.fine{font-size:14px;color:var(--ink-2);margin-top:6px}
+ul{list-style:none;margin:22px 0 26px;display:grid;gap:11px}
+li{font-size:15.5px;padding-left:24px;position:relative}
+li::before{content:"✓";position:absolute;left:0;color:var(--gold);font-weight:800}
+li b{font-weight:700}
+.btn{display:block;width:100%;padding:15px;border-radius:12px;border:0;cursor:pointer;
+  background:var(--acc);color:var(--acc-ink);font-size:16.5px;font-weight:750;letter-spacing:.04em}
+.btnline{display:block;width:100%;margin-top:10px;padding:13px;border-radius:12px;
+  border:1px solid var(--line);background:transparent;color:var(--ink);font-size:15px;font-weight:600;cursor:pointer}
+.voices{margin-top:34px}
+.vlabel{font-size:14px;color:var(--ink-2);font-weight:600;margin-bottom:10px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{padding:8px 15px;border-radius:999px;font-size:14.5px;font-weight:600;color:var(--ink-2);
+  border:1px solid var(--line);background:var(--surface2);cursor:pointer}
+.pill.on{background:var(--acc);color:var(--acc-ink);border-color:transparent}
+.foot{margin-top:40px;text-align:center;font-size:13.5px;color:var(--ink-2);letter-spacing:.06em}
+.foot b{color:var(--gold)}
+</style>
+</head>
+<body data-theme="A">
+<div class="switch">
+  <button data-t="A" class="on">A 玄墨鎏金</button>
+  <button data-t="B">B 紫玉描金</button>
+  <button data-t="C">C 黛板暖玉</button>
+</div>
+<div class="wrap">
+  <header>
+    <span class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="var(--acc-ink)"/></svg></span>
+    <span class="brand">GetCut<small>视频工作台</small></span>
+  </header>
+  <div class="kicker">买断制 · 不订阅 · 不涨价</div>
+  <h1>一次付费，<em>永久是你的。</em></h1>
+  <p class="sub">从一个压缩包，到一条能发的片子。</p>
+  <div class="card">
+    <div class="row"><h3>高级版</h3><span class="price">599<small>一次付费 · 永久有效</small></span></div>
+    <p class="fine">把片子变成「你的」。</p>
+    <ul>
+      <li><b>剪映草稿导出</b> —— 导进去就是分好镜的</li>
+      <li><b>品牌套件</b>：你的 Logo、文字水印，每条片自动带上</li>
+      <li><b>声音克隆</b>：录一分钟，以后都用你自己的声音配音</li>
+      <li><b>优先出片</b>：高峰期渲染队列排在免费任务前面</li>
+    </ul>
+    <button class="btn">加微信，开通高级版</button>
+    <div class="voices">
+      <div class="vlabel">配音音色 · 沉稳播报</div>
+      <div class="pills">
+        <span class="pill on">云扬</span><span class="pill">云健</span>
+        <span class="pill">云希</span><span class="pill">我的声音</span>
+      </div>
+    </div>
+  </div>
+  <p class="foot">付款由创始人<b>一对一</b>对接，转账后 5 分钟内发卡密</p>
+</div>
+<script>
+document.querySelectorAll(".switch button").forEach(b => b.onclick = () => {
+  document.body.dataset.theme = b.dataset.t;
+  document.querySelectorAll(".switch button").forEach(x => x.classList.toggle("on", x === b));
+});
+</script>
+</body>
+</html>

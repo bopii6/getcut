@@ -1,0 +1,352 @@
+<!doctype html>
+<!-- GetCut 权益与定价 · 「贵感」改造稿
+     左下角开关切换 旧版（忠实复刻线上现状）/ 新版（升级稿）。
+     设计立场：贵 = 克制。少元素、大留白、一套色、慢动效、把「微信转账」从将就包装成一对一服务。
+     页内数字为示例，上线前接真实统计（licenses.stats / outputs 计数）。 -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GetCut · 权益与定价（贵感改造稿）</title>
+<style>
+@font-face{font-family:"Display";src:url("display-subset.woff2") format("woff2");font-weight:900;font-display:swap}
+:root{
+  --bg:#14161B; --surface:#1C1F26; --surface2:#262B35; --sunken:#242933;
+  --ink:#EEF0F5; --ink-2:#AAB3C1; --ink-3:#8F9AAC;
+  --line:#333945; --line2:#424957;
+  --acc:#B7AAFF; --acc-ink:#191725; --acc-soft:rgba(183,170,255,.10);
+  --ok:#5BD08A;
+  --sans:"PingFang SC","HarmonyOS Sans SC","MiSans","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Consolas,monospace;
+  --ease:cubic-bezier(.25,.6,.3,1);
+}
+*{box-sizing:border-box;margin:0}
+body{color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;background:var(--bg)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+a{color:inherit;text-decoration:none}
+.display{font-family:"Display",var(--sans);font-weight:900;letter-spacing:-.01em}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:4px}
+
+/* 新版专属：极淡的极光底，让页面不是一块死黑 */
+body.new{background:
+  radial-gradient(900px 420px at 50% -120px, rgba(183,170,255,.09), transparent 65%),
+  radial-gradient(700px 380px at 85% 30%, rgba(183,170,255,.045), transparent 60%),
+  var(--bg)}
+
+.top{position:sticky;top:0;z-index:30;background:rgba(20,22,27,.86);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line)}
+.top .in{max-width:860px;margin:0 auto;height:58px;padding:0 28px;display:flex;align-items:center;gap:14px}
+.mark{width:30px;height:30px;flex:none;border-radius:9px;background:var(--acc);color:var(--acc-ink);
+  display:grid;place-items:center;font-family:"Display",var(--sans);font-size:15px}
+.top b{font-size:15.5px;font-weight:800;letter-spacing:-.01em}
+.top .crumb{color:var(--ink-3);font-size:13px;margin-left:auto}
+
+.wrap{max-width:860px;margin:0 auto;padding:0 28px 120px}
+.in{animation:rise .5s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.d1{animation-delay:.05s}.d2{animation-delay:.13s}.d3{animation-delay:.21s}.d4{animation-delay:.29s}.d5{animation-delay:.37s}
+
+/* ── 开场 ── */
+.pill{display:inline-flex;align-items:center;gap:8px;margin-top:44px;padding:6px 14px;border-radius:999px;
+  border:1px solid var(--line2);color:var(--ink-2);font-size:12.5px;font-weight:600}
+.pill i{font-style:normal;width:6px;height:6px;border-radius:50%;background:var(--ok);
+  box-shadow:0 0 0 3px rgba(91,208,138,.15)}
+.lead{margin-top:22px}
+.lead h1{font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.25}
+.lead h1 em{font-style:normal;color:var(--acc)}
+.lead p{margin-top:12px;color:var(--ink-2);font-size:15px;max-width:560px;line-height:1.9}
+
+/* 数字信任条：mono 精确感 */
+.trust{display:flex;gap:0;margin-top:30px;border:1px solid var(--line);border-radius:14px;
+  background:linear-gradient(180deg,#1D2029,#191C23);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.trust div{flex:1;padding:16px 8px 14px;text-align:center;position:relative}
+.trust div+div:before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:1px;background:var(--line)}
+.trust b{font-family:"Display",var(--sans);font-weight:900;font-size:21px;letter-spacing:.01em}
+.trust small{display:block;margin-top:2px;color:var(--ink-3);font-size:12px}
+.trustnote{margin-top:8px;color:var(--ink-3);font-size:11.5px}
+
+/* ── 档位：高级版是主角，基础版是配角 ── */
+.tiers{display:grid;grid-template-columns:1.18fr 1fr;gap:16px;margin-top:34px;align-items:stretch}
+.card{position:relative;border-radius:18px;padding:26px 26px 22px;
+  background:linear-gradient(180deg,#1D2029,#191C23);border:1px solid var(--line);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 12px 34px rgba(0,0,0,.35);
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
+.card:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 44px rgba(0,0,0,.45)}
+/* 主角卡：一圈渐变描边，只在边框上，不糊进内容 */
+.card.hi{border-color:transparent;background:
+  linear-gradient(180deg,#1E1F2E,#181A24) padding-box,
+  linear-gradient(160deg,#8F7FF2 0%,rgba(183,170,255,.25) 45%,#333945 100%) border-box;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 16px 44px rgba(120,100,255,.14), 0 4px 18px rgba(0,0,0,.4)}
+.card.hi:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 22px 56px rgba(120,100,255,.2),0 6px 22px rgba(0,0,0,.45)}
+.th{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.th h2{font-size:16.5px;font-weight:800}
+.reco{font-size:11px;font-weight:700;color:var(--acc);background:var(--acc-soft);
+  border:1px solid rgba(183,170,255,.28);border-radius:999px;padding:3px 10px;letter-spacing:.04em}
+.amt{margin-top:16px;display:flex;align-items:baseline;gap:6px}
+.amt .cur{font-size:17px;font-weight:700;color:var(--ink-2)}
+.amt .num{font-family:"Display",var(--sans);font-weight:900;font-size:52px;letter-spacing:-.01em;line-height:1;
+  background:linear-gradient(180deg,#F4F1FF 20%,#C9BEFF 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.amt .per{font-size:12.5px;color:var(--ink-3)}
+.card .one{margin-top:10px;color:var(--ink-2);font-size:13.5px}
+.feats{margin:16px 0 20px;padding:0;list-style:none}
+.feats li{position:relative;padding:6px 0 6px 26px;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.feats li::before{content:"✓";position:absolute;left:2px;top:6px;color:var(--acc);font-weight:800}
+.feats li b{color:var(--ink);font-weight:650}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;
+  border-radius:11px;min-height:46px;padding:0 22px;font-size:14.5px;font-weight:700;
+  background:var(--acc);color:var(--acc-ink);box-shadow:0 4px 16px rgba(183,170,255,.18);
+  transition:filter .2s,transform .2s,box-shadow .2s;width:100%}
+.btn:hover{filter:brightness(1.06);box-shadow:0 6px 22px rgba(183,170,255,.26)}
+.btn:active{transform:scale(.985)}
+.btn.line{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line2)}
+.btn.line:hover{background:var(--sunken)}
+.under{margin-top:10px;font-size:12px;color:var(--ink-3);text-align:center;line-height:1.6}
+.under b{color:var(--ink-2);font-weight:650}
+
+/* 免费试玩 · 一行带过 */
+.free{margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;
+  color:var(--ink-3);font-size:13px}
+.free a{color:var(--acc);font-weight:650}
+
+/* ── 开通：把「微信转账」说成一对一服务 ── */
+.how{margin-top:44px}
+.how h2,.redeem h2{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.how>p{margin-top:6px;color:var(--ink-3);font-size:13px}
+.steps3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:18px}
+.step{padding:18px;border-radius:14px;border:1px solid var(--line);
+  background:linear-gradient(180deg,#1D2029,#191C23);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.step .no{font-family:"Display",var(--sans);font-weight:900;font-size:13px;color:var(--acc);letter-spacing:.08em}
+.step b{display:block;margin-top:8px;font-size:14px}
+.step p{margin-top:5px;font-size:12.5px;color:var(--ink-3);line-height:1.7}
+.wxrow{margin-top:10px;display:flex;align-items:center;gap:8px;background:var(--sunken);
+  border:1px solid var(--line2);border-radius:9px;padding:8px 10px}
+.wxrow b{margin:0;font-family:var(--mono);font-size:14.5px;letter-spacing:.03em;flex:1;color:var(--ink)}
+.wxrow button{flex:none;font-size:12px;font-weight:700;color:var(--acc);padding:4px 10px;border-radius:7px}
+.wxrow button:hover{background:var(--acc-soft)}
+.concierge{margin-top:14px;padding:13px 16px;border-radius:12px;background:var(--acc-soft);
+  border:1px solid rgba(183,170,255,.2);color:var(--ink-2);font-size:13px;line-height:1.7}
+.concierge b{color:var(--acc)}
+
+/* ── 卡密 ── */
+.redeem{margin-top:40px;padding:22px;border-radius:16px;border:1px solid var(--line);
+  background:linear-gradient(180deg,#1D2029,#191C23);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.redeem>p{margin-top:5px;color:var(--ink-3);font-size:13px}
+.rrow{display:flex;gap:10px;margin-top:14px}
+.rrow input{flex:1;min-width:0;height:46px;border-radius:11px;border:1px solid var(--line2);
+  background:var(--sunken);padding:0 14px;font-family:var(--mono);font-size:14px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.rrow input::placeholder{color:var(--ink-3);letter-spacing:.06em}
+.rrow input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.rrow .btn{width:auto;min-width:112px}
+.rhint{margin-top:9px;font-size:12px;color:var(--ink-3)}
+.rhint code{font-family:var(--mono);color:var(--ink-2)}
+
+.foot{margin-top:52px;padding-top:18px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;color:var(--ink-3);font-size:12px}
+.foot span{font-family:var(--mono);letter-spacing:.02em}
+
+/* ══ 旧版（忠实复刻线上现状） ══ */
+body.old .wrap{max-width:760px}
+body.old{background:var(--bg)}
+body.old .top .in{max-width:760px}
+.pp-old{padding-top:34px}
+.pp-old h1{font-size:30px;font-weight:900;letter-spacing:-.02em}
+.pp-old .sub{color:var(--ink-2);font-size:14px;margin-top:8px}
+.pp-now{margin:22px 0 14px;padding:13px 16px;border-radius:11px;background:var(--acc-soft);font-size:13.5px;color:var(--ink-2)}
+.pp-now b{color:var(--acc)}
+.old-tiers{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.otier{border:1px solid var(--line2);border-radius:14px;padding:18px;background:var(--surface)}
+.otier.hi{border-color:#6c62a8}
+.oth{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.oth h3{font-size:16.5px}
+.oth .amt{margin:0;font-family:"Display",var(--sans);font-size:24px;font-weight:800}
+.oth .amt small{font-size:12px;color:var(--ink-3);font-weight:400;margin-left:2px}
+.otier>p{color:var(--ink-2);font-size:13px;margin:4px 0 10px}
+.otier ul{list-style:none;padding:0;margin:0}
+.otier li{font-size:13.5px;color:var(--ink-2);padding:5px 0 5px 20px;position:relative;line-height:1.5}
+.otier li::before{content:"✓";position:absolute;left:2px;color:var(--acc);font-weight:800}
+.obox{margin-top:26px;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:18px}
+.obox h2{font-size:15.5px;margin-bottom:10px}
+.obox ol{margin:0;padding-left:20px;color:var(--ink-2);font-size:13.8px;line-height:2.1}
+.orow{display:flex;gap:10px;margin-top:14px}
+.orow input{flex:1;min-width:0;height:42px;border-radius:9px;border:1px solid var(--line2);background:var(--sunken);
+  padding:0 12px;font-family:var(--mono);text-transform:uppercase}
+.orow .btn2{flex:none;height:42px;display:inline-flex;align-items:center;padding:0 20px;border-radius:9px;
+  background:var(--acc);color:var(--acc-ink);font-weight:700;font-size:14px}
+
+/* ── 稿件切换条 ── */
+.designbar{position:fixed;left:0;right:0;bottom:0;z-index:50;height:42px;display:flex;align-items:center;
+  justify-content:center;gap:14px;background:rgba(25,28,40,.92);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);color:var(--ink-3);font-size:12px}
+.designbar button{padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;color:var(--ink-3)}
+.designbar button.on{background:var(--acc);color:var(--acc-ink)}
+.designbar .note{color:var(--ink-3)}
+
+@media(max-width:760px){
+  .tiers,.steps3,.old-tiers{grid-template-columns:1fr}
+  .lead h1{font-size:29px}
+  .amt .num{font-size:44px}
+  .trust{flex-direction:column}
+  .trust div+div:before{left:14px;right:14px;top:0;bottom:auto;width:auto;height:1px}
+}
+</style>
+</head>
+<body class="new">
+
+<header class="top"><div class="in">
+  <span class="mark">v</span><b>GetCut</b>
+  <span class="crumb">权益与定价</span>
+</div></header>
+
+<!-- ═══ 新版 ═══ -->
+<main class="wrap" id="viewNew">
+
+  <section class="in d1">
+    <span class="pill"><i></i>买断制 · 不订阅 · 不涨价</span>
+    <div class="lead">
+      <h1>一次付费，<em>永久是你的。</em></h1>
+      <p>没有月费，没有按条收费。今天买断，之后出的每一条片，都不再花一分钱。</p>
+    </div>
+  </section>
+
+  <section class="trust in d2">
+    <div><b>1,286</b><small>累计出片（条）</small></div>
+    <div><b>4 分 12 秒</b><small>平均出片用时</small></div>
+    <div><b>96</b><small>正在使用的创作者</small></div>
+  </section>
+  <p class="trustnote">※ 稿件演示数字，上线前接真实统计（导出计数 / 在售卡密数）。</p>
+
+  <section class="tiers in d3">
+    <div class="card hi">
+      <div class="th"><h2>高级版</h2><span class="reco">推荐</span></div>
+      <div class="amt"><span class="cur">¥</span><span class="num">599</span><span class="per">一次付费 · 永久有效</span></div>
+      <p class="one">把片子变成「你的」。</p>
+      <ul class="feats">
+        <li><b>基础版全部权益</b>，一条不少</li>
+        <li><b>剪映草稿导出</b>——成片接着精剪，导进去就是分好镜的</li>
+        <li><b>品牌套件</b>：你的 Logo、片头、字幕样式，每条片自动带上</li>
+        <li><b>声音克隆</b>：录一分钟，以后都用你自己的声音配音</li>
+        <li><b>栏目化模板</b>：同一档节目，每期一个模子</li>
+      </ul>
+      <button class="btn">加微信，开通高级版</button>
+      <p class="under">付款由<b>创始人一对一对接</b>，转账后 5 分钟内发卡密</p>
+    </div>
+
+    <div class="card">
+      <div class="th"><h2>基础版</h2></div>
+      <div class="amt"><span class="cur">¥</span><span class="num">399</span><span class="per">一次付费 · 永久有效</span></div>
+      <p class="one">把片子做出来。</p>
+      <ul class="feats">
+        <li>出片全流程：拖素材包 → 自动分镜 → 成片</li>
+        <li>六套模板、音色任选、出片不限量</li>
+        <li>成片无 GetCut 水印，随便发</li>
+      </ul>
+      <button class="btn line">开通基础版</button>
+      <p class="under">随时可补差价升级高级版</p>
+    </div>
+  </section>
+
+  <p class="free in d4">还在犹豫？<a>先试免费版</a>——每天 2 条，成片带 GetCut 水印，不用花一分钱。</p>
+
+  <section class="how in d4">
+    <h2>怎么开通</h2>
+    <p>三步，五分钟。付款走微信，由创始人亲自对接。</p>
+    <div class="steps3">
+      <div class="step">
+        <span class="no">01</span>
+        <b>加创始人微信</b>
+        <p>扫不了码，复制微信号去微信搜索。</p>
+        <div class="wxrow"><b>bopii2024</b><button>复制</button></div>
+      </div>
+      <div class="step">
+        <span class="no">02</span>
+        <b>微信转账</b>
+        <p>说明要哪一档。有拿不准的，直接问，他本人回。</p>
+      </div>
+      <div class="step">
+        <span class="no">03</span>
+        <b>回来输卡密</b>
+        <p>付款截图发过去，马上拿卡密。在这里一贴，立即生效。</p>
+      </div>
+    </div>
+    <div class="concierge">
+      <b>为什么不是自动支付？</b>接支付要过通道、要手续费，最后都得摊进货价。现在这样，每个客户都由创始人对接——付了钱找不到人的事，不会发生。
+    </div>
+  </section>
+
+  <section class="redeem in d5">
+    <h2>卡密兑换</h2>
+    <p>拿到卡密后在这里输入，立即生效，不用等。</p>
+    <div class="rrow">
+      <input placeholder="GCP-XXXX-XXXX" spellcheck="false">
+      <button class="btn">兑换</button>
+    </div>
+    <p class="rhint"><code>GCB</code> 开头 = 基础版 · <code>GCP</code> 开头 = 高级版 · 大小写、横杠都无所谓</p>
+  </section>
+
+  <footer class="foot in d5">
+    <span>GetCut · 渲染引擎 v3</span>
+    <span>数据只存在你自己的账户里</span>
+  </footer>
+</main>
+
+<!-- ═══ 旧版（忠实复刻线上现状） ═══ -->
+<main class="wrap pp-old" id="viewOld" hidden>
+  <h1>权益与定价</h1>
+  <p class="sub">买断制，一次付费，永久使用。</p>
+  <div class="pp-now">你现在的档位：<b>免费版 · 每天 2 条免费额度，成片带 GetCut 水印</b></div>
+  <div class="old-tiers">
+    <div class="otier">
+      <div class="oth"><h3>基础版</h3><span class="amt">¥399<small>/永久</small></span></div>
+      <p>把片子做出来。</p>
+      <ul><li>出片全流程：拖素材包 → 自动分镜 → 成片</li>
+          <li>六套模板、音色任选、出片不限量</li>
+          <li>成片无 GetCut 水印，随便发</li></ul>
+    </div>
+    <div class="otier hi">
+      <div class="oth"><h3>高级版</h3><span class="amt">¥599<small>/永久</small></span></div>
+      <p>把片子变成「你的」。</p>
+      <ul><li>基础版全部权益</li>
+          <li>剪映草稿导出，成片接着精剪</li>
+          <li>品牌套件 + 声音克隆 + 栏目化</li></ul>
+    </div>
+  </div>
+  <div class="obox">
+    <h2>怎么开通</h2>
+    <ol>
+      <li>加创始人微信，说明要哪一档，直接微信转账。微信号 <b>bopii2024</b>（复制）</li>
+      <li>发付款截图，马上拿卡密。</li>
+      <li>回来输卡密，立即生效。</li>
+    </ol>
+  </div>
+  <div class="obox">
+    <h2>卡密兑换</h2>
+    <p style="color:var(--ink-2);font-size:13px;margin-bottom:8px">GCB 开头是基础版，GCP 开头是高级版。大小写、横杠都无所谓。</p>
+    <div class="orow"><input placeholder="GCP-XXXX-XXXX"><span class="btn2">兑换</span></div>
+  </div>
+</main>
+
+<nav class="designbar">
+  <span>改造稿切换</span>
+  <button id="bNew" class="on">新版（贵感）</button>
+  <button id="bOld">旧版（线上现状）</button>
+  <span class="note">右上可对照 · 数字为示例</span>
+</nav>
+
+<script>
+const bNew=document.getElementById("bNew"),bOld=document.getElementById("bOld"),
+      vNew=document.getElementById("viewNew"),vOld=document.getElementById("viewOld");
+function setMode(isNew){
+  document.body.className=isNew?"new":"old";
+  bNew.className=isNew?"on":"";bOld.className=isNew?"":"on";
+  vNew.hidden=!isNew;vOld.hidden=isNew;
+  window.scrollTo(0,0);
+}
+bNew.onclick=()=>setMode(true);
+bOld.onclick=()=>setMode(false);
+if(location.hash==="#old")setMode(false);
+</script>
+</body>
+</html>
