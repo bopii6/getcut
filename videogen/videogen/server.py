@@ -26,7 +26,7 @@ import uvicorn
 from fastapi import FastAPI, File, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-from . import auth, config, licenses, preview
+from . import auth, config, licenses, preview, voice_clone
 from . import brand as brand_kit
 from . import tts as tts_mod
 from .schemas import Content, Manifest
@@ -236,6 +236,8 @@ _PUBLIC_PATHS = {"/", "/index.html", "/healthz", "/api/templates",
 def _is_public(path: str) -> bool:
     return (path in _PUBLIC_PATHS or path.startswith("/fonts/")
             or path.startswith("/templates/")
+            # 声音克隆登记：百炼来下载用户录音的中转地址（随机 40 位 hex，登记完即删）
+            or path.startswith("/vc-src/")
             # 试玩：新访客没账号也要能看选题、提交试做、看进度、拿样片
             or path.startswith("/api/try") or path.startswith("/try/")
             # 剪映导入助手：安装器是公开脚本；pull 靠一次性 token 自证（见 _JY_PULL_TOKENS）
@@ -480,12 +482,28 @@ async def voice_clone_create(request: Request, file: UploadFile = None):
             vc.convert_audio(src, mp3)
         except vc.CloneError as e:
             return JSONResponse({"error": str(e)}, status_code=400)
+        # 百炼要求音频是公网可下载的 http(s) 地址：把转码后的录音挂到本站
+        # 随机不可枚举的公开路由（登记完即删），让百炼自己来取。
+        proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
+        host = request.headers.get("host") or request.url.netloc
+        base = config.PUBLIC_BASE_URL or f"{proto}://{host}"
         try:
-            voice_id = vc.enroll(mp3, f"getcut-{brand_kit._key(email)}")
+            voice_id = vc.enroll(mp3, f"getcut-{brand_kit._key(email)}", base)
         except vc.CloneError as e:
             return JSONResponse({"error": str(e)}, status_code=502)
     brand_kit.set_clone(email, voice_id, mp3.read_bytes())
     return {"ok": True, "voice_id": voice_id}
+
+
+@app.get("/vc-src/{name}")
+def vc_src(name: str):
+    """声音克隆登记期间的中转文件：40 位随机 hex 命名，登记完即删，30 分钟兜底清扫。"""
+    if not re.fullmatch(r"[0-9a-f]{40}\.mp3", name or ""):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    f = voice_clone.VC_SRC_DIR / name
+    if not f.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(f, media_type="audio/mpeg")
 
 
 @app.delete("/api/voice-clone")

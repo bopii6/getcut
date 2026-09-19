@@ -56,6 +56,9 @@ FREE_DAILY_BUILDS = int(_env("FREE_DAILY_BUILDS") or "2")
 # 直播间销售：用户付款后加这个微信号拿卡密（展示在定价页）
 SALES_WECHAT_ID = _env("SALES_WECHAT_ID")
 
+# 站点公网地址（声音克隆要让百炼来下载录音，需公网可达；留空则按请求头拼）
+PUBLIC_BASE_URL = _env("PUBLIC_BASE_URL")
+
 # 工作台扫描素材包的根目录（默认 videogen 的上级目录）
 WORKSPACES = Path(_env("VIDEOGEN_WORKSPACE") or ROOT.parent).resolve()
 
