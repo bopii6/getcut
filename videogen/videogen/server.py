@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hmac as _hmac
 import html
 import json
@@ -458,6 +459,21 @@ def voice_clone_get(request: Request):
             "clone": c, "has_voice": bool(c)}
 
 
+def _clone_worker(raw: bytes, prefix: str, base: str) -> tuple[str, bytes]:
+    """阻塞全程（ffmpeg 转码 + 等百炼下载/登记）。必须在工作者线程里跑：
+    事件循环若被占死，百炼来 /vc-src/ 取录音时本站无法应答 → 死锁，
+    百炼侧报 download audio failed（2026-09-19 用户实录踩过）。"""
+    import tempfile
+    from . import voice_clone as vc
+    with tempfile.TemporaryDirectory() as td:
+        src = Path(td) / "raw.upload"
+        src.write_bytes(raw)
+        mp3 = Path(td) / "sample.mp3"
+        vc.convert_audio(src, mp3)   # CloneError 由调用方翻译成 400/502
+        voice_id = vc.enroll(mp3, prefix, base)
+        return voice_id, mp3.read_bytes()
+
+
 @app.post("/api/voice-clone")
 async def voice_clone_create(request: Request, file: UploadFile = None):
     """上传录音（webm/ogg/m4a/mp3）→ ffmpeg 转码 → 百炼声音复刻 → 存 voice_id。"""
@@ -472,26 +488,16 @@ async def voice_clone_create(request: Request, file: UploadFile = None):
     raw = await file.read()
     if len(raw) > 20 * 1024 * 1024:
         return JSONResponse({"error": "录音别超过 20MB（30 秒足够了）"}, status_code=400)
-    import tempfile
-    from . import voice_clone as vc
-    with tempfile.TemporaryDirectory() as td:
-        src = Path(td) / "raw.upload"
-        src.write_bytes(raw)
-        mp3 = Path(td) / "sample.mp3"
-        try:
-            vc.convert_audio(src, mp3)
-        except vc.CloneError as e:
-            return JSONResponse({"error": str(e)}, status_code=400)
-        # 百炼要求音频是公网可下载的 http(s) 地址：把转码后的录音挂到本站
-        # 随机不可枚举的公开路由（登记完即删），让百炼自己来取。
-        proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
-        host = request.headers.get("host") or request.url.netloc
-        base = config.PUBLIC_BASE_URL or f"{proto}://{host}"
-        try:
-            voice_id = vc.enroll(mp3, f"getcut-{brand_kit._key(email)}", base)
-        except vc.CloneError as e:
-            return JSONResponse({"error": str(e)}, status_code=502)
-    brand_kit.set_clone(email, voice_id, mp3.read_bytes())
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
+    host = request.headers.get("host") or request.url.netloc
+    base = config.PUBLIC_BASE_URL or f"{proto}://{host}"
+    try:
+        voice_id, mp3_bytes = await asyncio.to_thread(
+            _clone_worker, raw, f"getcut-{brand_kit._key(email)}", base)
+    except voice_clone.CloneError as e:
+        code = 400 if "录音转换失败" in str(e) or "ffmpeg" in str(e) else 502
+        return JSONResponse({"error": str(e)}, status_code=code)
+    brand_kit.set_clone(email, voice_id, mp3_bytes)
     return {"ok": True, "voice_id": voice_id}
 
 
