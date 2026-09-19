@@ -471,6 +471,14 @@ def _clone_worker(raw: bytes, prefix: str, base: str) -> tuple[str, bytes]:
         mp3 = Path(td) / "sample.mp3"
         vc.convert_audio(src, mp3)   # CloneError 由调用方翻译成 400/502
         voice_id = vc.enroll(mp3, prefix, base)
+        # 预热试听缓存：否则用户第一次点试听要现合成（数秒），
+        # 超出浏览器"点击后 5 秒内可自动播放"窗口会被拦（实测踩过）
+        try:
+            pf = _preview_file(voice_id)
+            if not pf.exists() or pf.stat().st_size == 0:
+                tts_mod.synthesize_preview(voice_id, pf, "嗨，这是你的专属声音，来听听效果。")
+        except Exception:  # noqa: BLE001 - 预热失败不影响登记，试听会走现场合成
+            pass
         return voice_id, mp3.read_bytes()
 
 
@@ -759,9 +767,8 @@ def voices_list(request: Request):
     return {"voices": items, "dashscope": True, "default": tts_mod.VOICE}
 
 
-@app.get("/api/voice-preview")
-def voice_preview(voice: str = "xiaoxia"):
-    """音色试听：合成一句短样，按音色+渠道缓存（首次约 1-2 秒）。"""
+def _preview_file(voice: str) -> Path:
+    """试听音频的缓存路径（按音色+渠道命名，冷了会现合成）。"""
     entry = tts_mod.resolve_voice(voice)
     if entry.get("legacy"):
         safe = "edge_" + re.sub(r"[^A-Za-z0-9_-]", "", entry.get("edge") or "x")[:60]
@@ -771,7 +778,13 @@ def voice_preview(voice: str = "xiaoxia"):
         safe = "edge_" + re.sub(r"[^A-Za-z0-9_-]", "", str(entry.get("edge") or "x"))[:60]
     d = ROOT / "assets" / "voice_previews"
     d.mkdir(parents=True, exist_ok=True)
-    f = d / f"{safe}.mp3"
+    return d / f"{safe}.mp3"
+
+
+@app.get("/api/voice-preview")
+def voice_preview(voice: str = "xiaoxia"):
+    """音色试听：合成一句短样，按音色+渠道缓存（首次约 1-2 秒）。"""
+    f = _preview_file(voice)
     if not f.exists() or f.stat().st_size == 0:
         try:
             tts_mod.synthesize_preview(
