@@ -427,6 +427,17 @@ def _request_authed(request: Request) -> bool:
     return not AUTH_TOKEN and not auth.has_users()   # 开放模式
 
 
+def _effective_email(request: Request, body_email=None) -> str | None:
+    """会话优先；访问令牌是主钥匙，可代 body.email 指定的账号行事（脚本/MCP 通道）。
+
+    令牌持有者本就 adminish（可见一切），这里只是把品牌套件/声音克隆/档位
+    这些「跟账号走」的逻辑对脚本侧放开——没有令牌的光 body.email 一律无效。"""
+    email = _session_email(request)
+    if not email and body_email and _token_ok(request):
+        return str(body_email).strip().lower()
+    return email
+
+
 def _open_mode() -> bool:
     """本机自用开放模式：没配访问令牌也没建过账号。此时不设付费墙。"""
     return not AUTH_TOKEN and not auth.has_users()
@@ -1645,10 +1656,11 @@ def intake_meta(code: str):
 
 
 @app.post("/api/intake/{code}/claim")
-def intake_claim(code: str, request: Request):
+def intake_claim(code: str, request: Request, body: dict = None):
     """认领：把包解进工作区、登记归属、建好项目并挂上，一次顶「上传 + 建项目 + 挂包」。
 
-    要登录（开放模式本机自用除外）：渲染是账号行为，包认领后跟着账号走。
+    要登录（开放模式本机自用除外；令牌主钥匙可代 body.email 指定的账号）：
+    渲染是账号行为，包认领后跟着账号走。
     """
     if not INTAKE_CODE_RE.match(code):
         return JSONResponse({"error": "链接无效"}, status_code=404)
@@ -1659,7 +1671,7 @@ def intake_claim(code: str, request: Request):
             return JSONResponse({"error": "这个素材包已被导入过了", "projectId": side["project_id"]},
                                 status_code=409)
         return JSONResponse({"error": "链接已失效（素材包 24 小时内有效）"}, status_code=404)
-    email = _session_email(request)
+    email = _effective_email(request, (body or {}).get("email"))
     if not email and not _open_mode():
         return JSONResponse({"error": "先登录或注册，再导入素材包"}, status_code=401)
     side = _intake_sidecar(code)
@@ -1766,7 +1778,7 @@ def start_build(body: dict, request: Request):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     # 付费墙：免费档每天限量出片且强制带 GetCut 水印；基础/高级版不限量、水印随意。
-    email = _session_email(request)
+    email = _effective_email(request, body.get("email"))
     if email and not auth.is_admin(email) and auth.user_tier(email) == "free":
         body = dict(body)
         body["watermark"] = True
