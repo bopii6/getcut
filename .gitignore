@@ -91,3 +91,28 @@ videogen/renderer/_patch_brand.py
 .videogen-licenses.json
 .videogen-usage.json
 对比-f35/
+
+# ================= 2026-09-19 macro 轮补充 =================
+# 复刻/验证的运行时产物（成片、配音、props、逐帧截图）不入库
+/_replica/
+/_replica_macro/
+/_plan2_tmp.json
+/_macro_llm_f35.draft.json
+/_zhigu_sample.draft.json
+/*.draftsrc/
+/_tools/**/*.png
+/_tools/**/*.jpg
+/_tools/**/*.log
+/_tools/**/*.json
+/_tools/_shots/
+/_tools/_verify/
+/_tools/_watch/
+/_tools/_compare/
+/_tools/_logo/
+/_tools/_study/macro_frames/
+/_tools/_study/_macro_cmp/
+/_tools/_study/sc_*.png
+/videogen/_tools/
+/videogen/_work_*/
+/videogen/_zhigu_preview/
+/videogen/_zhigu_sample.log
