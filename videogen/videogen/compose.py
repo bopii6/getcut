@@ -361,6 +361,10 @@ def mix_audio(tts_mp3: Path, duration_s: float, work: Path, bgm: Path | None = N
 
 def mux(video: Path, audio: Path, out_mp4: Path, work: Path) -> Path:
     # 输出路径转绝对：ffmpeg 的 cwd 在 work/，相对路径会落到工作目录里去
+    # 必须显式 -map：视频里的 <Video> 素材若带原声（历史遗留），ffmpeg 默认选流
+    # 会在声道数打平时选输入序号更靠前的视觉轨原声，把混好的人声/BGM/音效整个丢掉
+    # （2026-09-19 实测踩过：成片只剩素材的机房嗡嗡声，人声消失）。
     _run(["ffmpeg", "-y", "-v", "error", "-i", video.name, "-i", audio.name,
+          "-map", "0:v:0", "-map", "1:a:0",
           "-c:v", "copy", "-c:a", "copy", "-shortest", str(Path(out_mp4).resolve())], work)
     return out_mp4

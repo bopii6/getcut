@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 from .planner import Plan
-from .schemas import Content
+from .schemas import Content, JobCancelled
 
 RENDERER = Path(__file__).resolve().parent.parent / "renderer"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -359,8 +359,29 @@ def render_draft_layers(props: dict, frames: list[dict], base_out: Path, card_di
 
 
 
+def _kill_proc_tree(proc) -> None:
+    """杀掉整棵进程树：Remotion 会 fork 一堆 Chrome 子进程，
+    只 kill 父进程会留下一地孤儿继续吃 CPU。Windows 走 taskkill /T。"""
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                           capture_output=True, timeout=15)
+        else:
+            proc.kill()
+    except Exception:  # noqa: BLE001
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    try:
+        proc.wait(timeout=10)
+    except Exception:
+        pass
+
+
 def render_visual(props: dict, out_path: Path, timeout: int = 1800,
-                  progress=None, key: str = "job") -> Path:
+                  progress=None, key: str = "job",
+                  cancel_check=None) -> Path:
     # 渲染中间产物按任务隔离（props/输出/日志各一份）：双通道流水线下允许
     # 多路渲染同时在跑，共用同一份 props.json/visual_out.mp4 会互相覆盖。
     key = _safe_key(key, "job")
@@ -392,7 +413,11 @@ def render_visual(props: dict, out_path: Path, timeout: int = 1800,
     cmd = [node, str(cli_js), "render", "main", rel_out,
            f"--props={props_path.name}",
            "--image-format=jpeg", "--jpeg-quality=95",
-           "--crf=23", "--x264-preset=veryfast", f"--concurrency={conc}"]
+           "--crf=23", "--x264-preset=veryfast", f"--concurrency={conc}",
+           # 素材 b-roll 的原声绝不能进片：模板里 <Video> 不带 muted，Remotion 会把
+           # 素材原声（如机房嗡嗡声）渲进视觉轨；成片音频一律由 compose.mix_audio
+           # 在 Python 侧合成后经 compose.mux 显式 -map 封装。这里静音是第一道闸。
+           "--muted"]
     import re as _re
     import time as _time
     # stdout 重定向到文件而非管道：Remotion 的 Chrome 子进程会继承管道句柄，
@@ -411,6 +436,10 @@ def render_visual(props: dict, out_path: Path, timeout: int = 1800,
             if _time.time() > deadline:
                 proc.kill()
                 raise subprocess.TimeoutExpired(cmd, timeout)
+            if cancel_check is not None and cancel_check():
+                # 用户按了"停止"：杀掉整棵渲染进程树后干净退出
+                _kill_proc_tree(proc)
+                raise JobCancelled("任务已被停止")
             _time.sleep(1.0)
             try:
                 with open(log_path, "r", encoding="utf-8", errors="replace") as rf:
