@@ -10,6 +10,7 @@ import argparse
 import asyncio
 import hmac as _hmac
 import html
+import io
 import json
 import math
 import os
@@ -30,7 +31,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from . import auth, config, licenses, preview, voice_clone
 from . import brand as brand_kit
 from . import tts as tts_mod
-from .schemas import Content, Manifest
+from .schemas import Content, Manifest, JobCancelled
 
 ROOT = config.ROOT
 WORKSPACES = config.WORKSPACES
@@ -45,6 +46,8 @@ DEFAULT_TEMPLATE = config.DEFAULT_TEMPLATE
 
 MAX_UPLOAD_BYTES = 512 * 1024 * 1024          # 单个 zip 上限 512MB
 MAX_EXTRACT_BYTES = 2 * 1024 * 1024 * 1024    # 解压后总上限 2GB（防 zip 炸弹）
+INTAKE_TTL_SECONDS = 24 * 3600                # Agent 直投的待认领包保留 24 小时
+INTAKE_CODE_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 SUPPORTED_FORMATS = set(TEMPLATES) | set(TEMPLATE_ALIAS)
 MAX_JOBS_KEPT = 80                            # jobs.json 只留最近这么多条，防无限膨胀
 
@@ -65,10 +68,17 @@ _RENDER_WAIT: list[dict] = []  # 等渲染灶台的任务：{"job": id, "prio": 
 _RENDER_SEQ = 0
 _PREP_CV = threading.Condition(_LOCK)
 _RENDER_CV = threading.Condition(_LOCK)
+# 灶台之外的两条低优先后台通道（都限流，防影子任务偷走下一批人的渲染力）：
+#   画面校验 —— 抽帧 + 等外部视觉 API，成片交付后才跑，不占灶台名额
+#   草稿备料 —— 剪映草稿是一次额外的 Remotion 渲染，默认只留 1 路细水长流
+_VERIFY_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_VERIFY_CONCURRENCY", "2")))
+_DRAFT_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_DRAFT_CONCURRENCY", "1")))
+_VERIFY_SEM = threading.Semaphore(_VERIFY_CONCURRENCY)
+_DRAFT_SEM = threading.Semaphore(_DRAFT_CONCURRENCY)
 
 # 正在干活（非排队/非终态）的阶段：算排队位置时要把它们算在"前面"
-_ACTIVE_STAGES = ("tts", "plan", "props", "prepped", "render", "audio", "mux", "verify")
-_RENDER_STAGES = ("render", "audio", "mux", "verify")
+_ACTIVE_STAGES = ("tts", "plan", "props", "prepped", "render", "audio", "mux")
+_RENDER_STAGES = ("render", "audio", "mux")
 
 
 # 正在后台备草稿的成片路径：前端据此显示"草稿准备中"还是"已备好"
@@ -76,14 +86,19 @@ DRAFT_PREP: set[str] = set()
 
 
 def _prebuild_draft(video) -> None:
-    """渲染完成后在后台把剪映草稿资产备好（失败不影响任何事，导出时还会再试）。"""
+    """渲染完成后在后台把剪映草稿资产备好（失败不影响任何事，导出时还会再试）。
+
+    草稿本身要再渲一次 Remotion——限流 _DRAFT_CONCURRENCY 路，
+    否则高峰期成片后面排队的影子渲染会把下一批人的灶台吃掉。
+    """
     key = str(video)
     DRAFT_PREP.add(key)
     try:
         from . import jianying_draft as jyd
-        mf = jyd.load_manifest(video)
-        if mf:
-            jyd.prepare_draft(video, mf)
+        with _DRAFT_SEM:
+            mf = jyd.load_manifest(video)
+            if mf:
+                jyd.prepare_draft(video, mf)
     except Exception as exc:  # noqa: BLE001
         print(f"draft prebuild skipped: {exc}")
     finally:
@@ -136,6 +151,30 @@ def try_topics_list():
                     "template": t["template"]})
     return {"topics": out, "templates": [{"id": k, "name": v} for k, v in TEMPLATES.items()],
             "cookie_limit": try_topics.COOKIE_LIMIT, "ip_limit": try_topics.IP_LIMIT}
+
+
+@app.get("/api/sample-bundle")
+def sample_bundle():
+    """示例素材包（公开）：把试玩素材现打成 zip 供下载——
+    用户拆开看一眼就知道"素材包"长什么样，不用再对着空拖拽区发懵。"""
+    from urllib.parse import quote
+    from . import try_topics
+    for t in try_topics.TOPICS:
+        try:
+            d = try_topics.bundle_dir(t)
+        except ValueError:
+            continue
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for f in sorted(d.rglob("*")):
+                if f.is_file():
+                    zf.write(f, f.relative_to(d))   # content.json 落在 zip 根部
+        name = "GetCut-示例素材包.zip"
+        return Response(buf.getvalue(), media_type="application/zip",
+                        headers={"Content-Disposition":
+                                 f"attachment; filename=\"bundle.zip\"; "
+                                 f"filename*=UTF-8''{quote(name)}"})
+    return JSONResponse({"error": "示例素材包暂时没上架"}, status_code=503)
 
 
 @app.post("/api/try")
@@ -267,7 +306,7 @@ SESSION_COOKIE = "vg_session"
 _PUBLIC_PATHS = {"/", "/index.html", "/healthz", "/api/templates",
                  "/api/auth/status", "/api/auth/login", "/api/auth/register",
                  "/api/auth/send-code", "/api/auth/reset-code", "/api/auth/reset",
-                 "/api/pricing"}
+                 "/api/pricing", "/api/sample-bundle"}
 
 
 def _is_public(path: str) -> bool:
@@ -277,6 +316,9 @@ def _is_public(path: str) -> bool:
             or path.startswith("/vc-src/")
             # 试玩：新访客没账号也要能看选题、提交试做、看进度、拿样片
             or path.startswith("/api/try") or path.startswith("/try/")
+            # Agent 直投：getcut-bundle 技能打包完自动 POST 上来，浏览器打开 /i/<code>
+            # 认领导入。公开但按 IP 限流，码本身是随机能力凭证，包 24 小时无人认领即清。
+            or path.startswith("/api/intake") or path.startswith("/i/")
             # 剪映导入助手：安装器是公开脚本；pull 靠一次性 token 自证（见 _JY_PULL_TOKENS）
             or path.startswith("/assistant/")
             or path.startswith("/api/jianying/pull"))
@@ -943,7 +985,7 @@ def _jobs_save() -> None:
 _jobs_load()
 # 启动清理：上次进程没跑完的任务已随进程消亡，标记失败让用户重发（防僵尸任务挡新提交）
 with _LOCK:
-    _stale = [jid for jid, j in JOBS.items() if j.get("stage") not in ("done", "failed")]
+    _stale = [jid for jid, j in JOBS.items() if j.get("stage") not in ("done", "failed", "cancelled")]
     if _stale:
         for jid in _stale:
             JOBS[jid].update(stage="failed", stage8=8, t_end=time.time(),
@@ -992,6 +1034,12 @@ def _find_bundles() -> list[dict]:
 
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
+    return (STATIC / "index.html").read_text(encoding="utf-8")
+
+
+@app.get("/i/{code}", response_class=HTMLResponse)
+def intake_page(code: str):
+    """Agent 直投短链：与 / 同一份 SPA，前端按路径进入「素材包已送达」落地页。"""
     return (STATIC / "index.html").read_text(encoding="utf-8")
 
 
@@ -1455,9 +1503,19 @@ def _safe_extract(zf: zipfile.ZipFile, dest: Path) -> None:
     zf.extractall(dest)
 
 
+def _fix_mojibake_name(name: str) -> str:
+    """multipart 里的中文文件名常被按 latin-1 解码成乱码（curl/旧客户端不发 filename*），掰回 UTF-8。
+
+    本来就解对了的名字（含真正的中文）latin-1 编不回去，原样返回。"""
+    try:
+        return name.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return name
+
+
 @app.post("/api/upload")
 async def upload(file: UploadFile, request: Request):
-    name = Path(file.filename or "bundle.zip").stem or f"bundle-{int(time.time())}"
+    name = Path(_fix_mojibake_name(file.filename or "bundle.zip")).stem or f"bundle-{int(time.time())}"
     data = await file.read()
     if len(data) > MAX_UPLOAD_BYTES:
         return JSONResponse({"error": "zip 超过 512MB 上限"}, status_code=413)
@@ -1486,6 +1544,158 @@ async def upload(file: UploadFile, request: Request):
     meta[dest.name] = {"owner": _session_email(request), "created": time.strftime("%Y/%m/%d %H:%M")}
     _bundles_meta_save(meta)
     return {"name": dest.name}
+
+
+# ---------- Agent 直投（素材包自动进站） ----------
+# 配合 getcut-bundle 技能：Agent 打包完直接 POST 上来拿一条 /i/<code> 短链；
+# 任何浏览器（含手机）打开短链，页面自己把包导进工作台并建好项目，
+# 用户只需要点「确定，导入工作台」→「确认内容并开始生成」。
+
+INTAKES = WORKSPACES / ".intakes"            # 待认领 zip + 登记 sidecar（数据盘，重启不丢）
+_INTAKE_RATE: dict[str, list[float]] = {}    # ip -> 最近上传时间戳（滑窗限流）
+
+
+def _intake_paths(code: str) -> tuple[Path, Path]:
+    return INTAKES / f"{code}.zip", INTAKES / f"{code}.json"
+
+
+def _intake_sidecar(code: str) -> dict:
+    _, side = _intake_paths(code)
+    if side.is_file():
+        try:
+            return json.loads(side.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 - 登记坏了按没有处理
+            return {}
+    return {}
+
+
+def _sweep_intakes(ttl: int = INTAKE_TTL_SECONDS) -> None:
+    """过期的待认领包（zip 与登记）直接删。"""
+    if not INTAKES.is_dir():
+        return
+    now = time.time()
+    for f in INTAKES.iterdir():
+        try:
+            if f.is_file() and now - f.stat().st_mtime > ttl:
+                f.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+@app.post("/api/intake")
+async def intake_create(file: UploadFile, request: Request):
+    ip = _client_ip(request)
+    now = time.time()
+    hits = [t for t in _INTAKE_RATE.get(ip, []) if now - t < 3600]
+    if len(hits) >= 10:
+        return JSONResponse({"error": "这个地址上传太频繁了，一小时后再试"}, status_code=429)
+    hits.append(now)
+    _INTAKE_RATE[ip] = hits
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        return JSONResponse({"error": "zip 超过 512MB 上限"}, status_code=413)
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            if "content.json" not in zf.namelist():
+                raise zipfile.BadZipFile("no content.json")
+    except zipfile.BadZipFile:
+        return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
+    INTAKES.mkdir(parents=True, exist_ok=True)
+    _sweep_intakes()
+    code = uuid.uuid4().hex[:12]
+    zf_path, side = _intake_paths(code)
+    zf_path.write_bytes(data)
+    side.write_text(json.dumps({"file": _fix_mojibake_name(file.filename or "bundle.zip"),
+                                "created": now, "ip": ip}, ensure_ascii=False),
+                    encoding="utf-8")
+    base = config.PUBLIC_BASE_URL or f"{request.url.scheme}://{request.url.netloc}"
+    return {"code": code, "url": f"{base}/i/{code}"}
+
+
+@app.get("/api/intake/{code}/meta")
+def intake_meta(code: str):
+    """落地页概要：不解包，直接从 zip 里抽 content.json/manifest.json 的关键数字。"""
+    if not INTAKE_CODE_RE.match(code):
+        return JSONResponse({"error": "链接无效"}, status_code=404)
+    zf_path, _ = _intake_paths(code)
+    side = _intake_sidecar(code)
+    if not zf_path.is_file():
+        if side.get("claimed") and side.get("project_id"):
+            return {"claimed": True, "projectId": side["project_id"]}
+        return JSONResponse({"error": "链接已失效（素材包 24 小时内有效）"}, status_code=404)
+    out = {"claimed": False, "file": side.get("file") or "bundle.zip",
+           "created": side.get("created"),
+           "expiresAt": (side.get("created") or 0) + INTAKE_TTL_SECONDS}
+    try:
+        with zipfile.ZipFile(zf_path) as zf:
+            content = json.loads(zf.read("content.json").decode("utf-8"))
+            script = str(content.get("script") or "")
+            out.update({"title": content.get("title") or out["file"],
+                        "scriptChars": len(script), "scriptPreview": script[:400],
+                        "estSeconds": round(len(script) / 6)})
+            try:
+                assets = json.loads(zf.read("manifest.json").decode("utf-8")).get("assets", [])
+                out["images"] = sum(1 for a in assets if a.get("kind") == "image")
+                out["videos"] = sum(1 for a in assets if a.get("kind") == "video")
+            except Exception:  # noqa: BLE001 - manifest 缺失/损坏只影响计数
+                pass
+    except Exception:  # noqa: BLE001
+        return JSONResponse({"error": "素材包内容读取失败"}, status_code=400)
+    return out
+
+
+@app.post("/api/intake/{code}/claim")
+def intake_claim(code: str, request: Request):
+    """认领：把包解进工作区、登记归属、建好项目并挂上，一次顶「上传 + 建项目 + 挂包」。
+
+    要登录（开放模式本机自用除外）：渲染是账号行为，包认领后跟着账号走。
+    """
+    if not INTAKE_CODE_RE.match(code):
+        return JSONResponse({"error": "链接无效"}, status_code=404)
+    zf_path, side_path = _intake_paths(code)
+    if not zf_path.is_file():
+        side = _intake_sidecar(code)
+        if side.get("project_id"):
+            return JSONResponse({"error": "这个素材包已被导入过了", "projectId": side["project_id"]},
+                                status_code=409)
+        return JSONResponse({"error": "链接已失效（素材包 24 小时内有效）"}, status_code=404)
+    email = _session_email(request)
+    if not email and not _open_mode():
+        return JSONResponse({"error": "先登录或注册，再导入素材包"}, status_code=401)
+    side = _intake_sidecar(code)
+    orig_name = Path(_fix_mojibake_name(side.get("file") or "bundle.zip")).stem or "bundle"
+    name = re.sub(r'[\\/:*?"<>|]', "", orig_name).strip() or "bundle"
+    dest = WORKSPACES / name
+    i = 1
+    while dest.exists():
+        dest = WORKSPACES / f"{name}-{i}"
+        i += 1
+    dest.mkdir(parents=True)
+    try:
+        with zipfile.ZipFile(zf_path) as zf:
+            _safe_extract(zf, dest)
+    except (zipfile.BadZipFile, ValueError) as e:
+        shutil.rmtree(dest, ignore_errors=True)
+        return JSONResponse({"error": f"素材包无效：{e}"}, status_code=400)
+    if not (dest / "content.json").is_file():
+        shutil.rmtree(dest, ignore_errors=True)
+        return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
+    meta = _bundles_meta()
+    meta[dest.name] = {"owner": email, "created": time.strftime("%Y/%m/%d %H:%M")}
+    _bundles_meta_save(meta)
+    with _LOCK:
+        reg = _reg()
+        pid = uuid.uuid4().hex[:12]
+        reg["projects"].append({"project_id": pid, "title": dest.name, "bundle": dest.name,
+                                "created": time.strftime("%Y/%m/%d"), "renders": [],
+                                "owner": email})
+        _reg_save(reg)
+    side["claimed"] = True
+    side["claimed_at"] = time.time()
+    side["project_id"] = pid
+    side_path.write_text(json.dumps(side, ensure_ascii=False), encoding="utf-8")
+    zf_path.unlink(missing_ok=True)
+    return {"name": dest.name, "project_id": pid, "title": dest.name}
 
 
 @app.get("/api/bundle/{name}")
@@ -1579,7 +1789,7 @@ def start_build(body: dict, request: Request):
     with _LOCK:
         if pid:
             for j in JOBS.values():
-                if j.get("project_id") == pid and j.get("stage") not in ("done", "failed"):
+                if j.get("project_id") == pid and j.get("stage") not in ("done", "failed", "cancelled"):
                     return JSONResponse(
                         {"error": "该项目已有任务在排队/渲染，等它完成再发起新的"},
                         status_code=409)
@@ -1600,7 +1810,7 @@ def start_build(body: dict, request: Request):
             time.sleep(3)
             with _LOCK:
                 j = JOBS.get(job_id)
-                if j is None or j["stage"] in ("done", "failed"):
+                if j is None or j["stage"] in ("done", "failed", "cancelled"):
                     return
                 span = _STAGE_SPAN.get(j["stage"])
                 if not span:
@@ -1640,8 +1850,8 @@ def my_jobs(request: Request):
                     item["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
                 item["queued_pos"] = ahead
             items.append(item)
-    active = [i for i in items if i["stage"] not in ("done", "failed")]
-    finished = sorted((i for i in items if i["stage"] in ("done", "failed")),
+    active = [i for i in items if i["stage"] not in ("done", "failed", "cancelled")]
+    finished = sorted((i for i in items if i["stage"] in ("done", "failed", "cancelled")),
                       key=lambda x: x.get("t0") or 0, reverse=True)[:8]
     return {"concurrency": _RENDER_CONCURRENCY, "active": active, "recent": finished}
 
@@ -1652,6 +1862,7 @@ def job_status(job_id: str, request: Request):
     if j is None or not _job_visible(j, request):
         return {"stage": "unknown"}   # 不存在与无权同形，不泄露任务存在性
     out = dict(j)
+    out.pop("cancel", None)           # 内部旗子不外泄
     if out.get("stage") in ("queued", "prepped"):
         with _LOCK:
             ahead = _queue_ahead(job_id)
@@ -1667,6 +1878,33 @@ def job_status(job_id: str, request: Request):
     stills = sorted(OUTPUTS.glob(f"{job_id}-still-*.jpg")) if OUTPUTS.is_dir() else []
     out["stills"] = [f"/still/{p.name}" for p in stills]
     return out
+
+
+@app.post("/api/job/{job_id}/cancel")
+def cancel_job(job_id: str, request: Request):
+    """停止任务。排队中的直接移出队列即刻生效；已经在干活的举旗子，
+    由渲染轮询循环（1 秒一查，杀进程树）或下一个阶段边界接住。"""
+    with _LOCK:
+        j = JOBS.get(job_id)
+        if j is None or not _job_visible(j, request):
+            return JSONResponse({"error": "任务不存在"}, status_code=404)
+        if j.get("stage") in ("done", "failed", "cancelled"):
+            return {"ok": True, "stage": j["stage"]}
+        stage = j.get("stage")
+        before = len(_PREP_WAIT)
+        _PREP_WAIT[:] = [x for x in _PREP_WAIT if x != job_id]
+        dequeued = len(_PREP_WAIT) < before
+        rbefore = len(_RENDER_WAIT)
+        _RENDER_WAIT[:] = [e for e in _RENDER_WAIT if e["job"] != job_id]
+        dequeued = dequeued or len(_RENDER_WAIT) < rbefore
+        j["cancel"] = True
+        if dequeued:
+            _PENDING.pop(job_id, None)
+        _jobs_save()
+    if dequeued:
+        _mark_cancelled(job_id)
+        return {"ok": True, "stage": "cancelled"}
+    return {"ok": True, "stage": stage}
 
 
 @app.get("/still/{name}")
@@ -1765,9 +2003,24 @@ def _cleanup_work_dir(work_dir) -> None:
 def _mark_failed(job_id: str, err) -> None:
     with _LOCK:
         j = JOBS.get(job_id)
-        if j and j.get("stage") not in ("done", "failed"):
+        if j and j.get("stage") not in ("done", "failed", "cancelled"):
             j.update(stage="failed", stage8=8, error=str(err)[-800:], t_end=time.time())
             _jobs_save()
+
+
+def _mark_cancelled(job_id: str) -> None:
+    with _LOCK:
+        j = JOBS.get(job_id)
+        if j and j.get("stage") not in ("done", "failed", "cancelled"):
+            j.update(stage="cancelled", stage8=8, error=None,
+                     detail="已停止", t_end=time.time())
+            _jobs_save()
+
+
+def _cancel_requested(job_id: str) -> bool:
+    """取消旗子：渲染循环每秒读一次（dict.get 原子，不必拿锁）。"""
+    j = JOBS.get(job_id)
+    return bool(j and j.get("cancel"))
 
 
 def _progress_reporter(job_id: str):
@@ -1798,6 +2051,8 @@ def _prep_job(job_id: str, body: dict) -> None:
     from . import cli
     progress = _progress_reporter(job_id)
     try:
+        if _cancel_requested(job_id):
+            raise JobCancelled("任务已被停止")
         # 入参先过安全校验（素材包目录），不合法直接把任务标记失败
         # 试玩任务由 /api/try 给出已经校验过的绝对路径；其余任务一律只认工作区里的包名
         if body.get("try") and body.get("try_bundle_dir"):
@@ -1823,6 +2078,9 @@ def _prep_job(job_id: str, body: dict) -> None:
                        brand=body.get("brand") or None,
                        series=body.get("series") or None,
                        job_id=job_id, progress=progress)
+        if _cancel_requested(job_id):
+            # 备料跑完一半用户按了停止：别再把半成品送上灶台
+            raise JobCancelled("任务已被停止")
         with _LOCK:
             j = JOBS.get(job_id)
             if j:
@@ -1830,6 +2088,12 @@ def _prep_job(job_id: str, body: dict) -> None:
                          detail="配音与分镜已就绪")
             _jobs_save()
         _enqueue_render(job_id, _job_prio(body, (JOBS.get(job_id) or {}).get("owner")))
+    except JobCancelled:
+        with _LOCK:
+            prep_meta = body.get("_prep") or {}
+        if prep_meta.get("work_dir"):
+            _cleanup_work_dir(prep_meta["work_dir"])
+        _mark_cancelled(job_id)
     except Exception as e:  # noqa: BLE001
         with _LOCK:
             prep_meta = body.get("_prep") or {}
@@ -1838,13 +2102,43 @@ def _prep_job(job_id: str, body: dict) -> None:
         _mark_failed(job_id, e)
 
 
+def _verify_bg(job_id: str, bundle_dir: Path, video: Path, work_dir: Path | None) -> None:
+    """画面校验后台通道：抽帧 + 最多 4 次外部视觉 API，成片交付后才跑。
+
+    以前它挂在渲染 subprocess 末尾——等网络却占着灶台名额，与双通道初衷相悖。
+    现在挪到 done 之后低优先跑（限流 _VERIFY_CONCURRENCY 路），结果记进 job["verify"]
+    供排查展示；顺带接管任务工作目录的清理（校验要读 work/prep.json）。
+    """
+    from . import cli
+    try:
+        with _VERIFY_SEM:
+            report = cli.run_verify(bundle_dir, video, work_dir=work_dir)
+        with _LOCK:
+            j = JOBS.get(job_id)
+            if j:
+                j["verify"] = {k: report.get(k) for k in ("ok", "errors", "warnings")}
+                _jobs_save()
+    except Exception as exc:  # noqa: BLE001
+        print(f"verify skipped: {exc}")
+    finally:
+        if work_dir:
+            _cleanup_work_dir(work_dir)
+
+
 def _render_job(job_id: str, body: dict) -> None:
-    """渲染阶段：画面渲染/混音/封装/校验——吃 CPU 的活，同时最多 CONCURRENCY 路。"""
+    """渲染阶段：画面渲染/混音/封装——吃 CPU 的活，同时最多 CONCURRENCY 路。
+
+    校验（等外部 API）不在这里跑：build_render 以 defer_verify 出灶台，
+    交给 _verify_bg 后台通道，渲染位早几分钟还给下一个人。
+    """
     from . import cli
     progress = _progress_reporter(job_id)
     prep_meta = body.get("_prep") or {}
     work_dir = Path(prep_meta["work_dir"]) if prep_meta.get("work_dir") else None
+    out = None
     try:
+        if _cancel_requested(job_id):
+            raise JobCancelled("任务已被停止")
         bundle_dir = Path(prep_meta.get("bundle_dir") or _resolve_bundle(body["bundle"]))
         out = OUTPUTS / f"{bundle_dir.name}-{job_id}.mp4"
         cli.build_render(bundle_dir, out, work_dir=work_dir,
@@ -1854,7 +2148,8 @@ def _render_job(job_id: str, body: dict) -> None:
                          sfx_mode=body.get("sfxMode") or ("full" if body.get("sfx", True) else "off"),
                          show_subtitles=bool(body.get("subtitles", True)),
                          show_sources=bool(body.get("sources", True)),
-                         job_id=job_id, progress=progress)
+                         job_id=job_id, progress=progress, defer_verify=True,
+                         cancel_check=lambda: _cancel_requested(job_id))
         with _LOCK:
             JOBS[job_id].update(stage="done", stage8=8, progress=100, video=str(out), t_end=time.time(),
                                 detail="成片已生成")
@@ -1873,12 +2168,23 @@ def _render_job(job_id: str, body: dict) -> None:
                     JOBS[job_id]["try_video"] = str(small)
                 out.unlink(missing_ok=True)
                 _sweep_try_files()
+                threading.Thread(target=_verify_bg, args=(job_id, bundle_dir, small, work_dir),
+                                 daemon=True).start()
+                work_dir = None   # 清理权已交给校验通道
             else:
                 _mark_failed(job_id, "样片转码失败，请稍后再试")
         else:
             # 成片已经交付，接着在后台把剪映草稿资产备好——用户走到导出页时通常已就绪，
             # 点「一键导入剪映」秒装，不用再等 1-2 分钟
             threading.Thread(target=_prebuild_draft, args=(Path(out),), daemon=True).start()
+            threading.Thread(target=_verify_bg, args=(job_id, bundle_dir, out, work_dir),
+                             daemon=True).start()
+            work_dir = None       # 清理权已交给校验通道
+    except JobCancelled:
+        # 渲染循环杀掉了 Remotion 进程树后抛上来；半成品随 work_dir 一起清
+        if out is not None:
+            out.unlink(missing_ok=True)
+        _mark_cancelled(job_id)
     except Exception as e:  # noqa: BLE001
         _mark_failed(job_id, e)
     finally:
@@ -1922,6 +2228,19 @@ for _i in range(_PREP_CONCURRENCY):
     threading.Thread(target=_prep_worker, daemon=True).start()
 for _i in range(_RENDER_CONCURRENCY):
     threading.Thread(target=_render_worker, daemon=True).start()
+
+
+def _intake_sweeper() -> None:
+    """定期清掉过期的待认领素材包（Agent 直投，24 小时无人认领即删）。"""
+    while True:
+        time.sleep(1800)
+        try:
+            _sweep_intakes()
+        except Exception as exc:  # 清扫线程绝不能死
+            print(f"intake sweeper error: {exc}")
+
+
+threading.Thread(target=_intake_sweeper, daemon=True).start()
 
 
 def main():

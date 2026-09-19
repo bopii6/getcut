@@ -23,7 +23,7 @@ from .config import OUTPUTS as _OUTPUTS
 from .planner import (align_timeline, build_plan, build_plan_clone, build_plan_llm,
                       build_plan_macro, clause_units, split_clauses, sentence_spans,
                       unit_spans, plan_to_dict, plan_from_dict)
-from .schemas import Content, Manifest, HIGHLIGHT
+from .schemas import Content, Manifest, HIGHLIGHT, JobCancelled
 
 WORK = Path(__file__).resolve().parent.parent / "work"
 
@@ -307,10 +307,13 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                  renderer: str = "remotion", sfx: bool = True, sfx_mode: str = "full",
                  show_subtitles: bool = True, show_sources: bool = True,
                  job_id: str | None = None, progress=None,
-                 vision: bool = True) -> Path:
+                 vision: bool = True, defer_verify: bool = False,
+                 cancel_check=None) -> Path:
     """流水线后半程：吃 CPU 的活（画面渲染/混音/封装/校验），全程不碰外部 API。
 
     prep = build_prep 的返回（缺省时从 work_dir/prep.json 读，兜底自愈）。
+    defer_verify=True 时跳过末尾的画面校验（那是等外部视觉 API 的活），
+    由调用方跑完后用 run_verify 在灶台之外补上——server 双通道走这条路。
     """
     report = _report_of(progress)
     bundle = Path(bundle_dir)
@@ -324,12 +327,19 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     content = Content.load(bundle / "content.json")
     manifest = Manifest.load(bundle / "manifest.json")
 
+    def _cancelled() -> bool:
+        return bool(cancel_check and cancel_check())
+
+    if _cancelled():
+        raise JobCancelled("任务已被停止")
+
     if renderer == "remotion":
         report("render", 0, "启动渲染引擎")
         props = json.loads((work / "props.json").read_text(encoding="utf-8"))
         visual = remotion_render.render_visual(
             props, work / "visual.mp4", key=str(job_id) if job_id else "cli",
-            progress=lambda p, d=None: report("render", max(0, min(p, 100)), d))
+            progress=lambda p, d=None: report("render", max(0, min(p, 100)), d),
+            cancel_check=cancel_check)
         withsubs = visual
     else:
         # legacy PIL compositor (fallback)
@@ -367,6 +377,10 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
             withsubs = cat
 
     # audio(sfx) -> mux -> verify
+    # 阶段间隙的取消哨：混音/封装是阻塞的 ffmpeg 子进程，中途杀不了，
+    # 所以只在它们开跑前拦——已开始的最后一步会跑完（几秒），不再往下走。
+    if _cancelled():
+        raise JobCancelled("任务已被停止")
     mode = sfx_mode if sfx else "off"
     # 音效：按"画面什么时候弹出一个东西"逐事件挂（开场/切换/卡片/数字/金句/结尾），
     # 不再有"全片最多 5 声"的老上限；音量由 compose.SFX_LEVELS 统一压在解说之下
@@ -390,6 +404,8 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                               progress=lambda p, d=None: report("audio", p, d))
     out_mp4 = Path(out_mp4)
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
+    if _cancelled():
+        raise JobCancelled("任务已被停止")
     report("mux", 94, "正在封装成片")
     compose.mux(withsubs, audio, out_mp4, work)
 
@@ -460,16 +476,38 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     except Exception as exc:  # 清单失败不影响成片
         print(f"draft manifest skipped: {exc}")
 
+    line = (f"renderer: {renderer} | director: {'llm' if prep.get('llm_used') else 'rules'} | "
+            f"shots: {len(plan.shots)} | clauses: {len(plan.clauses)} | "
+            f"duration: {duration_s:.1f}s -> {out_mp4}")
+    if defer_verify:
+        print(line)
+        return out_mp4
+
     summaries = {a.file: a.summary for a in manifest.assets}
     report("verify", 0, "正在逐镜校验画面")
     vreport = verify.verify(out_mp4, plan, work, vision=vision,
                             summaries=summaries, bundle=bundle,
                             progress=lambda p, d=None: report("verify", p, d))
-    print(f"renderer: {renderer} | director: {'llm' if prep.get('llm_used') else 'rules'} | "
-          f"shots: {len(plan.shots)} | clauses: {len(plan.clauses)} | "
-          f"duration: {duration_s:.1f}s -> {out_mp4}")
+    print(line)
     print("verify:", "OK" if vreport["ok"] else "FAILED", vreport["errors"], vreport["warnings"])
     return out_mp4
+
+
+def run_verify(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
+               vision: bool = True, progress=None) -> dict:
+    """画面校验独立入口（配合 build_render 的 defer_verify）。
+
+    校验只依赖成片 + prep.json 里的 plan + 素材包 manifest，不吃渲染中间产物；
+    放在灶台之外跑，等外部视觉 API 时不再占渲染位。
+    """
+    bundle = Path(bundle_dir)
+    work = Path(work_dir) if work_dir else WORK / bundle.name
+    prep = json.loads((work / "prep.json").read_text(encoding="utf-8"))
+    plan = plan_from_dict(prep.get("plan") or {})
+    manifest = Manifest.load(bundle / "manifest.json")
+    summaries = {a.file: a.summary for a in manifest.assets}
+    return verify.verify(Path(out_mp4), plan, work, vision=vision,
+                         summaries=summaries, bundle=bundle, progress=progress)
 
 
 def build(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
