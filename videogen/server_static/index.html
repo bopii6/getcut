@@ -5366,6 +5366,7 @@ async function importDraft(rid) {
     return;
   }
   const old = a.innerHTML;
+  const release = () => { const b = $("jyBtn"); if (!b) return; b.dataset.busy = ""; b.disabled = false; b.innerHTML = old; };
   a.dataset.busy = "1"; a.disabled = true;
   a.innerHTML = `<span class="spin"></span>正在准备草稿…`;
   try {
@@ -5373,22 +5374,24 @@ async function importDraft(rid) {
     if (res && res.installed) {
       a.innerHTML = "已导入剪映 ✓";
       toast(`已导入剪映：打开剪映就能看到「${res.name}」`);
+      setTimeout(release, 3200);
     } else if (res && res.protocol && res.pull) {
-      a.innerHTML = `<span class="spin"></span>已唤起助手…`;
-      toast("已唤起 GetCut 助手：浏览器若询问，点「打开」，剪映会自动弹出");
+      a.innerHTML = `<span class="spin"></span>助手安装中…`;
+      toast("已唤起导入助手，正在下载并安装草稿（约 10–30 秒），完成后剪映会自动打开。浏览器若询问「打开 GetCut 助手」，点允许。");
       wakeGetCutAssistant(res.pull, rid);
+      // 助手在后台要跑十几秒：按钮按住不放防连点——连点会拉起多个助手互相删装、撞文件锁
+      a.dataset.busy = "1"; a.disabled = true;
+      setTimeout(release, 45000);
     } else {
       await downloadDraft(pid, rid);
       a.innerHTML = "导入包已下载";
       toast("导入包已下载：解压后双击「一键导入剪映.bat」，再打开剪映");
+      setTimeout(release, 3200);
     }
   } catch (err) {
     if (err.data && err.data.tier_required === "premium"){ openPricing(); }
     else toast("导入失败：" + ((err && err.message) || "请稍后重试"));
-    a.innerHTML = old;
-  } finally {
-    a.dataset.busy = ""; a.disabled = false;
-    setTimeout(() => { if ($("jyBtn")) $("jyBtn").innerHTML = old; }, 3200);
+    setTimeout(release, 400);
   }
 }
 

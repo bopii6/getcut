@@ -1349,7 +1349,9 @@ def jianying_import(pid: str, rid: str, request: Request):
 
 
 # 一次性草稿提取 token（线上"导入到剪映"专用）：小助手没有浏览器会话，
-# 靠它自证身份。5 分钟过期，下载成功即焚，签发前已过高级版付费墙。
+# 靠它自证身份。5 分钟过期，签发前已过高级版付费墙。TTL 内允许重复取：
+# 助手端第一次传输成功但自检失败重拉时（2026-09-19 深夜实测踩过），焚得太急
+# 会把合法重试顶成 403；窗口短、内容固定，重放风险可忽略。
 _JY_PULL_TOKENS: dict[str, dict] = {}
 
 
@@ -1384,7 +1386,6 @@ def jianying_pull(t: str = ""):
             data = zpath.read_bytes()
     except Exception as exc:  # noqa: BLE001 - 打包失败保留 token，助手重试还能用
         return JSONResponse({"error": f"草稿打包失败: {exc}"}, status_code=500)
-    _JY_PULL_TOKENS.pop(t, None)      # 下载成功才焚 token
     fname = f"GetCut-剪映草稿-{info['rid'][:6]}.zip"
     from urllib.parse import quote
     return Response(

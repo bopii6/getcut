@@ -70,7 +70,7 @@ def _segment_base(material_id: str, target: dict, *, source: dict | None,
         "enable_color_curves": True, "enable_color_match_adjust": False,
         "enable_color_wheels": True, "enable_lut": True, "enable_smart_color_adjust": False,
         "last_nonzero_volume": 1.0, "reverse": False, "track_attribute": 0,
-        "track_render_index": render_index,
+        "track_render_index": 0,
         "visible": True,
         "id": _uid(), "material_id": material_id,
         "target_timerange": target,
@@ -83,6 +83,11 @@ def _segment_base(material_id: str, target: dict, *, source: dict | None,
     if visual:
         seg["clip"] = _clip(transform_y)
         seg["uniform_scale"] = {"on": True, "value": 1.0}
+    else:
+        # 音频片段也必须带 clip 键（官方草稿里为 null）：剪映 11.5 的升级转换器
+        # 对缺这个键的音频片段整段丢弃，升级后音频轨全部「媒体丢失」
+        seg["clip"] = None
+    seg["hdr_settings"] = None
     seg["render_index"] = render_index
     return seg
 
@@ -382,6 +387,11 @@ def build_multitrack_content(plan: dict) -> dict:
 
     tpl["materials"]["speeds"] = speeds
     tpl["tracks"] = tracks
+    # track_render_index 是「轨内第几个片段」（0 起），不是渲染层级——
+    # 官方草稿如此，新版剪映的升级转换器按它重排轨内顺序
+    for track in tracks:
+        for i, seg in enumerate(track["segments"]):
+            seg["track_render_index"] = i
     _validate_content(tpl)
     return tpl
 
@@ -467,6 +477,9 @@ def build_flat_content(manifest: dict, draft_dir_placeholder: str = PLACEHOLDER)
 
     tpl["materials"]["speeds"] = speeds
     tpl["tracks"] = tracks
+    for track in tracks:
+        for i, seg in enumerate(track["segments"]):
+            seg["track_render_index"] = i
     return tpl
 
 
