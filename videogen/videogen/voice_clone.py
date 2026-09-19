@@ -78,24 +78,31 @@ def enroll(audio_mp3: Path, display_name: str, public_base: str) -> str:
                       "prefix": prefix,
                       "url": f"{public_base.rstrip('/')}/vc-src/{token}.mp3"}}
     try:
-        r = requests.post(ENROLL_URL, headers={**_headers(), "Content-Type": "application/json"},
-                          json=body, timeout=180)
-    except requests.RequestException as e:
-        raise CloneError(f"登记请求发不出去：{e}") from None
+        # 百炼来本站取录音偶发失败（本站重启窗口/网络抖动）→ 自动重试两次
+        for attempt in range(3):
+            try:
+                r = requests.post(ENROLL_URL, headers={**_headers(), "Content-Type": "application/json"},
+                                  json=body, timeout=180)
+            except requests.RequestException as e:
+                raise CloneError(f"登记请求发不出去：{e}") from None
+            try:
+                out = r.json()
+            except Exception:  # noqa: BLE001 - 非 JSON 响应按原文截断给人看
+                out = {}
+            voice_id = (out.get("output") or {}).get("voice_id") or ""
+            if r.status_code == 200 and voice_id:
+                return voice_id
+            msg = str(out.get("message") or out.get("code") or r.text[:200])
+            if "download" in msg.lower() and attempt < 2:
+                time.sleep(2)
+                continue
+            raise CloneError(f"声音登记失败：{msg}")
+        raise CloneError("声音登记失败：重试耗尽")
     finally:
         try:
             staged.unlink(missing_ok=True)
         except OSError:
             pass
-    try:
-        out = r.json()
-    except Exception:  # noqa: BLE001 - 非 JSON 响应按原文截断给人看
-        out = {}
-    voice_id = (out.get("output") or {}).get("voice_id") or ""
-    if r.status_code != 200 or not voice_id:
-        msg = (out.get("message") or out.get("code") or r.text[:200])
-        raise CloneError(f"声音登记失败：{msg}")
-    return voice_id
 
 
 def remove(voice_id: str) -> None:
