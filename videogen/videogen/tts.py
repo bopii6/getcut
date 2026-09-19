@@ -164,15 +164,18 @@ async def _dashscope_synth(spoken: str, pv: str, speech_rate: float, out_mp3: Pa
     headers = {"Authorization": f"bearer {config.DASHSCOPE_API_KEY}",
                "user-agent": "GetCut/1.0",
                "X-DashScope-DataInspection": "enable"}
-    params = {"text_type": "PlainText", "format": "mp3", "sample_rate": 22050,
-              "volume": 50, "speech_rate": speech_rate, "pitch_rate": 1.0}
+    params = {"voice": pv, "text_type": "PlainText", "format": "mp3", "sample_rate": 22050,
+              "volume": 50, "rate": speech_rate, "pitch": 1.0}
     if want_words:
         params["word_timestamp_enabled"] = True
     tid = uuid.uuid4().hex
 
     def _msg(action: str, payload_input: dict | None = None) -> str:
+        # 探针实测（2026-09-19）：dashscope.aliyuncs.com/api-ws 这个老端点要求
+        # streaming=duplex 且每条消息都带 task_group/parameters——官方文档页描述的是
+        # 新 maas 端点（continue-task 只带 input），照抄会报 "input text is valid"。
         return json.dumps({
-            "header": {"action": action, "task_id": tid, "streaming": "out"},
+            "header": {"action": action, "task_id": tid, "streaming": "duplex"},
             "payload": {"task_group": "audio", "task": "tts",
                         "function": "SpeechSynthesizer", "model": config.TTS_MODEL,
                         "parameters": params, "input": payload_input or {}},
@@ -184,7 +187,7 @@ async def _dashscope_synth(spoken: str, pv: str, speech_rate: float, out_mp3: Pa
                                   max_size=None, open_timeout=20) as ws:
         await ws.send(_msg("run-task"))
 
-        async def _fail_info(ev: dict) -> str:
+        def _fail_info(ev: dict) -> str:
             h = ev.get("header") or {}
             return f"{h.get('error_code')} {h.get('error_message')}".strip() or "task-failed"
 
