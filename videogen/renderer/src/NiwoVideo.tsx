@@ -150,9 +150,7 @@ export type NiwoProps = {
   exportMode?: ExportMode;
   /** @deprecated 旧字段，等价于 exportMode="card" */
   chromeOnly?: boolean;
-  /** 分轨导出：文字测量结果回传地址（Node 侧小 HTTP 服务） */
-  probeUrl?: string;
-  /** 测量结果的分组标签（通常是镜头 id） */
+  /** 分轨导出：测量结果的分组标签（通常是镜头 id） */
   probeTag?: string;
   /**
    * 浏览器内合成（web-renderer）专用混音计划：voice/bgm/sfx 都是渲染包里
@@ -1273,7 +1271,15 @@ const PortraitVideo: React.FC<NiwoProps> = (props) => (
 // ---------------- 分轨导出：文字测量探针 ----------------
 // card 模式下文字只留形状与位置（颜色透明），这里把每个文字元素的几何/样式量出来，
 // 由 Python 侧生成剪映文本片段（可改字的那一层）。
-const TextProbe: React.FC<{url?: string; tag?: string}> = ({url, tag}) => {
+/**
+ * 量出来的文字几何暂存在此：成片台页面渲完一张 card 层就直接读这个对象，
+ * 随图层一起交回云端（服务器不再有 Chrome，量不到第二手）。
+ */
+export const probeStore: Record<string, Record<string, unknown>[]> =
+  ((globalThis as {__vgProbe?: Record<string, Record<string, unknown>[]>}).__vgProbe
+    ??= {});
+
+const TextProbe: React.FC<{tag?: string}> = ({tag}) => {
   const [handle] = React.useState(() => delayRender('draft text probe'));
   React.useEffect(() => {
     let cancelled = false;
@@ -1316,24 +1322,11 @@ const TextProbe: React.FC<{url?: string; tag?: string}> = ({url, tag}) => {
         }
         for (const c of Array.from(el.children)) walk(c);
       };
-      walk(document.body);
+      // 只量画面内部：成片台页面自身还有一整栏 UI，从 body 起走会把按钮文案当成片文字
+      walk(frame ?? document.body);
       if (hideStyle) hideStyle.disabled = false;
-      const done = () => continueRender(handle);
-      if (url) {
-        const payload = JSON.stringify({tag, items});
-        // 通道 A：no-cors POST
-        fetch(url, {method: 'POST', mode: 'no-cors', body: payload}).then(done).catch(done);
-        // 通道 B：图片信标（file:// 页面也能发）
-        try {
-          const img = new Image();
-          const b64 = btoa(unescape(encodeURIComponent(payload)));
-          img.src = `${url}?chunk=${encodeURIComponent(b64)}`;
-        } catch (err) {
-          /* 忽略 */
-        }
-      } else {
-        done();
-      }
+      if (tag) probeStore[tag] = items;
+      continueRender(handle);
     };
 
     // 等字体与布局都稳定再量：大字报/字幕这类用 bottom、百分比定位的元素，
@@ -1455,7 +1448,7 @@ export const NiwoVideo: React.FC<NiwoProps> = (props) => {
             __html: '*{color:transparent !important;text-shadow:none !important;}',
           }}
         />
-        <TextProbe url={props.probeUrl} tag={props.probeTag} />
+        <TextProbe tag={props.probeTag} />
       </>
     ) : null;
   let body: React.ReactNode;
