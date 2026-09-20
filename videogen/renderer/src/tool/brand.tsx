@@ -161,7 +161,7 @@ export const BrandSheet: React.FC<{
           <div style={{display: 'flex', gap: 16, alignItems: 'center'}}>
             <div style={{
               width: 76, height: 76, flexShrink: 0, borderRadius: 10, overflow: 'hidden',
-              border: `1px dashed ${C.line}`, background: '#fff', display: 'flex',
+              border: `1px dashed ${C.line}`, background: C.field, display: 'flex',
               alignItems: 'center', justifyContent: 'center',
             }}>
               {st.has_logo

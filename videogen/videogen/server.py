@@ -309,7 +309,7 @@ def _enqueue_render(job_id: str, prio: int) -> None:
 #   3. 开放模式：既没建过账号也没配令牌 → 本机自用不拦
 # 页面外壳、字体、健康检查、登录接口本身保持公开。
 SESSION_COOKIE = "vg_session"
-_PUBLIC_PATHS = {"/", "/index.html", "/healthz", "/api/templates",
+_PUBLIC_PATHS = {"/", "/index.html", "/studio", "/healthz", "/api/templates",
                  "/api/auth/status", "/api/auth/login", "/api/auth/register",
                  "/api/auth/send-code", "/api/auth/reset-code", "/api/auth/reset",
                  "/api/pricing", "/api/sample-bundle"}
@@ -1057,6 +1057,18 @@ def _find_bundles() -> list[dict]:
 
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
+    """首页就是成片台本体：拖包 → 生成 → 取片一屏走完，不必先进工作台找入口。
+    静态资源仍在 /poc/ 下，靠 <base> 让页面里的相对路径照旧解析。"""
+    html = _poc_html()
+    if isinstance(html, JSONResponse):
+        return html
+    return html.replace("<head>", '<head><base href="/poc/">', 1)
+
+
+@app.get("/studio", response_class=HTMLResponse)
+@app.get("/studio/", response_class=HTMLResponse)
+def studio() -> str:
+    """工作台：作品库与历史项目。主路径已在成片台，这里退成后台。"""
     return _inject_browser_export((STATIC / "index.html").read_text(encoding="utf-8"))
 
 
@@ -1089,12 +1101,12 @@ _BROWSER_EXPORT_WIDGET = """
       wrap.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;';
       var b = document.createElement('button');
       b.id = 'gc-bx-go';
-      b.style.cssText = 'all:unset;cursor:pointer;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:20px 36px;border-radius:16px;font:700 20px/1.3 system-ui;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);';
+      b.style.cssText = 'all:unset;cursor:pointer;background:var(--acc);color:var(--acc-ink);padding:16px 30px;border-radius:9px;font:700 18px/1.45 var(--sans);text-align:center;box-shadow:var(--sh-2);';
       b.addEventListener('click', openFrame);
       wrap.appendChild(b);
       document.body.appendChild(wrap);
     }
-    wrap.firstChild.innerHTML = '\\u26a1 \\u6709 ' + n + ' \\u4e2a\\u89c6\\u9891\\u7b49\\u7740\\u6e32\\u67d3<br><span style=\\"font-size:14px;font-weight:400;opacity:.85\\">\\u70b9\\u51fb\\u7528\\u672c\\u6d4f\\u89c8\\u5668\\u6e32\\u67d3\\uff0c\\u76f4\\u63a5\\u51fa\\u5e26\\u58f0 MP4\\uff08\\u6bcf\\u6761\\u7ea6 1~4 \\u5206\\u949f\\uff0c\\u671f\\u95f4\\u4fdd\\u6301\\u672c\\u9875\\u6253\\u5f00\\uff09</span>';
+    wrap.firstChild.innerHTML = '有 ' + n + ' 条视频等你生成<br><span style=\"font-size:14px;font-weight:400;opacity:.85\">点击在你这台电脑上完成，直接出带声 MP4（每条约 1~4 分钟，期间保持本页打开）</span>';
     wrap.style.display = 'flex';
   }
   function openFrame(){
@@ -1914,7 +1926,7 @@ def start_build(body: dict, request: Request):
                     continue
                 # 等成片台领取时不再爬"假进度"——那是兜底动画，会误导用户以为在渲染
                 if j.get("stage") == "render" and not j.get("render_via"):
-                    j["detail"] = "等待成片台领取 · 点「⚡ 生成视频」在本浏览器完成"
+                    j["detail"] = "等你在这台电脑上生成 · 打开成片台点「生成视频」"
                     continue
                 base, cap = span
                 el = time.time() - j.get("t_stage", time.time())
@@ -1946,7 +1958,7 @@ def my_jobs(request: Request):
             if item["stage"] in ("queued", "prepped"):
                 ahead = _queue_ahead(jid)
                 if item["stage"] == "prepped":
-                    item["detail"] = ("排队渲染中 · 前面还有 %d 条" % ahead) if ahead else "马上开始渲染"
+                    item["detail"] = ("排队生成中 · 前面还有 %d 条" % ahead) if ahead else "马上开始生成"
                 else:
                     item["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
                 item["queued_pos"] = ahead
@@ -1979,7 +1991,7 @@ def job_status(job_id: str, request: Request):
             ahead = _queue_ahead(job_id)
         out["queued_pos"] = ahead
         if out.get("stage") == "prepped":
-            out["detail"] = ("排队渲染中 · 前面还有 %d 条" % ahead) if ahead else "马上开始渲染"
+            out["detail"] = ("排队生成中 · 前面还有 %d 条" % ahead) if ahead else "马上开始生成"
         else:
             out["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
     t0 = out.get("t0")
@@ -2114,7 +2126,7 @@ async def agent_job_visual(job_id: str, request: Request, device: str = ""):
     dev = _agent_device(request, device)
     tmp = agenthub.upload_target(job_id, dev)
     if tmp is None:
-        return JSONResponse({"error": "任务不在渲染中（可能已被收回/取消）"},
+        return JSONResponse({"error": "任务不在生成中（可能已收回或取消）"},
                             status_code=410)
     crop = request.query_params.get("crop") or ""
     if crop:
@@ -2127,7 +2139,7 @@ async def agent_job_visual(job_id: str, request: Request, device: str = ""):
     tmp.write_bytes(data)
     if not agenthub.deliver(job_id, dev, tmp, final=final):
         tmp.unlink(missing_ok=True)
-        return JSONResponse({"error": "任务不在渲染中（可能已被收回/取消）"},
+        return JSONResponse({"error": "任务不在生成中（可能已收回或取消）"},
                             status_code=410)
     return {"ok": True}
 
@@ -2166,6 +2178,16 @@ def agent_status(request: Request):
 BROWSERPOC_DIR = STATIC / "poc"
 
 
+def _poc_html():
+    """成片台首页的 HTML；没打包时给一句照着能修的话。"""
+    f = BROWSERPOC_DIR / "index.html"
+    if not f.is_file():
+        return JSONResponse({"error": "成片台页面未打包（renderer/_tool_bundle.mjs）"},
+                            status_code=404)
+    return f.read_text(encoding="utf-8")
+
+
+
 @app.get("/poc/{rel_path:path}")
 def poc_page(rel_path: str = "index.html"):
     """浏览器成片台（web-renderer 逐帧渲染 + 浏览器内混音，产出带声 mp4）。
@@ -2176,10 +2198,8 @@ def poc_page(rel_path: str = "index.html"):
     except OSError:
         inside = False
     if not inside or not target.is_file():
-        target = BROWSERPOC_DIR / "index.html"
-    if not target.is_file():
-        return JSONResponse({"error": "成片台页面未打包（renderer/_tool_bundle.mjs）"},
-                            status_code=404)
+        html = _poc_html()
+        return html if isinstance(html, JSONResponse) else HTMLResponse(html)
     return FileResponse(target)
 
 

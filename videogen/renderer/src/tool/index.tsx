@@ -3,8 +3,9 @@ import {createRoot} from 'react-dom/client';
 import {Player, type PlayerRef} from '@remotion/player';
 import {renderMediaOnWeb, renderStillOnWeb} from '@remotion/web-renderer';
 import {NiwoVideo, probeSink, type NiwoProps} from '../NiwoVideo';
-import {C, btn, btnLine, sel, api, lnkAcc, Toggle} from './ui';
+import {api, lnkAcc, Toggle, Sheet} from './ui';
 import {Account, type AuthSt, type Me, type SheetName} from './account';
+import './ui.css';
 
 // GetCut 成片台（单页全流程）：拖素材包 → 内容与配音确认 → 浏览器渲染合成
 // → 取走带声 mp4。云端只做写稿/配音/分镜等轻活；画面与混音全在本页完成，
@@ -14,6 +15,43 @@ const qs = new URLSearchParams(location.search);
 const DEVICE = qs.get('device') || '网页成片台';
 // 开发自查用：?frames=240 只渲前 240 帧（不改变正式行为）
 const FRAMES_LIMIT = Math.max(0, parseInt(qs.get('frames') || '0', 10) || 0);
+const THEME_KEY = 'vg-theme';
+const NL = /\r?\n/;   // 口播文案按段切开
+// 配色主题：名字与工作台的 data-theme 同一套，两页之间切换互相认得
+const THEMES = [
+  {id: 'ziyu', name: '紫玉描金'}, {id: 'xuanqing', name: '玄青'}, {id: 'shimo', name: '石墨'},
+  {id: 'zhimu', name: '纸墨'}, {id: 'daiqing', name: '黛青'},
+];
+
+/** 品牌记号：与工作台同一个方印（右下角那一刀就是「Cut」），颜色跟主题走 */
+const Mark: React.FC<{size?: number}> = ({size = 26}) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M9 0H23A9 9 0 0 1 32 9v9.5L18.5 32H9A9 9 0 0 1 0 23V9a9 9 0 0 1 9-9Z" fill="var(--acc)" />
+    <path d="M10.5 8.6 23.6 15.6 10.5 22.6Z" fill="var(--acc-ink)" />
+  </svg>
+);
+
+/** 音色按气质分组，与工作台同一口径 */
+/** 图层交回的失败原文带 HTTP 码，客户看不懂：翻成一句照着能做的事 */
+const layerHint = (e: unknown) => {
+  const m = String((e as Error).message || e);
+  if (/404/.test(m)) return '这台服务器版本旧了，重启服务再出一条就全';
+  if (/410/.test(m) || /没有等图层/.test(m)) return '这一单已过期，重试这一步再出';
+  if (/401|403|未登录/.test(m)) return '登录掉了，重新登录后再出';
+  return m.replace(/交回失败：/, '').slice(0, 46);
+};
+
+const groupVoices = (list: Voice[]) => {
+  const g: Record<string, Voice[]> = {沉稳播报: [], 清爽男声: [], 女声: [], 特色口音: [], 其他: []};
+  for (const v of list) {
+    if (/口音/.test(v.label)) g.特色口音.push(v);
+    else if (/女声/.test(v.label)) g.女声.push(v);
+    else if (/新闻|浑厚|沉稳|解说|老年/.test(v.label)) g.沉稳播报.push(v);
+    else if (/男声|少年/.test(v.label)) g.清爽男声.push(v);
+    else g.其他.push(v);
+  }
+  return Object.entries(g).filter(([, v]) => v.length);
+};
 
 type Phase = 'drop' | 'importing' | 'config' | 'prepping' | 'ready'
   | 'rendering' | 'uploading' | 'done' | 'error';
@@ -49,23 +87,20 @@ interface BundleInfo {
   assets?: {kind: string}[];
 }
 interface Voice {id: string; label: string; provider?: string}
+interface Project {project_id: string; title?: string; created?: string;
+  assets_count?: number; renders_count?: number; renders?: {id: string; file?: string}[]}
 
 const Step: React.FC<{n: number; title: string; state: 'todo' | 'active' | 'done';
                      children?: React.ReactNode; summary?: string; open?: boolean}> =
   ({n, title, state, children, summary, open}) => (
-    <div style={{display: 'flex', gap: 14, opacity: state === 'todo' ? 0.45 : 1}}>
-      <div style={{
-        width: 26, height: 26, flexShrink: 0, borderRadius: '50%', marginTop: 1,
-        border: `1.5px solid ${state === 'done' ? C.ok : state === 'active' ? C.accent : C.line}`,
-        background: state === 'done' ? C.ok : state === 'active' ? C.accentSoft : 'transparent',
-        color: state === 'done' ? '#fff' : state === 'active' ? C.accent : C.soft,
-        fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>{state === 'done' ? '✓' : n}</div>
-      <div style={{minWidth: 0, flex: 1}}>
-        <div style={{fontSize: 15, fontWeight: 700}}>{title}</div>
+    <div className={`step${state === 'active' ? ' on' : ''}${state === 'done' ? ' ok' : ''}
+      ${state === 'todo' ? ' dim' : ''}`}>
+      <div className="no">{state === 'done' ? '✓' : n}</div>
+      <div className="wrap">
+        <div className="t">{title}</div>
         {(state === 'done' || state === 'active') && summary
-          ? <div style={{fontSize: 13, color: C.soft, marginTop: 3}}>{summary}</div> : null}
-        {(state === 'active' || open) && children ? <div style={{marginTop: 10}}>{children}</div> : null}
+          ? <div className="m">{summary}</div> : null}
+        {(state === 'active' || open) && children ? <div className="c">{children}</div> : null}
       </div>
     </div>
   );
@@ -113,6 +148,11 @@ const App: React.FC = () => {
   const [layersOk, setLayersOk] = React.useState<boolean | null>(null);
   const [layerErr, setLayerErr] = React.useState('');
   const [layerNote, setLayerNote] = React.useState('');
+  const [theme, setTheme] = React.useState(() => localStorage.getItem(THEME_KEY) || 'ziyu');
+  const [hot, setHot] = React.useState(false);
+  const [elapsed, setElapsed] = React.useState(0);
+  const [lib, setLib] = React.useState<Project[] | null>(null);
+  const [libMsg, setLibMsg] = React.useState('');
   const playerRef = React.useRef<PlayerRef>(null);
   const abortRef = React.useRef<AbortController | null>(null);
   const packRef = React.useRef<JobPack | null>(null);
@@ -121,8 +161,24 @@ const App: React.FC = () => {
   const pendingZip = React.useRef<File | null>(null);
   const meRef = React.useRef<Me | null>(null);
   const phaseRef = React.useRef<Phase>('drop');
+  const t0Ref = React.useRef(0);
   phaseRef.current = phase;
   jobIdRef.current = jobId;
+
+  React.useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  // 一条进度条要配一个「已经过了多久」，否则 2 分钟像 20 分钟
+  React.useEffect(() => {
+    const busy = phase === 'prepping' || phase === 'ready' || phase === 'rendering'
+      || phase === 'uploading';
+    if (!busy) return;
+    if (!t0Ref.current) t0Ref.current = Date.now();
+    const iv = setInterval(() => setElapsed(Math.round((Date.now() - t0Ref.current) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [phase]);
 
   const say = (m: string) => {
     setToast(m);
@@ -303,6 +359,7 @@ const App: React.FC = () => {
     if (!bundle) return;
     setErr('');
     setPhase('prepping');
+    t0Ref.current = Date.now();
     setPrepMsg('已提交，云端正在写稿配音…');
     try {
       const r = await api('/api/build', {method: 'POST',
@@ -458,7 +515,7 @@ const App: React.FC = () => {
           setLayersOk(true);
         } catch (e) {
           setLayersOk(false);
-          setLayerErr(String((e as Error).message || e).slice(0, 90));
+          setLayerErr(layerHint(e));
           console.warn('GetCut 剪映图层出图失败', (e as Error).stack || String(e));
         } finally {
           setLayerMsg('');
@@ -486,7 +543,19 @@ const App: React.FC = () => {
     setLayersOk(null);
     setPct(0);
     setErr('');
+    t0Ref.current = 0;
+    setElapsed(0);
     setPhase('drop');
+  };
+
+  const openLib = () => {
+    setLibMsg('正在取项目列表…');
+    setLib([]);
+    api('/api/projects').then((d) => {
+      const ps = ((d.projects || d) as Project[]) || [];
+      setLib(ps.slice().sort((a, b) => String(b.created || '').localeCompare(String(a.created || ''))));
+      setLibMsg('');
+    }).catch((e) => { setLib(null); setLibMsg(String((e as Error).message || e)); });
   };
 
   const playPreview = (url: string) => {
@@ -503,7 +572,7 @@ const App: React.FC = () => {
       const res = await api(`/api/projects/${projectId}/renders/${jobId}/jianying-import`,
         {method: 'POST'});
       if (res.installed) {
-        setJy('已导入剪映，打开剪映就能看到 ✓');
+        setJy('已导入剪映，打开剪映就能看到');
       } else if (res.protocol && res.pull) {
         setJy('正在唤起导入小助手…（浏览器问「打开」时点允许）');
         let woke = false;
@@ -515,12 +584,12 @@ const App: React.FC = () => {
           window.removeEventListener('blur', off);
           document.removeEventListener('visibilitychange', off);
           if (!woke) {
-            setJy('小助手还没装：已改为下载草稿包，解压后双击「一键导入剪映.bat」');
+            setJy('这台电脑没装导入小助手：草稿包已改为下载，解压后双击「一键导入剪映.bat」；不装也能用——剪映里直接导入那个 MP4。');
             location.href = `/api/projects/${projectId}/renders/${jobId}/jianying-draft`;
           }
         }, 2600);
       } else {
-        setJy('草稿包已下载：解压后双击「一键导入剪映.bat」');
+        setJy('草稿包已下载：解压后双击「一键导入剪映.bat」（只想快点剪的话，直接把这个 MP4 拖进剪映就行）');
         location.href = `/api/projects/${projectId}/renders/${jobId}/jianying-draft`;
       }
     } catch (e) {
@@ -536,6 +605,10 @@ const App: React.FC = () => {
   const nVid = bundle?.assets ? bundle.assets.filter((a) => a.kind === 'video').length : 0;
   const title = bundle?.title || pack?.props.headline?.lines?.[0]?.text || '';
   const fileName = `${(title || 'getcut').replace(/[\\/:*?"<>|\[\]]/g, '')}-${(pack?.job || jobId).slice(-6)}.mp4`;
+  const nChars = (bundle?.script || '').length;
+  const estMin = Math.max(1, Math.round((durS || 60) / 60 * 2));
+  const mmss = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
+  const codecOk = typeof (window as unknown as {VideoEncoder?: unknown}).VideoEncoder !== 'undefined';
 
   // 每一步对应流程线上的位置：号小于当前=已完成，等于=进行中
   const SEQ: Record<Phase, number> = {
@@ -548,19 +621,49 @@ const App: React.FC = () => {
     return n < cur ? 'done' : n === cur ? 'active' : 'todo';
   };
 
+  // 从「点生成」到「交回」一条进度条走到底：备料 2~15 → 缓存素材 15~20 → 本机 20~97 → 交回 97~100
+  const bar = phase === 'prepping' && !pack ? Math.min(15, 2 + prepPct * 0.13)
+    : pack && !finalUrl && phase !== 'rendering' && phase !== 'uploading' && phase !== 'done'
+      ? 15 + (prewarmDone / Math.max(1, pack.files.length)) * 5
+    : phase === 'rendering' ? 20 + pct * 0.75
+    : phase === 'uploading' ? 97 : phase === 'done' ? 100 : 0;
+  const line = phase === 'error' ? ''
+    : phase === 'prepping' && !pack ? `云端准备 · ${prepMsg.replace(/渲染/g, '生成')}`
+    : phase === 'uploading' ? '交回云端…'
+    : phase === 'done' ? ''
+    : pack && phase !== 'rendering' ? `缓存素材 ${prewarmDone}/${pack.files.length}`
+    : `本机生成中 · 已出 ${Math.round(pct * durS / 100)} / ${Math.round(durS)} 秒 · 已用 ${mmss}`;
+
+  const fileInput = React.useRef<HTMLInputElement>(null);
+  const pick = () => fileInput.current?.click();
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setHot(false);
+    const f = e.dataTransfer?.files?.[0];
+    if (f) void importZip(f);
+  };
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setHot(true);
+  };
+
   return (
-    <div style={{display: 'grid', gridTemplateColumns: 'minmax(340px, 420px) 1fr', height: '100vh',
-                 background: C.paper, color: C.ink, fontFamily: 'system-ui, "Microsoft YaHei", sans-serif'}}>
-      {/* 左：动作 */}
-      <div style={{padding: '36px 32px', borderRight: `1px solid ${C.line}`, background: C.card,
-                   display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto'}}>
-        <div style={{display: 'flex', gap: 14, alignItems: 'flex-start'}}>
-          <div style={{flex: 1, minWidth: 0}}>
-            <div style={{fontSize: 22, fontWeight: 800, letterSpacing: 0.5}}>GetCut 成片台</div>
-            <div style={{fontSize: 14, color: C.soft, marginTop: 6, lineHeight: 1.7}}>
-              拖入素材包，一条好片子在你这台电脑上完成。
-            </div>
-          </div>
+    <div className="shell">
+      <header className="topbar">
+        <div className="brand">
+          <Mark />
+          <span className="wm">GetCut</span>
+          <span className="sub">成片台</span>
+        </div>
+        <div className="top-right">
+          <span className="selw">
+            <select className="chip sel-theme" value={theme} aria-label="配色主题"
+                    onChange={(e) => setTheme(e.target.value)}>
+              {THEMES.map((t) => <option key={t.id} value={t.id}>配色 · {t.name}</option>)}
+            </select>
+            <span className="car">▾</span>
+          </span>
+          <button className="chip" onClick={openLib} title="历史项目与成片">作品库</button>
           <Account me={me} authst={authst} sheet={sheet} setSheet={setSheet}
                    refresh={refreshMe} toast={say}
                    onMe={(m) => { meRef.current = m; setMe(m); }}
@@ -573,213 +676,272 @@ const App: React.FC = () => {
                      if (f) void importZip(f);
                    }} />
         </div>
+      </header>
 
-        <div style={{display: 'flex', flexDirection: 'column', gap: 20}}>
-          {/* 1 导入 */}
-          <Step n={1} title="导入素材包" state={st(1)}
-                summary={bundle ? `${bundle.name} 已导入` : undefined}>
-            {phase === 'importing' ? (
-              <div>
-                <div style={{height: 6, background: C.line, borderRadius: 3, overflow: 'hidden'}}>
-                  <div style={{width: `${Math.max(4, upPct)}%`, height: '100%', background: C.accent, transition: 'width .3s'}} />
+      <div className="body">
+        {/* 左：动作 */}
+        <div className="pane left">
+          <div className="lede">拖入素材包，一条好片子在你这台电脑上完成——不排队、不限速。</div>
+
+          <input ref={fileInput} type="file" accept=".zip" style={{display: 'none'}}
+                 onChange={(e) => void importZip(e.target.files?.[0])} />
+
+          <div className="steps">
+            {/* 1 导入 */}
+            <Step n={1} title="导入素材包" state={st(1)}
+                  summary={bundle ? `${bundle.name} 已导入` : undefined}>
+              {phase === 'importing' ? (
+                <div>
+                  <div className="bar"><i style={{width: `${Math.max(4, upPct)}%`}} /></div>
+                  <div className="pline"><span className="st">上传中</span>
+                    <span className="pc">{upPct}%</span></div>
                 </div>
-                <div style={{fontSize: 13, color: C.soft, marginTop: 6}}>上传中 {upPct}%</div>
-              </div>
-            ) : (
-              <label style={{
-                display: 'block', border: `1.5px dashed ${C.line}`, borderRadius: 10,
-                padding: '18px 14px', textAlign: 'center', cursor: 'pointer',
-                fontSize: 13.5, color: C.soft, lineHeight: 1.7, background: C.paper,
-              }}>
-                把素材包 zip 拖进来，或点这里选文件
-                <input type="file" accept=".zip" style={{display: 'none'}}
-                       onChange={(e) => void importZip(e.target.files?.[0])} />
-              </label>
-            )}
-          </Step>
-
-          {/* 2 内容与配音 */}
-          {bundle ? (
-            <Step n={2} title="内容与配音" state={st(2)}
-                  summary={`${(bundle.script || '').length} 字 · 约 ${bundle.estSeconds} 秒 · 图${nImg} 视频${nVid}`}>
-              <div style={{fontSize: 15, fontWeight: 700, lineHeight: 1.6, marginBottom: 12}}>
-                {(bundle.hookLines?.[0]?.text) || bundle.title}
-              </div>
-              <div style={{display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px 8px', alignItems: 'center'}}>
-                <select style={sel} value={cfg.voice}
-                        onChange={(e) => setCfg({...cfg, voice: e.target.value})}>
-                  {voices.map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
-                  {!voices.length ? <option value="">默认音色</option> : null}
-                </select>
-                <button style={{...btnLine, padding: '9px 12px'}}
-                        onClick={() => cfg.voice && playPreview(`/api/voice-preview?voice=${encodeURIComponent(cfg.voice)}`)}>试听</button>
-                <select style={sel} value={cfg.bgm} onChange={(e) => setCfg({...cfg, bgm: e.target.value})}>
-                  <option value="">不用背景音乐</option>
-                  {music.map((m) => <option key={m.file} value={m.file}>{m.name}{m.mood ? ` · ${m.mood}` : ''}</option>)}
-                </select>
-                <button style={{...btnLine, padding: '9px 12px'}}
-                        onClick={() => cfg.bgm && playPreview(`/api/bgm/${encodeURIComponent(cfg.bgm.split('/').pop() as string)}`)}>试听</button>
-              </div>
-              <div style={{display: 'flex', gap: 18, marginTop: 14, flexWrap: 'wrap'}}>
-                <Toggle label="字幕" on={cfg.subtitles} set={(v) => setCfg({...cfg, subtitles: v})} />
-                <Toggle label="音效" on={cfg.sfx} set={(v) => setCfg({...cfg, sfx: v})} />
-                <Toggle label="资料来源" on={cfg.sources} set={(v) => setCfg({...cfg, sources: v})} />
-              </div>
-              <div style={{marginTop: 14}}>
-                <button style={btn} onClick={() => void submit()}>
-                  ▶ 生成视频{durS ? `（约 ${Math.max(1, Math.round(durS / 60 * 2))} 分钟）` : ''}
-                </button>
-              </div>
-            </Step>
-          ) : null}
-
-          {/* 3 正在生成视频：备料→预热→渲染→交回，一条进度条走到底 */}
-          {pack || jobId || phase === 'prepping' ? (
-            <Step n={3} title="正在生成视频" state={st(3)}
-                  summary={phase === 'done' ? '视频已生成' : undefined}>
-              {(() => {
-                const bar = phase === 'prepping' && !pack ? Math.min(15, 2 + prepPct * 0.13)
-                  : pack && !finalUrl && phase !== 'rendering' && phase !== 'uploading' && phase !== 'done'
-                    ? 15 + (prewarmDone / Math.max(1, pack.files.length)) * 5
-                  : phase === 'rendering' ? 20 + pct * 0.75
-                  : phase === 'uploading' ? 97 : phase === 'done' ? 100 : 0;
-                const line = phase === 'error' ? ''
-                  : phase === 'prepping' && !pack ? `云端备料 · ${prepMsg}`
-                  : phase === 'uploading' ? '交回云端…'
-                  : phase === 'done' ? ''
-                  : pack && phase !== 'rendering' ? `缓存素材 ${prewarmDone}/${pack.files.length}`
-                  : `本机生成中 ${pct}%`;
-                return (
-                  <div>
-                    {phase !== 'error' && phase !== 'done' ? (
-                      <>
-                        <div style={{height: 6, background: C.line, borderRadius: 3, overflow: 'hidden'}}>
-                          <div style={{width: `${bar}%`, height: '100%', background: C.accent, transition: 'width .4s'}} />
-                        </div>
-                        <div style={{fontSize: 13, color: C.soft, marginTop: 6}}>{line}</div>
-                      </>
-                    ) : null}
-                    {phase === 'ready' ? (
-                      <button style={{...btn, marginTop: 10}} onClick={() => void startRender()}>
-                        ▶ 生成视频（约 {Math.max(1, Math.round(durS / 60 * 2))} 分钟）
-                      </button>
-                    ) : null}
-                    {phase === 'error' ? (
-                      <button style={{...btn, marginTop: 10}} onClick={() => void startRender()}>
-                        ↻ 重试
-                      </button>
-                    ) : null}
-                  </div>
-                );
-              })()}
-            </Step>
-          ) : null}
-
-          {/* 4 取走成片 */}
-          {finalUrl ? (
-            <Step n={4} title="取走成片" state="done" open>
-              <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
-                <a style={btn} href={finalUrl} download={fileName}>下载 MP4 成片</a>
-                <button style={{...btnLine, alignSelf: 'flex-start', opacity: (jyBusy || layerMsg) ? 0.6 : 1}}
-                        disabled={jyBusy || !!layerMsg} onClick={() => void jianying()}>
-                  导入剪映
-                </button>
-                {layerMsg ? (
-                  <div style={{fontSize: 12.5, color: C.soft, lineHeight: 1.7}}>{layerMsg}</div>
-                ) : null}
-                {layersOk !== null && !layerMsg ? (
-                  <div style={{fontSize: 12.5, color: layersOk ? C.ok : C.soft, lineHeight: 1.7}}>
-                    {layersOk ? `剪映分轨图层已备好：${layerNote || '底板、卡片、可改文字各一条轨'}`
-                              : '分轨图层没出全' + (layerErr ? `（${layerErr}）` : '')
-                                + '：仍可导入剪映，但卡片只能整条挪'}
-                  </div>
-                ) : null}
-                {jy ? <div style={{fontSize: 12.5, color: C.soft, lineHeight: 1.7}}>{jy}</div> : null}
-                <div style={{fontSize: 12.5, color: C.soft}}>
-                  {!me || me.tier === 'free' ? '免费版成片带 GetCut 水印 · '
-                    : brandOn ? '右上角已带上你的品牌角标 · ' : '本条按你的档位干净出片（无水印）· '}
-                  {!me || me.tier === 'free' ? (
-                    <button style={lnkAcc} onClick={() => setSheet('pricing')}>看权益</button>
-                  ) : (
-                    <button style={lnkAcc} onClick={() => setSheet('brand')}>品牌套装</button>
-                  )}
-                </div>
-                <div style={{fontSize: 12.5, color: cloudOk ? C.ok : C.soft}}>
-                  {cloudOk ? '已同步云端工作台 · ' : '云端交回失败，不影响本机下载 · '}
-                  {cloudOk && jobId ? <a href={`/#/project/${projectId}`} style={{color: C.accent}}>去工作台看历史</a> : null}
-                </div>
-                <button style={{...btnLine, alignSelf: 'flex-start'}} onClick={reset}>再做一条</button>
-              </div>
-            </Step>
-          ) : null}
-        </div>
-
-        {err ? <div style={{fontSize: 13, color: C.err, lineHeight: 1.6}}>出错：{err}</div> : null}
-
-        <div style={{marginTop: 'auto', fontSize: 12, color: C.soft, lineHeight: 1.8}}>
-          生成期间请保持本页打开。画面与声音都在这台电脑上完成，服务器零渲染。
-        </div>
-      </div>
-
-      {/* 右：结果 */}
-      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, minWidth: 0}}>
-        <div style={{height: 'min(92vh, 1200px)', aspectRatio: '9 / 16', position: 'relative',
-                     background: '#0d0c0b', borderRadius: 14, overflow: 'hidden'}}>
-          {finalUrl ? (
-            <video src={finalUrl} controls autoPlay style={{width: '100%', height: '100%', objectFit: 'contain'}} />
-          ) : pack && phase === 'rendering' ? (
-            /* 渲染期卸载 Player：同一时刻只保留 web-renderer 那一份合成 */
-            <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                         alignItems: 'center', justifyContent: 'center', gap: 10, color: '#b5afa6'}}>
-              <div style={{fontSize: 40, fontWeight: 800, color: '#fff'}}>{pct}%</div>
-              <div style={{fontSize: 14}}>生成视频中…</div>
-            </div>
-          ) : pack ? (
-            <Player
-              ref={playerRef}
-              component={NiwoVideo as React.FC<Record<string, unknown>>}
-              inputProps={pack.props as unknown as Record<string, unknown>}
-              durationInFrames={pack.props.durationInFrames}
-              fps={30}
-              compositionWidth={1080}
-              compositionHeight={1920}
-              style={{width: '100%', height: '100%'}}
-              autoplay
-              loop
-              muted
-              showControls={false}
-              acknowledgeRemotionLicense
-            />
-          ) : (
-            <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                         alignItems: 'center', justifyContent: 'center', gap: 16, color: '#8a857d', padding: 30, textAlign: 'center'}}>
-              {title ? (
-                <>
-                  <div style={{fontSize: 24, fontWeight: 800, color: '#efece7', lineHeight: 1.6}}>{title}</div>
-                  <div style={{fontSize: 13}}>{phase === 'prepping' ? '云端配音分镜中，稍候自动开渲' : '已导入，检查左侧配置'}</div>
-                </>
+              ) : bundle ? (
+                <button className="btn ln sm" onClick={pick}>换一个素材包</button>
               ) : (
-                <div style={{fontSize: 15, lineHeight: 2}}>素材包进来后<br />成片会在这里出现</div>
+                <div className={`drop${hot ? ' hot' : ''}`} onClick={pick}
+                     onDrop={onDrop} onDragOver={onDragOver} onDragLeave={() => setHot(false)}>
+                  <b>点这里选素材包 zip</b>
+                  <span>不解压，文案与素材一起读入 · 也可以直接拖到右边那块</span>
+                </div>
               )}
+            </Step>
+
+            {/* 2 内容与配音 */}
+            {bundle ? (
+              <Step n={2} title="内容与配音" state={st(2)}>
+                <div className="meta">
+                  <span>{nChars} 字口播</span><span>约 {bundle.estSeconds} 秒</span>
+                  <span>{nImg} 图 / {nVid} 视频</span>
+                </div>
+                <div className="togo">口播文案在右边整屏核对，看完直接点生成</div>
+
+                <div className="field" style={{marginTop: 16}}>
+                  <div className="lb">配音</div>
+                  <div className="row">
+                    <select className="sel" value={cfg.voice}
+                            onChange={(e) => setCfg({...cfg, voice: e.target.value})}>
+                      {groupVoices(voices).map(([g, vs]) => (
+                        <optgroup key={g} label={g}>
+                          {vs.map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
+                        </optgroup>
+                      ))}
+                      {!voices.length ? <option value="">默认音色</option> : null}
+                    </select>
+                    <button className="btn ln sm"
+                            onClick={() => cfg.voice && playPreview(`/api/voice-preview?voice=${encodeURIComponent(cfg.voice)}`)}>试听</button>
+                  </div>
+                </div>
+                <div className="field">
+                  <div className="lb">背景音乐</div>
+                  <div className="row">
+                    <select className="sel" value={cfg.bgm}
+                            onChange={(e) => setCfg({...cfg, bgm: e.target.value})}>
+                      <option value="">不用背景音乐</option>
+                      {music.map((m) => <option key={m.file} value={m.file}>{m.name}{m.mood ? ` · ${m.mood}` : ''}</option>)}
+                    </select>
+                    <button className="btn ln sm"
+                            onClick={() => cfg.bgm && playPreview(`/api/bgm/${encodeURIComponent(cfg.bgm.split('/').pop() as string)}`)}>试听</button>
+                  </div>
+                </div>
+                <div className="toggles">
+                  <Toggle label="字幕" on={cfg.subtitles} set={(v) => setCfg({...cfg, subtitles: v})} />
+                  <Toggle label="音效" on={cfg.sfx} set={(v) => setCfg({...cfg, sfx: v})} />
+                  <Toggle label="资料来源" on={cfg.sources} set={(v) => setCfg({...cfg, sources: v})} />
+                </div>
+                <div style={{marginTop: 18}}>
+                  <button className="btn" onClick={() => void submit()}>
+                    生成视频{durS ? `（约 ${estMin} 分钟）` : ''}
+                  </button>
+                </div>
+              </Step>
+            ) : null}
+
+            {/* 3 正在生成视频：备料→缓存→本机→交回，一条进度条走到底 */}
+            {pack || jobId || phase === 'prepping' ? (
+              <Step n={3} title={phase === 'done' ? '视频已生成' : '正在生成视频'} state={st(3)}>
+                {phase !== 'error' && phase !== 'done' ? (
+                  <div>
+                    <div className="bar"><i style={{width: `${bar}%`}} /></div>
+                    <div className="pline">
+                      <span className="st">{line}</span>
+                      <span className="pc">{Math.round(bar)}%</span>
+                    </div>
+                  </div>
+                ) : null}
+                {phase === 'ready' ? (
+                  <button className="btn" style={{marginTop: 12}} onClick={() => void startRender()}>
+                    生成视频（约 {estMin} 分钟）
+                  </button>
+                ) : null}
+                {phase === 'error' ? (
+                  <button className="btn" style={{marginTop: 12}} onClick={() => void startRender()}>
+                    重试这一步
+                  </button>
+                ) : null}
+              </Step>
+            ) : null}
+
+            {/* 4 取走成片 */}
+            {finalUrl ? (
+              <Step n={4} title="取走成片" state="done" open>
+                <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
+                  <a className="btn" href={finalUrl} download={fileName}>下载 MP4 成片</a>
+                  <div className="note">拿到 MP4 就能直接用：发抖音/视频号，或剪映里「导入」这个文件开剪，什么都不用装。</div>
+                  <button className="btn ln" style={{alignSelf: 'flex-start',
+                          opacity: (jyBusy || layerMsg) ? .6 : 1}}
+                          disabled={jyBusy || !!layerMsg} onClick={() => void jianying()}>
+                    导入剪映（分轨草稿 · 可逐条改字幕）
+                  </button>
+                  {layerMsg ? <div className="note">{layerMsg}</div> : null}
+                  {layersOk !== null && !layerMsg ? (
+                    <div className="note" style={{color: layersOk ? 'var(--ok)' : undefined}}>
+                      {layersOk ? `剪映分轨图层已备好：${layerNote || '底板、卡片、可改文字各一条轨'}`
+                                : '分轨图层没出全' + (layerErr ? `（${layerErr}）` : '')
+                                  + '。片子照样能导入剪映，只是卡片只能整条挪'}
+                    </div>
+                  ) : null}
+                  {jy ? <div className="note">{jy}</div> : null}
+                  <div className="note">
+                    {!me || me.tier === 'free' ? '免费版成片带 GetCut 水印 · '
+                      : brandOn ? '右上角已带上你的品牌角标 · ' : '本条按你的档位干净出片（无水印）· '}
+                    {!me || me.tier === 'free' ? (
+                      <button style={lnkAcc} onClick={() => setSheet('pricing')}>看权益</button>
+                    ) : (
+                      <button style={lnkAcc} onClick={() => setSheet('brand')}>品牌套装</button>
+                    )}
+                  </div>
+                  <div className="note" style={{color: cloudOk ? 'var(--ok)' : undefined}}>
+                    {cloudOk ? '已同步云端作品库 · ' : '交回云端失败，不影响本机下载 · '}
+                    {cloudOk && jobId ? <a href={`/studio#/project/${projectId}`} style={{color: 'var(--acc)'}}>去看历史</a> : null}
+                  </div>
+                  <button className="btn ln" style={{alignSelf: 'flex-start'}} onClick={reset}>再做一条</button>
+                </div>
+              </Step>
+            ) : null}
+          </div>
+
+          {err ? <div className="err">出错：{err}</div> : null}
+          {phase === 'drop' && !bundle ? (
+            <div className="note">需要新版 Chrome 或 Edge（出片靠这台电脑自己算）。5 年以上的旧机器会慢一些。</div>
+          ) : null}
+        </div>
+
+        {/* 右：预览台 */}
+        <div className="pane right" onDrop={bundle ? undefined : onDrop}
+             onDragOver={bundle ? undefined : onDragOver}
+             onDragLeave={bundle ? undefined : () => setHot(false)}>
+          {finalUrl || pack ? (
+            <div className="stagewrap">
+              <div className="stage">
+                {finalUrl ? (
+                  <video src={finalUrl} controls autoPlay />
+                ) : phase === 'rendering' ? (
+                  /* 生成期卸载 Player：同一时刻只保留 web-renderer 那一份合成 */
+                  <div className="void">
+                    <div className="bars3"><i /><i /><i /><i /><i /></div>
+                    <div className="pct">{Math.round(bar)}%</div>
+                    <div className="sm">
+                      本机生成中 · 已用 {mmss}
+                      <br />画面已出 {Math.round(pct * durS / 100)} / {Math.round(durS)} 秒，请保持本页打开
+                    </div>
+                  </div>
+                ) : (
+                  <Player
+                    ref={playerRef}
+                    component={NiwoVideo as React.FC<Record<string, unknown>>}
+                    inputProps={(pack as JobPack).props as unknown as Record<string, unknown>}
+                    durationInFrames={(pack as JobPack).props.durationInFrames}
+                    fps={30}
+                    compositionWidth={1080}
+                    compositionHeight={1920}
+                    style={{width: '100%', height: '100%'}}
+                    autoplay
+                    loop
+                    muted
+                    showControls={false}
+                    acknowledgeRemotionLicense
+                  />
+                )}
+                {pack && !finalUrl && phase !== 'rendering' ? (
+                  <div className="cap">实时预览（静音） · 成片带配音与音乐</div>
+                ) : null}
+              </div>
+              <div className="stagecap">
+                <b>{title}</b>
+                <span>{Math.round(durS)} 秒 · 1080×1920 竖屏 · {phase === 'done' ? '已完成' : phase === 'rendering' ? '生成中' : '预览中'}</span>
+              </div>
+            </div>
+          ) : bundle ? (
+            <article className="reader">
+              <div className="rd-top">
+                <span className="rd-kicker">口播文案 · 核对</span>
+                <span className="rd-meta">{nChars} 字 · 约 {bundle.estSeconds} 秒 · 图 {nImg} 视频 {nVid}</span>
+              </div>
+              <h2 className="rd-title">{title}</h2>
+              {(bundle.hookLines?.[0]?.text) ? <div className="rd-hook">{bundle.hookLines?.[0]?.text}</div> : null}
+              {phase === 'prepping' ? (
+                <div className="rd-strip"><span className="rd-dot" />{prepMsg} · 已用 {mmss}</div>
+              ) : null}
+              <div className="rd-body">
+                {(bundle.script || '').split(NL).filter(Boolean).map((para, i) => <p key={i}>{para}</p>)}
+              </div>
+            </article>
+          ) : (
+            <div className={`stagedrop${hot ? ' hot' : ''}`} onClick={pick}
+                 onDrop={onDrop} onDragOver={onDragOver} onDragLeave={() => setHot(false)}>
+              <Mark size={44} />
+              <div className="t">素材包拖到这里</div>
+              <div className="s">文案、图片、视频一起读入，成片在这里出现</div>
+              <div className="s dim">也可以点左边第 1 步选文件 · zip 不解压</div>
             </div>
           )}
-          {pack && !finalUrl && phase !== 'rendering' ? (
-            <div style={{position: 'absolute', left: 0, right: 0, bottom: 0, padding: '28px 16px 10px',
-                         textAlign: 'center', fontSize: 12, color: '#b5afa6',
-                         background: 'linear-gradient(transparent, rgba(0,0,0,.55))'}}>
-              实时预览（静音） · 成片带配音与音乐
-            </div>
-          ) : null}
         </div>
       </div>
 
-      {toast ? (
-        <div style={{
-          position: 'fixed', left: '50%', bottom: 28, transform: 'translateX(-50%)', zIndex: 60,
-          background: C.ink, color: '#fff', fontSize: 13.5, padding: '10px 18px', borderRadius: 24,
-          boxShadow: '0 10px 30px rgba(0,0,0,.25)',
-        }}>{toast}</div>
+      <footer className="footbar">
+        <span>{DEVICE}</span>
+        <span className="sep" />
+        <span style={{color: codecOk ? undefined : 'var(--err)'}}>
+          {codecOk ? '本机出片能力 正常' : '浏览器太旧，请换新版 Chrome / Edge'}
+        </span>
+        <div className="right">
+          <span>画面与声音都在这台电脑上完成</span>
+          <span className="sep" />
+          <span>服务器零排队</span>
+        </div>
+      </footer>
+
+      {lib !== null || libMsg ? (
+        <Sheet title="作品库" sub="历史项目与成片；打开可继续精修" width={620}
+               onClose={() => { setLib(null); setLibMsg(''); }}>
+          {libMsg ? <div className="note">{libMsg}</div> : null}
+          {lib && !lib.length ? <div className="note">还没有项目，拖一个素材包进来就是第一条。</div> : null}
+          <div className="liblist">
+            {(lib || []).map((p) => {
+              const last = (p.renders || []).filter((r) => r.file).slice(-1)[0];
+              return (
+                <div className="librow" key={p.project_id}>
+                  <div className="li-t">
+                    <b>{p.title || '未命名'}</b>
+                    <span>{p.created || ''} · {p.assets_count ?? 0} 素材 · {p.renders_count ?? 0} 成片</span>
+                  </div>
+                  <div className="li-a">
+                    {last ? <a className="btn ln sm" href={`/video/${last.id}`}
+                               download>下成片</a> : null}
+                    <a className="btn ln sm" href={`/studio#/project/${p.project_id}`}>打开</a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="note" style={{marginTop: 14}}>
+            需要逐条改字幕、动分轨，就在「打开」里进工作台；只出片的话，这一页就够了。
+          </div>
+        </Sheet>
       ) : null}
+
+      {toast ? <div className="toast">{toast}</div> : null}
     </div>
   );
 };

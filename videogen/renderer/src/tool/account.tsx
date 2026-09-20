@@ -113,7 +113,7 @@ const AuthSheet: React.FC<{
     <button onClick={() => setMode(m)} style={{
       all: 'unset', cursor: 'pointer', textAlign: 'center', flex: 1, padding: '9px 0',
       borderRadius: 8, fontSize: 14.5, fontWeight: 700,
-      background: mode === m ? C.accent : 'transparent', color: mode === m ? '#fff' : C.soft,
+      background: mode === m ? C.accent : 'transparent', color: mode === m ? C.onAcc : C.soft,
     }}>{label}</button>
   );
 
@@ -443,7 +443,7 @@ const PricingSheet: React.FC<{me: Me | null; onClose: () => void; refresh: () =>
             }}>
               <span style={{
                 position: 'absolute', top: 0, right: 0, fontSize: 11.5, fontWeight: 700,
-                background: C.accent, color: '#fff', padding: '5px 12px',
+                background: C.accent, color: C.onAcc, padding: '5px 12px',
                 borderRadius: '0 12px 0 12px',
               }}>永久有效</span>
               <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
@@ -656,7 +656,7 @@ export const Account: React.FC<{
         <div role="menu" onClick={(e) => e.stopPropagation()} style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 30, width: 302,
           background: C.card, border: `1px solid ${C.line}`, borderRadius: 14,
-          boxShadow: '0 16px 44px rgba(26,24,23,.16)', padding: 8,
+          boxShadow: 'var(--sh-pop)', padding: 8,
         }}>
           <div style={{display: 'flex', gap: 10, alignItems: 'center', padding: '8px 10px 12px'}}>
             <span style={{fontSize: 24}} aria-hidden>{me.avatar || '🦊'}</span>

@@ -1,15 +1,20 @@
 import React from 'react';
 
-/** 成片台一套记号：账号相关页面（登录/权益/设置）与主流程共用，避免两处各画一套 */
+/**
+ * 成片台一套记号：账号相关页面（登录/权益/设置）与主流程共用，避免两处各画一套。
+ * 值全部指向 ui.css 里的主题令牌——换 data-theme 时这些内联样式跟着一起换，
+ * 所以这里不许出现字面量颜色。
+ */
 export const C = {
-  ink: '#1a1817', soft: '#6f6a63', line: '#e5e2dc', paper: '#f7f6f3',
-  card: '#ffffff', accent: '#5b21b6', accentSoft: '#ede9f7', ok: '#166534',
-  okSoft: '#e8f2ea', err: '#a44231', errSoft: '#f7eae7', gold: '#8a6d1f',
+  ink: 'var(--ink)', soft: 'var(--ink-2)', line: 'var(--line)', paper: 'var(--bg)',
+  card: 'var(--surface)', accent: 'var(--acc)', accentSoft: 'var(--acc-soft)',
+  ok: 'var(--ok)', okSoft: 'var(--ok-soft)', err: 'var(--err)', errSoft: 'var(--err-soft)',
+  gold: 'var(--acc)', onAcc: 'var(--acc-ink)', field: 'var(--bg)', track: 'var(--line2)',
 };
 
 export const btn: React.CSSProperties = {
   all: 'unset', cursor: 'pointer', display: 'block', textAlign: 'center',
-  background: C.accent, color: '#fff', padding: '13px 26px', borderRadius: 10,
+  background: C.accent, color: C.onAcc, padding: '13px 26px', borderRadius: 10,
   fontSize: 16, fontWeight: 700,
   // 内联样式没有全局 reset：不设 border-box，width:100% + padding 会撑破容器
   boxSizing: 'border-box',
@@ -20,11 +25,11 @@ export const btnLine: React.CSSProperties = {
 };
 export const btnSm: React.CSSProperties = {...btn, padding: '8px 14px', fontSize: 13.5};
 export const btnSmLine: React.CSSProperties = {
-  ...btnLine, padding: '8px 14px', fontSize: 13.5, background: '#fff',
+  ...btnLine, padding: '8px 14px', fontSize: 13.5, background: C.card,
 };
 export const sel: React.CSSProperties = {
   width: '100%', padding: '9px 10px', borderRadius: 8, border: `1px solid ${C.line}`,
-  background: '#fff', color: C.ink, fontSize: 14, fontFamily: 'inherit',
+  background: C.field, color: C.ink, fontSize: 14, fontFamily: 'inherit',
   boxSizing: 'border-box',
 };
 export const inp: React.CSSProperties = {
@@ -47,11 +52,11 @@ export const Toggle: React.FC<{label: string; on: boolean; set: (v: boolean) => 
     }}>
       <span style={{
         width: 30, height: 17, borderRadius: 9, position: 'relative', flexShrink: 0,
-        background: on ? C.accent : '#d8d4cd', transition: 'background .15s',
+        background: on ? C.accent : C.track, transition: 'background .15s',
       }}>
         <span style={{
           position: 'absolute', top: 2, left: on ? 15 : 2, width: 13, height: 13,
-          borderRadius: '50%', background: '#fff', transition: 'left .15s',
+          borderRadius: '50%', background: on ? C.onAcc : C.card, transition: 'left .15s',
         }} />
       </span>
       {label}
@@ -72,11 +77,12 @@ export const Sheet: React.FC<{title: string; sub?: string; width?: number;
     }, [onClose]);
     return (
       <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-           style={{position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(26,24,23,.42)',
+           style={{position: 'fixed', inset: 0, zIndex: 40, background: 'var(--veil)',
                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20}}>
         <div role="dialog" aria-modal="true" aria-label={title} style={{
           width, maxWidth: '100%', maxHeight: '92vh', display: 'flex', flexDirection: 'column',
-          background: C.card, borderRadius: 16, boxShadow: '0 24px 70px rgba(0,0,0,.28)',
+          background: C.card, color: C.ink, borderRadius: 16, boxShadow: '0 24px 70px rgba(0,0,0,.28)',
+          border: `1px solid ${C.line}`,
         }}>
           <div style={{padding: '22px 26px 0', display: 'flex', gap: 14, alignItems: 'flex-start'}}>
             <div style={{flex: 1, minWidth: 0}}>
@@ -101,8 +107,8 @@ export const Sheet: React.FC<{title: string; sub?: string; width?: number;
 export const TierChip: React.FC<{tier: string; label: string}> = ({tier, label}) => (
   <span style={{
     fontSize: 11.5, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap',
-    background: tier === 'free' ? C.paper : '#fbf3dd', color: tier === 'free' ? C.soft : C.gold,
-    border: `1px solid ${tier === 'free' ? C.line : '#e6d3a3'}`,
+    background: tier === 'free' ? C.paper : C.accentSoft, color: tier === 'free' ? C.soft : C.accent,
+    border: `1px solid ${tier === 'free' ? C.line : C.accent}`,
   }}>{label}</span>
 );
 
