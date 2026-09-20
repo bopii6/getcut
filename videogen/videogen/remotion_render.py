@@ -478,7 +478,9 @@ def collect_remote_assets(props: dict) -> tuple[dict[str, Path], Path | None]:
             for v in o:
                 walk(v)
         elif isinstance(o, str):
-            if re.fullmatch(r"[0-9A-Za-z._-]{3,160}", o) and ".." not in o:
+            # 中文素材包名生成的媒体名含中文（如 美联储加息-素材包-1__images__x.jpg），
+            # 白名单只挡路径分隔符；是否真素材由 media_dir 下「文件存在」兜底
+            if re.fullmatch(r"[^/\\\n]{3,160}", o) and ".." not in o:
                 p = media_dir / o
                 if p.is_file():
                     media.setdefault(o, p)

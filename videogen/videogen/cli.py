@@ -335,13 +335,41 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     if _cancelled():
         raise JobCancelled("任务已被停止")
 
+    # ---- 混音备料：先于渲染算好 ----
+    # 新版浏览器渲染台领任务时要拿完整混音计划（配音/BGM/音效事件）自行合成，
+    # 不能再等渲染完之后；云端混音/封装复用同一组变量，行为不变。
+    # 阶段间隙的取消哨：混音/封装是阻塞的 ffmpeg 子进程，中途杀不了，
+    # 所以只在它们开跑前拦——已开始的最后一步会跑完（几秒），不再往下走。
+    if _cancelled():
+        raise JobCancelled("任务已被停止")
+    mode = sfx_mode if sfx else "off"
+    # 音效：按"画面什么时候弹出一个东西"逐事件挂（开场/切换/卡片/数字/金句/结尾），
+    # 不再有"全片最多 5 声"的老上限；音量由 compose.SFX_LEVELS 统一压在解说之下
+    sfx_bank = compose.sfx_bank() if mode != "off" else {}
+    sfx_events = compose.plan_sfx_events(plan, sfx_bank, mode=mode)
+    # 风格包 -> 默认 BGM（用户没指定时按形态气质自动配）
+    if bgm is None:
+        pack_bgm = {"data": "bgm-electronic", "opinion": "bgm-trap",
+                    "profile": "bgm-cinematic", "investigation": "bgm-news"}
+        want = pack_bgm.get(getattr(plan, "style_pack", ""), "")
+        music_dir = Path(__file__).resolve().parent.parent / "assets" / "music"
+        if want and music_dir.is_dir():
+            hit = next((f for f in sorted(music_dir.glob("*.mp3")) if f.stem.startswith(want)), None)
+            if hit:
+                bgm = hit
+                report("audio", 85, f"自动配乐：{bgm.stem}")
+    mp3 = Path(prep["voice"]) if prep.get("voice") else None
+    audio_plan = {"voice": mp3, "bgm": bgm, "sfx": sfx_events,
+                  "duration_s": duration_s}
+
     if renderer == "remotion":
         report("render", 0, "启动渲染引擎")
         props = json.loads((work / "props.json").read_text(encoding="utf-8"))
         if visual_fn is not None:
             visual = visual_fn(props, work / "visual.mp4",
                                progress=lambda p, d=None: report("render", max(0, min(p, 100)), d),
-                               cancel_check=cancel_check)
+                               cancel_check=cancel_check,
+                               audio=audio_plan)
         else:
             visual = remotion_render.render_visual(
                 props, work / "visual.mp4", key=str(job_id) if job_id else "cli",
@@ -384,37 +412,24 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
             withsubs = cat
 
     # audio(sfx) -> mux -> verify
-    # 阶段间隙的取消哨：混音/封装是阻塞的 ffmpeg 子进程，中途杀不了，
-    # 所以只在它们开跑前拦——已开始的最后一步会跑完（几秒），不再往下走。
-    if _cancelled():
-        raise JobCancelled("任务已被停止")
-    mode = sfx_mode if sfx else "off"
-    # 音效：按"画面什么时候弹出一个东西"逐事件挂（开场/切换/卡片/数字/金句/结尾），
-    # 不再有"全片最多 5 声"的老上限；音量由 compose.SFX_LEVELS 统一压在解说之下
-    sfx_bank = compose.sfx_bank() if mode != "off" else {}
-    sfx_events = compose.plan_sfx_events(plan, sfx_bank, mode=mode)
-    report("audio", 88, f"正在合成音效与背景音乐（{len(sfx_events)} 处声音）")
-    # 风格包 -> 默认 BGM（用户没指定时按形态气质自动配）
-    if bgm is None:
-        pack_bgm = {"data": "bgm-electronic", "opinion": "bgm-trap",
-                    "profile": "bgm-cinematic", "investigation": "bgm-news"}
-        want = pack_bgm.get(getattr(plan, "style_pack", ""), "")
-        music_dir = Path(__file__).resolve().parent.parent / "assets" / "music"
-        if want and music_dir.is_dir():
-            hit = next((f for f in sorted(music_dir.glob("*.mp3")) if f.stem.startswith(want)), None)
-            if hit:
-                bgm = hit
-                report("audio", 85, f"自动配乐：{bgm.stem}")
-
-    mp3 = Path(prep["voice"]) if prep.get("voice") else None
-    audio = compose.mix_audio(mp3, duration_s, work, bgm=bgm, sfx_events=sfx_events,
-                              progress=lambda p, d=None: report("audio", p, d))
     out_mp4 = Path(out_mp4)
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
     if _cancelled():
         raise JobCancelled("任务已被停止")
-    report("mux", 94, "正在封装成片")
-    compose.mux(withsubs, audio, out_mp4, work)
+    if visual_fn is not None and getattr(visual_fn, "delivered_final", False):
+        # 浏览器渲染台已把混好音的完整成片整体交回：云端原样收下，
+        # 不再混音/封装（重编码会把音轨丢掉，裁剪对成片也无意义）
+        if Path(visual).resolve() != out_mp4.resolve():
+            shutil.move(str(visual), str(out_mp4))
+        report("mux", 94, "本机成片已交回")
+    else:
+        report("audio", 88, f"正在合成音效与背景音乐（{len(sfx_events)} 处声音）")
+        audio_out = compose.mix_audio(mp3, duration_s, work, bgm=bgm, sfx_events=sfx_events,
+                                      progress=lambda p, d=None: report("audio", p, d))
+        if _cancelled():
+            raise JobCancelled("任务已被停止")
+        report("mux", 94, "正在封装成片")
+        compose.mux(withsubs, audio_out, out_mp4, work)
 
     # 落盘剪映草稿清单（供「下载剪映草稿」用）：分镜/字幕时间点 + 配音与配置
     try:

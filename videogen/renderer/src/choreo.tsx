@@ -1,5 +1,6 @@
 import React from 'react';
-import {Easing, Img, interpolate, Loop, spring, Video} from 'remotion';
+import {Easing, Img, interpolate, Loop, spring} from 'remotion';
+import {ShotVideo} from './webmedia';
 import {T} from './skin';
 import {heavy, Tick, useAnimFrame, hideMedia} from './anim';
 
@@ -326,7 +327,7 @@ const MediaFill: React.FC<{src: string; kind?: 'video' | 'image'; dur: number}> 
   if (kind === 'video') {
     return (
       <Loop durationInFrames={Math.max(1, dur)}>
-        <Video src={src} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+        <ShotVideo src={src} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
       </Loop>
     );
   }

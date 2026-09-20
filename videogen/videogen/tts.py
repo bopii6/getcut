@@ -14,6 +14,7 @@ import hashlib
 import json
 import re
 import subprocess
+import time
 import uuid
 from pathlib import Path
 
@@ -108,7 +109,7 @@ def resolve_voice(voice: str | None) -> dict:
     """音色 id -> 目录条目。目录外：cosyvoice 复刻音色 id 走百炼；其余（老项目的
     edge 音色名）按 edge 渠道处理。"""
     voices = load_voices()
-    entry = voices.get(voice or "")
+    entry = voices.get(voice or VOICE)
     if entry:
         entry = dict(entry)
         entry.setdefault("id", voice)
@@ -336,6 +337,9 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
     edge_voice = entry.get("edge") or voice or VOICE
     if mp3.exists():
         mp3.unlink()
+    # edge-tts 的 NoAudioReceived 是阵发性的（微软令牌/接口偶发抽风，几分钟一阵），
+    # 重试必须带退避间隔硬扛过去，否则三连发全撞在同一个坑里
+    last_err: Exception | None = None
     for attempt in range(3):
         try:
             events = asyncio.run(_synth(spoken, edge_voice, rate or RATE, mp3))
@@ -343,10 +347,14 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
                 meta.write_text(json.dumps({"input_sig": sig, "events": events},
                                            ensure_ascii=False), encoding="utf-8")
                 return mp3, events
-        except Exception:  # noqa: BLE001 - retry on transient network errors
-            if attempt == 2:
-                raise
-    raise RuntimeError("tts failed")
+            last_err = RuntimeError("edge-tts 没有返回时间戳")
+        except Exception as e:  # noqa: BLE001 - 偶发网络/令牌故障，退避重试
+            last_err = e
+        if attempt < 2:
+            time.sleep(3 * (attempt + 1))
+    raise RuntimeError(
+        f"配音渠道暂时不可用（微软 edge-tts：{last_err}）。"
+        f"这是偶发故障，通常半分钟后重提任务即可")
 
 
 if __name__ == "__main__":

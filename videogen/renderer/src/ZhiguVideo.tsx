@@ -3,13 +3,13 @@ import {
   AbsoluteFill,
   Img,
   Loop,
-  OffthreadVideo,
   Sequence,
   staticFile,
   interpolate,
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
+import {ShotVideo} from './webmedia';
 // 循环引用说明：本文件只在组件渲染期使用 NiwoVideo 的工具，ESM 活绑定安全。
 import {FontFace, buildSubtitleChunks, hideMedia, isBase, isCard} from './NiwoVideo';
 import type {NiwoProps, Shot} from './NiwoVideo';
@@ -488,7 +488,7 @@ const MediaStage: React.FC<{shot: Shot; index: number}> = ({shot, index}) => {
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <Loop durationInFrames={dur}>
-        <OffthreadVideo src={src} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+        <ShotVideo src={src} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
       </Loop>
     </AbsoluteFill>
   );

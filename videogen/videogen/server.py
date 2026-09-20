@@ -28,7 +28,7 @@ import uvicorn
 from fastapi import FastAPI, File, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-from . import auth, config, licenses, preview, voice_clone
+from . import agenthub, auth, config, licenses, preview, voice_clone
 from . import brand as brand_kit
 from . import tts as tts_mod
 from .schemas import Content, Manifest, JobCancelled
@@ -76,28 +76,11 @@ _DRAFT_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_DRAFT_CONCURRENCY", "1"
 _VERIFY_SEM = threading.Semaphore(_VERIFY_CONCURRENCY)
 _DRAFT_SEM = threading.Semaphore(_DRAFT_CONCURRENCY)
 
-# 渲染工人节点（可选）：配了 VIDEOGEN_RENDER_NODE 就多开 _REMOTE_LANES 条远端灶台，
-# 画面渲染发给节点跑，混音/封装/校验仍在本地；同一队列统一调度，付费优先不变。
-_RENDER_NODE_URL = os.environ.get("VIDEOGEN_RENDER_NODE", "").strip().rstrip("/")
-_RENDER_NODE_TOKEN = os.environ.get("VIDEOGEN_NODE_TOKEN", "").strip()
-_REMOTE_LANES = 0
-if _RENDER_NODE_URL:
-    try:
-        _REMOTE_LANES = max(1, int(os.environ.get("VIDEOGEN_REMOTE_LANES", "2") or "2"))
-    except ValueError:
-        _REMOTE_LANES = 2
-# 本地渲染总闸：本地灶台线程 + 远端灶台「节点挂了回退本地」都得先拿到名额，
-# 保证主机上同时跑的 Remotion 不超过 _RENDER_CONCURRENCY 路（内存护栏——
-# 否则节点宕机时 4 个线程一起本机渲，3G 内存的小机器会当场殉职）。
-_RENDER_SLOTS = threading.BoundedSemaphore(_RENDER_CONCURRENCY)
-_NODE_FAIL_UNTIL = 0.0          # 节点失联熔断：这个时刻之前远端线程直接走本地
-
-
-def _acquire_render_slot(cancel_check=None) -> None:
-    """拿本地渲染名额；排队等名额期间用户按了「停止」要能立刻退出。"""
-    while not _RENDER_SLOTS.acquire(timeout=1.0):
-        if cancel_check is not None and cancel_check():
-            raise JobCancelled("任务已被停止")
+# 渲染全部在用户本机跑（2026-09-20 拍板，不做云端渲染备选）：渲染灶台线程
+# 只负责「挂单等渲染台领走 + 等画面轨回来 + 混音封装」，画面渲染发生在用户
+# 电脑上的 GetCut 渲染台（协议见 agenthub.py 模块注释）。灶台线程数因此可以
+# 放开——每个线程只是在等 IO，不再吃主机 CPU/内存。
+_RENDER_STAGE_WORKERS = max(1, int(os.environ.get("VIDEOGEN_RENDER_STAGES", "6") or "6"))
 
 # 正在干活（非排队/非终态）的阶段：算排队位置时要把它们算在"前面"
 _ACTIVE_STAGES = ("tts", "plan", "props", "prepped", "render", "audio", "mux")
@@ -445,6 +428,9 @@ def _job_visible(j: dict, request: Request) -> bool:
 
 
 def _request_authed(request: Request) -> bool:
+    tok = (request.headers.get("x-agent-token") or "").strip()
+    if tok and auth.read_session(tok):
+        return True            # 本机渲染台的设备令牌（登录接口签发的长会话）
     if _token_ok(request) or _session_email(request):
         return True
     return not AUTH_TOKEN and not auth.has_users()   # 开放模式
@@ -1068,13 +1054,77 @@ def _find_bundles() -> list[dict]:
 
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
-    return (STATIC / "index.html").read_text(encoding="utf-8")
+    return _inject_browser_export((STATIC / "index.html").read_text(encoding="utf-8"))
 
 
 @app.get("/i/{code}", response_class=HTMLResponse)
 def intake_page(code: str):
     """Agent 直投短链：与 / 同一份 SPA，前端按路径进入「素材包已送达」落地页。"""
-    return (STATIC / "index.html").read_text(encoding="utf-8")
+    return _inject_browser_export((STATIC / "index.html").read_text(encoding="utf-8"))
+
+
+# 浏览器极速导出悬浮组件：有任务在等渲染台时，任务页右下角浮出按钮，
+# 点击全屏打开 /poc/ 导出页（纯浏览器渲染），完成后导出页 postMessage 通知收起。
+_BROWSER_EXPORT_WIDGET = """
+<script>
+(function(){
+  if (window.__gcExportWidget) return; window.__gcExportWidget = 1;
+  var wrap = null;
+  function waitingCount(){
+    return fetch('/api/jobs', {credentials:'same-origin'})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var a = (d && d.active) || [];
+        return a.filter(function(j){
+          return j.stage === 'render' && /等待渲染台/.test(j.detail || '');
+        }).length;
+      }).catch(function(){ return 0; });
+  }
+  function show(n){
+    if (!wrap){
+      wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;';
+      var b = document.createElement('button');
+      b.id = 'gc-bx-go';
+      b.style.cssText = 'all:unset;cursor:pointer;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:20px 36px;border-radius:16px;font:700 20px/1.3 system-ui;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);';
+      b.addEventListener('click', openFrame);
+      wrap.appendChild(b);
+      document.body.appendChild(wrap);
+    }
+    wrap.firstChild.innerHTML = '\\u26a1 \\u6709 ' + n + ' \\u4e2a\\u89c6\\u9891\\u7b49\\u7740\\u6e32\\u67d3<br><span style=\\"font-size:14px;font-weight:400;opacity:.85\\">\\u70b9\\u51fb\\u7528\\u672c\\u6d4f\\u89c8\\u5668\\u6e32\\u67d3\\uff0c\\u76f4\\u63a5\\u51fa\\u5e26\\u58f0 MP4\\uff08\\u6bcf\\u6761\\u7ea6 1~4 \\u5206\\u949f\\uff0c\\u671f\\u95f4\\u4fdd\\u6301\\u672c\\u9875\\u6253\\u5f00\\uff09</span>';
+    wrap.style.display = 'flex';
+  }
+  function openFrame(){
+    var f = document.getElementById('gc-bx-frame');
+    if (f) return;
+    f = document.createElement('iframe');
+    f.id = 'gc-bx-frame';
+    f.src = '/poc/?agent=1&device=' + encodeURIComponent('\\u7f51\\u9875\\u6d4f\\u89c8\\u5668');
+    f.allow = 'display-capture';
+    f.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;border:0;z-index:2147483001;background:#111;';
+    document.body.appendChild(f);
+    window.addEventListener('message', function(ev){
+      if (ev.data && ev.data.type === 'getcut-export-done' && f.parentNode){
+        setTimeout(function(){ f.remove(); location.reload(); }, 1800);
+      }
+    });
+  }
+  function tick(){
+    waitingCount().then(function(n){
+      if (n > 0) openFrame();
+    });
+  }
+  function boot(){ tick(); setInterval(tick, 5000); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>"""
+
+
+def _inject_browser_export(html: str) -> str:
+    if "</body>" in html and "__gcExportWidget" not in html:
+        return html.replace("</body>", _BROWSER_EXPORT_WIDGET + "</body>", 1)
+    return html
 
 
 @app.get("/templates/{name}")
@@ -1867,6 +1917,10 @@ def start_build(body: dict, request: Request):
                 span = _STAGE_SPAN.get(j["stage"])
                 if not span:
                     continue
+                # 等渲染台领取时不再爬"假进度"——那是兜底动画，会误导用户以为在渲染
+                if j.get("stage") == "render" and not j.get("render_via"):
+                    j["detail"] = "等待渲染台领取 · 点「⚡ 极速导出」用本浏览器渲染"
+                    continue
                 base, cap = span
                 el = time.time() - j.get("t_stage", time.time())
                 target = int(base + (cap - base) * (1 - math.exp(-el / _TICK_TAU)))
@@ -1905,31 +1959,17 @@ def my_jobs(request: Request):
     active = [i for i in items if i["stage"] not in ("done", "failed", "cancelled")]
     finished = sorted((i for i in items if i["stage"] in ("done", "failed", "cancelled")),
                       key=lambda x: x.get("t0") or 0, reverse=True)[:8]
-    out = {"concurrency": _RENDER_CONCURRENCY, "active": active, "recent": finished}
-    if _REMOTE_LANES:
-        out["render_lanes"] = {"local": _RENDER_CONCURRENCY, "remote": _REMOTE_LANES}
+    out = {"concurrency": _RENDER_STAGE_WORKERS, "active": active, "recent": finished,
+           "agent": agenthub.snapshot()}
     return out
 
 
 @app.get("/api/admin/nodes")
 def admin_nodes(request: Request):
-    """管理员看渲染节点水位：节点在不在、还有几个空渲染位。"""
+    """管理员看渲染台水位：哪几台在线、队列里还有几个没领。"""
     if not _is_adminish(request):
         return JSONResponse({"error": "只有管理员能看"}, status_code=403)
-    if not _REMOTE_LANES:
-        return {"enabled": False}
-    import requests as _rq
-    node = {"enabled": True, "url": _RENDER_NODE_URL, "lanes": _REMOTE_LANES,
-            "status": "down", "active": None, "waiting": None}
-    try:
-        r = _rq.get(f"{_RENDER_NODE_URL}/healthz", timeout=(3, 5))
-        if r.status_code == 200:
-            info = r.json()
-            node.update(status="up", active=info.get("active"),
-                        waiting=info.get("waiting"), lanes=info.get("lanes"))
-    except Exception as exc:  # noqa: BLE001
-        node["error"] = str(exc)[:200]
-    return node
+    return {"enabled": True, "kind": "agent", **agenthub.snapshot()}
 
 
 @app.get("/api/job/{job_id}")
@@ -1981,6 +2021,166 @@ def cancel_job(job_id: str, request: Request):
         _mark_cancelled(job_id)
         return {"ok": True, "stage": "cancelled"}
     return {"ok": True, "stage": stage}
+
+
+# ---------- 本机渲染台（Agent）接口 ----------
+# 渲染台在用户电脑上常驻，轮询这组接口领任务/下载渲染包/上报进度/交回画面轨。
+# 身份三种：登录签发的设备令牌（x-agent-token，90 天）、主钥匙（x-auth-token，
+# 调试/管理）、开放模式（本机自用）。渲染台只领自己的任务——素材是用户自己
+# 的，不能串门到别人的电脑上。
+
+def _agent_identity(request: Request) -> str | None:
+    tok = (request.headers.get("x-agent-token") or "").strip()
+    if tok:
+        email = auth.read_session(tok)
+        if email:
+            return email
+    if _token_ok(request):
+        return "__admin__"
+    email = _session_email(request)
+    if email:
+        return email
+    return "__open__" if _open_mode() else None
+
+
+def _claim_owners(identity: str) -> list:
+    """这台渲染台可以领谁的活：只领自己的；主钥匙领无主+管理员自己的。"""
+    if identity == "__admin__":
+        admin = auth.admin_email()
+        return [None] + ([admin] if admin else [])
+    if identity == "__open__":
+        return [None]
+    return [identity]
+
+
+def _agent_device(request: Request, fallback: str = "device") -> str:
+    name = (request.headers.get("x-agent-device")
+            or request.query_params.get("device") or fallback).strip()
+    return re.sub(r"[^\w.\-]", "_", name)[:48] or fallback
+
+
+@app.post("/api/agent/login")
+def agent_login(body: dict):
+    """渲染台登录：邮箱密码换 90 天设备令牌，存本机以后免输。"""
+    email = str(body.get("email") or "").strip().lower()
+    if not auth.verify_login(email, str(body.get("password") or "")):
+        return JSONResponse({"error": "邮箱或密码不对"}, status_code=401)
+    return {"token": auth.make_session(email, ttl=90 * 24 * 3600), "email": email}
+
+
+@app.get("/api/agent/poll")
+def agent_poll(request: Request, device: str = "", wait: int = 1):
+    """长轮询领任务（服务器最多挂 25 秒）：领到就返回渲染包描述。"""
+    ident = _agent_identity(request)
+    if ident is None:
+        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+    dev = _agent_device(request, device)
+    # x-agent-final: 1 = 新版浏览器渲染台：能自己混音出完整 mp4，
+    # 领任务时把音轨（配音/BGM/音效+混音计划）一并下发
+    want_audio = (request.headers.get("x-agent-final") or "").strip() == "1"
+    payload = agenthub.wait_for_job(_claim_owners(ident), dev,
+                                    timeout=25.0 if wait else 0.0,
+                                    want_audio=want_audio)
+    if not payload:
+        return {"job": None}
+    files = []
+    for rel, p in payload["files"].items():
+        try:
+            files.append({"path": rel, "size": os.path.getsize(p)})
+        except OSError:
+            pass
+    return {"job": payload["job"], "props": payload["props"], "files": files}
+
+
+@app.get("/api/agent/job/{job_id}/file")
+def agent_job_file(job_id: str, request: Request, path: str = ""):
+    """下载渲染包里的一个文件（只放行挂单时登记过的相对路径）。"""
+    if _agent_identity(request) is None:
+        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+    p = agenthub.file_path(job_id, path)
+    if p is None:
+        return JSONResponse({"error": "文件不存在"}, status_code=404)
+    return FileResponse(p, filename=Path(path).name)
+
+
+@app.post("/api/agent/job/{job_id}/progress")
+def agent_job_progress(job_id: str, body: dict, request: Request, device: str = ""):
+    """渲染台上报进度；响应里带 cancel 旗子，让渲染台知道该收手了。"""
+    if _agent_identity(request) is None:
+        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+    return agenthub.progress(job_id, _agent_device(request, device),
+                             int(body.get("pct") or 0), body.get("detail"),
+                             failed=body.get("status") == "error",
+                             requeue=body.get("requeue") is True)
+
+
+@app.post("/api/agent/job/{job_id}/visual")
+async def agent_job_visual(job_id: str, request: Request, device: str = ""):
+    """渲染台交回画面轨（裸 mp4 字节流）：落临时名，原子转正后云端接着混音。"""
+    if _agent_identity(request) is None:
+        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+    dev = _agent_device(request, device)
+    tmp = agenthub.upload_target(job_id, dev)
+    if tmp is None:
+        return JSONResponse({"error": "任务不在渲染中（可能已被收回/取消）"},
+                            status_code=410)
+    crop = request.query_params.get("crop") or ""
+    if crop:
+        agenthub.set_crop(job_id, dev, crop)
+    final = request.query_params.get("final") == "1"
+    data = await request.body()
+    if len(data) < 4096:
+        return JSONResponse({"error": "画面轨文件异常（太小）"}, status_code=400)
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    tmp.write_bytes(data)
+    if not agenthub.deliver(job_id, dev, tmp, final=final):
+        tmp.unlink(missing_ok=True)
+        return JSONResponse({"error": "任务不在渲染中（可能已被收回/取消）"},
+                            status_code=410)
+    return {"ok": True}
+
+
+@app.get("/api/agent/status")
+def agent_status(request: Request):
+    if _agent_identity(request) is None:
+        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+    return agenthub.snapshot()
+
+
+BROWSERPOC_DIR = STATIC / "poc"
+
+
+@app.get("/poc/{rel_path:path}")
+def poc_page(rel_path: str = "index.html"):
+    """浏览器极速导出页（纯浏览器渲染：Player 逐帧渲染 + 标签页捕获硬编码）。
+    同源部署，正式环境里登录用户的会话 cookie 随页面自动可用。"""
+    target = (BROWSERPOC_DIR / rel_path).resolve()
+    try:
+        inside = str(target).startswith(str(BROWSERPOC_DIR.resolve()))
+    except OSError:
+        inside = False
+    if not inside or not target.is_file():
+        target = BROWSERPOC_DIR / "index.html"
+    if not target.is_file():
+        return JSONResponse({"error": "浏览器导出页未打包（renderer/_poc_bundle.mjs）"},
+                            status_code=404)
+    return FileResponse(target)
+
+
+@app.get("/agent-media/{job_id}/{rel_path:path}")
+def agent_media(job_id: str, request: Request, rel_path: str = ""):
+    """浏览器渲染台直读渲染包素材：已登记文件按登记路径放行；
+    fonts/ 这类模板公共资产不入渲染包，回退到 renderer/public。"""
+    if _agent_identity(request) is None:
+        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+    p = agenthub.file_path(job_id, rel_path)
+    if p is None and rel_path.startswith("fonts/") and ".." not in rel_path:
+        cand = Path(__file__).resolve().parent.parent / "renderer" / "public" / rel_path
+        if cand.is_file():
+            p = cand
+    if p is None:
+        return JSONResponse({"error": "文件不存在"}, status_code=404)
+    return FileResponse(p)
 
 
 @app.get("/still/{name}")
@@ -2201,46 +2401,178 @@ def _verify_bg(job_id: str, bundle_dir: Path, video: Path, work_dir: Path | None
             _cleanup_work_dir(work_dir)
 
 
-def _remote_visual(job_id: str):
-    """远端灶台的画面渲染替身：优先发渲染节点；节点失联/出错回退本机渲染，
-    回退必须先拿本地渲染名额（见 _RENDER_SLOTS），防止把主机挤爆。"""
+def _browser_safe_video(path: str, cache_dir: Path) -> str:
+    """素材库视频有两类会卡死浏览器解码链路（@remotion/media + mediabunny）：
+    1. timed-metadata data 轨（tmcd 时间码等）——mediabunny 首帧提取直接挂起；
+       且 ffmpeg 复制时默认会把时间码再写成一条 tmcd，必须 -write_tmcd 0 关掉；
+    2. 高帧率源（实测 50fps 的 mixkit 素材）——同样卡在 Extracting frame。
+    前者剥轨流复制、后者重编到 30fps（veryfast/crf23，10 秒片段 CPU 数秒），
+    产物按名字缓存在 work/_browsersafe，跨任务复用。"""
+    p = Path(path)
+    if p.suffix.lower() not in {".mp4", ".mov", ".mkv", ".webm"}:
+        return path
+    try:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries",
+             "stream=codec_type,r_frame_rate", "-of", "csv=p=0", str(p)],
+            capture_output=True, text=True, timeout=30)
+        lines = [x.strip().split(",") for x in probe.stdout.strip().splitlines() if x.strip()]
+        has_data = any(len(t) > 1 and t[0] == "data" for t in lines)
+        fps = 0.0
+        for t in lines:
+            if len(t) > 1 and t[0] == "video" and "/" in t[1]:
+                n, d = t[1].split("/")
+                if float(d):
+                    fps = float(n) / float(d)
+                break
+        if not has_data and (fps == 0 or fps <= 31):
+            return path
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        mode = "b30" if fps > 31 else "bclean"
+        out = cache_dir / f"{p.stem}.{mode}.mp4"
+        if not out.is_file():
+            tmp = cache_dir / f"{p.stem}.{mode}-tmp.mp4"
+            vf = (["-r", "30", "-c:v", "libx264", "-preset", "veryfast",
+                   "-crf", "23", "-pix_fmt", "yuv420p"] if fps > 31
+                  else ["-c", "copy", "-write_tmcd", "0"])
+            subprocess.run(
+                ["ffmpeg", "-y", "-v", "error", "-i", str(p),
+                 "-map", "0:v:0", "-map", "0:a?", *vf,
+                 "-movflags", "+faststart", str(tmp)],
+                timeout=600, check=True)
+            tmp.replace(out)
+        return str(out)
+    except Exception as exc:  # noqa: BLE001 - 清洗失败就用原文件，别拦渲染
+        print(f"browser_safe_video({p.name}) skipped: {exc}", flush=True)
+        return path
+
+
+def _build_audio_package(audio: dict) -> tuple[dict, dict[str, str]]:
+    """混音计划（cli.build_render 算好的 voice/bgm/sfx 事件）→ 浏览器可执行的
+    {音频相对路径: 本地文件} + props.audio 元数据。
+
+    props.audio 形如 {voice, bgm, sfx:[{t,file,vol}], durationMs}：浏览器端
+    NiwoVideo 据此挂 <Audio> 层，web-renderer 逐帧渲染时一并混音进成片。
+    """
+    files: dict[str, str] = {}
+    vp = Path(str(audio["voice"]))
+    voice_rel = f"audio/voice{vp.suffix or '.mp3'}"
+    files[voice_rel] = str(vp)
+    bgm_rel = None
+    bp = audio.get("bgm")
+    if bp and Path(bp).is_file():
+        bgm_rel = f"audio/bgm{Path(bp).suffix or '.mp3'}"
+        files[bgm_rel] = str(Path(bp))
+    sfx_meta = []
+    by_file: dict[str, str] = {}
+    for at_s, f, vol in (audio.get("sfx") or []):
+        p = Path(str(f))
+        rel = by_file.get(str(p))
+        if rel is None:
+            rel = f"audio/sfx{len(by_file)}{p.suffix or '.wav'}"
+            by_file[str(p)] = rel
+            files[rel] = str(p)
+        sfx_meta.append({"t": round(float(at_s), 3), "file": rel, "vol": float(vol)})
+    meta = {"voice": voice_rel, "bgm": bgm_rel, "sfx": sfx_meta,
+            "durationMs": int(float(audio.get("duration_s") or 0) * 1000)}
+    return meta, files
+
+
+def _agent_visual(job_id: str):
+    """渲染灶台的画面渲染替身（本机渲染版）：把 props+素材挂到 agenthub，
+    等用户的渲染台领走渲染、把画面轨交回来。没有云端备选——渲染台不在线
+    就一直等（这是产品形态），失联的任务由 agenthub 收回重排。
+
+    交回的东西有两种（渲染台在 /visual?final=1 里自己声明）：
+    - 旧链路（Node 渲染台 / 旧录屏导出页）：裸画面轨，云端照旧裁剪+混音封装；
+    - 新链路（浏览器合成页）：已带声的完整 mp4，云端原样收下不再动刀。
+    """
     from . import remotion_render as rr
 
-    def fn(props, out_path, progress=None, cancel_check=None):
-        global _NODE_FAIL_UNTIL
-        if _RENDER_NODE_URL and time.time() >= _NODE_FAIL_UNTIL:
-            try:
-                out = rr.render_visual_remote(props, out_path, node_url=_RENDER_NODE_URL,
-                                              token=_RENDER_NODE_TOKEN, job_id=job_id,
-                                              progress=progress, cancel_check=cancel_check)
-                with _LOCK:
-                    if JOBS.get(job_id):
-                        JOBS[job_id]["render_via"] = "node"
-                return out
-            except JobCancelled:
-                raise
-            except Exception as exc:  # noqa: BLE001
-                print(f"render node unavailable (job {job_id}), fallback local: {exc}", flush=True)
-                _NODE_FAIL_UNTIL = time.time() + 120
+    def fn(props, out_path, progress=None, cancel_check=None, audio=None):
         with _LOCK:
-            if JOBS.get(job_id):
-                JOBS[job_id]["render_via"] = "local"
-        _acquire_render_slot(cancel_check)
+            owner = (JOBS.get(job_id) or {}).get("owner")
+        media, logo_path = rr.collect_remote_assets(props)
+        # 素材统一改成分配的 ASCII 名：中文包名生成的媒体名不再进 URL，
+        # 浏览器/Caddy/编码各种环节都再无中文路径隐患
+        rename: dict[str, str] = {}
+        files: dict[str, str] = {}
+        for idx, name in enumerate(sorted(media)):
+            safe = f"{job_id}_m{idx}{Path(name).suffix}"
+            rename[name] = safe
+            files[f"media/{safe}"] = _browser_safe_video(str(media[name]),
+                                                         config.WORK / "_browsersafe")
+        props_out = rr._rewrite_media_names(props, rename)
+        if logo_path is not None:
+            files[str(props.get("brand").get("logo"))] = str(logo_path)
+        audio_pkg = None
+        if audio and audio.get("voice") and Path(str(audio["voice"])).is_file():
+            meta, afiles = _build_audio_package(audio)
+            props_out = {**props_out, "audio": meta}
+            audio_pkg = (meta, afiles)
+        agenthub.register(job_id, owner, props_out, files, str(out_path),
+                          audio=audio_pkg)
         try:
-            return rr.render_visual(props, out_path, key=job_id,
-                                    progress=progress, cancel_check=cancel_check)
-        finally:
-            _RENDER_SLOTS.release()
+            visual = agenthub.wait_result(job_id, progress=progress,
+                                          cancel_check=cancel_check)
+            delivered_final = agenthub.is_final_delivered(job_id)
+            agenthub.discard(job_id)
+        except BaseException:
+            agenthub.discard(job_id)
+            raise
+        if delivered_final:
+            # 浏览器已混好音的完整成片：不裁剪、不转码（重编码的 -an 会把人声丢掉）
+            fn.delivered_final = True
+            return visual
+        # 浏览器录的是整个标签页：居中裁出 9:16 画面区并归一到 1080x1920 + H.264
+        # （导出页布局保证播放器横向居中且占满全高，居中裁剪=正好裁出内容）
+        fixed = Path(str(visual) + ".1080.mp4")
+        try:
+            probe = subprocess.run(
+                ["ffprobe", "-v", "error", "-select_streams", "v:0",
+                 "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", str(visual)],
+                capture_output=True, text=True, timeout=60)
+            iw, ih = (int(v) for v in probe.stdout.strip().split("x"))
+            cw = min(iw, ih * 9 // 16)
+            ch = ih
+            cx = (iw - cw) // 2
+            cw -= cw % 2
+            ch -= ch % 2
+            cx -= cx % 2
+            subprocess.run(
+                ["ffmpeg", "-y", "-v", "error", "-i", str(visual),
+                 "-vf", f"crop={cw}:{ch}:{cx}:0,scale=1080:1920:flags=lanczos",
+                 "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-an",
+                 str(fixed)],
+                timeout=900, check=True)
+            visual.unlink(missing_ok=True)
+            visual = fixed
+        except Exception as exc:  # noqa: BLE001 - 裁剪失败保留原片，别让任务死在最后一步
+            print(f"browser visual crop/scale failed (keep raw): {exc}", flush=True)
+        return visual
 
+    fn.delivered_final = False
     return fn
 
 
-def _render_job(job_id: str, body: dict, lane: str = "local") -> None:
-    """渲染阶段：画面渲染/混音/封装——吃 CPU 的活，同时最多 CONCURRENCY 路。
+def _agent_claimed(job_id: str, device: str) -> None:
+    """agenthub 回调：渲染台领走了任务，任务卡立刻给个准话。"""
+    with _LOCK:
+        j = JOBS.get(job_id)
+        if j:
+            j["render_via"] = f"agent:{device}"
+            j["detail"] = f"渲染台「{device}」已领取，本机渲染中"
+            _jobs_save()
+
+
+agenthub.on_claim = _agent_claimed
+
+
+def _render_job(job_id: str, body: dict) -> None:
+    """渲染阶段：画面交给用户的渲染台渲，云端只留混音/封装（都是秒级轻活）。
 
     校验（等外部 API）不在这里跑：build_render 以 defer_verify 出灶台，
     交给 _verify_bg 后台通道，渲染位早几分钟还给下一个人。
-    lane="remote"：画面渲染发给渲染节点（远端灶台线程），节点不行当场回退本机。
     """
     from . import cli
     progress = _progress_reporter(job_id)
@@ -2252,10 +2584,9 @@ def _render_job(job_id: str, body: dict, lane: str = "local") -> None:
             raise JobCancelled("任务已被停止")
         bundle_dir = Path(prep_meta.get("bundle_dir") or _resolve_bundle(body["bundle"]))
         out = OUTPUTS / f"{bundle_dir.name}-{job_id}.mp4"
-        if lane == "local":
-            with _LOCK:
-                if JOBS.get(job_id):
-                    JOBS[job_id]["render_via"] = "local"
+        with _LOCK:
+            if JOBS.get(job_id):
+                JOBS[job_id]["render_via"] = "agent"
         render_kwargs = dict(bgm=_resolve_bgm(body.get("bgm")),
                              renderer=body.get("renderer") or "remotion",
                              sfx=bool(body.get("sfx", True)),
@@ -2263,17 +2594,9 @@ def _render_job(job_id: str, body: dict, lane: str = "local") -> None:
                              show_subtitles=bool(body.get("subtitles", True)),
                              show_sources=bool(body.get("sources", True)),
                              job_id=job_id, progress=progress, defer_verify=True,
-                             cancel_check=lambda: _cancel_requested(job_id))
-        if lane == "remote":
-            render_kwargs["visual_fn"] = _remote_visual(job_id)
-            cli.build_render(bundle_dir, out, work_dir=work_dir, **render_kwargs)
-        else:
-            # 本地灶台先拿名额：多出来的是远端灶台的回退渲染，不能挤爆主机
-            _acquire_render_slot(lambda: _cancel_requested(job_id))
-            try:
-                cli.build_render(bundle_dir, out, work_dir=work_dir, **render_kwargs)
-            finally:
-                _RENDER_SLOTS.release()
+                             cancel_check=lambda: _cancel_requested(job_id),
+                             visual_fn=_agent_visual(job_id))
+        cli.build_render(bundle_dir, out, work_dir=work_dir, **render_kwargs)
         with _LOCK:
             JOBS[job_id].update(stage="done", stage8=8, progress=100, video=str(out), t_end=time.time(),
                                 detail="成片已生成")
@@ -2331,9 +2654,9 @@ def _prep_worker() -> None:
             _mark_failed(job_id, exc)
 
 
-def _render_worker(remote: bool = False) -> None:
-    """渲染灶台消费者：local 线程在本机渲，remote 线程把画面渲染发给渲染节点
-    （节点不行当场回退本机）；两种线程吃同一条队列，付费优先不变。"""
+def _render_worker() -> None:
+    """渲染灶台消费者：挂单等渲染台领走 + 等画面轨回来 + 混音封装。
+    画面渲染已经在用户电脑上了，线程只是在等 IO，多开也不吃主机算力。"""
     while True:
         with _LOCK:
             while not _RENDER_WAIT:
@@ -2343,7 +2666,7 @@ def _render_worker(remote: bool = False) -> None:
         job_id = best["job"]
         body = _PENDING.get(job_id) or {}
         try:
-            _render_job(job_id, body, lane="remote" if remote else "local")
+            _render_job(job_id, body)
         except Exception as exc:  # noqa: BLE001
             print(f"render worker error: {exc}")
             _mark_failed(job_id, exc)
@@ -2351,12 +2674,8 @@ def _render_worker(remote: bool = False) -> None:
 
 for _i in range(_PREP_CONCURRENCY):
     threading.Thread(target=_prep_worker, daemon=True).start()
-for _i in range(_RENDER_CONCURRENCY):
+for _i in range(_RENDER_STAGE_WORKERS):
     threading.Thread(target=_render_worker, daemon=True).start()
-if _REMOTE_LANES:
-    for _i in range(_REMOTE_LANES):
-        threading.Thread(target=_render_worker, args=(True,), daemon=True).start()
-    print(f"remote render lanes: {_REMOTE_LANES} -> {_RENDER_NODE_URL}", flush=True)
 
 
 def _intake_sweeper() -> None:

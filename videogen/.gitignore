@@ -43,3 +43,10 @@ renderer/draft_stills.log
 
 # 音效归一化缓存（一条音效只跑一次 loudnorm，可再生）
 assets/sfx/.norm/
+
+# 浏览器成片台构建产物（可再生，_tool_bundle.mjs 一键重建）
+renderer/browsertool-dist/
+renderer/browserpoc-dist/
+server_static/poc/
+server_static/poc_webm_bak/
+*.log

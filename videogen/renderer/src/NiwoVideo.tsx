@@ -8,10 +8,11 @@ import {
   Loop,
   Sequence,
   staticFile,
-  Video,
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
+import {Audio as MediaAudio} from '@remotion/media';
+import {ShotVideo} from './webmedia';
 import {T, resolveSkin, applySkin, type Skin} from './skin';
 import {ChoreoCard, sanitizeChoreo} from './choreo';
 import {ZhiguVideo} from './ZhiguVideo';
@@ -153,6 +154,17 @@ export type NiwoProps = {
   probeUrl?: string;
   /** 测量结果的分组标签（通常是镜头 id） */
   probeTag?: string;
+  /**
+   * 浏览器内合成（web-renderer）专用混音计划：voice/bgm/sfx 都是渲染包里
+   * audio/ 下的相对路径，随 props 一起下发。云端渲染链路不带这个字段，
+   * 画面轨照旧无声、由 ffmpeg 混音——两种产物互不干扰。
+   */
+  audio?: {
+    voice: string;
+    bgm?: string | null;
+    sfx?: {t: number; file: string; vol: number}[];
+    durationMs?: number;
+  };
 };
 
 export const estW = (text: string, size: number) => {
@@ -723,7 +735,7 @@ const MediaWindow: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) 
   return (
     <div style={{position: 'absolute', inset: 0, overflow: 'hidden'}}>
       <Loop durationInFrames={durFrames}>
-        <Video src={src} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+        <ShotVideo src={src} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
       </Loop>
     </div>
   );
@@ -1092,7 +1104,7 @@ const PortraitMedia: React.FC<{shot: Shot; index: number}> = ({shot, index}) => 
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <Loop durationInFrames={durFrames}>
-        <Video src={src} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+        <ShotVideo src={src} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
       </Loop>
     </AbsoluteFill>
   );
@@ -1393,6 +1405,38 @@ const SeriesBadge: React.FC<{text: string}> = ({text}) => (
 );
 
 // ---------------- root video ----------------
+// ---------------- 浏览器内合成：音轨层 ----------------
+// 复刻云端 ffmpeg 混音规格：配音全程、BGM 音量 0.2 循环铺底、片尾 3 秒淡出、
+// 音效按事件时刻挂。BGM 的 highpass/压缩两处小差异可闻度极低，暂不复刻。
+const AudioLayer: React.FC<{audio: NonNullable<NiwoProps['audio']>}> = ({audio}) => {
+  const {fps, durationInFrames} = useVideoConfig();
+  const totalMs = (audio.durationMs || 0) > 0
+    ? audio.durationMs!
+    : (durationInFrames / fps) * 1000;
+  const fadeStart = totalMs - 3000;
+  return (
+    <>
+      <MediaAudio src={staticFile(audio.voice)} />
+      {audio.bgm ? (
+        <MediaAudio
+          src={staticFile(audio.bgm)}
+          loop
+          volume={(f) => {
+            const t = (f / fps) * 1000;
+            const fade = t <= fadeStart ? 1 : Math.max(0, (totalMs - t) / 3000);
+            return 0.2 * fade;
+          }}
+        />
+      ) : null}
+      {(audio.sfx || []).map((e, i) => (
+        <Sequence key={i} from={Math.round(e.t * fps)}>
+          <MediaAudio src={staticFile(e.file)} volume={e.vol} />
+        </Sequence>
+      ))}
+    </>
+  );
+};
+
 export const NiwoVideo: React.FC<NiwoProps> = (props) => {
   // 模板决定整套配色 / 字体 / 装饰 / 动效节奏。必须在子组件渲染前赋值。
   // 配色由模板独家控制：LLM 的 stylePack 从此只影响「用哪些信息卡」，
@@ -1428,6 +1472,7 @@ export const NiwoVideo: React.FC<NiwoProps> = (props) => {
       {body}
       {props.series?.badge && !isCard() ? <SeriesBadge text={props.series.badge} /> : null}
       {props.watermark !== false && !isCard() ? <Watermark logo={props.brand?.logo} text={props.brand?.watermarkText} /> : null}
+      {props.audio && mode === 'full' ? <AudioLayer audio={props.audio} /> : null}
     </>
   );
 };
