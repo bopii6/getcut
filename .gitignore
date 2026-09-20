@@ -116,3 +116,20 @@ videogen/renderer/_patch_brand.py
 /videogen/_work_*/
 /videogen/_zhigu_preview/
 /videogen/_zhigu_sample.log
+
+# ================= 2026-09-20 提交前分拣 =================
+# 运行/测试产物与本地草稿不进库
+.intakes/
+pack-e2e/
+pack-e2e-1/
+端到端登录测试包/
+选题/
+vibe_images/
+videogen/_jy11_exp/
+videogen/_redesign/
+videogen/_shot_users.json
+videogen/_local8600.log
+videogen/_redesign_8600.log
+videogen/_redesign_8601.log
+videogen/renderer/props_*.json
+videogen/renderer/render_*.log

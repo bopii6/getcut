@@ -308,12 +308,14 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                  show_subtitles: bool = True, show_sources: bool = True,
                  job_id: str | None = None, progress=None,
                  vision: bool = True, defer_verify: bool = False,
-                 cancel_check=None) -> Path:
+                 cancel_check=None, visual_fn=None) -> Path:
     """流水线后半程：吃 CPU 的活（画面渲染/混音/封装/校验），全程不碰外部 API。
 
     prep = build_prep 的返回（缺省时从 work_dir/prep.json 读，兜底自愈）。
     defer_verify=True 时跳过末尾的画面校验（那是等外部视觉 API 的活），
     由调用方跑完后用 run_verify 在灶台之外补上——server 双通道走这条路。
+    visual_fn：画面渲染的替身 (props, out_path, progress=, cancel_check=) -> Path，
+    远端灶台（渲染节点）用；None = 本机 Remotion。
     """
     report = _report_of(progress)
     bundle = Path(bundle_dir)
@@ -336,10 +338,15 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     if renderer == "remotion":
         report("render", 0, "启动渲染引擎")
         props = json.loads((work / "props.json").read_text(encoding="utf-8"))
-        visual = remotion_render.render_visual(
-            props, work / "visual.mp4", key=str(job_id) if job_id else "cli",
-            progress=lambda p, d=None: report("render", max(0, min(p, 100)), d),
-            cancel_check=cancel_check)
+        if visual_fn is not None:
+            visual = visual_fn(props, work / "visual.mp4",
+                               progress=lambda p, d=None: report("render", max(0, min(p, 100)), d),
+                               cancel_check=cancel_check)
+        else:
+            visual = remotion_render.render_visual(
+                props, work / "visual.mp4", key=str(job_id) if job_id else "cli",
+                progress=lambda p, d=None: report("render", max(0, min(p, 100)), d),
+                cancel_check=cancel_check)
         withsubs = visual
     else:
         # legacy PIL compositor (fallback)

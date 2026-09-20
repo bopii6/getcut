@@ -27,7 +27,11 @@ async function configure(h, {format, voice, sfx, sources, watermark, bgm}) {
   const wanted = [format, voice, sfx, sources, watermark, bgm].some(v => v !== undefined);
   if (!wanted) return;
   await h.flush(); // music select 的 onchange 在 /api/music 解析后才挂上
-  if (format !== undefined) h.click('#fmt [data-v="' + format + '"]');
+  // 模板卡片点下去先放样片，弹窗里按「就用这个模板」才真正切换（与线上一致）
+  if (format !== undefined) {
+    h.click('#fmt [data-v="' + format + '"]');
+    h.click('#tplVidUse');
+  }
   if (voice !== undefined) h.click('#voiceSeg [data-v="' + voice + '"]');
   if (sfx !== undefined) h.click('#sfxSeg [data-v="' + sfx + '"]');
   if (sources !== undefined) h.click('.swt[data-k="sources"]');
@@ -210,6 +214,7 @@ test('generation view keeps the decision before the render and shows no per-stag
   assert(!grid.classList.contains('hide'), '点那一格要展开');
   assert.match(h.get('tplNow').textContent, /收起/, '展开了那一格要提示能收起');
   await h.click('#fmt [data-v="poster"]');
+  await h.click('#tplVidUse');            // 样片弹窗里确认，才真正选用（线上交互如此）
   assert(grid.classList.contains('hide'), '选完要自动收起');
   assert.equal(h.evaluate('CFG.format'), 'poster');
   assert.match(h.get('tplNow').textContent, /poster/, '那一格要换成新选的');

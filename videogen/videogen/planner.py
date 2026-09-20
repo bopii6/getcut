@@ -370,6 +370,73 @@ _US_SIDE = re.compile(r"美国|白宫|美方|特朗普")
 _CN_SIDE = re.compile(r"中国|中方|北京")
 
 
+# ---------- 内容驱动开场：开场从稿子和素材里长出来，纯排版只做兜底 ----------
+
+_CHART_TAGS = ("图表", "走势", "数据", "K线", "行情", "屏幕")
+_HERO_NUM = re.compile(
+    "(" + _ARABIC.pattern + "|" + _CN_NUM.pattern + r")\s*(个基点|基点|万亿?美元|亿美元|万亿|亿|万|倍|%)"
+)
+
+
+def _hero_number(script: str) -> str | None:
+    """开场主角数字：全稿第一个「数+量级」（百分比/基点/亿/万/倍）。
+    前 40% 篇幅里的优先——开场就该亮最狠的那个。中文数字直接转阿拉伯。"""
+    head_cut = int(len(script) * 0.4)
+    for seg in (script[:head_cut], script):
+        m = _HERO_NUM.search(seg)
+        if m:
+            src, unit = m.group(1), m.group(2)
+            display = src if _ARABIC.fullmatch(src) else _cn_to_arabic(src)
+            if 1 <= len(display) <= 6:
+                return display + unit
+    return None
+
+
+def _pick_hero_asset(assets: list, prefer_chart: bool = False,
+                     title: str = "", exclude: str | None = None) -> str | None:
+    """开场/片尾主角素材：数字形态优先图表打底；素材形态优先视频，照片按「标签对上
+    选题标题」排序（标题点名的主体优先出镜），图表垫底。exclude 用来跟开场错开主角。"""
+    def _is_chart(a) -> bool:
+        return any(t in _CHART_TAGS for t in (a.tags or []))
+
+    def _photo_rank(a) -> tuple:
+        hit = sum(len(t) for t in (a.tags or []) if t and t in title)
+        return (0 if hit else 1, -hit)
+
+    videos = [a for a in assets if a.kind == "video" and a.file != exclude]
+    images = [a for a in assets if a.kind == "image" and a.file != exclude]
+    charts = [a for a in images if _is_chart(a)]
+    photos = sorted((a for a in images if not _is_chart(a)), key=_photo_rank)
+    pool = (charts + photos + videos) if prefer_chart else (videos + photos + charts)
+    return pool[0].file if pool else None
+
+
+def plan_opening(content: Content, manifest: Manifest, template: str = "") -> dict | None:
+    """决定这支出什么形态的开场：
+    - 稿子有扎眼数字 → number（数字当主角，图表/素材打底）
+    - 没数字但有素材 → media（照片/视频铺满，标题压上去）
+    - 两样都没有 → plain（纯排版，编舞引擎的谱式兜底）
+    返回 None = 该模板不启用（目前只有 editorial 系）。"""
+    if template != "editorial":
+        return None
+    num = _hero_number(content.script or "")
+    if num:
+        return {"form": "number", "hero_number": num,
+                "hero_asset": _pick_hero_asset(manifest.assets, prefer_chart=True)}
+    hero = _pick_hero_asset(manifest.assets, prefer_chart=False, title=content.title or "")
+    if hero:
+        return {"form": "media", "hero_asset": hero, "hero_number": None}
+    return {"form": "plain", "hero_asset": None, "hero_number": None}
+
+
+def plan_ending(manifest: Manifest, template: str = "", exclude: str | None = None) -> dict | None:
+    """片尾形态：有素材 → media（主角素材与开场错开，呼应但不重复）；没有 → plain。"""
+    if template != "editorial":
+        return None
+    hero = _pick_hero_asset(manifest.assets, prefer_chart=False, exclude=exclude)
+    return {"form": "media" if hero else "plain", "hero_asset": hero}
+
+
 def apply_designed_overlays(plan: Plan, content: Content) -> None:
     """Pick at most one callout and up to two info panels, mirroring niwo's
     restraint (about 5 designed moments in an 84s reference)."""
@@ -558,6 +625,12 @@ def build_plan_llm(content: Content, manifest: Manifest, clauses, shots_spec,
     first_span, last_span = edge_spans if edge_spans else (spans[ids[0]], spans[ids[-1]])
     shot_list.append(Shot(kind="title_card", asset_path=None, sent_indexes=[],
                           start_ms=first_span[0], end_ms=first_span[1]))
+    # 内容驱动开场：数字/素材当主角——主角素材直接挂在片头镜头上，形态决定留到渲染前编谱
+    opening = plan_opening(content, manifest, template)
+    if opening:
+        if opening.get("hero_asset"):
+            shot_list[0].asset_path = opening["hero_asset"]
+        shot_list[0].overlay = {"opening": opening}
     for e in entries:
         start = min(e["start"], shot_list[-1].end_ms)
         if e.get("card") == "callout":
@@ -585,6 +658,13 @@ def build_plan_llm(content: Content, manifest: Manifest, clauses, shots_spec,
                                   overlay=({"stage": e["stage"]} if e.get("stage") else {})))
     shot_list.append(Shot(kind="quote_card", asset_path=None, sent_indexes=[],
                           start_ms=max(shot_list[-1].end_ms, last_span[0]), end_ms=last_span[1]))
+    # 内容驱动片尾：换个主角素材呼应开场，形态留给渲染前编谱
+    if template == "editorial":
+        ending = plan_ending(manifest, template, exclude=(opening or {}).get("hero_asset"))
+        if ending:
+            if ending.get("hero_asset"):
+                shot_list[-1].asset_path = ending["hero_asset"]
+            shot_list[-1].overlay = {"ending": ending}
     # 智能替换：非人物图片镜头若有"标签重合的未用视频"，换成视频（提高动态占比）。
     # 人物照（tags 含"人物"）保留——人物题材用真实照片比用无关视频更准确。
     by_file = {a.file: a for a in manifest.assets}

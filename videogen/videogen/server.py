@@ -76,6 +76,29 @@ _DRAFT_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_DRAFT_CONCURRENCY", "1"
 _VERIFY_SEM = threading.Semaphore(_VERIFY_CONCURRENCY)
 _DRAFT_SEM = threading.Semaphore(_DRAFT_CONCURRENCY)
 
+# 渲染工人节点（可选）：配了 VIDEOGEN_RENDER_NODE 就多开 _REMOTE_LANES 条远端灶台，
+# 画面渲染发给节点跑，混音/封装/校验仍在本地；同一队列统一调度，付费优先不变。
+_RENDER_NODE_URL = os.environ.get("VIDEOGEN_RENDER_NODE", "").strip().rstrip("/")
+_RENDER_NODE_TOKEN = os.environ.get("VIDEOGEN_NODE_TOKEN", "").strip()
+_REMOTE_LANES = 0
+if _RENDER_NODE_URL:
+    try:
+        _REMOTE_LANES = max(1, int(os.environ.get("VIDEOGEN_REMOTE_LANES", "2") or "2"))
+    except ValueError:
+        _REMOTE_LANES = 2
+# 本地渲染总闸：本地灶台线程 + 远端灶台「节点挂了回退本地」都得先拿到名额，
+# 保证主机上同时跑的 Remotion 不超过 _RENDER_CONCURRENCY 路（内存护栏——
+# 否则节点宕机时 4 个线程一起本机渲，3G 内存的小机器会当场殉职）。
+_RENDER_SLOTS = threading.BoundedSemaphore(_RENDER_CONCURRENCY)
+_NODE_FAIL_UNTIL = 0.0          # 节点失联熔断：这个时刻之前远端线程直接走本地
+
+
+def _acquire_render_slot(cancel_check=None) -> None:
+    """拿本地渲染名额；排队等名额期间用户按了「停止」要能立刻退出。"""
+    while not _RENDER_SLOTS.acquire(timeout=1.0):
+        if cancel_check is not None and cancel_check():
+            raise JobCancelled("任务已被停止")
+
 # 正在干活（非排队/非终态）的阶段：算排队位置时要把它们算在"前面"
 _ACTIVE_STAGES = ("tts", "plan", "props", "prepped", "render", "audio", "mux")
 _RENDER_STAGES = ("render", "audio", "mux")
@@ -1525,11 +1548,26 @@ def _fix_mojibake_name(name: str) -> str:
         return name
 
 
+async def _read_capped(file, cap: int) -> bytes:
+    """流式读上传体，超 cap 当场掐断。await file.read() 会把没限大的包整个吞进内存
+    才想起查上限——公网端点一脚 10GB 的包就能把 3G 内存的小机器踹下线。"""
+    buf = bytearray()
+    while True:
+        chunk = await file.read(8 * 1024 * 1024)
+        if not chunk:
+            break
+        buf.extend(chunk)
+        if len(buf) > cap:
+            raise ValueError("upload too large")
+    return bytes(buf)
+
+
 @app.post("/api/upload")
 async def upload(file: UploadFile, request: Request):
     name = Path(_fix_mojibake_name(file.filename or "bundle.zip")).stem or f"bundle-{int(time.time())}"
-    data = await file.read()
-    if len(data) > MAX_UPLOAD_BYTES:
+    try:
+        data = await _read_capped(file, MAX_UPLOAD_BYTES)
+    except ValueError:
         return JSONResponse({"error": "zip 超过 512MB 上限"}, status_code=413)
     dest = WORKSPACES / name
     i = 1
@@ -1603,8 +1641,9 @@ async def intake_create(file: UploadFile, request: Request):
         return JSONResponse({"error": "这个地址上传太频繁了，一小时后再试"}, status_code=429)
     hits.append(now)
     _INTAKE_RATE[ip] = hits
-    data = await file.read()
-    if len(data) > MAX_UPLOAD_BYTES:
+    try:
+        data = await _read_capped(file, MAX_UPLOAD_BYTES)
+    except ValueError:
         return JSONResponse({"error": "zip 超过 512MB 上限"}, status_code=413)
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
@@ -1866,7 +1905,31 @@ def my_jobs(request: Request):
     active = [i for i in items if i["stage"] not in ("done", "failed", "cancelled")]
     finished = sorted((i for i in items if i["stage"] in ("done", "failed", "cancelled")),
                       key=lambda x: x.get("t0") or 0, reverse=True)[:8]
-    return {"concurrency": _RENDER_CONCURRENCY, "active": active, "recent": finished}
+    out = {"concurrency": _RENDER_CONCURRENCY, "active": active, "recent": finished}
+    if _REMOTE_LANES:
+        out["render_lanes"] = {"local": _RENDER_CONCURRENCY, "remote": _REMOTE_LANES}
+    return out
+
+
+@app.get("/api/admin/nodes")
+def admin_nodes(request: Request):
+    """管理员看渲染节点水位：节点在不在、还有几个空渲染位。"""
+    if not _is_adminish(request):
+        return JSONResponse({"error": "只有管理员能看"}, status_code=403)
+    if not _REMOTE_LANES:
+        return {"enabled": False}
+    import requests as _rq
+    node = {"enabled": True, "url": _RENDER_NODE_URL, "lanes": _REMOTE_LANES,
+            "status": "down", "active": None, "waiting": None}
+    try:
+        r = _rq.get(f"{_RENDER_NODE_URL}/healthz", timeout=(3, 5))
+        if r.status_code == 200:
+            info = r.json()
+            node.update(status="up", active=info.get("active"),
+                        waiting=info.get("waiting"), lanes=info.get("lanes"))
+    except Exception as exc:  # noqa: BLE001
+        node["error"] = str(exc)[:200]
+    return node
 
 
 @app.get("/api/job/{job_id}")
@@ -2138,11 +2201,46 @@ def _verify_bg(job_id: str, bundle_dir: Path, video: Path, work_dir: Path | None
             _cleanup_work_dir(work_dir)
 
 
-def _render_job(job_id: str, body: dict) -> None:
+def _remote_visual(job_id: str):
+    """远端灶台的画面渲染替身：优先发渲染节点；节点失联/出错回退本机渲染，
+    回退必须先拿本地渲染名额（见 _RENDER_SLOTS），防止把主机挤爆。"""
+    from . import remotion_render as rr
+
+    def fn(props, out_path, progress=None, cancel_check=None):
+        global _NODE_FAIL_UNTIL
+        if _RENDER_NODE_URL and time.time() >= _NODE_FAIL_UNTIL:
+            try:
+                out = rr.render_visual_remote(props, out_path, node_url=_RENDER_NODE_URL,
+                                              token=_RENDER_NODE_TOKEN, job_id=job_id,
+                                              progress=progress, cancel_check=cancel_check)
+                with _LOCK:
+                    if JOBS.get(job_id):
+                        JOBS[job_id]["render_via"] = "node"
+                return out
+            except JobCancelled:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                print(f"render node unavailable (job {job_id}), fallback local: {exc}", flush=True)
+                _NODE_FAIL_UNTIL = time.time() + 120
+        with _LOCK:
+            if JOBS.get(job_id):
+                JOBS[job_id]["render_via"] = "local"
+        _acquire_render_slot(cancel_check)
+        try:
+            return rr.render_visual(props, out_path, key=job_id,
+                                    progress=progress, cancel_check=cancel_check)
+        finally:
+            _RENDER_SLOTS.release()
+
+    return fn
+
+
+def _render_job(job_id: str, body: dict, lane: str = "local") -> None:
     """渲染阶段：画面渲染/混音/封装——吃 CPU 的活，同时最多 CONCURRENCY 路。
 
     校验（等外部 API）不在这里跑：build_render 以 defer_verify 出灶台，
     交给 _verify_bg 后台通道，渲染位早几分钟还给下一个人。
+    lane="remote"：画面渲染发给渲染节点（远端灶台线程），节点不行当场回退本机。
     """
     from . import cli
     progress = _progress_reporter(job_id)
@@ -2154,15 +2252,28 @@ def _render_job(job_id: str, body: dict) -> None:
             raise JobCancelled("任务已被停止")
         bundle_dir = Path(prep_meta.get("bundle_dir") or _resolve_bundle(body["bundle"]))
         out = OUTPUTS / f"{bundle_dir.name}-{job_id}.mp4"
-        cli.build_render(bundle_dir, out, work_dir=work_dir,
-                         bgm=_resolve_bgm(body.get("bgm")),
-                         renderer=body.get("renderer") or "remotion",
-                         sfx=bool(body.get("sfx", True)),
-                         sfx_mode=body.get("sfxMode") or ("full" if body.get("sfx", True) else "off"),
-                         show_subtitles=bool(body.get("subtitles", True)),
-                         show_sources=bool(body.get("sources", True)),
-                         job_id=job_id, progress=progress, defer_verify=True,
-                         cancel_check=lambda: _cancel_requested(job_id))
+        if lane == "local":
+            with _LOCK:
+                if JOBS.get(job_id):
+                    JOBS[job_id]["render_via"] = "local"
+        render_kwargs = dict(bgm=_resolve_bgm(body.get("bgm")),
+                             renderer=body.get("renderer") or "remotion",
+                             sfx=bool(body.get("sfx", True)),
+                             sfx_mode=body.get("sfxMode") or ("full" if body.get("sfx", True) else "off"),
+                             show_subtitles=bool(body.get("subtitles", True)),
+                             show_sources=bool(body.get("sources", True)),
+                             job_id=job_id, progress=progress, defer_verify=True,
+                             cancel_check=lambda: _cancel_requested(job_id))
+        if lane == "remote":
+            render_kwargs["visual_fn"] = _remote_visual(job_id)
+            cli.build_render(bundle_dir, out, work_dir=work_dir, **render_kwargs)
+        else:
+            # 本地灶台先拿名额：多出来的是远端灶台的回退渲染，不能挤爆主机
+            _acquire_render_slot(lambda: _cancel_requested(job_id))
+            try:
+                cli.build_render(bundle_dir, out, work_dir=work_dir, **render_kwargs)
+            finally:
+                _RENDER_SLOTS.release()
         with _LOCK:
             JOBS[job_id].update(stage="done", stage8=8, progress=100, video=str(out), t_end=time.time(),
                                 detail="成片已生成")
@@ -2220,8 +2331,9 @@ def _prep_worker() -> None:
             _mark_failed(job_id, exc)
 
 
-def _render_worker() -> None:
-    """渲染灶台消费者：同时最多 _RENDER_CONCURRENCY 路在跑；付费任务优先。"""
+def _render_worker(remote: bool = False) -> None:
+    """渲染灶台消费者：local 线程在本机渲，remote 线程把画面渲染发给渲染节点
+    （节点不行当场回退本机）；两种线程吃同一条队列，付费优先不变。"""
     while True:
         with _LOCK:
             while not _RENDER_WAIT:
@@ -2231,8 +2343,8 @@ def _render_worker() -> None:
         job_id = best["job"]
         body = _PENDING.get(job_id) or {}
         try:
-            _render_job(job_id, body)
-        except Exception as exc:
+            _render_job(job_id, body, lane="remote" if remote else "local")
+        except Exception as exc:  # noqa: BLE001
             print(f"render worker error: {exc}")
             _mark_failed(job_id, exc)
 
@@ -2241,6 +2353,10 @@ for _i in range(_PREP_CONCURRENCY):
     threading.Thread(target=_prep_worker, daemon=True).start()
 for _i in range(_RENDER_CONCURRENCY):
     threading.Thread(target=_render_worker, daemon=True).start()
+if _REMOTE_LANES:
+    for _i in range(_REMOTE_LANES):
+        threading.Thread(target=_render_worker, args=(True,), daemon=True).start()
+    print(f"remote render lanes: {_REMOTE_LANES} -> {_RENDER_NODE_URL}", flush=True)
 
 
 def _intake_sweeper() -> None:

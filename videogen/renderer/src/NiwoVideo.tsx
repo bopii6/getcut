@@ -13,6 +13,7 @@ import {
   useVideoConfig,
 } from 'remotion';
 import {T, resolveSkin, applySkin, type Skin} from './skin';
+import {ChoreoCard, sanitizeChoreo} from './choreo';
 import {ZhiguVideo} from './ZhiguVideo';
 import {MacroVideo} from './MacroVideo';
 
@@ -68,6 +69,8 @@ export type ShotOverlay = {
   right?: {head: string; body: string};
   card?: {title: string; body: string};
   rows?: {code: string; text: string}[];
+  /** 编舞谱（开场/金句现场编排）：结构由 choreo.tsx 的词汇表约束，非法谱回落死编排 */
+  choreo?: unknown;
 };
 export type ZhiguTable = {
   title?: string;
@@ -116,6 +119,8 @@ export type NiwoProps = {
   sources: string[];
   disclaimer: string;
   showSubtitles?: boolean;
+  /** 编舞镜头（开场/金句/数字卡）时间窗 [startMs, endMs]：窗内字幕不出，画面自带大字 */
+  subtitleHoles?: [number, number][];
   /** 模板 id：editorial / finance / minimal / bleed / news / retro / portrait */
   template?: string;
   /** 右上角品牌水印「Powered by GetCut」；false = 不出 */
@@ -161,19 +166,13 @@ const fitSize = (text: string, maxSize: number, maxW: number) =>
 const msToF = (ms: number, fps: number) => Math.round((ms / 1000) * fps);
 
 // ---------------- 分轨导出（exportMode） ----------------
-// full：正常成片
-// card：只出「卡片/包装」层（页面底/纸卡/面板/页脚不出，素材与字幕不出，文字只留几何位置）
-// base：只出「底板」层（页面底/纸卡/面板留洞/标题带/页脚，镜头内容与字幕不出）
+// full：正常成片 / card：只出卡片包装层 / base：只出底板层
 // 剪映草稿的轨道顺序（下→上）：底板 → 画面 → 卡片 → 字幕 → 叠加文字
-export type ExportMode = 'full' | 'card' | 'base';
-let EXPORT_MODE: ExportMode = 'full';
-const setExportMode = (m: ExportMode) => {
-  EXPORT_MODE = m;
-};
-/** 素材/字幕是否隐藏（分轨导出时） */
-export const hideMedia = () => EXPORT_MODE !== 'full';
-export const isCard = () => EXPORT_MODE === 'card';
-export const isBase = () => EXPORT_MODE === 'base';
+// 状态实现在 ./anim（编舞引擎的媒体元素也要遵守），这里转发导出维持旧引用。
+export {setExportMode, hideMedia, isCard, isBase} from './anim';
+export type {ExportMode} from './anim';
+import {hideMedia, isCard, isBase, setExportMode} from './anim';
+import type {ExportMode} from './anim';
 /**
  * 版式几何一律走皮肤（renderer/src/layouts.json）：一次渲染 = 一个模板，
  * T.geo 在渲染入口由 applySkin 赋值，所以这里只做取值不存常量。
@@ -241,41 +240,9 @@ const RectWithHole: React.FC<{
 // 注意：这两个是模块级常量，但 T 是在渲染时才被 applySkin 改写的。
 // 用 getter 而不是普通属性，保证每次展开/读取时取到当前皮肤的值，
 // 否则它们会永久固化成 import 那一刻的 editorial 配色与字体。
-const heavy: React.CSSProperties = {
-  get fontFamily() {
-    return T.font;
-  },
-  get fontWeight() {
-    return 900;
-  },
-};
-
-const Tick: React.CSSProperties = {
-  get display() {
-    return 'inline-block';
-  },
-  get width() {
-    return 8;
-  },
-  get height() {
-    return 30;
-  },
-  get background() {
-    return T.accent;
-  },
-  get marginRight() {
-    return 14;
-  },
-};
-
-/**
- * 入场动效用的帧号：把模板的入场快慢折算成时间轴压缩。
- * 各卡片里的入场帧号是按 9 帧写死的；模板把 motionFrames 调小（节奏更快）时，
- * 这里整体加速，不用逐个改组件里的字面量。ANIM_BASE=9 时与历史行为完全一致。
- */
-const ANIM_BASE = 9;
-const animFactor = () => ANIM_BASE / Math.max(2, T.motionFrames || ANIM_BASE);
-export const useAnimFrame = () => useCurrentFrame() * animFactor();
+// heavy / Tick / useAnimFrame 抽到 ./anim：编舞引擎（choreo）与卡片共用同一套字面与入场节奏。
+import {heavy, Tick, useAnimFrame} from './anim';
+export {useAnimFrame};
 
 const Label: React.FC<{text: string; delay?: number}> = ({text, delay = 0}) => {
   const frame = useAnimFrame();
@@ -778,6 +745,8 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
   const from = msToF(shot.startMs, fps);
   const dur = msToF(shot.endMs - shot.startMs, fps) + 1;
   const mediaSrc = shot.media ? staticFile(`media/${shot.media}`) : undefined;
+  // 编舞谱：片头/片尾/数字卡的 overlay 带合法谱就走引擎，谱废了回落死编排
+  const choreoCues = sanitizeChoreo(shot.overlay?.choreo);
   const shotInner = (
     <div
       style={{
@@ -792,11 +761,28 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
       }}
     >
       {shot.kind === 'title_card' ? (
-        <TitleCard spec={shot.overlay ?? {}} fps={fps} />
+        choreoCues ? (
+          <ChoreoCard cues={choreoCues} fps={fps} media={mediaSrc}
+                      mediaKind={shot.mediaKind} dur={dur} />
+        ) : (
+          <TitleCard spec={shot.overlay ?? {}} fps={fps} />
+        )
       ) : shot.kind === 'quote_card' ? (
-        <QuoteCard spec={shot.overlay ?? {}} />
+        choreoCues ? (
+          <ChoreoCard cues={choreoCues} fps={fps} media={mediaSrc}
+                      mediaKind={shot.mediaKind} dur={dur} />
+        ) : (
+          <QuoteCard spec={shot.overlay ?? {}} />
+        )
       ) : shot.kind === 'statement' && shot.overlay?.variant === 'statement_media' ? (
         <StatementMedia spec={{...shot.overlay, appearMs: (shot.overlay as any).appearMs} as any} media={mediaSrc} />
+      ) : shot.kind === 'callout' && choreoCues ? (
+        <ChoreoCard cues={choreoCues} fps={fps} media={mediaSrc}
+                    mediaKind={shot.mediaKind} dur={dur} />
+      ) : shot.kind === 'panel' && choreoCues && (shot.overlay?.variant === 'fact' || shot.overlay?.variant === 'statement') ? (
+        // fact/statement 卡谱：字段当主角现场摆（谱内元素只从词汇表出）
+        <ChoreoCard cues={choreoCues} fps={fps} media={mediaSrc}
+                    mediaKind={shot.mediaKind} dur={dur} />
       ) : (
         <div style={{position: 'absolute', inset: 0}}>
           {/* media window: 778x440 at panel-relative (36,71) */}
@@ -853,7 +839,7 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
                 {shot.code}
               </div>
             ) : null}
-            {shot.kind === 'footage' ? (
+            {shot.kind === 'footage' && !choreoCues ? (
               <div
                 style={{
                   position: 'absolute',
@@ -866,7 +852,17 @@ const ShotView: React.FC<{shot: Shot; index?: number}> = ({shot, index = 0}) => 
               />
             ) : null}
           </div>
-          {shot.kind === 'footage' ? <ChapterLabel text={shot.chapterLabel ?? ''} /> : null}
+          {shot.kind === 'footage' ? (
+            choreoCues ? (
+              // 信息层编舞谱：挂在面板坐标系（媒体窗外层），media-* 锚位经 mediaOrigin
+              // 换算进媒体窗；只画谱里的元素，媒体窗本身照常走 MediaWindow
+              <ChoreoCard cues={choreoCues} fps={fps} dur={dur} bare
+                          mediaOrigin={{left: mediaWindow().left, top: mediaWindow().top,
+                                        width: mediaWindow().width, height: mediaWindow().height}} />
+            ) : (
+              <ChapterLabel text={shot.chapterLabel ?? ''} />
+            )
+          ) : null}
         </div>
       )}
     </div>
@@ -1045,13 +1041,15 @@ export const buildSubtitleChunks = (clauses: Clause[]) => {
   return chunks;
 };
 
-const Subtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
+const Subtitles: React.FC<{clauses: Clause[]; holes?: [number, number][]}> = ({clauses, holes}) => {
   const frame = useCurrentFrame();
   const fps = useVideoConfig().fps;
   const t = (frame / fps) * 1000;
   const chunks = buildSubtitleChunks(clauses);
   const active = chunks.find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
+  // 编舞时刻（内容驱动开场/金句卡/数字卡）画面自带大字：字幕再压上来会撞成两层白字，让路
+  if (holes?.some(([a, b]) => active.startMs >= a - 200 && active.endMs <= b + 200)) return null;
   return (
     <div
       style={{
@@ -1500,7 +1498,7 @@ const EditorialVideo: React.FC<{props: NiwoProps}> = ({props}) => (
     {isBase() ? null : props.shots.map((shot, i) => (
       <ShotView key={i} shot={shot} index={i} />
     ))}
-    {props.showSubtitles !== false ? <Subtitles clauses={props.clauses} /> : null}
+    {props.showSubtitles !== false ? <Subtitles clauses={props.clauses} holes={props.subtitleHoles} /> : null}
     {isCard() ? null : <Footer sources={props.sources} disclaimer={props.disclaimer} />}
   </AbsoluteFill>
 );

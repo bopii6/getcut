@@ -66,6 +66,7 @@ def build_props(bundle: Path, plan: Plan, content: Content,
     media_dir.mkdir(parents=True, exist_ok=True)
     # 每个素材包独立命名，避免不同包的同名文件互相覆盖（此前按 src.name 直接拷贝）。
     used_media: set[str] = set()
+    sub_holes: list[tuple[int, int]] = []
     shots: list[dict] = []
     for idx, shot in enumerate(plan.shots):
         s: dict = {"kind": shot.kind, "startMs": round(shot.start_ms), "endMs": round(shot.end_ms)}
@@ -107,16 +108,68 @@ def build_props(bundle: Path, plan: Plan, content: Content,
         # 片头卡/金句卡：分镜图纸自带文案时优先用它（复刻片、模板样片都是手写的）；
         # 常规出片走 LLM/规则，shot.overlay 是空的，仍用调用方传来的 title_card / quote_card。
         if shot.kind == "title_card":
-            s["overlay"] = {"label": o.get("label") or title_card.get("label", ""),
-                            "keyword": o.get("keyword") or o.get("title") or title_card.get("keyword", ""),
-                            "code": "SIGNAL / 01"}
+            # 开场谱三层优先级：镜头自带手写谱（复刻片/样片）> 内容驱动（数字/素材当主角，
+            # planner 已把形态挂在 overlay.opening）> 排版谱式兜底。choreo=False 可全关。
+            ch = o.get("choreo") if isinstance(o, dict) else None
+            opening = o.get("opening") if isinstance(o, dict) else None
+            _label = o.get("label") or title_card.get("label", "")
+            _kw = o.get("keyword") or o.get("title") or title_card.get("keyword", "")
+            _code = o.get("code") or "SIGNAL / 01"
+            if ch is None and template == "editorial":
+                from .choreo import compose_content_opening, compose_opening
+                form = (opening or {}).get("form", "plain") if isinstance(opening, dict) else "plain"
+                if form == "media" and not s.get("media"):
+                    form = "plain"  # 主角素材缺失（文件不在等），回落排版
+                if form in ("number", "media"):
+                    ch = compose_content_opening(
+                        form, label=_label, keyword=_kw, code=_code,
+                        hero_number=(opening or {}).get("hero_number"),
+                        has_media=bool(s.get("media")))
+                else:
+                    ch = compose_opening(f"{bundle.name}|{content.title}",
+                                         label=_label, keyword=_kw, code=_code)
+            s["overlay"] = {"label": _label, "keyword": _kw, "code": _code}
+            if isinstance(ch, dict) and ch.get("cues"):
+                s["overlay"]["choreo"] = ch
+                # 编舞镜头是设计时刻：烧录字幕再压上来会跟大字撞成一团
+                # （2026-09-20 实测开场数字卡两层白字叠字），这个时间窗里的字幕让路
+                sub_holes.append((s["startMs"], s["endMs"]))
         elif shot.kind == "quote_card":
-            s["overlay"] = {"label": o.get("label") or quote_card.get("label", ""),
-                            "quote": o.get("quote") or o.get("title") or quote_card.get("quote", "")}
+            # 片尾谱：手写谱 > 内容驱动（金句压素材/纯排版），同片头三层优先级
+            ending = o.get("ending") if isinstance(o, dict) else None
+            ch = o.get("choreo") if isinstance(o, dict) else None
+            _label = o.get("label") or quote_card.get("label", "")
+            _quote = o.get("quote") or o.get("title") or quote_card.get("quote", "")
+            if ch is None and template == "editorial":
+                from .choreo import compose_ending
+                form = (ending or {}).get("form", "plain") if isinstance(ending, dict) else "plain"
+                ch = compose_ending(form, label=_label, quote=_quote,
+                                    code=o.get("code") or "SIGNAL / 01",
+                                    has_media=bool(s.get("media")))
+            s["overlay"] = {"label": _label, "quote": _quote}
+            if isinstance(ch, dict) and ch.get("cues"):
+                s["overlay"]["choreo"] = ch
+                # 编舞镜头是设计时刻：烧录字幕再压上来会跟大字撞成一团
+                # （2026-09-20 实测开场数字卡两层白字叠字），这个时间窗里的字幕让路
+                sub_holes.append((s["startMs"], s["endMs"]))
         elif shot.kind == "callout":
-            s["overlay"] = {"label": o.get("label") or s.get("chapterLabel", "") or "关键数据",
-                            "number": o.get("number", ""),
+            # 数字卡谱：数字当主角压素材。数字缺失（LLM 没给出）就不编，回落老版式
+            ch = o.get("choreo") if isinstance(o, dict) else None
+            _label = o.get("label") or s.get("chapterLabel", "") or "关键数据"
+            _number = str(o.get("number", "") or "").strip()
+            if ch is None and template == "editorial" and _number:
+                from .choreo import compose_callout
+                ch = compose_callout(label=_label, number=_number,
+                                     caption=o.get("caption", ""),
+                                     has_media=bool(s.get("media")))
+            s["overlay"] = {"label": _label,
+                            "number": _number,
                             "caption": o.get("caption", "")}
+            if isinstance(ch, dict) and ch.get("cues"):
+                s["overlay"]["choreo"] = ch
+                # 编舞镜头是设计时刻：烧录字幕再压上来会跟大字撞成一团
+                # （2026-09-20 实测开场数字卡两层白字叠字），这个时间窗里的字幕让路
+                sub_holes.append((s["startMs"], s["endMs"]))
         elif shot.kind == "panel":
             v = o.get("variant", "fact")
             if v in ("stat", "branches", "timeline", "person"):
@@ -145,11 +198,31 @@ def build_props(bundle: Path, plan: Plan, content: Content,
                 s["overlay"] = {"variant": "fact", "label": o.get("label") or "关键事实",
                                 "card": {"title": o.get("card_title", ""), "body": o.get("card_body", "")},
                                 "badge": o.get("badge", "")}
+                # 事实卡谱化：字段当主角现场摆（字段缺失就少排，过校验才上）
+                if template == "editorial":
+                    from .choreo import compose_panel
+                    ch2 = compose_panel("fact", s["overlay"])
+                    if ch2["cues"]:
+                        s["overlay"]["choreo"] = ch2
             else:
                 s["overlay"] = {"variant": "statement", "label": o.get("label") or "核心观点",
                                 "title": o.get("title", ""), "subtitle": o.get("subtitle", ""),
                                 "badge": o.get("badge", ""), "rightNote": o.get("rightNote", ""),
                                 "rows": o.get("rows", [])}
+                # 观点卡谱化：同事实卡
+                if template == "editorial":
+                    from .choreo import compose_panel
+                    ch2 = compose_panel("statement", s["overlay"])
+                    if ch2["cues"]:
+                        s["overlay"]["choreo"] = ch2
+        elif shot.kind == "footage":
+            ch = o.get("choreo") if isinstance(o, dict) else None
+            if ch is None and template == "editorial":
+                from .choreo import compose_footage
+                ch = compose_footage(f"{bundle.name}|{content.title}|{idx}",
+                                     label=shot.chapter_label or "")
+            if isinstance(ch, dict) and ch.get("cues"):
+                s["overlay"] = {"choreo": ch}
         elif shot.overlay and "macro" not in shot.overlay:
             # clone 模式：镜头自带完整 overlay（如 statement_media）
             s["overlay"] = {**shot.overlay}
@@ -171,6 +244,8 @@ def build_props(bundle: Path, plan: Plan, content: Content,
         "shots": shots,
         "clauses": [{"text": c.text, "startMs": round(c.start_ms), "endMs": round(c.end_ms)}
                     for c in plan.clauses],
+        # 编舞镜头（开场/金句/数字卡）时间窗：这些窗里的字幕不出（画面自带大字）
+        "subtitleHoles": [[a, b] for a, b in sub_holes],
     }
     if template == "macro":
         # macro：顶部金标题=选题标题；暗背景=导演从素材挑的图（拷进渲染器），没有就用自带 K 线底图。
@@ -377,6 +452,149 @@ def _kill_proc_tree(proc) -> None:
         proc.wait(timeout=10)
     except Exception:
         pass
+
+
+# ---------- 渲染工人节点（远端灶台）客户端 ----------
+# 节点侧服务见 rendernode.py：只跑「Remotion 出画面」这一步，混音/封装仍在主站。
+# 协议：POST props+素材（multipart）→ 轮询进度 → GET 拉成片；任何失败都抛
+# RuntimeError，由调用方（server 的远端灶台线程）回退本地渲染。
+
+
+def collect_remote_assets(props: dict) -> tuple[dict[str, Path], Path | None]:
+    """props 里实际引用的素材：{媒体名: 本地文件}（public/media 下）+ 品牌 logo。
+
+    媒体名靠递归扫 props 字符串值兜底——分镜的 media、macro 的 bgImage、
+    智谷 stage 里的 logo 都是一个字符串指到 public/media/<名>，将来模板
+    加新的引用字段也不用改这里。
+    """
+    media: dict[str, Path] = {}
+    media_dir = RENDERER / "public" / "media"
+
+    def walk(o) -> None:
+        if isinstance(o, dict):
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+        elif isinstance(o, str):
+            if re.fullmatch(r"[0-9A-Za-z._-]{3,160}", o) and ".." not in o:
+                p = media_dir / o
+                if p.is_file():
+                    media.setdefault(o, p)
+
+    walk(props)
+    logo_path = None
+    logo_rel = (props.get("brand") or {}).get("logo")
+    if isinstance(logo_rel, str) and re.fullmatch(r"brand/[0-9a-f]{16}\.png", logo_rel):
+        p = RENDERER / "public" / logo_rel
+        if p.is_file():
+            logo_path = p
+    return media, logo_path
+
+
+def _rewrite_media_names(props: dict, rename: dict[str, str]) -> dict:
+    """把 props 里的媒体名换成分任务前缀版（节点上多任务互不覆盖）。"""
+    def walk(o):
+        if isinstance(o, dict):
+            return {k: walk(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [walk(v) for v in o]
+        if isinstance(o, str) and o in rename:
+            return rename[o]
+        return o
+    return walk(props)
+
+
+def render_visual_remote(props: dict, out_path: Path, *, node_url: str, token: str,
+                         job_id: str, timeout: int = 2400,
+                         progress=None, cancel_check=None) -> Path:
+    """把画面渲染交给渲染节点：上传→轮询→拉回 mp4。失败抛 RuntimeError。"""
+    import requests as _rq
+
+    safe = _safe_key(job_id, "job")
+    prefix = f"r{safe}__"
+    media, logo_path = collect_remote_assets(props)
+    rename = {name: f"{prefix}{name}" for name in media}
+    props_out = _rewrite_media_names(props, rename)
+
+    _report(progress, 0, "正在把素材传到渲染节点")
+    deadline = time.time() + timeout
+    upload: list[tuple[str, tuple[str, object, str]]] = []
+    handles = []
+    try:
+        for name, p in media.items():
+            fh = open(p, "rb")
+            handles.append(fh)
+            upload.append(("files", (f"media/{prefix}{name}", fh, "application/octet-stream")))
+        if logo_path is not None:
+            fh = open(logo_path, "rb")
+            handles.append(fh)
+            logo_rel = (props.get("brand") or {}).get("logo")
+            upload.append(("files", (logo_rel, fh, "application/octet-stream")))
+        headers = {"x-node-token": token}
+        resp = _rq.post(f"{node_url.rstrip('/')}/v1/render",
+                        data={"job": safe, "props": json.dumps(props_out, ensure_ascii=False)},
+                        files=upload or None, headers=headers, timeout=(15, 600))
+        if resp.status_code != 200:
+            raise RuntimeError(f"渲染节点拒收任务 HTTP {resp.status_code}: {resp.text[:300]}")
+        remote_id = resp.json().get("job") or safe
+
+        status = None
+        while True:
+            if time.time() > deadline:
+                try:
+                    _rq.delete(f"{node_url.rstrip('/')}/v1/render/{remote_id}",
+                               headers=headers, timeout=(5, 10))
+                except Exception:  # noqa: BLE001
+                    pass
+                raise RuntimeError(f"渲染节点超时（>{timeout}s）")
+            if cancel_check is not None and cancel_check():
+                try:
+                    _rq.delete(f"{node_url.rstrip('/')}/v1/render/{remote_id}",
+                               headers=headers, timeout=(5, 10))
+                except Exception:  # noqa: BLE001
+                    pass
+                raise JobCancelled("任务已被停止")
+            time.sleep(1.0)
+            try:
+                r = _rq.get(f"{node_url.rstrip('/')}/v1/render/{remote_id}",
+                            headers=headers, timeout=(5, 15))
+            except Exception as exc:  # noqa: BLE001
+                raise RuntimeError(f"渲染节点失联: {exc}") from exc
+            if r.status_code == 404:
+                raise RuntimeError("渲染节点不认识这个任务（节点可能刚重启）")
+            if r.status_code != 200:
+                raise RuntimeError(f"渲染节点状态查询异常 HTTP {r.status_code}")
+            info = r.json()
+            status = info.get("status")
+            if status == "running" or status == "queued":
+                _report(progress, max(0, int(info.get("pct") or 0)),
+                        info.get("detail") or "节点渲染中")
+                continue
+            break
+        if status != "done":
+            raise RuntimeError("渲染节点出错: " + str(info.get("error") or status)[:4000])
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with _rq.get(f"{node_url.rstrip('/')}/v1/render/{remote_id}/video",
+                     headers=headers, timeout=(15, 600), stream=True) as v:
+            if v.status_code != 200:
+                raise RuntimeError(f"拉取成片失败 HTTP {v.status_code}")
+            tmp = Path(str(out_path) + ".nodepart")
+            with open(tmp, "wb") as f:
+                for chunk in v.iter_content(1024 * 512):
+                    f.write(chunk)
+            if tmp.stat().st_size <= 0:
+                raise RuntimeError("渲染节点回传了空文件")
+            tmp.replace(out_path)
+        return out_path
+    finally:
+        for fh in handles:
+            try:
+                fh.close()
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def render_visual(props: dict, out_path: Path, timeout: int = 1800,

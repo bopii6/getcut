@@ -9,6 +9,10 @@ from pathlib import Path
 HIGHLIGHT = re.compile(r"\[\[([^\[\]]+)\]\]")
 
 
+class JobCancelled(Exception):
+    """任务被用户停止：渲染子进程已杀掉，各阶段边界检查到这个就干净退出。"""
+
+
 @dataclass
 class HookHeadline:
     lines: list[str] = field(default_factory=list)
