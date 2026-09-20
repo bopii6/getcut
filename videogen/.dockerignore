@@ -8,12 +8,17 @@ work/
 outputs/
 uploads/
 jobs.json
-renderer/props.json
-renderer/props_portrait.json
-renderer/render.log
-renderer/visual_out.mp4
-renderer/portrait_out.mp4
+renderer/props*.json
+renderer/*.log
+renderer/*.log.err
+renderer/*.mp4
+renderer/*.webm
+renderer/*.png
 renderer/still_test.*
+renderer/work/
+# 成片台产物由镜像构建阶段自己打（见 Dockerfile 的 toolbundle），本地打的一律不带进上下文
+renderer/browsertool-dist/
+renderer/browserpoc-dist/
 server_e2e.log*
 
 # 依赖与缓存（镜像内重新安装）

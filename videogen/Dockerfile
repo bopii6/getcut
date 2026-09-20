@@ -4,6 +4,22 @@
 #
 # 构建： docker build -t videogen .
 # 运行： docker run -p 8600:8600 --env-file .env -v videogen-data:/data videogen
+#
+# 成片台页面（/poc/）在下面的 toolbundle 阶段用 Node 打包，最终镜像里不留 Node。
+# 这一步不能省：产物目录 server_static/poc/ 不入 git（前端一改就得重打，入库容易
+# 把旧页面提上去），所以 CI 从 git 检出构建时必须自己打，否则线上 /poc/ 只有 404。
+
+# ---------- 0) 成片台打包（构建期一次性用完即弃） ----------
+FROM node:22-bookworm-slim AS toolbundle
+WORKDIR /r
+COPY renderer/package.json renderer/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY renderer/ ./
+RUN node _tool_bundle.mjs \
+    && rm -f browsertool-dist/*.map \
+    && rm -rf browsertool-dist/public/media
+
+# ---------- 1) 运行镜像 ----------
 FROM python:3.12-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -47,8 +63,9 @@ ENV PIP_INDEX_URL=$PIP_INDEX_URL \
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
-# 3) 应用代码（成片台页面是预先打好的静态包，装在 server_static/poc 里，无需构建）
+# 3) 应用代码 + 成片台产物（toolbundle 阶段现打，不依赖仓库里有没有静态包）
 COPY . .
+COPY --from=toolbundle /r/browsertool-dist /app/server_static/poc
 
 # 清掉构建期代理，避免运行时误用
 ENV HTTP_PROXY= HTTPS_PROXY=
