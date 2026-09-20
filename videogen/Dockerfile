@@ -1,5 +1,6 @@
 # videogen studio · 云端容器镜像
-# Python(FastAPI 管线) + ffmpeg + Node/Remotion(Headless Chrome) 打成一个镜像。
+# Python(FastAPI 管线) + ffmpeg。画面渲染与混音都在客户的浏览器里完成，
+# 服务器不装 Node、不装 Headless Chrome——它只做写稿/配音/切音频/封装这些轻活。
 #
 # 构建： docker build -t videogen .
 # 运行： docker run -p 8600:8600 --env-file .env -v videogen-data:/data videogen
@@ -23,29 +24,22 @@ RUN if [ -n "$APT_MIRROR" ]; then \
       fi; \
     fi
 
-# 1) ffmpeg + 中文字体 + Remotion(Headless Chrome) 运行库 + Node 20
+# 1) ffmpeg + 中文字体（ffmpeg 负责切片/混音/封装，字体供它画封面等叠字用）
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ffmpeg \
       fonts-noto-cjk fonts-noto-color-emoji fontconfig \
-      ca-certificates curl gnupg xz-utils \
-      libnss3 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 libgbm1 libasound2 \
-      libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 \
-      libpango-1.0-0 libcairo2 libcups2 libgl1 \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
+      ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # 构建期网络参数（国内主机可传镜像源 / 代理）
-#   docker compose build --build-arg NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+#   docker compose build --build-arg PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 #   docker compose build --build-arg HTTPS_PROXY=http://host:port
-ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org
 ARG PIP_INDEX_URL=https://pypi.org/simple
 ARG HTTP_PROXY=
 ARG HTTPS_PROXY=
-ENV NPM_CONFIG_REGISTRY=$NPM_CONFIG_REGISTRY \
-    PIP_INDEX_URL=$PIP_INDEX_URL \
+ENV PIP_INDEX_URL=$PIP_INDEX_URL \
     HTTP_PROXY=$HTTP_PROXY \
     HTTPS_PROXY=$HTTPS_PROXY
 
@@ -53,12 +47,8 @@ ENV NPM_CONFIG_REGISTRY=$NPM_CONFIG_REGISTRY \
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
-# 3) 应用代码 + Remotion 依赖 + 预下载 Headless Chrome
+# 3) 应用代码（成片台页面是预先打好的静态包，装在 server_static/poc 里，无需构建）
 COPY . .
-RUN cd renderer \
-    && npm ci --no-audit --no-fund \
-    && npx remotion browser ensure \
-    && npm cache clean --force
 
 # 清掉构建期代理，避免运行时误用
 ENV HTTP_PROXY= HTTPS_PROXY=

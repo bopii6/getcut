@@ -258,41 +258,10 @@ def run_preview(project_id: str, body: dict) -> None:
         print(f"preview failed: {e}")
 
 
-def shot_frame_index(props: dict, shot_index: int) -> int:
-    """镜头 i 的代表帧：镜头中点。"""
-    shots = props.get("shots") or []
-    fps = 30
-    total = int(props.get("durationInFrames") or 0)
-    if shot_index < 0 or shot_index >= len(shots) or total <= 1:
-        return 0
-    s = shots[shot_index]
-    start = int((s.get("startMs") or 0) / 1000 * fps)
-    end = int((s.get("endMs") or 0) / 1000 * fps)
-    return max(0, min(total - 1, (start + end) // 2 if end > start else start))
-
-
-def still_for_shot(project_id: str, props: dict, shot_index: int) -> str | None:
-    """取（带缓存）镜头静帧；失败返回 None。"""
-    d = preview_dir(project_id)
-    stills = d / "stills"
-    out = stills / f"shot-{shot_index}.jpg"
-    if out.is_file() and out.stat().st_size > 0:
-        return f"/api/projects/{project_id}/preview/stills/shot-{shot_index}.jpg"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    frame = shot_frame_index(props, shot_index)
-    try:
-        made = remotion_render.render_still_frame(props, out, frame, quality=80)
-    except Exception:
-        return None
-    if made and out.is_file() and out.stat().st_size > 0:
-        return f"/api/projects/{project_id}/preview/stills/shot-{shot_index}.jpg"
-    return None
-
-
 def build_preview_payload(project_id: str, body: dict) -> dict:
-    """前端分镜页数据：逐镜头（口播、素材、overlay、静帧 URL、时间）。
+    """前端分镜页数据：逐镜头（口播、素材、overlay、时间）。
 
-    静帧按需出图（每张 1-3 秒），首镜先出，其余在前端请求时补齐。
+    画面静帧不在这里出：服务器不再有渲染器，看画面得去成片台。
     """
     p = load_plan(project_id)
     props_path = preview_dir(project_id) / "props.json"
@@ -318,7 +287,6 @@ def build_preview_payload(project_id: str, body: dict) -> dict:
             rel = media_name.split("__", 1)[1] if "__" in media_name else media_name
             asset_url = f"/media/{bundle_name}/{rel}"
         overlay = (props_shots[i].get("overlay") if i < len(props_shots) else None) or s.get("overlay") or {}
-        url = still_for_shot(project_id, props, i)
         shots_out.append({
             "index": i,
             "kind": s.get("kind"),
@@ -327,7 +295,6 @@ def build_preview_payload(project_id: str, body: dict) -> dict:
             "overlay": overlay or ({"chapterLabel": s.get("chapter", "")} if s.get("chapter") else {}),
             "media": asset_url,
             "mediaKind": (props_shots[i].get("mediaKind") if i < len(props_shots) else None),
-            "still": url,
         })
     return {
         "project_id": project_id,
@@ -338,5 +305,4 @@ def build_preview_payload(project_id: str, body: dict) -> dict:
         "headline": props.get("headline"),
         "voice": p.get("voice"), "rate": p.get("rate"),
         "shots": shots_out,
-        "stillUrl": f"/api/projects/{project_id}/preview/stills/",
     }

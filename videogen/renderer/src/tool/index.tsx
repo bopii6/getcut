@@ -3,22 +3,39 @@ import {createRoot} from 'react-dom/client';
 import {Player, type PlayerRef} from '@remotion/player';
 import {renderMediaOnWeb, renderStillOnWeb} from '@remotion/web-renderer';
 import {NiwoVideo, probeStore, type NiwoProps} from '../NiwoVideo';
-import {setWebMediaMode} from '../webmedia';
 import {C, btn, btnLine, sel, api, lnkAcc, Toggle} from './ui';
 import {Account, type AuthSt, type Me, type SheetName} from './account';
 
 // GetCut 成片台（单页全流程）：拖素材包 → 内容与配音确认 → 浏览器渲染合成
 // → 取走带声 mp4。云端只做写稿/配音/分镜等轻活；画面与混音全在本页完成，
 // 无录屏授权弹窗（web-renderer 走 WebCodecs）。
-setWebMediaMode(true);
 
 const qs = new URLSearchParams(location.search);
-const DEVICE = qs.get('device') || '网页渲染台';
+const DEVICE = qs.get('device') || '网页成片台';
 // 开发自查用：?frames=240 只渲前 240 帧（不改变正式行为）
 const FRAMES_LIMIT = Math.max(0, parseInt(qs.get('frames') || '0', 10) || 0);
 
 type Phase = 'drop' | 'importing' | 'config' | 'prepping' | 'ready'
   | 'rendering' | 'uploading' | 'done' | 'error';
+
+const FPS = 30;
+const COMP_W = 1080;
+const COMP_H = 1920;
+
+/**
+ * 剪映分轨草稿要出几张卡片层：优先用云端随 props 下发的清单（与
+ * draft_build.build_stills 同一份算法），老单子没这个字段时按同一公式兜底。
+ */
+const draftStillsOf = (props: NiwoProps) => {
+  if (props.draftStills?.length) return props.draftStills;
+  const total = props.durationInFrames;
+  return props.shots.map((s, i) => {
+    const end = Math.round((Number(s.endMs) / 1000) * FPS) - 2;
+    const start = Math.round((Number(s.startMs) / 1000) * FPS) + 1;
+    return {id: `shot_${String(i).padStart(3, '0')}`,
+            frame: Math.max(0, Math.min(total - 1, Math.max(start, end)))};
+  });
+};
 
 interface JobPack {
   job: string;
@@ -53,12 +70,26 @@ const Step: React.FC<{n: number; title: string; state: 'todo' | 'active' | 'done
     </div>
   );
 
+/**
+ * 剪映分轨草稿的图层：一张底板 + 每镜一张透明卡片 + 卡片文字几何。
+ * 成片与图层共用这一个 composition 描述，尺寸/帧率一旦对不上，卡片在剪映里就会错位。
+ */
+const compositionOf = (durationInFrames: number) => ({
+  id: 'main',
+  component: NiwoVideo as React.ComponentType<Record<string, unknown>>,
+  width: COMP_W,
+  height: COMP_H,
+  fps: FPS,
+  durationInFrames,
+});
+
 const App: React.FC = () => {
   const [phase, setPhase] = React.useState<Phase>('drop');
   const [me, setMe] = React.useState<Me | null>(null);
   const [authst, setAuthst] = React.useState<AuthSt>({smtp: false, dev_email: false, token_auth: false, locked: false});
   const [sheet, setSheet] = React.useState<SheetName>('');
   const [authNote, setAuthNote] = React.useState('');
+  const [brandOn, setBrandOn] = React.useState(false);
   const [toast, setToast] = React.useState('');
   const [err, setErr] = React.useState('');
   const [upPct, setUpPct] = React.useState(0);
@@ -78,6 +109,8 @@ const App: React.FC = () => {
   const [msg, setMsg] = React.useState('');
   const [finalUrl, setFinalUrl] = React.useState<string | null>(null);
   const [cloudOk, setCloudOk] = React.useState<boolean | null>(null);
+  const [layerMsg, setLayerMsg] = React.useState('');
+  const [layersOk, setLayersOk] = React.useState<boolean | null>(null);
   const playerRef = React.useRef<PlayerRef>(null);
   const abortRef = React.useRef<AbortController | null>(null);
   const packRef = React.useRef<JobPack | null>(null);
@@ -94,16 +127,24 @@ const App: React.FC = () => {
     setTimeout(() => setToast((t) => (t === m ? '' : t)), 3200);
   };
 
+  // 付费档：右上角那一格摆的是他自己的 Logo/文字（设了才出），没设就干净出片
+  const loadBrand = React.useCallback(() => api('/api/brand').then((d) => {
+    const b = d as {has_logo?: boolean; brand?: {watermark_text?: string}};
+    setBrandOn(!!(b.has_logo || b.brand?.watermark_text));
+  }).catch(() => setBrandOn(false)), []);
+
   // 登录成功后要立刻能拿到档位（水印、续传导入都读它），所以 ref 与 state 一起写
   const refreshMe = React.useCallback(() => api('/api/me')
     .then((d) => {
       meRef.current = d as unknown as Me;
       setMe(meRef.current);
+      if (meRef.current.tier !== 'free') void loadBrand();
+      else setBrandOn(false);
     })
     .catch(() => {
       meRef.current = null;
       setMe(null);
-    }), []);
+    }), [loadBrand]);
 
   const report = async (p: number, detail: string, requeue = false) => {
     const cur = packRef.current;
@@ -121,24 +162,27 @@ const App: React.FC = () => {
     }
   };
 
+  // 克隆完「我的声音」要重新拉一次音色目录
+  const loadVoices = React.useCallback(() => api('/api/voices').then((d) => {
+    const list = (d.voices as Voice[]) || [];
+    if (list.length) {
+      setVoices(list);
+      setCfg((c) => ({...c, voice: c.voice || String(d.default || list[0].id)}));
+    }
+  }).catch(() => {}), []);
+
   // ---- 目录：音色 + 曲库（进页面拉一次） ----
   React.useEffect(() => {
     refreshMe();
     api('/api/auth/status').then((d) => setAuthst(d as unknown as AuthSt)).catch(() => {});
-    api('/api/voices').then((d) => {
-      const list = (d.voices as Voice[]) || [];
-      if (list.length) {
-        setVoices(list);
-        setCfg((c) => ({...c, voice: c.voice || String(d.default || list[0].id)}));
-      }
-    }).catch(() => {});
+    void loadVoices();
     api('/api/music').then((d) => {
       const list = (Array.isArray(d) ? d : (d.music as typeof music)) || [];
       setMusic(list);
     }).catch(() => {});
   }, []);
 
-  // ---- 渲染台轮询：领任务（本页提交的或别的页提交的都走这里） ----
+  // ---- 成片台轮询：领任务（本页提交的或别的页提交的都走这里） ----
   React.useEffect(() => {
     let alive = true;
     (async () => {
@@ -252,7 +296,7 @@ const App: React.FC = () => {
     }
   };
 
-  // ---- 提交：/api/build → 盯云端备料（配音/分镜），渲染台领单后自动开渲 ----
+  // ---- 提交：/api/build → 盯云端备料（配音/分镜），成片台领单后自动开渲 ----
   const submit = async () => {
     if (!bundle) return;
     setErr('');
@@ -264,8 +308,8 @@ const App: React.FC = () => {
         body: JSON.stringify({project_id: projectId, bundle: bundle.name,
           voice: cfg.voice, bgm: cfg.bgm, sfx: cfg.sfx, sfxMode: cfg.sfx ? 'full' : 'off',
           subtitles: cfg.subtitles, sources: cfg.sources,
-          // 付费档才交无水印；免费档服务端也会强制带，这里只是不谎称去掉
-          watermark: !me || me.tier === 'free',
+          // 免费档带 GetCut 水印（服务端也强制）；付费档设了品牌才出那一格
+          watermark: !me || me.tier === 'free' || brandOn,
           useLlm: true})});
       const jid = String(r.job || '');
       if (!jid) throw new Error(String(r.error || '启动失败'));
@@ -303,6 +347,41 @@ const App: React.FC = () => {
     }
   };
 
+  // ---- 剪映分轨图层：成片交回后接着在本页出（服务器已无 Chrome） ----
+  const exportDraftLayers = async (cur: JobPack) => {
+    const props = cur.props;
+    const stills = draftStillsOf(props);
+    const last = Math.max(0, props.durationInFrames - 1);
+    const post = async (name: string, body: Blob | string, type: string) => {
+      const r = await fetch(`/api/agent/job/${cur.job}/layer?name=${encodeURIComponent(name)}&device=${encodeURIComponent(DEVICE)}`,
+        {method: 'POST', headers: {'content-type': type}, body});
+      if (!r.ok) throw new Error(`${name} 交回失败（HTTP ${r.status}）`);
+    };
+    const still = async (extra: Record<string, unknown>, frame: number) => {
+      const res = await renderStillOnWeb({
+        composition: compositionOf(props.durationInFrames),
+        inputProps: {...(props as unknown as Record<string, unknown>), ...extra},
+        frame: Math.max(0, Math.min(last, frame)),
+        delayRenderTimeoutInMilliseconds: 180_000,
+        signal: abortRef.current?.signal ?? null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+      return res.blob({format: 'png'});
+    };
+    setLayerMsg('正在出剪映底板…');
+    await post('base.png', await still({exportMode: 'base'}, stills[0]?.frame ?? 0),
+               'application/octet-stream');
+    for (let i = 0; i < stills.length; i++) {
+      setLayerMsg(`正在出剪映卡片层 ${i + 1}/${stills.length}`);
+      delete probeStore[stills[i].id];
+      const png = await still({exportMode: 'card', probeTag: stills[i].id}, stills[i].frame);
+      await post(`cards/${stills[i].id}.png`, png, 'application/octet-stream');
+    }
+    const texts: Record<string, unknown[]> = {};
+    for (const s of stills) if (probeStore[s.id]?.length) texts[s.id] = probeStore[s.id];
+    await post('texts.json', JSON.stringify(texts), 'application/json');
+  };
+
   // ---- 渲染 + 交回 ----
   const startRender = async () => {
     const cur = packRef.current;
@@ -316,14 +395,7 @@ const App: React.FC = () => {
     let lastReport = 0;
     try {
       const {getBlob} = await renderMediaOnWeb({
-        composition: {
-          id: 'main',
-          component: NiwoVideo as React.ComponentType<Record<string, unknown>>,
-          width: 1080,
-          height: 1920,
-          fps: 30,
-          durationInFrames: total,
-        },
+        composition: compositionOf(total),
         inputProps: cur.props as unknown as Record<string, unknown>,
         muted: false,
         videoCodec: 'h264',
@@ -366,6 +438,19 @@ const App: React.FC = () => {
       }
       setPhase('done');
       setPct(100);
+      // 图层出图排在成片之后：慢一点、失败都不要紧，大不了草稿退回整条切片
+      if (ok) {
+        setLayersOk(null);
+        try {
+          await exportDraftLayers(cur);
+          setLayersOk(true);
+        } catch (e) {
+          setLayersOk(false);
+          console.warn('GetCut 剪映图层出图失败', e);
+        } finally {
+          setLayerMsg('');
+        }
+      }
     } catch (e) {
       setPhase('error');
       setErr(String((e as Error).message || e).slice(0, 200));
@@ -382,6 +467,8 @@ const App: React.FC = () => {
     setJobId('');
     setFinalUrl(null);
     setCloudOk(null);
+    setLayerMsg('');
+    setLayersOk(null);
     setPct(0);
     setErr('');
     setPhase('drop');
@@ -463,6 +550,7 @@ const App: React.FC = () => {
                    refresh={refreshMe} toast={say}
                    onMe={(m) => { meRef.current = m; setMe(m); }}
                    authNote={authNote}
+                   onBrandChanged={() => { void loadVoices(); void loadBrand(); }}
                    onSignedIn={() => {
                      setAuthNote('');
                      const f = pendingZip.current;
@@ -577,17 +665,28 @@ const App: React.FC = () => {
             <Step n={4} title="取走成片" state="done" open>
               <div style={{display: 'flex', flexDirection: 'column', gap: 10}}>
                 <a style={btn} href={finalUrl} download={fileName}>下载 MP4 成片</a>
-                <button style={{...btnLine, alignSelf: 'flex-start', opacity: jyBusy ? 0.6 : 1}}
-                        disabled={jyBusy} onClick={() => void jianying()}>
+                <button style={{...btnLine, alignSelf: 'flex-start', opacity: (jyBusy || layerMsg) ? 0.6 : 1}}
+                        disabled={jyBusy || !!layerMsg} onClick={() => void jianying()}>
                   导入剪映
                 </button>
+                {layerMsg ? (
+                  <div style={{fontSize: 12.5, color: C.soft, lineHeight: 1.7}}>{layerMsg}</div>
+                ) : null}
+                {layersOk !== null && !layerMsg ? (
+                  <div style={{fontSize: 12.5, color: layersOk ? C.ok : C.soft, lineHeight: 1.7}}>
+                    {layersOk ? '剪映分轨图层已备好：底板、卡片、可改文字各一条轨'
+                               : '分轨图层没出全：仍可导入剪映，但卡片只能整条挪'}
+                  </div>
+                ) : null}
                 {jy ? <div style={{fontSize: 12.5, color: C.soft, lineHeight: 1.7}}>{jy}</div> : null}
                 <div style={{fontSize: 12.5, color: C.soft}}>
-                  {me && me.tier !== 'free' ? '本条已按你的档位去掉 GetCut 水印'
-                    : '免费版成片带 GetCut 水印 · '}
-                  {me && me.tier === 'free' ? (
+                  {!me || me.tier === 'free' ? '免费版成片带 GetCut 水印 · '
+                    : brandOn ? '右上角已带上你的品牌角标 · ' : '本条按你的档位干净出片（无水印）· '}
+                  {!me || me.tier === 'free' ? (
                     <button style={lnkAcc} onClick={() => setSheet('pricing')}>看权益</button>
-                  ) : null}
+                  ) : (
+                    <button style={lnkAcc} onClick={() => setSheet('brand')}>品牌套装</button>
+                  )}
                 </div>
                 <div style={{fontSize: 12.5, color: cloudOk ? C.ok : C.soft}}>
                   {cloudOk ? '已同步云端工作台 · ' : '云端交回失败，不影响本机下载 · '}

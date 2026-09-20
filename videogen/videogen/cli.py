@@ -19,7 +19,7 @@ from pathlib import Path
 from . import brand as brand_kit
 from . import compose, llm, remotion_render, tts, verify
 from .config import DEFAULT_TEMPLATE, TEMPLATE_ALIAS, TEMPLATES
-from .config import OUTPUTS as _OUTPUTS
+from .config import OUTPUTS
 from .planner import (align_timeline, build_plan, build_plan_clone, build_plan_llm,
                       build_plan_macro, clause_units, split_clauses, sentence_spans,
                       unit_spans, plan_to_dict, plan_from_dict)
@@ -271,15 +271,6 @@ def build_prep(bundle_dir: Path, work_dir: Path | None = None,
                 json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
         except Exception:
             pass
-        # 分镜剧照：先把几张关键画面拍出来，等待期间用户能看到片子长什么样
-        if job_id:
-            report("props", 32, "正在拍分镜剧照")
-            try:
-                stills = remotion_render.render_stills(props, _OUTPUTS, job_id)
-                if stills:
-                    report("props", 38, f"分镜剧照 {len(stills)} 张已就绪")
-            except Exception:
-                pass
 
     prep = {
         "work_dir": str(work),
@@ -336,7 +327,7 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
         raise JobCancelled("任务已被停止")
 
     # ---- 混音备料：先于渲染算好 ----
-    # 新版浏览器渲染台领任务时要拿完整混音计划（配音/BGM/音效事件）自行合成，
+    # 新版浏览器成片台领任务时要拿完整混音计划（配音/BGM/音效事件）自行合成，
     # 不能再等渲染完之后；云端混音/封装复用同一组变量，行为不变。
     # 阶段间隙的取消哨：混音/封装是阻塞的 ffmpeg 子进程，中途杀不了，
     # 所以只在它们开跑前拦——已开始的最后一步会跑完（几秒），不再往下走。
@@ -364,7 +355,7 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
 
     # 画面渲染只剩一条路：客户的浏览器成片台（web-renderer 逐帧合成，
     # visual_fn 由 server._agent_visual 提供挂单/等件代理）。
-    # 云端 Remotion CLI 渲染与 Node 渲染台已于 2026-09-20 双双退役。
+    # 云端 Remotion CLI 渲染与 Node 成片台已于 2026-09-20 双双退役。
     if visual_fn is None:
         raise RuntimeError("缺少 visual_fn：画面渲染必须由浏览器成片台承接")
     report("render", 0, "等待浏览器成片台领取")
@@ -381,7 +372,7 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     if _cancelled():
         raise JobCancelled("任务已被停止")
     if visual_fn is not None and getattr(visual_fn, "delivered_final", False):
-        # 浏览器渲染台已把混好音的完整成片整体交回：云端原样收下，
+        # 浏览器成片台已把混好音的完整成片整体交回：云端原样收下，
         # 不再混音/封装（重编码会把音轨丢掉，裁剪对成片也无意义）
         if Path(visual).resolve() != out_mp4.resolve():
             shutil.move(str(visual), str(out_mp4))

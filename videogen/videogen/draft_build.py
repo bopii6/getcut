@@ -146,23 +146,49 @@ def _probe_ms(path: Path) -> float:
         return 0.0
 
 
-def chrome_frames(shots: list[dict], fps: int, total_frames: int) -> list[dict]:
-    """每镜取「该镜最后一帧」渲染包装层（入场动画此时已完成）。"""
-    out = []
-    for i, s in enumerate(shots):
-        end = int(round(float(s["end_ms"]) / 1000.0 * fps)) - 2
-        start = int(round(float(s["start_ms"]) / 1000.0 * fps)) + 1
-        out.append({"id": f"shot_{i:03d}", "frame": max(0, min(total_frames - 1, max(start, end)))})
-    return out
+def layers_dir_for(video: Path) -> Path:
+    """成片台交回剪映分轨图层的目录：挨着成片放，交没到手一眼就看得见。"""
+    return Path(video).with_suffix(".layers")
 
 
-def build_draft_assets(manifest: dict, folder: Path, props: dict,
-                       progress=None) -> dict:
+def import_layers(layers_dir: Path | None, folder: Path, ids: list[str]) -> dict:
+    """把成片台在浏览器里渲好的分轨图层搬进草稿目录，返回 {镜头id: 文字几何}。
+
+    少任何一张就抛错：宁可让调用方退回「整条成片一条轨」的粗草稿，也不能给剪映
+    一份缺层的工程——那种工程打开来看是坏的，比不给更糟。
+    """
+    src = Path(layers_dir) if layers_dir else None
+    if not src or not src.is_dir():
+        raise RuntimeError("成片台没交回分轨图层：渲完请留在成片台页面，等它把图层出完")
+
+    def need(rel: str) -> Path:
+        p = src / rel
+        if not p.is_file() or p.stat().st_size < 1024:
+            raise RuntimeError(f"分轨图层不完整，缺 {rel}")
+        return p
+
+    shutil.copyfile(need("base.png"), folder / "base.png")
+    (folder / "cards").mkdir(parents=True, exist_ok=True)
+    for i in ids:
+        f = need(f"cards/{i}.png")
+        shutil.copyfile(f, folder / "cards" / f.name)
+    tp = need("texts.json")
+    try:
+        raw = json.loads(tp.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001 - 坏 JSON 同样按缺层处理
+        raise RuntimeError(f"分轨图层的文字几何读不出来：{exc}") from exc
+    if not isinstance(raw, dict):
+        raise RuntimeError("分轨图层的文字几何格式不对")
+    return {i: (raw.get(i) or []) for i in ids}
+
+
+def build_draft_assets(manifest: dict, folder: Path, progress=None,
+                       layers_dir: Path | None = None) -> dict:
     """产出草稿资产 + draft_plan.json，返回 plan 字典。
 
     失败会抛异常，由调用方兜底（退回旧的「整条成片切片」草稿）。
+    layers_dir=成片台交回的剪映图层目录，缺它就没有分轨可言。
     """
-    from . import remotion_render
 
     def report(pct: int, detail: str = "") -> None:
         if progress:
@@ -184,7 +210,6 @@ def build_draft_assets(manifest: dict, folder: Path, props: dict,
     rect = media_rect(fmt)
     fps = int(manifest.get("fps") or 30)
     duration_ms = float(manifest.get("duration_ms") or 0.0)
-    total_frames = max(1, int(round(duration_ms / 1000.0 * fps)))
 
     if any((s.get("overlay") or {}).get("variant") in CLONE_VARIANTS for s in shots):
         raise RuntimeError("clone 版面暂不支持分轨草稿")
@@ -205,20 +230,11 @@ def build_draft_assets(manifest: dict, folder: Path, props: dict,
             entry["media_kind"] = "image" if _is_image(Path(asset)) else "video"
             entry["media_duration_ms"] = _probe_ms(folder / name)
         plan_shots.append(entry)
-    report(80, "正在渲染底板与卡片层")
+    report(80, "正在取回浏览器交回的剪映图层")
 
-    # 2) 底板层（一张）+ 卡片层（每镜一张）+ 文字几何
-    frames = chrome_frames(shots, fps, total_frames)
-    base_png = folder / "base.png"
-    texts_json = folder / "texts.json"
-    ok = remotion_render.render_draft_layers(
-        props, frames, base_png, folder / "cards", texts_json)
-    if not ok:
-        raise RuntimeError("底板/卡片层渲染不完整")
-    try:
-        raw_texts = json.loads(texts_json.read_text(encoding="utf-8"))
-    except Exception:
-        raw_texts = {}
+    # 2) 底板层（一张）+ 卡片层（每镜一张）+ 文字几何：成片台在浏览器里渲好交回的
+    raw_texts = import_layers(layers_dir, folder,
+                              [f"shot_{i:03d}" for i in range(len(plan_shots))])
     for i, entry in enumerate(plan_shots):
         entry.pop("chrome", None)
         entry["texts"] = raw_texts.get(f"shot_{i:03d}") or []

@@ -1,20 +1,19 @@
-"""Remotion renderer bridge: props.json exporter + visual-track renderer.
+"""渲染包出口：把导演分镜翻成 props.json，并登记成片台要下载的素材。
 
-Architecture parity with niwo: Python produces structured props (script timing,
-shots, designed-overlay copy), Remotion renders the editorial TSX template.
+画面渲染不在这里：props 交给客户浏览器里的成片台（@remotion/web-renderer +
+renderer/src/tool），由它渲帧、编码、混音出带声 mp4。本模块只产 props 与
+素材清单——服务器上不装 Node，也不跑 Chrome。
 """
 from __future__ import annotations
 import json
 import os
 import re
 import shutil
-import subprocess
-import threading
 import time
 from pathlib import Path
 
 from .planner import Plan
-from .schemas import Content, JobCancelled
+from .schemas import Content
 
 RENDERER = Path(__file__).resolve().parent.parent / "renderer"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -265,6 +264,16 @@ def build_props(bundle: Path, plan: Plan, content: Content,
         props_out["channelName"] = "@宏观棱镜"
     if series and series.get("badge"):
         props_out["series"] = {"badge": str(series["badge"])[:24]}
+    # 剪映分轨草稿的卡片层取帧清单：一次算清随 props 下发，成片台照它出图。
+    # 入场动画走完才是该镜的定妆帧，所以取「镜头末尾退两帧」。
+    _dur = props_out["durationInFrames"]
+    props_out["draftStills"] = [
+        {"id": f"shot_{i:03d}",
+         "frame": max(0, min(_dur - 1,
+                             max(round(s["startMs"] / 1000 * 30) + 1,
+                                 round(s["endMs"] / 1000 * 30) - 2)))}
+        for i, s in enumerate(shots)
+    ]
     props_out = {k: v for k, v in props_out.items() if v is not None}
     apply_brand(props_out, bundle, brand)
     # 清理本素材包上一轮残留的媒体文件（避免磁盘无界增长）。
@@ -323,115 +332,6 @@ def apply_brand(props: dict, bundle: Path, brand: dict | None) -> None:
         spec["watermarkText"] = str(brand["watermark_text"])
     if spec:
         props["brand"] = spec
-
-
-def render_stills(props: dict, out_dir: Path, prefix: str,
-                  ratios=(0.06, 0.30, 0.55, 0.82), quality: int = 82) -> list[Path]:
-    """先拍几张关键剧照（分镜预览）：让等待的人看到片子正在长什么样。
-
-    每张 still 由 Remotion 单独渲染，单张约 1–3 秒；失败不影响正式渲染。
-    """
-    props_path = RENDERER / f"props_still_{_safe_key(prefix, 'still')}.json"
-    props_path.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
-    cli_js = RENDERER / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"
-    node = shutil.which("node")
-    if not cli_js.is_file() or not node:
-        return []
-    total = int(props.get("durationInFrames") or 0)
-    if total <= 1:
-        return []
-    out_dir.mkdir(parents=True, exist_ok=True)
-    made: list[Path] = []
-    props_flag = f"--props={props_path.name}"
-    for i, ratio in enumerate(ratios, start=1):
-        frame = max(0, min(total - 1, int(total * ratio)))
-        out = out_dir / f"{prefix}-still-{i}.jpg"
-        cmd = [node, str(cli_js), "still", "main", str(out),
-               "--frame", str(frame), props_flag,
-               "--image-format=jpeg", "--jpeg-quality", str(quality), "--log=error"]
-        try:
-            p = subprocess.run(cmd, cwd=str(RENDERER), capture_output=True,
-                               text=True, timeout=120)
-            if p.returncode == 0 and out.is_file() and out.stat().st_size > 0:
-                made.append(out)
-        except Exception:
-            pass
-    try:
-        props_path.unlink()
-    except OSError:
-        pass
-    return made
-
-
-# 渲染器共享状态（props.json / visual_out.mp4）互斥；预览出图与正式渲染共用
-_STILL_LOCK = threading.Lock()
-
-
-def render_still_frame(props: dict, out_path: Path, frame: int,
-                       quality: int = 80) -> bool:
-    """渲染 props 的第 frame 帧（分镜预览单帧）；成功返回 True。
-
-    用独立的 props_still.json：正式渲染的 props.json 不能被并发改写。
-    输出必须是绝对路径——子进程 cwd 是 renderer/，相对路径会写错位置。
-    """
-    cli_js = RENDERER / "node_modules" / "@remotion" / "cli" / "remotion-cli.js"
-    node = shutil.which("node")
-    if not cli_js.is_file() or not node:
-        return False
-    total = int(props.get("durationInFrames") or 0)
-    if total <= 1:
-        return False
-    out_path = Path(out_path).resolve()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with _STILL_LOCK:
-        props_still = RENDERER / "props_still.json"
-        props_still.write_text(json.dumps(props, ensure_ascii=False, indent=1), encoding="utf-8")
-        cmd = [node, str(cli_js), "still", "main", str(out_path),
-               "--frame", str(max(0, min(total - 1, frame))),
-               "--props=props_still.json",
-               "--image-format=jpeg", "--jpeg-quality", str(quality), "--log=error"]
-        try:
-            p = subprocess.run(cmd, cwd=str(RENDERER), capture_output=True,
-                               text=True, timeout=120)
-            return p.returncode == 0 and out_path.is_file() and out_path.stat().st_size > 0
-        except Exception:
-            return False
-
-
-def render_draft_layers(props: dict, frames: list[dict], base_out: Path, card_dir: Path,
-                        texts_out: Path, timeout: int = 2400) -> bool:
-    """剪映分轨草稿的两层素材：底板 PNG（一张）+ 每镜卡片 PNG + 文字几何 JSON。
-
-    一次打包、逐镜头渲染；返回是否全部产出。props 会按 exportMode 覆盖。
-    """
-    script = RENDERER / "scripts" / "draft_layers.mjs"
-    node = shutil.which("node")
-    if not script.is_file() or not node:
-        return False
-    # 输出路径必须转绝对：node 脚本的 cwd 是 renderer/，相对路径会写到别处，
-    # 于是这里检查"文件在不在"永远为假 → 好端端的分轨草稿被判定成"渲染不完整"而退回单轨。
-    props_path = (RENDERER / "props_draft.json").resolve()
-    frames_path = (RENDERER / "draft_frames.json").resolve()
-    props_path.write_text(json.dumps(props, ensure_ascii=False), encoding="utf-8")
-    frames_path.write_text(json.dumps(frames, ensure_ascii=False), encoding="utf-8")
-    base_out = Path(base_out).resolve()
-    base_out.parent.mkdir(parents=True, exist_ok=True)
-    card_dir = Path(card_dir).resolve()
-    card_dir.mkdir(parents=True, exist_ok=True)
-    texts_out = Path(texts_out).resolve()
-    cmd = [node, str(script), str(props_path), str(base_out), str(card_dir),
-           str(frames_path), str(texts_out)]
-    log_path = RENDERER / "draft_stills.log"
-    try:
-        with open(log_path, "w", encoding="utf-8", errors="replace") as logf:
-            subprocess.run(cmd, cwd=str(RENDERER), stdout=logf,
-                           stderr=subprocess.STDOUT, timeout=timeout)
-    except Exception:
-        pass
-    ok_base = base_out.is_file() and base_out.stat().st_size > 0
-    made = sum(1 for f in frames if (card_dir / f"{f['id']}.png").is_file())
-    return ok_base and made == len(frames) and texts_out.is_file()
-
 
 
 # ---------- 浏览器成片台：渲染包登记 ----------

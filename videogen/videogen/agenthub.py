@@ -1,19 +1,23 @@
-"""本机渲染台（Agent）调度中枢：云端把「Remotion 出画面」交给用户自己的电脑。
+"""浏览器成片台（Agent）调度中枢：云端把「出画面」整个交给用户自己的电脑。
 
-产品决策（2026-09-20 拍板）：**渲染全部在用户本机跑，云端不做渲染备选**。
+产品决策（2026-09-20 拍板）：**渲染只在客户的浏览器里跑，云端与服务器本机都不做渲染**。
 用户在浏览器打开成片台页面（renderer/src/tool），它长轮询这里领任务、下载
 渲染包（props+素材+音轨）、用 WebCodecs 逐帧渲染并混音、把带声成片传回来。云端灶台
 线程在 visual_fn 里阻塞等结果——对 build_render 来说画面渲染仍是一次普通
-函数调用，混音/封装/校验一切照旧。
+函数调用。
+
+成片交回之后，成片台还会接着用同一个页面渲出剪映分轨草稿要的那几张 PNG（见
+layer_target）：那时任务记录已经摘牌，所以交片时先留一张认领凭据。
 
 唯一的自动救济是「失联收回」：任务被某台成片台领走后心跳停了（渲染中被
 杀、断网、合盖），超过 _STALL_SECONDS 没有任何进度就收回来重新排队，最多
 _MAX_RECLAIMS 次，超过按失败处理——别让用户对着一个永远转圈的任务干等。
-渲染台一直不在线则任务停在「待领取」（这就是产品形态：你的片子用你的电脑
-渲，渲染台没开机就等你开机）。
+成片台一直不在线则任务停在「待领取」（这就是产品形态：你的片子用你的电脑
+渲，成片台没开机就等你开机）。
 """
 from __future__ import annotations
 
+import re
 import threading
 import time
 from pathlib import Path
@@ -21,13 +25,18 @@ from pathlib import Path
 from .schemas import JobCancelled
 
 # 被领取后 10 分钟没有任何进度上报 → 判失联收回（成片台渲染约 1-5 分钟，
-# 正常渲染时进度每隔几秒就来，10 分钟静默必然是渲染台没了）
+# 正常渲染时进度每隔几秒就来，10 分钟静默必然是成片台没了）
 _STALL_SECONDS = 600
 _MAX_RECLAIMS = 2            # 收回 2 次还失联就按失败处理（第三次不再重试）
-_WAIT_PATIENCE = 24 * 3600   # 待领取最长等 24 小时（渲染台可能就是没开机）
+_WAIT_PATIENCE = 24 * 3600   # 待领取最长等 24 小时（成片台可能就是没开机）
+
+# 分轨图层的文件名是成片台报上来的，只认这三种写法（挡住一切路径拼接花样）
+LAYER_NAME = re.compile(r"^(?:base\.png|cards/shot_[0-9]{3}\.png|texts\.json)$")
+_LAYER_TTL = 3600            # 交片后 1 小时内还允许补图层，过期即弃
 
 _JOBS: dict[str, dict] = {}
 _DEVICES: dict[str, dict] = {}       # device -> {email-ish owners, last_seen, job}
+_LAYER_SLOTS: dict[str, dict] = {}   # jid -> {device, dir, t}：摘牌后的图层认领凭据
 _CV = threading.Condition()
 on_claim = None                      # server 注入：fn(job_id, device)，更新任务卡
 
@@ -38,12 +47,13 @@ def _jid(job_id: str) -> str:
 
 def register(job_id: str, owner: str | None, props: dict,
              files: dict[str, str], out_path: str,
-             audio: tuple[dict, dict[str, str]] | None = None) -> None:
+             audio: tuple[dict, dict[str, str]] | None = None,
+             layers_dir: str | None = None) -> None:
     """渲染灶台把一个待渲染任务挂上来：owner=归属邮箱（None=开放模式/无主）。
 
     audio=(混音计划 meta, {音频相对路径: 本地文件})：只有声明支持「浏览器内
-    合成」的渲染台（poll 带 x-agent-final: 1）才会收到这部分——Node 渲染台
-    与旧导出页拿到的 props 不含 audio 字段，行为与从前完全一致。
+    合成」的成片台（poll 带 x-agent-final: 1）才会收到这部分。
+    layers_dir=剪映分轨图层该落到哪个目录（成片台交回成片之后陆续写进来）。
     """
     with _CV:
         all_files = dict(files)
@@ -53,7 +63,7 @@ def register(job_id: str, owner: str | None, props: dict,
             "owner": owner, "device": None, "status": "waiting",
             "pct": 0, "detail": "等待成片台领取", "props": props,
             "files": all_files, "out_path": out_path,
-            "audio": audio,
+            "audio": audio, "layers_dir": layers_dir,
             "cancel": threading.Event(), "reclaims": 0,
             "t_reg": time.time(), "t_progress": time.time(), "error": None,
         }
@@ -78,7 +88,7 @@ def _claim_locked(owners: list, device: str, want_audio: bool = False) -> dict |
         if j["status"] != "waiting" or j["owner"] not in owners:
             continue
         j.update(status="rendering", device=device, pct=0,
-                 detail="成片台已领取，本机浏览器渲染中", t_progress=now)
+                 detail="成片台已领取，正在本机生成", t_progress=now)
         _DEVICES[device] = {"last_seen": now, "job": jid}
         if on_claim is not None:
             try:
@@ -108,7 +118,7 @@ def wait_for_job(owners: list, device: str, timeout: float = 25.0,
 
 
 def file_path(job_id: str, rel: str) -> Path | None:
-    """渲染台下载渲染包里的一个文件：只放行挂单时登记过的相对路径。"""
+    """成片台下载渲染包里的一个文件：只放行挂单时登记过的相对路径。"""
     with _CV:
         j = _JOBS.get(_jid(job_id))
         if not j:
@@ -198,10 +208,37 @@ def deliver(job_id: str, device: str, tmp: Path, final: bool = False) -> bool:
         j["status"] = "uploaded"
         j["delivered_final"] = bool(final)
         j["pct"] = 100
-        j["detail"] = ("本机渲染合成完成，成片已交回" if final
-                       else "本机渲染完成，正在合成音轨")
+        j["detail"] = ("成片台渲染合成完成，成片已交回" if final
+                       else "成片台渲染完成，正在合成音轨")
+        if j.get("layers_dir"):
+            _prune_layers(time.time())
+            _LAYER_SLOTS[_jid(job_id)] = {"device": device, "dir": j["layers_dir"],
+                                          "t": time.time()}
         _CV.notify_all()
     return True
+
+
+def _prune_layers(now: float) -> None:
+    for k in [k for k, v in _LAYER_SLOTS.items() if now - v["t"] > _LAYER_TTL]:
+        _LAYER_SLOTS.pop(k, None)
+
+
+def layer_target(job_id: str, device: str, name: str) -> Path | None:
+    """剪映分轨图层（底板/卡片 PNG、文字几何 JSON）的落盘路径。
+
+    这些是成片交回**之后**成片台才陆续渲出来的，那时任务记录已经摘牌，
+    所以认的是 deliver() 留下的那张凭据：交片的设备 + 挂单时指定的目录。
+    """
+    if not LAYER_NAME.match(name):
+        return None
+    with _CV:
+        _prune_layers(time.time())
+        rec = _LAYER_SLOTS.get(_jid(job_id))
+        if not rec or rec["device"] != device:
+            return None
+        root = Path(rec["dir"])
+    (root / Path(name).parent).mkdir(parents=True, exist_ok=True)
+    return root / name
 
 
 def is_final_delivered(job_id: str) -> bool:
@@ -212,7 +249,7 @@ def is_final_delivered(job_id: str) -> bool:
 
 
 def wait_result(job_id: str, progress=None, cancel_check=None) -> Path:
-    """云端灶台在此阻塞：等渲染台交回画面轨，中途桥接进度/取消/失联收回。"""
+    """云端灶台在此阻塞：等成片台交回画面轨，中途桥接进度/取消/失联收回。"""
     deadline = time.time() + _WAIT_PATIENCE
     last = (-1, None)
     while True:
@@ -230,11 +267,11 @@ def wait_result(job_id: str, progress=None, cancel_check=None) -> Path:
             if j["status"] == "uploaded":
                 return Path(j["out_path"])
             if j["status"] == "error":
-                raise RuntimeError(str(j["error"] or "渲染台渲染失败")[:4000])
+                raise RuntimeError(str(j["error"] or "成片台渲染失败")[:4000])
             now = time.time()
             if (j["status"] == "rendering"
                     and now - j["t_progress"] > _STALL_SECONDS):
-                # 渲染台失联（被杀/断网/合盖）：收回来重新排队，别的渲染台
+                # 成片台失联（被杀/断网/合盖）：收回来重新排队，别的成片台
                 # （或它自己回来）可以再领
                 j["reclaims"] += 1
                 if j["reclaims"] > _MAX_RECLAIMS:

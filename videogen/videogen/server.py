@@ -59,7 +59,7 @@ REG = ROOT / "registry.json"
 _LOCK = threading.RLock()
 # 双通道流水线：
 #   prep 通道 —— 配音/分镜/版式（等外部 API 为主），多路并行，不占渲染力
-#   渲染通道 —— 画面渲染/混音（吃 CPU），同时最多 _RENDER_CONCURRENCY 路
+#   渲染通道 —— 挂单等成片台交回 + ffmpeg 混音封装；画面渲染不在这台机器上
 # 渲染中间产物（props_*.json / visual_*.mp4）已按任务隔离，多路互不覆盖。
 _PREP_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_PREP_CONCURRENCY", "2")))
 _RENDER_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_CONCURRENCY", "1")))
@@ -70,7 +70,7 @@ _PREP_CV = threading.Condition(_LOCK)
 _RENDER_CV = threading.Condition(_LOCK)
 # 灶台之外的两条低优先后台通道（都限流，防影子任务偷走下一批人的渲染力）：
 #   画面校验 —— 抽帧 + 等外部视觉 API，成片交付后才跑，不占灶台名额
-#   草稿备料 —— 剪映草稿是一次额外的 Remotion 渲染，默认只留 1 路细水长流
+#   草稿备料 —— 剪映草稿要切每镜素材与逐句配音（一串 ffmpeg），默认只留 1 路细水长流
 _VERIFY_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_VERIFY_CONCURRENCY", "2")))
 _DRAFT_CONCURRENCY = max(1, int(os.environ.get("VIDEOGEN_DRAFT_CONCURRENCY", "1")))
 _VERIFY_SEM = threading.Semaphore(_VERIFY_CONCURRENCY)
@@ -1315,14 +1315,6 @@ def preview_shots(pid: str, body: dict, request: Request):
     return preview.build_preview_payload(pid, {"bundle": bundle})
 
 
-@app.get("/api/projects/{pid}/preview/stills/{name}")
-def preview_still(pid: str, name: str):
-    f = (preview.preview_dir(pid) / "stills" / name).resolve()
-    if not f.is_file() or preview.preview_dir(pid).resolve() not in f.parents:
-        return JSONResponse({"error": "not found"}, status_code=404)
-    return FileResponse(f, media_type="image/jpeg")
-
-
 @app.post("/api/projects/{pid}/preview/invalidate")
 def preview_invalidate(pid: str, body: dict, request: Request):
     """配置/素材变更后丢弃预演数据。"""
@@ -1993,9 +1985,6 @@ def job_status(job_id: str, request: Request):
     t0 = out.get("t0")
     # 跑完/失败后冻结耗时，否则"已用"会一直涨（回来再看变成几十小时）
     out["elapsed"] = int((out.get("t_end") or time.time()) - t0) if t0 else None
-    # 分镜剧照（渲染开始前先拍好，渲染中陆续可见）
-    stills = sorted(OUTPUTS.glob(f"{job_id}-still-*.jpg")) if OUTPUTS.is_dir() else []
-    out["stills"] = [f"/still/{p.name}" for p in stills]
     return out
 
 
@@ -2029,7 +2018,7 @@ def cancel_job(job_id: str, request: Request):
 # ---------- 浏览器成片台（Agent 协议）接口 ----------
 # 成片台页面轮询这组接口领任务/下载渲染包/上报进度/交回带声成片。
 # 身份三种：登录签发的设备令牌（x-agent-token，90 天）、主钥匙（x-auth-token，
-# 调试/管理）、开放模式（本机自用）。渲染台只领自己的任务——素材是用户自己
+# 调试/管理）、开放模式（本机自用）。成片台只领自己的任务——素材是用户自己
 # 的，不能串门到别人的电脑上。
 
 def _agent_identity(request: Request) -> str | None:
@@ -2064,7 +2053,7 @@ def _agent_device(request: Request, fallback: str = "device") -> str:
 
 @app.post("/api/agent/login")
 def agent_login(body: dict):
-    """成片台/渲染台登录：邮箱密码换 90 天设备令牌，存本机以后免输。"""
+    """成片台登录：邮箱密码换 90 天设备令牌，存本机以后免输。"""
     email = str(body.get("email") or "").strip().lower()
     if not auth.verify_login(email, str(body.get("password") or "")):
         return JSONResponse({"error": "邮箱或密码不对"}, status_code=401)
@@ -2076,7 +2065,7 @@ def agent_poll(request: Request, device: str = "", wait: int = 1):
     """长轮询领任务（服务器最多挂 25 秒）：领到就返回渲染包描述。"""
     ident = _agent_identity(request)
     if ident is None:
-        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+        return JSONResponse({"error": "成片台未登录"}, status_code=401)
     dev = _agent_device(request, device)
     # x-agent-final: 1 = 浏览器成片台：能自己混音出完整 mp4，
     # 领任务时把音轨（配音/BGM/音效+混音计划）一并下发
@@ -2099,7 +2088,7 @@ def agent_poll(request: Request, device: str = "", wait: int = 1):
 def agent_job_file(job_id: str, request: Request, path: str = ""):
     """下载渲染包里的一个文件（只放行挂单时登记过的相对路径）。"""
     if _agent_identity(request) is None:
-        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+        return JSONResponse({"error": "成片台未登录"}, status_code=401)
     p = agenthub.file_path(job_id, path)
     if p is None:
         return JSONResponse({"error": "文件不存在"}, status_code=404)
@@ -2110,7 +2099,7 @@ def agent_job_file(job_id: str, request: Request, path: str = ""):
 def agent_job_progress(job_id: str, body: dict, request: Request, device: str = ""):
     """成片台上报进度；响应里带 cancel 旗子，让成片台知道该收手了。"""
     if _agent_identity(request) is None:
-        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+        return JSONResponse({"error": "成片台未登录"}, status_code=401)
     return agenthub.progress(job_id, _agent_device(request, device),
                              int(body.get("pct") or 0), body.get("detail"),
                              failed=body.get("status") == "error",
@@ -2121,7 +2110,7 @@ def agent_job_progress(job_id: str, body: dict, request: Request, device: str = 
 async def agent_job_visual(job_id: str, request: Request, device: str = ""):
     """成片台交回产物（默认 final=1 带声成片）：落临时名，原子转正唤醒灶台。"""
     if _agent_identity(request) is None:
-        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+        return JSONResponse({"error": "成片台未登录"}, status_code=401)
     dev = _agent_device(request, device)
     tmp = agenthub.upload_target(job_id, dev)
     if tmp is None:
@@ -2143,10 +2132,33 @@ async def agent_job_visual(job_id: str, request: Request, device: str = ""):
     return {"ok": True}
 
 
+@app.post("/api/agent/job/{job_id}/layer")
+async def agent_job_layer(job_id: str, request: Request, device: str = "",
+                          name: str = ""):
+    """成片台交回剪映分轨图层：base.png / cards/shot_00N.png / texts.json。
+
+    文件名过 agenthub 的白名单再拼路径（这里不接受任何客户端给的目录），
+    身份认的是交片那台设备留下的凭据——图层是成片之后才陆续到的，
+    任务记录那时已经摘牌。
+    """
+    if _agent_identity(request) is None:
+        return JSONResponse({"error": "成片台未登录"}, status_code=401)
+    dst = agenthub.layer_target(job_id, _agent_device(request, device), name)
+    if dst is None:
+        return JSONResponse({"error": "没有等图层的那台成片台，或文件名不合法"},
+                            status_code=410)
+    data = await request.body()
+    # 1080x1920 的透明 PNG 最大也就几 MB；上限是防有人拿这个口往服务器塞东西
+    if not (16 < len(data) < 25 * 1024 * 1024):
+        return JSONResponse({"error": "图层大小不对"}, status_code=400)
+    dst.write_bytes(data)
+    return {"ok": True, "bytes": len(data)}
+
+
 @app.get("/api/agent/status")
 def agent_status(request: Request):
     if _agent_identity(request) is None:
-        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+        return JSONResponse({"error": "成片台未登录"}, status_code=401)
     return agenthub.snapshot()
 
 
@@ -2175,7 +2187,7 @@ def agent_media(job_id: str, request: Request, rel_path: str = ""):
     """成片台直读渲染包素材：已登记文件按登记路径放行；
     fonts/ 这类模板公共资产不入渲染包，回退到 renderer/public。"""
     if _agent_identity(request) is None:
-        return JSONResponse({"error": "渲染台未登录"}, status_code=401)
+        return JSONResponse({"error": "成片台未登录"}, status_code=401)
     p = agenthub.file_path(job_id, rel_path)
     if p is None and rel_path.startswith("fonts/") and ".." not in rel_path:
         cand = Path(__file__).resolve().parent.parent / "renderer" / "public" / rel_path
@@ -2184,17 +2196,6 @@ def agent_media(job_id: str, request: Request, rel_path: str = ""):
     if p is None:
         return JSONResponse({"error": "文件不存在"}, status_code=404)
     return FileResponse(p)
-
-
-@app.get("/still/{name}")
-def still(name: str, request: Request):
-    f = (OUTPUTS / name).resolve()
-    if not f.is_file() or OUTPUTS.resolve() not in f.parents:
-        return JSONResponse({"error": "not found"}, status_code=404)
-    jid = name.split("-still-", 1)[0]      # 剧照文件名 = <job_id>-still-<n>.jpg
-    if not _job_visible(JOBS.get(jid) or {}, request):
-        return JSONResponse({"error": "not found"}, status_code=404)
-    return FileResponse(f, media_type="image/jpeg")
 
 
 @app.get("/api/music")
@@ -2481,10 +2482,13 @@ def _build_audio_package(audio: dict) -> tuple[dict, dict[str, str]]:
     return meta, files
 
 
-def _agent_visual(job_id: str):
+def _agent_visual(job_id: str, layers_dir: Path | None = None):
     """渲染灶台的画面渲染替身：把 props+素材+音轨挂到 agenthub，
     等用户的浏览器成片台领走渲染、把带声成片交回来。没有云端渲染备选——
     成片台不在线就一直等（这是产品形态），失联的任务由 agenthub 收回重排。
+
+    layers_dir：剪映分轨草稿要的底板/卡片 PNG 与文字几何交回哪儿。成片交回后
+    成片台还在同一个页面上接着渲，陆续写进这个目录（见 agenthub.layer_target）。
 
     交回的东西有两种（成片台在 /visual?final=1 里自己声明）：
     - 浏览器成片台（现行唯一链路）：已带声的完整 mp4，云端原样收下不再动刀；
@@ -2514,7 +2518,8 @@ def _agent_visual(job_id: str):
             props_out = {**props_out, "audio": meta}
             audio_pkg = (meta, afiles)
         agenthub.register(job_id, owner, props_out, files, str(out_path),
-                          audio=audio_pkg)
+                          audio=audio_pkg,
+                          layers_dir=str(layers_dir) if layers_dir else None)
         try:
             visual = agenthub.wait_result(job_id, progress=progress,
                                           cancel_check=cancel_check)
@@ -2527,7 +2532,7 @@ def _agent_visual(job_id: str):
             # 浏览器已混好音的完整成片：不裁剪、不转码（重编码的 -an 会把人声丢掉）
             fn.delivered_final = True
             return visual
-        # 旧录屏导出页/Node 渲染台已退役；非 final 的裸画面轨只剩手工调试一条路，
+        # 旧录屏导出页/Node 成片台已退役；非 final 的裸画面轨只剩手工调试一条路，
         # 原样交给 build_render 走云端混音封装（秒级轻活），不再做裁剪转码。
         return visual
 
@@ -2536,12 +2541,12 @@ def _agent_visual(job_id: str):
 
 
 def _agent_claimed(job_id: str, device: str) -> None:
-    """agenthub 回调：渲染台领走了任务，任务卡立刻给个准话。"""
+    """agenthub 回调：成片台领走了任务，任务卡立刻给个准话。"""
     with _LOCK:
         j = JOBS.get(job_id)
         if j:
             j["render_via"] = f"agent:{device}"
-            j["detail"] = f"成片台「{device}」已领取，本机渲染中"
+            j["detail"] = f"成片台「{device}」已领取，正在本机生成"
             _jobs_save()
 
 
@@ -2575,7 +2580,7 @@ def _render_job(job_id: str, body: dict) -> None:
                              show_sources=bool(body.get("sources", True)),
                              job_id=job_id, progress=progress, defer_verify=True,
                              cancel_check=lambda: _cancel_requested(job_id),
-                             visual_fn=_agent_visual(job_id))
+                             visual_fn=_agent_visual(job_id, out.with_suffix(".layers")))
         cli.build_render(bundle_dir, out, work_dir=work_dir, **render_kwargs)
         with _LOCK:
             JOBS[job_id].update(stage="done", stage8=8, progress=100, video=str(out), t_end=time.time(),

@@ -14,15 +14,14 @@ services:
       HOST: 0.0.0.0
       PORT: "8600"
       VIDEOGEN_WORKSPACE: /data
-      # 渲染灶台路数必须显式写在这里：不设时代码默认回落到 1 路，
-      # 多核机器会白白闲置一半产能。经验值：每 2~4 核开 1 路。
+      # 出片通道路数：画面渲染不在服务器（在客户自己的浏览器里），一路占的是
+      # 一个等成片台交片的线程 + 几十秒 ffmpeg 的轻活，不再按"每几核开一路"算。
+      # 默认 2 是过去 CPU 时代留下的，放开多少取决于主机内存与磁盘，先按老值跑。
       VIDEOGEN_CONCURRENCY: "${VIDEOGEN_CONCURRENCY:-2}"
       VIDEOGEN_PREP_CONCURRENCY: "${VIDEOGEN_PREP_CONCURRENCY:-2}"
     volumes:
       - videogen-data:/data
       - videogen-outputs:/app/outputs
-    # Remotion(Chrome) 渲染吃共享内存：每加 2 路灶台约需 +1g（4路起建议 2gb）
-    shm_size: "${SHM_SIZE:-1gb}"
 
 volumes:
   videogen-data:

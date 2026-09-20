@@ -152,6 +152,8 @@ export type NiwoProps = {
   chromeOnly?: boolean;
   /** 分轨导出：测量结果的分组标签（通常是镜头 id） */
   probeTag?: string;
+  /** 分轨导出：云端算好的卡片层取帧清单，成片台照着逐张出图 */
+  draftStills?: {id: string; frame: number}[];
   /**
    * 浏览器内合成（web-renderer）专用混音计划：voice/bgm/sfx 都是渲染包里
    * audio/ 下的相对路径，随 props 一起下发。云端渲染链路不带这个字段，
@@ -1441,11 +1443,12 @@ export const NiwoVideo: React.FC<NiwoProps> = (props) => {
   const probe =
     mode === 'card' ? (
       <>
-        {/* 只留形状与位置：字形交给剪映文本轨 */}
+        {/* 只留形状与位置：字形交给剪映文本轨。范围必须锁在画面内部——
+            成片台页面与合成同处一个 document，写全局 * 会把页面自己的字也弄透明 */}
         <style
           id="vg-hide-text"
           dangerouslySetInnerHTML={{
-            __html: '*{color:transparent !important;text-shadow:none !important;}',
+            __html: '.vg-frame,.vg-frame *{color:transparent !important;text-shadow:none !important;}',
           }}
         />
         <TextProbe tag={props.probeTag} />
@@ -1460,13 +1463,15 @@ export const NiwoVideo: React.FC<NiwoProps> = (props) => {
   else if (skin.layout === 'data') body = <DataVideo {...props} />;
   else body = <EditorialVideo props={props} />;
   return (
-    <>
+    // 画面根节点统一在这里给：七个版式各有自己的 AbsoluteFill，靠它们各自挂
+    // 标记会漏（宏观/智谷两版就没挂），文字几何也就量不到正确的原点。
+    <AbsoluteFill data-vg-frame="1" className="vg-frame">
       {probe}
       {body}
       {props.series?.badge && !isCard() ? <SeriesBadge text={props.series.badge} /> : null}
       {props.watermark !== false && !isCard() ? <Watermark logo={props.brand?.logo} text={props.brand?.watermarkText} /> : null}
       {props.audio && mode === 'full' ? <AudioLayer audio={props.audio} /> : null}
-    </>
+    </AbsoluteFill>
   );
 };
 
