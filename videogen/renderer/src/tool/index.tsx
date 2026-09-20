@@ -1,9 +1,11 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {Player, type PlayerRef} from '@remotion/player';
-import {renderMediaOnWeb} from '@remotion/web-renderer';
-import {NiwoVideo, type NiwoProps} from '../NiwoVideo';
+import {renderMediaOnWeb, renderStillOnWeb} from '@remotion/web-renderer';
+import {NiwoVideo, probeStore, type NiwoProps} from '../NiwoVideo';
 import {setWebMediaMode} from '../webmedia';
+import {C, btn, btnLine, sel, api, lnkAcc, Toggle} from './ui';
+import {Account, type AuthSt, type Me, type SheetName} from './account';
 
 // GetCut 成片台（单页全流程）：拖素材包 → 内容与配音确认 → 浏览器渲染合成
 // → 取走带声 mp4。云端只做写稿/配音/分镜等轻活；画面与混音全在本页完成，
@@ -31,53 +33,6 @@ interface BundleInfo {
 }
 interface Voice {id: string; label: string; provider?: string}
 
-const C = {
-  ink: '#1a1817', soft: '#6f6a63', line: '#e5e2dc', paper: '#f7f6f3',
-  card: '#ffffff', accent: '#5b21b6', accentSoft: '#ede9f7', ok: '#166534',
-  err: '#a44231',
-};
-
-const btn: React.CSSProperties = {
-  all: 'unset', cursor: 'pointer', display: 'block', textAlign: 'center',
-  background: C.accent, color: '#fff', padding: '13px 26px', borderRadius: 10,
-  fontSize: 16, fontWeight: 700,
-};
-const btnLine: React.CSSProperties = {
-  ...btn, background: 'transparent', color: C.accent,
-  border: `1px solid ${C.accent}`, padding: '9px 18px', fontSize: 14, fontWeight: 600,
-};
-const sel: React.CSSProperties = {
-  width: '100%', padding: '9px 10px', borderRadius: 8, border: `1px solid ${C.line}`,
-  background: '#fff', color: C.ink, fontSize: 14, fontFamily: 'inherit',
-};
-
-const api = async (u: string, o?: RequestInit) => {
-  const r = await fetch(u, {credentials: 'same-origin', ...o});
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error((d && (d.error as string)) || `HTTP ${r.status}`);
-  return d as Record<string, unknown>;
-};
-
-/** 小开关：一行一项，开了是紫的，没开是灰的——不做大段表单 */
-const Toggle: React.FC<{label: string; on: boolean; set: (v: boolean) => void}> =
-  ({label, on, set}) => (
-    <button onClick={() => set(!on)} style={{
-      all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center',
-      gap: 8, fontSize: 13.5, color: C.ink,
-    }}>
-      <span style={{
-        width: 30, height: 17, borderRadius: 9, position: 'relative', flexShrink: 0,
-        background: on ? C.accent : '#d8d4cd', transition: 'background .15s',
-      }}>
-        <span style={{
-          position: 'absolute', top: 2, left: on ? 15 : 2, width: 13, height: 13,
-          borderRadius: '50%', background: '#fff', transition: 'left .15s',
-        }} />
-      </span>
-      {label}
-    </button>
-  );
-
 const Step: React.FC<{n: number; title: string; state: 'todo' | 'active' | 'done';
                      children?: React.ReactNode; summary?: string; open?: boolean}> =
   ({n, title, state, children, summary, open}) => (
@@ -100,6 +55,11 @@ const Step: React.FC<{n: number; title: string; state: 'todo' | 'active' | 'done
 
 const App: React.FC = () => {
   const [phase, setPhase] = React.useState<Phase>('drop');
+  const [me, setMe] = React.useState<Me | null>(null);
+  const [authst, setAuthst] = React.useState<AuthSt>({smtp: false, dev_email: false, token_auth: false, locked: false});
+  const [sheet, setSheet] = React.useState<SheetName>('');
+  const [authNote, setAuthNote] = React.useState('');
+  const [toast, setToast] = React.useState('');
   const [err, setErr] = React.useState('');
   const [upPct, setUpPct] = React.useState(0);
   const [bundle, setBundle] = React.useState<BundleInfo | null>(null);
@@ -123,9 +83,27 @@ const App: React.FC = () => {
   const packRef = React.useRef<JobPack | null>(null);
   const jobIdRef = React.useRef('');
   const autoRef = React.useRef(false);
+  const pendingZip = React.useRef<File | null>(null);
+  const meRef = React.useRef<Me | null>(null);
   const phaseRef = React.useRef<Phase>('drop');
   phaseRef.current = phase;
   jobIdRef.current = jobId;
+
+  const say = (m: string) => {
+    setToast(m);
+    setTimeout(() => setToast((t) => (t === m ? '' : t)), 3200);
+  };
+
+  // 登录成功后要立刻能拿到档位（水印、续传导入都读它），所以 ref 与 state 一起写
+  const refreshMe = React.useCallback(() => api('/api/me')
+    .then((d) => {
+      meRef.current = d as unknown as Me;
+      setMe(meRef.current);
+    })
+    .catch(() => {
+      meRef.current = null;
+      setMe(null);
+    }), []);
 
   const report = async (p: number, detail: string, requeue = false) => {
     const cur = packRef.current;
@@ -145,6 +123,8 @@ const App: React.FC = () => {
 
   // ---- 目录：音色 + 曲库（进页面拉一次） ----
   React.useEffect(() => {
+    refreshMe();
+    api('/api/auth/status').then((d) => setAuthst(d as unknown as AuthSt)).catch(() => {});
     api('/api/voices').then((d) => {
       const list = (d.voices as Voice[]) || [];
       if (list.length) {
@@ -221,6 +201,13 @@ const App: React.FC = () => {
   // ---- 导入：建项目 → 上传 zip → 挂载 → 读摘要 ----
   const importZip = async (file?: File) => {
     if (!file || phaseRef.current === 'importing') return;
+    // 素材包是要花钱的活，账号先到位；本机开放模式（没建过账号）不拦
+    if (!meRef.current && (authst.locked || authst.token_auth)) {
+      pendingZip.current = file;
+      setAuthNote(`登录后接着导入「${file.name}」，不用重拖一次。`);
+      setSheet('auth');
+      return;
+    }
     setErr('');
     setPhase('importing');
     setUpPct(0);
@@ -254,8 +241,14 @@ const App: React.FC = () => {
       setBundle(b);
       setPhase('config');
     } catch (e) {
-      setErr(String((e as Error).message || e));
+      const m = String((e as Error).message || e);
+      setErr(m);
       setPhase('drop');
+      if (/未登录/.test(m)) {          // 会话过期：把包留在手里，登录完接着导
+        pendingZip.current = file;
+        setAuthNote(`登录后接着导入「${file.name}」，不用重拖一次。`);
+        setSheet('auth');
+      }
     }
   };
 
@@ -270,7 +263,9 @@ const App: React.FC = () => {
         headers: {'content-type': 'application/json'},
         body: JSON.stringify({project_id: projectId, bundle: bundle.name,
           voice: cfg.voice, bgm: cfg.bgm, sfx: cfg.sfx, sfxMode: cfg.sfx ? 'full' : 'off',
-          subtitles: cfg.subtitles, sources: cfg.sources, watermark: true,
+          subtitles: cfg.subtitles, sources: cfg.sources,
+          // 付费档才交无水印；免费档服务端也会强制带，这里只是不谎称去掉
+          watermark: !me || me.tier === 'free',
           useLlm: true})});
       const jid = String(r.job || '');
       if (!jid) throw new Error(String(r.error || '启动失败'));
@@ -301,8 +296,10 @@ const App: React.FC = () => {
       };
       void tick();
     } catch (e) {
-      setErr(String((e as Error).message || e));
+      const m = String((e as Error).message || e);
+      setErr(m);
       setPhase('config');
+      if (/额度|升级|水印/.test(m)) setSheet('pricing');   // 付费墙：当场给出权益页
     }
   };
 
@@ -455,11 +452,23 @@ const App: React.FC = () => {
       {/* 左：动作 */}
       <div style={{padding: '36px 32px', borderRight: `1px solid ${C.line}`, background: C.card,
                    display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto'}}>
-        <div>
-          <div style={{fontSize: 22, fontWeight: 800, letterSpacing: 0.5}}>GetCut 成片台</div>
-          <div style={{fontSize: 14, color: C.soft, marginTop: 6, lineHeight: 1.7}}>
-            拖入素材包，一条好片子在你这台电脑上完成。
+        <div style={{display: 'flex', gap: 14, alignItems: 'flex-start'}}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontSize: 22, fontWeight: 800, letterSpacing: 0.5}}>GetCut 成片台</div>
+            <div style={{fontSize: 14, color: C.soft, marginTop: 6, lineHeight: 1.7}}>
+              拖入素材包，一条好片子在你这台电脑上完成。
+            </div>
           </div>
+          <Account me={me} authst={authst} sheet={sheet} setSheet={setSheet}
+                   refresh={refreshMe} toast={say}
+                   onMe={(m) => { meRef.current = m; setMe(m); }}
+                   authNote={authNote}
+                   onSignedIn={() => {
+                     setAuthNote('');
+                     const f = pendingZip.current;
+                     pendingZip.current = null;
+                     if (f) void importZip(f);
+                   }} />
         </div>
 
         <div style={{display: 'flex', flexDirection: 'column', gap: 20}}>
@@ -573,6 +582,13 @@ const App: React.FC = () => {
                   导入剪映
                 </button>
                 {jy ? <div style={{fontSize: 12.5, color: C.soft, lineHeight: 1.7}}>{jy}</div> : null}
+                <div style={{fontSize: 12.5, color: C.soft}}>
+                  {me && me.tier !== 'free' ? '本条已按你的档位去掉 GetCut 水印'
+                    : '免费版成片带 GetCut 水印 · '}
+                  {me && me.tier === 'free' ? (
+                    <button style={lnkAcc} onClick={() => setSheet('pricing')}>看权益</button>
+                  ) : null}
+                </div>
                 <div style={{fontSize: 12.5, color: cloudOk ? C.ok : C.soft}}>
                   {cloudOk ? '已同步云端工作台 · ' : '云端交回失败，不影响本机下载 · '}
                   {cloudOk && jobId ? <a href={`/#/project/${projectId}`} style={{color: C.accent}}>去工作台看历史</a> : null}
@@ -641,6 +657,14 @@ const App: React.FC = () => {
           ) : null}
         </div>
       </div>
+
+      {toast ? (
+        <div style={{
+          position: 'fixed', left: '50%', bottom: 28, transform: 'translateX(-50%)', zIndex: 60,
+          background: C.ink, color: '#fff', fontSize: 13.5, padding: '10px 18px', borderRadius: 24,
+          boxShadow: '0 10px 30px rgba(0,0,0,.25)',
+        }}>{toast}</div>
+      ) : null}
     </div>
   );
 };

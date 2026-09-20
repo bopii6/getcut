@@ -327,7 +327,10 @@ def _is_public(path: str) -> bool:
             or path.startswith("/api/intake") or path.startswith("/i/")
             # 剪映导入助手：安装器是公开脚本；pull 靠一次性 token 自证（见 _JY_PULL_TOKENS）
             or path.startswith("/assistant/")
-            or path.startswith("/api/jianying/pull"))
+            or path.startswith("/api/jianying/pull")
+            # 成片台外壳：未登录也要能打开这页看到「登录/注册」，页面里所有
+            # 数据接口照旧要会话。放行的只是 HTML/JS 壳，不含任何用户数据。
+            or path.startswith("/poc/"))
 
 
 def _token_ok(request: Request) -> bool:
