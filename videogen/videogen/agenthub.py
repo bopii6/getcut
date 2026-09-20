@@ -1,12 +1,12 @@
 """本机渲染台（Agent）调度中枢：云端把「Remotion 出画面」交给用户自己的电脑。
 
 产品决策（2026-09-20 拍板）：**渲染全部在用户本机跑，云端不做渲染备选**。
-用户电脑上跑一个 GetCut 渲染台（常驻小程序），它长轮询这里领任务、下载
-渲染包（props+素材）、用本机 Edge/自带内核渲染、把画面轨传回来。云端灶台
+用户在浏览器打开成片台页面（renderer/src/tool），它长轮询这里领任务、下载
+渲染包（props+素材+音轨）、用 WebCodecs 逐帧渲染并混音、把带声成片传回来。云端灶台
 线程在 visual_fn 里阻塞等结果——对 build_render 来说画面渲染仍是一次普通
 函数调用，混音/封装/校验一切照旧。
 
-唯一的自动救济是「失联收回」：任务被某台渲染台领走后心跳停了（渲染中被
+唯一的自动救济是「失联收回」：任务被某台成片台领走后心跳停了（渲染中被
 杀、断网、合盖），超过 _STALL_SECONDS 没有任何进度就收回来重新排队，最多
 _MAX_RECLAIMS 次，超过按失败处理——别让用户对着一个永远转圈的任务干等。
 渲染台一直不在线则任务停在「待领取」（这就是产品形态：你的片子用你的电脑
@@ -20,7 +20,7 @@ from pathlib import Path
 
 from .schemas import JobCancelled
 
-# 被领取后 10 分钟没有任何进度上报 → 判失联收回（渲染要 5-15 分钟，
+# 被领取后 10 分钟没有任何进度上报 → 判失联收回（成片台渲染约 1-5 分钟，
 # 正常渲染时进度每隔几秒就来，10 分钟静默必然是渲染台没了）
 _STALL_SECONDS = 600
 _MAX_RECLAIMS = 2            # 收回 2 次还失联就按失败处理（第三次不再重试）
@@ -51,7 +51,7 @@ def register(job_id: str, owner: str | None, props: dict,
             all_files.update(audio[1])   # 音频文件同画面素材一样走 /agent-media 放行表
         _JOBS[_jid(job_id)] = {
             "owner": owner, "device": None, "status": "waiting",
-            "pct": 0, "detail": "等待渲染台领取", "props": props,
+            "pct": 0, "detail": "等待成片台领取", "props": props,
             "files": all_files, "out_path": out_path,
             "audio": audio,
             "cancel": threading.Event(), "reclaims": 0,
@@ -78,7 +78,7 @@ def _claim_locked(owners: list, device: str, want_audio: bool = False) -> dict |
         if j["status"] != "waiting" or j["owner"] not in owners:
             continue
         j.update(status="rendering", device=device, pct=0,
-                 detail="渲染台已领取，启动本机渲染", t_progress=now)
+                 detail="成片台已领取，本机浏览器渲染中", t_progress=now)
         _DEVICES[device] = {"last_seen": now, "job": jid}
         if on_claim is not None:
             try:
@@ -94,7 +94,7 @@ def _claim_locked(owners: list, device: str, want_audio: bool = False) -> dict |
 
 def wait_for_job(owners: list, device: str, timeout: float = 25.0,
                  want_audio: bool = False) -> dict | None:
-    """渲染台长轮询领任务：等到一个就领走返回，超时返回 None（调用方再轮）。"""
+    """成片台长轮询领任务：等到一个就领走返回，超时返回 None（调用方再轮）。"""
     deadline = time.time() + max(0.0, timeout)
     with _CV:
         while True:
@@ -119,10 +119,10 @@ def file_path(job_id: str, rel: str) -> Path | None:
 
 def progress(job_id: str, device: str, pct: int, detail: str | None,
              failed: bool = False, requeue: bool = False) -> dict:
-    """渲染台上报进度；返回里带 cancel 让它知道该收手了。
-    failed=True 是渲染台主动报错（Remotion 退出码非 0 等）：任务立刻判失败，
+    """成片台上报进度；返回里带 cancel 让它知道该收手了。
+    failed=True 是成片台主动报错（Remotion 退出码非 0 等）：任务立刻判失败，
     别让云端傻等失联超时才发现。
-    requeue=True 是渲染台中途撤了（页面切走/用户放弃）：立即收回重新排队，
+    requeue=True 是成片台中途撤了（页面切走/用户放弃）：立即收回重新排队，
     相当于失联收回的主动版。"""
     with _CV:
         j = _JOBS.get(_jid(job_id))
@@ -130,7 +130,7 @@ def progress(job_id: str, device: str, pct: int, detail: str | None,
             return {"error": "unknown job"}
         if failed:
             j["status"] = "error"
-            j["error"] = "渲染台渲染失败: " + str(detail or "未知错误")[:3900]
+            j["error"] = "成片台渲染失败: " + str(detail or "未知错误")[:3900]
             j["t_progress"] = time.time()
             _CV.notify_all()
             return {"cancel": True}
@@ -138,11 +138,11 @@ def progress(job_id: str, device: str, pct: int, detail: str | None,
             j["reclaims"] += 1
             if j["reclaims"] > _MAX_RECLAIMS:
                 j["status"] = "error"
-                j["error"] = "渲染台反复中途退出，任务已终止。请确认网络与浏览器后重试"
+                j["error"] = "成片台反复中途退出，任务已终止。请重新打开成片台页面"
                 _CV.notify_all()
                 return {"cancel": True}
             j.update(status="waiting", device=None, pct=0,
-                     detail="渲染台中途离开，任务已重新排队",
+                     detail="成片台中途离开，任务已重新排队",
                      t_progress=time.time())
             d = _DEVICES.get(device)
             if d and d.get("job") == _jid(job_id):
@@ -239,10 +239,10 @@ def wait_result(job_id: str, progress=None, cancel_check=None) -> Path:
                 j["reclaims"] += 1
                 if j["reclaims"] > _MAX_RECLAIMS:
                     j["status"] = "error"
-                    j["error"] = "渲染台反复失联，任务已终止。请确认 GetCut 渲染台在运行后重试"
+                    j["error"] = "成片台反复失联，任务已终止。请重新打开成片台页面并保持打开"
                     continue
                 j.update(status="waiting", device=None, pct=0,
-                         detail="渲染台失联，任务已重新排队",
+                         detail="成片台失联，任务已重新排队",
                          t_progress=now)
                 _CV.notify_all()
             cur = (j["pct"], j["detail"])
@@ -250,12 +250,12 @@ def wait_result(job_id: str, progress=None, cancel_check=None) -> Path:
             last = cur
             progress(cur[0], cur[1])
         if time.time() > deadline:
-            raise RuntimeError("等渲染台超时（24 小时）：请确认渲染台在运行")
+            raise RuntimeError("等成片台超时（24 小时）：请打开成片台页面领取渲染")
         time.sleep(1.0)
 
 
 def mark_cancelled(job_id: str) -> None:
-    """用户按了停止：渲染台下轮上报就会看到 cancel，自己收手。"""
+    """用户按了停止：成片台下轮上报就会看到 cancel，自己收手。"""
     with _CV:
         j = _JOBS.get(_jid(job_id))
         if j:
@@ -263,7 +263,7 @@ def mark_cancelled(job_id: str) -> None:
 
 
 def snapshot() -> dict:
-    """给状态页/排障用：渲染台在位情况 + 队列水位。"""
+    """给状态页/排障用：成片台在位情况 + 队列水位。"""
     with _CV:
         now = time.time()
         devices = [{"device": name, "job": d.get("job"),

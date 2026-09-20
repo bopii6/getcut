@@ -13,7 +13,8 @@ from pathlib import Path
 from PIL import Image, ImageChops
 
 from .llm import vision_check as llm_vision
-from .overlays import MEDIA
+# 素材窗矩形（原 overlays.py 常量，PIL 合成器退役后唯此一处还在用）
+MEDIA = (151, 667, 929, 1107)
 from .planner import Plan
 
 

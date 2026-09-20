@@ -77,8 +77,8 @@ _VERIFY_SEM = threading.Semaphore(_VERIFY_CONCURRENCY)
 _DRAFT_SEM = threading.Semaphore(_DRAFT_CONCURRENCY)
 
 # 渲染全部在用户本机跑（2026-09-20 拍板，不做云端渲染备选）：渲染灶台线程
-# 只负责「挂单等渲染台领走 + 等画面轨回来 + 混音封装」，画面渲染发生在用户
-# 电脑上的 GetCut 渲染台（协议见 agenthub.py 模块注释）。灶台线程数因此可以
+# 只负责「挂单等成片台领走 + 等带声成片交回」，画面渲染与混音都发生在用户
+# 自己的浏览器里（协议见 agenthub.py 模块注释）。灶台线程数因此可以
 # 放开——每个线程只是在等 IO，不再吃主机 CPU/内存。
 _RENDER_STAGE_WORKERS = max(1, int(os.environ.get("VIDEOGEN_RENDER_STAGES", "6") or "6"))
 
@@ -430,7 +430,7 @@ def _job_visible(j: dict, request: Request) -> bool:
 def _request_authed(request: Request) -> bool:
     tok = (request.headers.get("x-agent-token") or "").strip()
     if tok and auth.read_session(tok):
-        return True            # 本机渲染台的设备令牌（登录接口签发的长会话）
+        return True            # 成片台/脚本的设备令牌（登录接口签发的长会话）
     if _token_ok(request) or _session_email(request):
         return True
     return not AUTH_TOKEN and not auth.has_users()   # 开放模式
@@ -1063,8 +1063,8 @@ def intake_page(code: str):
     return _inject_browser_export((STATIC / "index.html").read_text(encoding="utf-8"))
 
 
-# 浏览器极速导出悬浮组件：有任务在等渲染台时，任务页右下角浮出按钮，
-# 点击全屏打开 /poc/ 导出页（纯浏览器渲染），完成后导出页 postMessage 通知收起。
+# 成片台悬浮组件：有任务在等成片台时，任务页右下角浮出按钮，
+# 点击全屏打开 /poc/ 成片台（纯浏览器渲染合成），完成后 postMessage 通知收起。
 _BROWSER_EXPORT_WIDGET = """
 <script>
 (function(){
@@ -1076,7 +1076,7 @@ _BROWSER_EXPORT_WIDGET = """
       .then(function(d){
         var a = (d && d.active) || [];
         return a.filter(function(j){
-          return j.stage === 'render' && /等待渲染台/.test(j.detail || '');
+          return j.stage === 'render' && /等待成片台/.test(j.detail || '');
         }).length;
       }).catch(function(){ return 0; });
   }
@@ -1917,9 +1917,9 @@ def start_build(body: dict, request: Request):
                 span = _STAGE_SPAN.get(j["stage"])
                 if not span:
                     continue
-                # 等渲染台领取时不再爬"假进度"——那是兜底动画，会误导用户以为在渲染
+                # 等成片台领取时不再爬"假进度"——那是兜底动画，会误导用户以为在渲染
                 if j.get("stage") == "render" and not j.get("render_via"):
-                    j["detail"] = "等待渲染台领取 · 点「⚡ 极速导出」用本浏览器渲染"
+                    j["detail"] = "等待成片台领取 · 点「⚡ 生成视频」在本浏览器完成"
                     continue
                 base, cap = span
                 el = time.time() - j.get("t_stage", time.time())
@@ -1966,7 +1966,7 @@ def my_jobs(request: Request):
 
 @app.get("/api/admin/nodes")
 def admin_nodes(request: Request):
-    """管理员看渲染台水位：哪几台在线、队列里还有几个没领。"""
+    """管理员看成片台水位：哪几台在线、队列里还有几个没领。"""
     if not _is_adminish(request):
         return JSONResponse({"error": "只有管理员能看"}, status_code=403)
     return {"enabled": True, "kind": "agent", **agenthub.snapshot()}
@@ -2023,8 +2023,8 @@ def cancel_job(job_id: str, request: Request):
     return {"ok": True, "stage": stage}
 
 
-# ---------- 本机渲染台（Agent）接口 ----------
-# 渲染台在用户电脑上常驻，轮询这组接口领任务/下载渲染包/上报进度/交回画面轨。
+# ---------- 浏览器成片台（Agent 协议）接口 ----------
+# 成片台页面轮询这组接口领任务/下载渲染包/上报进度/交回带声成片。
 # 身份三种：登录签发的设备令牌（x-agent-token，90 天）、主钥匙（x-auth-token，
 # 调试/管理）、开放模式（本机自用）。渲染台只领自己的任务——素材是用户自己
 # 的，不能串门到别人的电脑上。
@@ -2044,7 +2044,7 @@ def _agent_identity(request: Request) -> str | None:
 
 
 def _claim_owners(identity: str) -> list:
-    """这台渲染台可以领谁的活：只领自己的；主钥匙领无主+管理员自己的。"""
+    """这台成片台可以领谁的活：只领自己的；主钥匙领无主+管理员自己的。"""
     if identity == "__admin__":
         admin = auth.admin_email()
         return [None] + ([admin] if admin else [])
@@ -2061,7 +2061,7 @@ def _agent_device(request: Request, fallback: str = "device") -> str:
 
 @app.post("/api/agent/login")
 def agent_login(body: dict):
-    """渲染台登录：邮箱密码换 90 天设备令牌，存本机以后免输。"""
+    """成片台/渲染台登录：邮箱密码换 90 天设备令牌，存本机以后免输。"""
     email = str(body.get("email") or "").strip().lower()
     if not auth.verify_login(email, str(body.get("password") or "")):
         return JSONResponse({"error": "邮箱或密码不对"}, status_code=401)
@@ -2075,7 +2075,7 @@ def agent_poll(request: Request, device: str = "", wait: int = 1):
     if ident is None:
         return JSONResponse({"error": "渲染台未登录"}, status_code=401)
     dev = _agent_device(request, device)
-    # x-agent-final: 1 = 新版浏览器渲染台：能自己混音出完整 mp4，
+    # x-agent-final: 1 = 浏览器成片台：能自己混音出完整 mp4，
     # 领任务时把音轨（配音/BGM/音效+混音计划）一并下发
     want_audio = (request.headers.get("x-agent-final") or "").strip() == "1"
     payload = agenthub.wait_for_job(_claim_owners(ident), dev,
@@ -2105,7 +2105,7 @@ def agent_job_file(job_id: str, request: Request, path: str = ""):
 
 @app.post("/api/agent/job/{job_id}/progress")
 def agent_job_progress(job_id: str, body: dict, request: Request, device: str = ""):
-    """渲染台上报进度；响应里带 cancel 旗子，让渲染台知道该收手了。"""
+    """成片台上报进度；响应里带 cancel 旗子，让成片台知道该收手了。"""
     if _agent_identity(request) is None:
         return JSONResponse({"error": "渲染台未登录"}, status_code=401)
     return agenthub.progress(job_id, _agent_device(request, device),
@@ -2116,7 +2116,7 @@ def agent_job_progress(job_id: str, body: dict, request: Request, device: str = 
 
 @app.post("/api/agent/job/{job_id}/visual")
 async def agent_job_visual(job_id: str, request: Request, device: str = ""):
-    """渲染台交回画面轨（裸 mp4 字节流）：落临时名，原子转正后云端接着混音。"""
+    """成片台交回产物（默认 final=1 带声成片）：落临时名，原子转正唤醒灶台。"""
     if _agent_identity(request) is None:
         return JSONResponse({"error": "渲染台未登录"}, status_code=401)
     dev = _agent_device(request, device)
@@ -2152,7 +2152,7 @@ BROWSERPOC_DIR = STATIC / "poc"
 
 @app.get("/poc/{rel_path:path}")
 def poc_page(rel_path: str = "index.html"):
-    """浏览器极速导出页（纯浏览器渲染：Player 逐帧渲染 + 标签页捕获硬编码）。
+    """浏览器成片台（web-renderer 逐帧渲染 + 浏览器内混音，产出带声 mp4）。
     同源部署，正式环境里登录用户的会话 cookie 随页面自动可用。"""
     target = (BROWSERPOC_DIR / rel_path).resolve()
     try:
@@ -2162,14 +2162,14 @@ def poc_page(rel_path: str = "index.html"):
     if not inside or not target.is_file():
         target = BROWSERPOC_DIR / "index.html"
     if not target.is_file():
-        return JSONResponse({"error": "浏览器导出页未打包（renderer/_poc_bundle.mjs）"},
+        return JSONResponse({"error": "成片台页面未打包（renderer/_tool_bundle.mjs）"},
                             status_code=404)
     return FileResponse(target)
 
 
 @app.get("/agent-media/{job_id}/{rel_path:path}")
 def agent_media(job_id: str, request: Request, rel_path: str = ""):
-    """浏览器渲染台直读渲染包素材：已登记文件按登记路径放行；
+    """成片台直读渲染包素材：已登记文件按登记路径放行；
     fonts/ 这类模板公共资产不入渲染包，回退到 renderer/public。"""
     if _agent_identity(request) is None:
         return JSONResponse({"error": "渲染台未登录"}, status_code=401)
@@ -2479,13 +2479,13 @@ def _build_audio_package(audio: dict) -> tuple[dict, dict[str, str]]:
 
 
 def _agent_visual(job_id: str):
-    """渲染灶台的画面渲染替身（本机渲染版）：把 props+素材挂到 agenthub，
-    等用户的渲染台领走渲染、把画面轨交回来。没有云端备选——渲染台不在线
-    就一直等（这是产品形态），失联的任务由 agenthub 收回重排。
+    """渲染灶台的画面渲染替身：把 props+素材+音轨挂到 agenthub，
+    等用户的浏览器成片台领走渲染、把带声成片交回来。没有云端渲染备选——
+    成片台不在线就一直等（这是产品形态），失联的任务由 agenthub 收回重排。
 
-    交回的东西有两种（渲染台在 /visual?final=1 里自己声明）：
-    - 旧链路（Node 渲染台 / 旧录屏导出页）：裸画面轨，云端照旧裁剪+混音封装；
-    - 新链路（浏览器合成页）：已带声的完整 mp4，云端原样收下不再动刀。
+    交回的东西有两种（成片台在 /visual?final=1 里自己声明）：
+    - 浏览器成片台（现行唯一链路）：已带声的完整 mp4，云端原样收下不再动刀；
+    - 不带 final 的裸画面轨：只剩手工调试会走到，云端按老规矩补混音封装。
     """
     from . import remotion_render as rr
 
@@ -2524,31 +2524,8 @@ def _agent_visual(job_id: str):
             # 浏览器已混好音的完整成片：不裁剪、不转码（重编码的 -an 会把人声丢掉）
             fn.delivered_final = True
             return visual
-        # 浏览器录的是整个标签页：居中裁出 9:16 画面区并归一到 1080x1920 + H.264
-        # （导出页布局保证播放器横向居中且占满全高，居中裁剪=正好裁出内容）
-        fixed = Path(str(visual) + ".1080.mp4")
-        try:
-            probe = subprocess.run(
-                ["ffprobe", "-v", "error", "-select_streams", "v:0",
-                 "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", str(visual)],
-                capture_output=True, text=True, timeout=60)
-            iw, ih = (int(v) for v in probe.stdout.strip().split("x"))
-            cw = min(iw, ih * 9 // 16)
-            ch = ih
-            cx = (iw - cw) // 2
-            cw -= cw % 2
-            ch -= ch % 2
-            cx -= cx % 2
-            subprocess.run(
-                ["ffmpeg", "-y", "-v", "error", "-i", str(visual),
-                 "-vf", f"crop={cw}:{ch}:{cx}:0,scale=1080:1920:flags=lanczos",
-                 "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-an",
-                 str(fixed)],
-                timeout=900, check=True)
-            visual.unlink(missing_ok=True)
-            visual = fixed
-        except Exception as exc:  # noqa: BLE001 - 裁剪失败保留原片，别让任务死在最后一步
-            print(f"browser visual crop/scale failed (keep raw): {exc}", flush=True)
+        # 旧录屏导出页/Node 渲染台已退役；非 final 的裸画面轨只剩手工调试一条路，
+        # 原样交给 build_render 走云端混音封装（秒级轻活），不再做裁剪转码。
         return visual
 
     fn.delivered_final = False
@@ -2561,7 +2538,7 @@ def _agent_claimed(job_id: str, device: str) -> None:
         j = JOBS.get(job_id)
         if j:
             j["render_via"] = f"agent:{device}"
-            j["detail"] = f"渲染台「{device}」已领取，本机渲染中"
+            j["detail"] = f"成片台「{device}」已领取，本机渲染中"
             _jobs_save()
 
 
@@ -2569,7 +2546,7 @@ agenthub.on_claim = _agent_claimed
 
 
 def _render_job(job_id: str, body: dict) -> None:
-    """渲染阶段：画面交给用户的渲染台渲，云端只留混音/封装（都是秒级轻活）。
+    """渲染阶段：画面交给用户的浏览器成片台渲；final 交回时云端连混音都省了。
 
     校验（等外部 API）不在这里跑：build_render 以 defer_verify 出灶台，
     交给 _verify_bg 后台通道，渲染位早几分钟还给下一个人。
@@ -2655,7 +2632,7 @@ def _prep_worker() -> None:
 
 
 def _render_worker() -> None:
-    """渲染灶台消费者：挂单等渲染台领走 + 等画面轨回来 + 混音封装。
+    """渲染灶台消费者：挂单等成片台领走 + 等带声成片交回。
     画面渲染已经在用户电脑上了，线程只是在等 IO，多开也不吃主机算力。"""
     while True:
         with _LOCK:

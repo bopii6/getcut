@@ -35,7 +35,7 @@ for (;;) {
     console.log('PAGE-ERROR:', (txt.match(/出错：[^\n]*/) || [''])[0]);
     process.exit(2);
   }
-  if (/开始渲染/.test(txt)) break;
+  if (/生成视频（约/.test(txt)) break;
   if (Date.now() - t0 > 180000) {
     console.log('TIMEOUT waiting ready');
     process.exit(3);
@@ -43,7 +43,7 @@ for (;;) {
   await sleep(3000);
 }
 console.log('READY，预热完成，点击渲染', ((Date.now() - t0) / 1000).toFixed(0) + 's');
-await evalJs(`[...document.querySelectorAll('button')].find(b=>b.innerText.includes('开始渲染')).click(); 1`);
+await evalJs(`[...document.querySelectorAll('button')].find(b=>b.innerText.includes('生成视频（约')).click(); 1`);
 const t1 = Date.now();
 let lastPct = -1;
 for (;;) {

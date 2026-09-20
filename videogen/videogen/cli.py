@@ -17,7 +17,7 @@ import threading
 from pathlib import Path
 
 from . import brand as brand_kit
-from . import compose, llm, overlays, remotion_render, subtitle, tts, verify
+from . import compose, llm, remotion_render, tts, verify
 from .config import DEFAULT_TEMPLATE, TEMPLATE_ALIAS, TEMPLATES
 from .config import OUTPUTS as _OUTPUTS
 from .planner import (align_timeline, build_plan, build_plan_clone, build_plan_llm,
@@ -314,8 +314,8 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     prep = build_prep 的返回（缺省时从 work_dir/prep.json 读，兜底自愈）。
     defer_verify=True 时跳过末尾的画面校验（那是等外部视觉 API 的活），
     由调用方跑完后用 run_verify 在灶台之外补上——server 双通道走这条路。
-    visual_fn：画面渲染的替身 (props, out_path, progress=, cancel_check=) -> Path，
-    远端灶台（渲染节点）用；None = 本机 Remotion。
+    visual_fn：画面渲染的替身 (props, out_path, progress=, cancel_check=, audio=) -> Path，
+    浏览器成片台挂单代理（server._agent_visual）用；None 直接报错——云端渲染已退役。
     """
     report = _report_of(progress)
     bundle = Path(bundle_dir)
@@ -362,54 +362,18 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
     audio_plan = {"voice": mp3, "bgm": bgm, "sfx": sfx_events,
                   "duration_s": duration_s}
 
-    if renderer == "remotion":
-        report("render", 0, "启动渲染引擎")
-        props = json.loads((work / "props.json").read_text(encoding="utf-8"))
-        if visual_fn is not None:
-            visual = visual_fn(props, work / "visual.mp4",
-                               progress=lambda p, d=None: report("render", max(0, min(p, 100)), d),
-                               cancel_check=cancel_check,
-                               audio=audio_plan)
-        else:
-            visual = remotion_render.render_visual(
-                props, work / "visual.mp4", key=str(job_id) if job_id else "cli",
-                progress=lambda p, d=None: report("render", max(0, min(p, 100)), d),
-                cancel_check=cancel_check)
-        withsubs = visual
-    else:
-        # legacy PIL compositor (fallback)
-        tc = prep.get("title_card") or {}
-        qc = prep.get("quote_card") or {}
-        title_label, title_kw = tc.get("label", ""), tc.get("keyword", "")
-        q_label, q_text = qc.get("label", ""), qc.get("quote", "")
-        hook = content.hook_headline
-        lines: list[tuple[str, list[tuple[int, int]]]] = []
-        if hook and hook.lines:
-            for ln in hook.lines:
-                lines.append((hook.plain(ln), hook.highlight_spans(ln)))
-        else:
-            lines.append((content.title[:14], []))
-            if len(lines[0][0]) < len(content.title):
-                lines.append((content.title[14:26], []))
-        base_png = overlays.make_base(lines, content.sources,
-                                      disclaimer or remotion_render.DISCLAIMER, work / "base.png")
-        overlays.make_title_card(title_label, title_kw, "SIGNAL / 01", work / "art_title.png")
-        overlays.make_quote_card(q_label, q_text, work / "art_quote.png")
-        segments = []
-        for idx, shot in enumerate(plan.shots):
-            media = None
-            if shot.asset_path:
-                media = bundle / shot.asset_path
-                if not media.is_file():
-                    media = None
-            segments.append(compose.build_segment(base_png, shot, media, work, idx))
-        cat = compose.concat(segments, work)
-        if show_subtitles:
-            ass_path = work / "subs.ass"
-            subtitle.build_ass(plan, ass_path)
-            withsubs = compose.burn_subtitles(cat, ass_path, work)
-        else:
-            withsubs = cat
+    # 画面渲染只剩一条路：客户的浏览器成片台（web-renderer 逐帧合成，
+    # visual_fn 由 server._agent_visual 提供挂单/等件代理）。
+    # 云端 Remotion CLI 渲染与 Node 渲染台已于 2026-09-20 双双退役。
+    if visual_fn is None:
+        raise RuntimeError("缺少 visual_fn：画面渲染必须由浏览器成片台承接")
+    report("render", 0, "等待浏览器成片台领取")
+    props = json.loads((work / "props.json").read_text(encoding="utf-8"))
+    visual = visual_fn(props, work / "visual.mp4",
+                       progress=lambda p, d=None: report("render", max(0, min(p, 100)), d),
+                       cancel_check=cancel_check,
+                       audio=audio_plan)
+    withsubs = visual
 
     # audio(sfx) -> mux -> verify
     out_mp4 = Path(out_mp4)
@@ -599,7 +563,7 @@ def main() -> None:
     b.add_argument("--voice", default=None)
     b.add_argument("--rate", default=None)
     b.add_argument("--bgm", type=Path, default=None)
-    b.add_argument("--renderer", default="remotion", choices=["remotion", "pil"])
+    b.add_argument("--renderer", default="remotion", choices=["remotion"])
     b.add_argument("--clone", type=Path, default=None)
     b.add_argument("--format", default=DEFAULT_TEMPLATE,
                    choices=list(TEMPLATES) + list(TEMPLATE_ALIAS),

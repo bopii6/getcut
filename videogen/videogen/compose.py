@@ -1,15 +1,9 @@
-"""Stage 7: ffmpeg composition — segments, concat, ASS burn, audio mix."""
+"""音频工序：音效编排 + ffmpeg 混音/封装（PIL 贴片合成器已随云端渲染退役）。"""
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 from pathlib import Path
-
-from PIL import Image, ImageDraw
-
-from .overlays import MEDIA, PANEL, font, RED_SOFT
-from .planner import Plan
 
 
 def _run(cmd: list[str], cwd: Path) -> None:
@@ -50,108 +44,6 @@ def _run_progress(cmd: list[str], cwd: Path, total_s: float, progress=None,
     p.wait()
     if p.returncode != 0:
         raise RuntimeError("ffmpeg failed:\n" + (err or "".join(tail))[-3000:])
-
-
-def _chapter_label_png(text: str, out: Path) -> Path:
-    w, h = PANEL[2] - PANEL[0], PANEL[3] - PANEL[1]
-    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    dr = ImageDraw.Draw(im)
-    y = 524
-    dr.rectangle([36, y, 45, y + 34], fill=RED_SOFT)
-    dr.text((60, y + 2), text, font=font(32), fill=RED_SOFT)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    im.save(out)
-    return out
-
-
-def _media_vf(is_img: bool, post: str = "") -> str:
-    """Media window filter: videos cover-crop; images fit completely over a
-    blurred backdrop (niwo spec: images are never cropped)."""
-    if is_img:
-        return (
-            "split=2[bg][fg];"
-            "[bg]scale=778:440:force_original_aspect_ratio=increase,crop=778:440,"
-            "boxblur=16:2,eq=brightness=-0.05[bgb];"
-            "[fg]scale=778:440:force_original_aspect_ratio=decrease[fgs];"
-            "[bgb][fgs]overlay=(W-w)/2:(H-h)/2,setsar=1,fps=30" + post
-        )
-    return "scale=778:440:force_original_aspect_ratio=increase,crop=778:440,setsar=1,fps=30" + post
-
-
-def build_segment(base_png: Path, shot, media_file: Path | None, work: Path,
-                  idx: int, bgmless: bool = False) -> Path:
-    dur_s = (shot.end_ms - shot.start_ms) / 1000.0
-    dur_s = max(dur_s, 1.2)
-    out = work / f"seg_{idx:03d}.mp4"
-    base = ["-loop", "1", "-t", f"{dur_s:.3f}", "-i", str(base_png)]
-    is_img = bool(media_file) and media_file.suffix.lower() in (
-        ".jpg", ".jpeg", ".png", ".webp", ".gif")
-
-    if shot.kind == "footage" and media_file and media_file.is_file():
-        label_png = _chapter_label_png(shot.chapter_label or "", work / f"label_{idx:03d}.png")
-        cmd = ["ffmpeg", "-y", "-v", "error",
-               *(["-stream_loop", "-1", "-t", f"{dur_s:.3f}"] if not is_img else []),
-               "-i", str(media_file),
-               *base,
-               "-loop", "1", "-t", f"{dur_s:.3f}", "-i", str(label_png),
-               "-filter_complex",
-               "[0:v]" + _media_vf(is_img) + "[m];"
-               f"[1:v][2:v]overlay={PANEL[0]}:{PANEL[1]}[b];"
-               f"[b][m]overlay={MEDIA[0]}:{MEDIA[1]},format=yuv420p",
-               "-t", f"{dur_s:.3f}", "-r", "30",
-               "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-an", str(out)]
-
-    elif shot.kind in ("callout", "panel") and media_file and media_file.is_file():
-        overlay_png = (work / f"call_{idx:03d}.png") if shot.kind == "callout" \
-            else (work / f"pan_{idx:03d}.png")
-        if shot.kind == "callout":
-            from .overlays import make_callout
-            o = shot.overlay
-            make_callout(o.get("number", ""), o.get("label", ""), o.get("caption", ""), overlay_png)
-        else:
-            from .overlays import make_info_panel
-            make_info_panel(shot.overlay, overlay_png)
-        # panel dims+blurs the footage under the design; callout keeps it sharp
-        post = ",boxblur=12:2,eq=brightness=-0.08" if shot.kind == "panel" else ""
-        cmd = ["ffmpeg", "-y", "-v", "error",
-               *(["-stream_loop", "-1", "-t", f"{dur_s:.3f}"] if not is_img else []),
-               "-i", str(media_file),
-               *base,
-               "-loop", "1", "-t", f"{dur_s:.3f}", "-i", str(overlay_png),
-               "-filter_complex",
-               "[0:v]" + _media_vf(is_img, post) + "[m];"
-               f"[1:v][m]overlay={MEDIA[0]}:{MEDIA[1]}[b];"
-               f"[b][2:v]overlay={MEDIA[0]}:{MEDIA[1]},format=yuv420p",
-               "-t", f"{dur_s:.3f}", "-r", "30",
-               "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-an", str(out)]
-    else:
-        art = work / ("art_title.png" if shot.kind == "title_card" else "art_quote.png")
-        cmd = ["ffmpeg", "-y", "-v", "error",
-               *base,
-               "-loop", "1", "-t", f"{dur_s:.3f}", "-i", str(art),
-               "-filter_complex",
-               f"[0:v][1:v]overlay={PANEL[0]}:{PANEL[1]},format=yuv420p",
-               "-t", f"{dur_s:.3f}", "-r", "30",
-               "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-an", str(out)]
-    _run(cmd, work)
-    return out
-
-
-def concat(segments: list[Path], work: Path) -> Path:
-    listing = work / "concat.txt"
-    listing.write_text("".join(f"file '{s.name}'\n" for s in segments), encoding="utf-8")
-    out = work / "concat.mp4"
-    _run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0",
-          "-i", listing.name, "-c", "copy", out.name], work)
-    return out
-
-
-def burn_subtitles(video: Path, ass_file: Path, work: Path) -> Path:
-    out = work / "withsubs.mp4"
-    _run(["ffmpeg", "-y", "-v", "error", "-i", video.name,
-          "-vf", f"ass={ass_file.name}",
-          "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-an", out.name], work)
-    return out
 
 
 SFX_CATEGORIES = ("open", "cut", "card", "number", "emphasis", "end")
