@@ -663,7 +663,9 @@ const App: React.FC = () => {
             </select>
             <span className="car">▾</span>
           </span>
-          <button className="chip" onClick={openLib} title="历史项目与成片">作品库</button>
+          {!me ? <a className="chip" href="/studio" title="这产品是什么、怎么做">怎么用</a> : null}
+          {!me ? <button className="chip" onClick={() => setSheet('pricing')} title="免费版与高级版">定价</button> : null}
+          {me ? <button className="chip" onClick={openLib} title="历史项目与成片">作品库</button> : null}
           <Account me={me} authst={authst} sheet={sheet} setSheet={setSheet}
                    refresh={refreshMe} toast={say}
                    onMe={(m) => { meRef.current = m; setMe(m); }}
