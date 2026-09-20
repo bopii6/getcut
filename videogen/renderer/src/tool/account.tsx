@@ -2,6 +2,7 @@ import React from 'react';
 import {
   C, btn, btnLine, btnSm, btnSmLine, inp, api, lnk, lnkAcc, Sheet, TierChip, Field, Msg,
 } from './ui';
+import {BrandSheet} from './brand';
 
 export interface Me {
   email: string; tier: string; tier_label: string; is_admin: boolean;
@@ -9,7 +10,7 @@ export interface Me {
   builds_today?: number; free_daily_builds?: number;
 }
 export interface AuthSt { smtp: boolean; dev_email: boolean; token_auth: boolean; locked: boolean }
-export type SheetName = '' | 'auth' | 'pricing' | 'settings' | 'contact';
+export type SheetName = '' | 'auth' | 'pricing' | 'settings' | 'contact' | 'brand';
 
 
 /** 菜单里那行「你现在这档有什么」——与权益页同一口径，别两处各说一套 */
@@ -595,9 +596,9 @@ const PricingSheet: React.FC<{me: Me | null; onClose: () => void; refresh: () =>
 export const Account: React.FC<{
   me: Me | null; authst: AuthSt; sheet: SheetName; setSheet: (s: SheetName) => void;
   refresh: () => Promise<unknown>; onMe: (m: Me | null) => void; onSignedIn: () => void;
-  authNote?: string;
+  authNote?: string; onBrandChanged: () => void;
   toast: (m: string) => void;
-}> = ({me, authst, sheet, setSheet, refresh, onMe, onSignedIn, authNote, toast}) => {
+}> = ({me, authst, sheet, setSheet, refresh, onMe, onSignedIn, authNote, onBrandChanged, toast}) => {
   const [menu, setMenu] = React.useState(false);
   // 顶栏两个按钮各自开各自的一档；被导入拦下来时按服务器状态给默认档
   const [authMode0, setAuthMode0] = React.useState<'login' | 'register'>(
@@ -683,6 +684,14 @@ export const Account: React.FC<{
               {benefitNote(tier)}
             </div>
           </div>
+          <button style={item} onClick={() => { setMenu(false); setSheet(tier === 'premium' ? 'brand' : 'pricing'); }}>
+            <i style={{fontStyle: 'normal', color: tier === 'premium' ? C.accent : C.soft}}>
+              {tier === 'premium' ? '◈' : '🔒'}
+            </i>品牌套装
+            <i style={{fontStyle: 'normal', marginLeft: 'auto', fontSize: 12, color: C.soft}}>
+              {tier === 'premium' ? 'Logo · 声音 · 水印' : '高级版'}
+            </i>
+          </button>
           <button style={item} onClick={() => { setMenu(false); setSheet('settings'); }}>
             <i style={{fontStyle: 'normal'}}>⚙</i>账号设置
             <i style={{fontStyle: 'normal', marginLeft: 'auto', fontSize: 12, color: C.soft}}>
@@ -722,6 +731,9 @@ export const Account: React.FC<{
       ) : null}
       {sheet === 'contact' ? (
         <ContactSheet onClose={() => setSheet('')} toast={toast} />
+      ) : null}
+      {sheet === 'brand' ? (
+        <BrandSheet onClose={() => setSheet('')} toast={toast} onBrandChanged={onBrandChanged} />
       ) : null}
     </div>
   );

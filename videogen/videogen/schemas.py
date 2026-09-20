@@ -13,13 +13,31 @@ class JobCancelled(Exception):
     """任务被用户停止：渲染子进程已杀掉，各阶段边界检查到这个就干净退出。"""
 
 
+def _hook_line(item) -> str:
+    """一行钩子标题统一成 "前半[[高亮]]后半"。
+
+    getcut-bundle 技能投的包写的是 {"text","highlight"} 字典，内部样例写的是带
+    [[..]] 的字符串——只按 str() 转会把字典原样打进成片标题。"""
+    if not isinstance(item, dict):
+        return str(item)
+    text = str(item.get("text") or "")
+    hl = str(item.get("highlight") or "")
+    if not hl or "[[" in text:
+        return text
+    at = item.get("highlight_at")
+    i = at if isinstance(at, int) and 0 <= at <= len(text) else text.find(hl)
+    if i < 0:
+        return text
+    return text[:i] + "[[" + text[i:i + len(hl)] + "]]" + text[i + len(hl):]
+
+
 @dataclass
 class HookHeadline:
     lines: list[str] = field(default_factory=list)
 
     @classmethod
     def parse(cls, raw: dict) -> "HookHeadline":
-        return cls(lines=[str(x) for x in raw.get("lines", [])])
+        return cls(lines=[_hook_line(x) for x in raw.get("lines", [])])
 
     def plain(self, line: str) -> str:
         return HIGHLIGHT.sub(r"\1", line)
