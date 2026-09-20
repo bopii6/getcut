@@ -59,7 +59,7 @@ fi
 
 # ---------- 4. 启动 ----------
 if [[ "$MODE" == "build" ]]; then
-  log "本地构建镜像（首次约 5-15 分钟：npm ci + 下载 headless chrome）"
+  log "本地构建镜像（装 Python 依赖 + ffmpeg；画面渲染在客户浏览器里，镜像内不再有 Node/Chrome）"
   export DOCKER_BUILDKIT=1
   # 国内网络加速（可按需改成官方源）
   export NPM_CONFIG_REGISTRY="${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}"

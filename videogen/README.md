@@ -104,20 +104,27 @@ python -m videogen draft outputs/成片.mp4 -o 草稿.zip   # 也可以在工作
 | 背景音乐 | 循环铺满 + 结尾淡出，音量 20% | 右键替换换歌 |
 | 音效 | 每个画面事件一条，每条独立 | 单独替换或删除 |
 
-首次导出要在本机用 ffmpeg 切素材、Remotion 出底板与卡片层并采出文字几何
-（约 1-2 分钟，之后有缓存）；没有分轨资产（旧成片 / PIL 渲染）时自动退回
-「整条成片按分镜切片」的单轨草稿。
+底板与卡片层这两层图不是服务器画的：成片台在交回成片之后，继续在客户浏览器里
+逐镜渲出透明 PNG 交回来（连同量好的文字几何）。服务器只做 ffmpeg 切素材/切配音。
+图层没交齐（旧成片 / 客户提前关了页面）时自动退回「整条成片按分镜切片」的单轨草稿。
 
 **分层是怎么切的**（改渲染模板时要守住这套约定）：
 
 - **底板层**（一张图片铺满全片）：页面底、纸卡、面板、标题带、页脚。
   底板在素材轨**之上**，所以凡是盖住画面的整块元素都必须**给媒体窗挖洞**
-  （editorial 用 `RectWithHole`，data 面板同理）——忘了挖洞素材就整块被盖住。
+  （整块矩形用 `RectWithHole` 画四条边带；整层元素用 `ChromeClip` 套 clip-path）
+  ——忘了挖洞素材就整块被盖住。
+  `ChromeClip` 的 polygon **不许写 `evenodd` 前缀**：成片台那套软件合成器按
+  「每点 x y」解析 polygon()，evenodd 会被当成第一个点，整张底板直接渲崩
+  （视频走 full 模式不碰这里，所以只有出图层会炸）。改写法见 `holeClip`。
 - **卡片层**（每镜一张）：这一拍才有的东西——设计卡、章节标签、大字、进度轨。
   卡片层里**所有文字都是透明的**（`vg-hide-text`），只有形状；文字由 `TextProbe`
   量出几何后变成剪映的文本轨（可改字）。
 - 用 `bottom` / 百分比定位的文字元素，探针会等字体与布局稳定后再量（双 rAF）。
-  早了会量到负坐标，剪映里文字直接飘出画面。
+  早了会量到负坐标，剪映里文字直接飘出画面。探针找画面根节点只能从自己身上
+  `closest('[data-vg-frame]')`，不能 `document.querySelector`（页面里同时存在播放器
+  和每张 still 各自的脚手架）；量到的结果走 `probeSink()` 挂到 globalThis——
+  webpack 分包会把模块装进多个 chunk，模块级常量会变成两份，页面永远读不到。
 - 已知保真度差异：字幕在草稿里是**纯文字轨**，字幕底衬只有大字报（整幅定高带）
   烘进了底板；数据面板那种"跟着文字宽度走的底衬"没有进草稿。
 
@@ -130,7 +137,10 @@ bash deploy.sh          # 自动生成 .env 与访问令牌，拉取或构建镜
 - 密钥放 `.env`（从 `.env.example` 复制）；`DEEPSEEK_API_KEY` 必填。
 - `VIDEOGEN_TOKEN` 设置后工作台所有数据接口需要令牌（首次打开页面输入一次）；
   留空 = 不鉴权，仅限本机自用。
-- 渲染全部在容器内本机完成（Remotion + ffmpeg），没有外部渲染依赖。
+- 画面渲染与混音都在**客户的浏览器**里完成（成片台，`renderer/src/tool`），容器里
+  不装 Node 也不装 Chrome；服务器只做写稿/配音/切音频/封装（ffmpeg + 外部 API）。
+  成片台页面是预先打好的静态包，放在 `server_static/poc/`（改完模板要重新打包再拷过去，
+  这个目录不进 git）。
 - `renderer/src` 与 `videogen/` 都是**挂载进容器**的：改模板/改 Python 只需传文件 +
   `docker restart videogen`，不用重建镜像。
 
@@ -141,9 +151,9 @@ bash deploy.sh          # 自动生成 .env 与访问令牌，拉取或构建镜
 | 分镜规划 | planner.py | 子句单元切分 → 节奏重分块 → script_anchor 匹配素材 → 首镜片头卡/末镜金句卡 |
 | TTS 配音 | tts.py | edge-tts 词级时间戳；多音字用等长同音字替换法修正读音 |
 | 画面设计 | llm.py + templates.py | 导演按模板语汇挑卡；模板说明写在 templates.py |
-| 画面渲染 | renderer/ (Remotion) | 骨架 × 皮肤 × 几何，props.json 驱动 |
+| 画面渲染 | 客户的浏览器成片台（renderer/src/tool + web-renderer） | 骨架 × 皮肤 × 几何，props.json 驱动；服务器不参与 |
 | 音效混音 | compose.py | 逐画面事件挂音效 + BGM 循环淡出，同文件只解码一次 |
-| 字幕 | subtitle.py | 子句级 ASS，落在内嵌板字幕区 |
+| 字幕 | renderer/src/NiwoVideo.tsx | 子句级字幕由画面模板自己排（showSubtitles 开关） |
 | 画面校验 | verify.py | 逐镜抽帧 + GLM-4V 复核 |
 
 ## 开发约定

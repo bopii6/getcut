@@ -2,7 +2,7 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {Player, type PlayerRef} from '@remotion/player';
 import {renderMediaOnWeb, renderStillOnWeb} from '@remotion/web-renderer';
-import {NiwoVideo, probeStore, type NiwoProps} from '../NiwoVideo';
+import {NiwoVideo, probeSink, type NiwoProps} from '../NiwoVideo';
 import {C, btn, btnLine, sel, api, lnkAcc, Toggle} from './ui';
 import {Account, type AuthSt, type Me, type SheetName} from './account';
 
@@ -111,6 +111,8 @@ const App: React.FC = () => {
   const [cloudOk, setCloudOk] = React.useState<boolean | null>(null);
   const [layerMsg, setLayerMsg] = React.useState('');
   const [layersOk, setLayersOk] = React.useState<boolean | null>(null);
+  const [layerErr, setLayerErr] = React.useState('');
+  const [layerNote, setLayerNote] = React.useState('');
   const playerRef = React.useRef<PlayerRef>(null);
   const abortRef = React.useRef<AbortController | null>(null);
   const packRef = React.useRef<JobPack | null>(null);
@@ -355,9 +357,14 @@ const App: React.FC = () => {
     const post = async (name: string, body: Blob | string, type: string) => {
       const r = await fetch(`/api/agent/job/${cur.job}/layer?name=${encodeURIComponent(name)}&device=${encodeURIComponent(DEVICE)}`,
         {method: 'POST', headers: {'content-type': type}, body});
-      if (!r.ok) throw new Error(`${name} 交回失败（HTTP ${r.status}）`);
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}) as Record<string, unknown>);
+        throw new Error(`${name} 交回失败：${String(d.error || `HTTP ${r.status}`)}`);
+      }
     };
     const still = async (extra: Record<string, unknown>, frame: number) => {
+      // 探针在 commit 时同步量字，字体没落地就会量到回退字体的宽度
+      await document.fonts.ready.catch(() => {});
       const res = await renderStillOnWeb({
         composition: compositionOf(props.durationInFrames),
         inputProps: {...(props as unknown as Record<string, unknown>), ...extra},
@@ -368,17 +375,20 @@ const App: React.FC = () => {
       } as any);
       return res.blob({format: 'png'});
     };
+    const sink = probeSink();
     setLayerMsg('正在出剪映底板…');
     await post('base.png', await still({exportMode: 'base'}, stills[0]?.frame ?? 0),
                'application/octet-stream');
     for (let i = 0; i < stills.length; i++) {
       setLayerMsg(`正在出剪映卡片层 ${i + 1}/${stills.length}`);
-      delete probeStore[stills[i].id];
+      delete sink[stills[i].id];
       const png = await still({exportMode: 'card', probeTag: stills[i].id}, stills[i].frame);
       await post(`cards/${stills[i].id}.png`, png, 'application/octet-stream');
     }
     const texts: Record<string, unknown[]> = {};
-    for (const s of stills) if (probeStore[s.id]?.length) texts[s.id] = probeStore[s.id];
+    for (const s of stills) if (sink[s.id]?.length) texts[s.id] = sink[s.id];
+    const nTexts = Object.keys(texts).length;
+    setLayerNote(`底板 1 张 + 卡片 ${stills.length} 张 + ${nTexts} 镜可改文字`);
     await post('texts.json', JSON.stringify(texts), 'application/json');
   };
 
@@ -441,12 +451,15 @@ const App: React.FC = () => {
       // 图层出图排在成片之后：慢一点、失败都不要紧，大不了草稿退回整条切片
       if (ok) {
         setLayersOk(null);
+        setLayerErr('');
+        setLayerNote('');
         try {
           await exportDraftLayers(cur);
           setLayersOk(true);
         } catch (e) {
           setLayersOk(false);
-          console.warn('GetCut 剪映图层出图失败', e);
+          setLayerErr(String((e as Error).message || e).slice(0, 90));
+          console.warn('GetCut 剪映图层出图失败', (e as Error).stack || String(e));
         } finally {
           setLayerMsg('');
         }
@@ -468,6 +481,8 @@ const App: React.FC = () => {
     setFinalUrl(null);
     setCloudOk(null);
     setLayerMsg('');
+    setLayerErr('');
+    setLayerNote('');
     setLayersOk(null);
     setPct(0);
     setErr('');
@@ -674,8 +689,9 @@ const App: React.FC = () => {
                 ) : null}
                 {layersOk !== null && !layerMsg ? (
                   <div style={{fontSize: 12.5, color: layersOk ? C.ok : C.soft, lineHeight: 1.7}}>
-                    {layersOk ? '剪映分轨图层已备好：底板、卡片、可改文字各一条轨'
-                               : '分轨图层没出全：仍可导入剪映，但卡片只能整条挪'}
+                    {layersOk ? `剪映分轨图层已备好：${layerNote || '底板、卡片、可改文字各一条轨'}`
+                              : '分轨图层没出全' + (layerErr ? `（${layerErr}）` : '')
+                                + '：仍可导入剪映，但卡片只能整条挪'}
                   </div>
                 ) : null}
                 {jy ? <div style={{fontSize: 12.5, color: C.soft, lineHeight: 1.7}}>{jy}</div> : null}

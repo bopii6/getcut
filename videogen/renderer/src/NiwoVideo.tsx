@@ -197,12 +197,24 @@ const mediaRect = () => T.geo.mediaRect!;
 
 type Rect = {left: number; top: number; width: number; height: number};
 
-/** 全帧坐标 -> clip-path polygon(evenodd) 字符串：整块挖掉 hole 矩形 */
-const holeClip = (frameW: number, frameH: number, hole: Rect) =>
-  `polygon(evenodd, 0 0, ${frameW}px 0, ${frameW}px ${frameH}px, 0 ${frameH}px, 0 0, ` +
-  `${hole.left}px ${hole.top}px, ${hole.left}px ${hole.top + hole.height}px, ` +
-  `${hole.left + hole.width}px ${hole.top + hole.height}px, ` +
-  `${hole.left + hole.width}px ${hole.top}px, ${hole.left}px ${hole.top}px)`;
+/**
+ * 全帧坐标 -> 挖掉 hole 矩形的 clip-path。
+ * 刻意不写 polygon(evenodd, …)：成片台用的 @remotion/web-renderer 那套软件合成器
+ * 按「每个点 x y」解析 polygon()，evenodd 前缀会被当成第一个点，整张底板直接渲崩
+ * （视频那条路是 full 模式，从不走这里，所以一直没暴露）。
+ * 改写成「零宽缝隙 + 反向绕行」：nonzero 填充下外框与洞方向相反即互相抵消，
+ * 洞照样是洞，真浏览器里像素一致。
+ */
+const holeClip = (frameW: number, frameH: number, hole: Rect) => {
+  const l = hole.left;
+  const t = hole.top;
+  const r = hole.left + hole.width;
+  const b = hole.top + hole.height;
+  return 'polygon(' + [
+    `0 0`, `${frameW}px 0`, `${frameW}px ${frameH}px`, `0 ${frameH}px`, `0 0`,
+    `${l}px ${t}px`, `${l}px ${b}px`, `${r}px ${b}px`, `${r}px ${t}px`, `${l}px ${t}px`,
+  ].join(', ') + ')';
+};
 
 /** 分轨导出：把整层按媒体窗挖洞（页面底、纸卡等整层不透明元素用） */
 const ChromeClip: React.FC<{hole: Rect; children?: React.ReactNode}> = ({hole, children}) => {
@@ -1274,83 +1286,83 @@ const PortraitVideo: React.FC<NiwoProps> = (props) => (
 // card 模式下文字只留形状与位置（颜色透明），这里把每个文字元素的几何/样式量出来，
 // 由 Python 侧生成剪映文本片段（可改字的那一层）。
 /**
- * 量出来的文字几何暂存在此：成片台页面渲完一张 card 层就直接读这个对象，
+ * 量出来的文字几何暂存在此：成片台页面渲完一张 card 层就直接读它，
  * 随图层一起交回云端（服务器不再有 Chrome，量不到第二手）。
+ * 必须走 globalThis 取：webpack 分包会把本模块装进多个 chunk，
+ * 模块级常量会变成两份，页面那份永远读不到渲染那份写的东西。
  */
-export const probeStore: Record<string, Record<string, unknown>[]> =
+export const probeSink = (): Record<string, Record<string, unknown>[]> =>
   ((globalThis as {__vgProbe?: Record<string, Record<string, unknown>[]>}).__vgProbe
     ??= {});
 
+/** 量画面里每个文字元素的几何与样式：剪映文本轨按这个摆字（可改字的那一层）。 */
+const measureTextGeometry = (anchor: HTMLElement | null): Record<string, unknown>[] => {
+  const items: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+  // 画面原点：Remotion 把画面整体放在缩放容器里，rect 是屏幕坐标，需要换算。
+  // 必须从探针自己往上找——页面里同时存在过好几个 [data-vg-frame]（播放器那一个、
+  // 每张 still 各自的脚手架），全局 querySelector 会抓到残留的那个。
+  const frame = anchor?.closest('[data-vg-frame]') as HTMLElement | null;
+  if (!frame) return items;
+  const fr = frame.getBoundingClientRect();
+  // still 的脚手架挂在 visibility:hidden 下：隐藏里的文字不生成绘制盒，Range 量出来
+  // 全是 0×0。量之前把祖先的 visibility 临时抬起来，量完还原；外层那个
+  // filter:opacity(0) 不动，它照样透明，不会在页面上闪一下。
+  const lifted: Array<[HTMLElement, string]> = [];
+  for (let q: HTMLElement | null = frame; q; q = q.parentElement) {
+    if (getComputedStyle(q).visibility === 'hidden') {
+      lifted.push([q, q.style.visibility]);
+      q.style.visibility = 'visible';
+    }
+  }
+  // 关掉「文字透明」再量，拿到设计里的真实字色；量完恢复
+  const hideStyle = document.getElementById('vg-hide-text') as HTMLStyleElement | null;
+  if (hideStyle) hideStyle.disabled = true;
+  const walk = (el: Element) => {
+    const node = el as HTMLElement;
+    const box = node.getBoundingClientRect();
+    if (box.width > 0.5 && box.height > 0.5) {
+      for (const child of Array.from(node.childNodes)) {
+        if (child.nodeType !== 3) continue;
+        const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!text) continue;
+        const cs = getComputedStyle(node);
+        if (parseFloat(cs.fontSize) < 6) continue;
+        // 用 Range 量「文字本身」的框：元素框常是整行宽度，不能代表文字位置
+        const range = document.createRange();
+        range.selectNodeContents(child);
+        const r = range.getBoundingClientRect();
+        if (r.width <= 0.5 || r.height <= 0.5) continue;
+        const key = `${text}|${Math.round(r.x)}|${Math.round(r.y)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        items.push({
+          text, x: r.x - fr.x, y: r.y - fr.y, w: r.width, h: r.height,
+          size: parseFloat(cs.fontSize),
+          weight: parseInt(cs.fontWeight, 10) || 400,
+          color: cs.color,
+          align: cs.textAlign,
+        });
+      }
+    }
+    for (const c of Array.from(el.children)) walk(c);
+  };
+  // 只量画面内部：成片台页面自身还有一整栏 UI，从 body 起走会把按钮文案当成片文字
+  walk(frame);
+  if (hideStyle) hideStyle.disabled = false;
+  for (const [el, v] of lifted) el.style.visibility = v;
+  return items;
+};
+
 const TextProbe: React.FC<{tag?: string}> = ({tag}) => {
-  const [handle] = React.useState(() => delayRender('draft text probe'));
-  React.useEffect(() => {
-    let cancelled = false;
-
-    const measure = () => {
-      const items: Record<string, unknown>[] = [];
-      const seen = new Set<string>();
-      // 画面原点：Remotion 会把画面整体放在缩放容器里，rect 是屏幕坐标，需要换算
-      const frame = document.querySelector('[data-vg-frame]') as HTMLElement | null;
-      const fr = frame ? frame.getBoundingClientRect() : {x: 0, y: 0};
-      // 关掉「文字透明」再量，拿到设计里的真实字色；量完恢复
-      const hideStyle = document.getElementById('vg-hide-text') as HTMLStyleElement | null;
-      if (hideStyle) hideStyle.disabled = true;
-      const walk = (el: Element) => {
-        const node = el as HTMLElement;
-        const box = node.getBoundingClientRect();
-        if (box.width > 0.5 && box.height > 0.5) {
-          for (const child of Array.from(node.childNodes)) {
-            if (child.nodeType !== 3) continue;
-            const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
-            if (!text) continue;
-            const cs = getComputedStyle(node);
-            if (parseFloat(cs.fontSize) < 6) continue;
-            // 用 Range 量「文字本身」的框：元素框常是整行宽度，不能代表文字位置
-            const range = document.createRange();
-            range.selectNodeContents(child);
-            const r = range.getBoundingClientRect();
-            if (r.width <= 0.5 || r.height <= 0.5) continue;
-            const key = `${text}|${Math.round(r.x)}|${Math.round(r.y)}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            items.push({
-              text, x: r.x - fr.x, y: r.y - fr.y, w: r.width, h: r.height,
-              size: parseFloat(cs.fontSize),
-              weight: parseInt(cs.fontWeight, 10) || 400,
-              color: cs.color,
-              align: cs.textAlign,
-            });
-          }
-        }
-        for (const c of Array.from(el.children)) walk(c);
-      };
-      // 只量画面内部：成片台页面自身还有一整栏 UI，从 body 起走会把按钮文案当成片文字
-      walk(frame ?? document.body);
-      if (hideStyle) hideStyle.disabled = false;
-      if (tag) probeStore[tag] = items;
-      continueRender(handle);
-    };
-
-    // 等字体与布局都稳定再量：大字报/字幕这类用 bottom、百分比定位的元素，
-    // 容器尺寸还没落定就量会得到负坐标和错误的宽高（剪映里文字会飘到画面外）。
-    const fontsReady =
-      typeof document !== 'undefined' && (document as Document & {fonts?: FontFaceSet}).fonts
-        ? (document as Document & {fonts: FontFaceSet}).fonts.ready
-        : Promise.resolve();
-    Promise.resolve(fontsReady)
-      .then(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))))
-      .then(() => {
-        if (!cancelled) measure();
-      })
-      .catch(() => {
-        if (!cancelled) measure();
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return null;
+  const anchorRef = React.useRef<HTMLSpanElement>(null);
+  // 必须用 layout effect 同步量：web-renderer 不吃 delayRender——它渲完就取像素，
+  // 普通 effect 排在那之后，探针连同脚手架一起被卸载，一条文字都量不到（实测）。
+  React.useLayoutEffect(() => {
+    if (tag) probeSink()[tag] = measureTextGeometry(anchorRef.current);
+  }, [tag]);
+  // 零尺寸占位：只为让探针知道自己挂在哪个画面里
+  return <span ref={anchorRef} style={{display: 'none'}} />;
 };
 
 /**

@@ -161,10 +161,12 @@ def import_layers(layers_dir: Path | None, folder: Path, ids: list[str]) -> dict
     if not src or not src.is_dir():
         raise RuntimeError("成片台没交回分轨图层：渲完请留在成片台页面，等它把图层出完")
 
-    def need(rel: str) -> Path:
+    def need(rel: str, min_bytes: int = 1024) -> Path:
         p = src / rel
-        if not p.is_file() or p.stat().st_size < 1024:
+        if not p.is_file():
             raise RuntimeError(f"分轨图层不完整，缺 {rel}")
+        if p.stat().st_size < min_bytes:
+            raise RuntimeError(f"分轨图层 {rel} 是空的（{p.stat().st_size} 字节）")
         return p
 
     shutil.copyfile(need("base.png"), folder / "base.png")
@@ -172,7 +174,7 @@ def import_layers(layers_dir: Path | None, folder: Path, ids: list[str]) -> dict
     for i in ids:
         f = need(f"cards/{i}.png")
         shutil.copyfile(f, folder / "cards" / f.name)
-    tp = need("texts.json")
+    tp = need("texts.json", 2)      # 全片没有一张文字卡时 {} 也是合法结果
     try:
         raw = json.loads(tp.read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001 - 坏 JSON 同样按缺层处理

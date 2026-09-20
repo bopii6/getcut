@@ -2148,8 +2148,9 @@ async def agent_job_layer(job_id: str, request: Request, device: str = "",
         return JSONResponse({"error": "没有等图层的那台成片台，或文件名不合法"},
                             status_code=410)
     data = await request.body()
-    # 1080x1920 的透明 PNG 最大也就几 MB；上限是防有人拿这个口往服务器塞东西
-    if not (16 < len(data) < 25 * 1024 * 1024):
+    # 上限是防有人拿这个口往服务器塞东西；下限只挡空包——
+    # 「图层缺不缺」由 draft_build.import_layers 逐张把关
+    if not (1 <= len(data) <= 25 * 1024 * 1024):
         return JSONResponse({"error": "图层大小不对"}, status_code=400)
     dst.write_bytes(data)
     return {"ok": True, "bytes": len(data)}
