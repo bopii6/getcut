@@ -829,9 +829,14 @@ def _set_session_cookie(response: Response, request: Request, email: str,
 
 @app.get("/api/auth/status")
 def auth_status():
-    """登录/注册页初始化用（公开）。"""
+    """登录/注册页初始化用（公开）。
+
+    `open` 一并说出来：前端曾自己用"没令牌 + 没账号"猜开放模式，而 _open_mode 还要求
+    显式 VIDEOGEN_OPEN_MODE=1 —— 猜错的结果是访客一进成片台就撞 401、落地页糊一屏红字。
+    """
     return {"smtp": auth.smtp_ready(), "dev_email": config.DEV_EMAIL_FALLBACK,
-            "token_auth": bool(AUTH_TOKEN), "locked": auth.has_users()}
+            "token_auth": bool(AUTH_TOKEN), "locked": auth.has_users(),
+            "open": _open_mode()}
 
 
 @app.post("/api/auth/send-code")

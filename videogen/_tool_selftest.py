@@ -17,6 +17,9 @@ from pathlib import Path
 
 os.environ["VIDEOGEN_TOKEN"] = ""
 os.environ["VIDEOGEN_USERS_FILE"] = str(Path(tempfile.mkdtemp(prefix="gc_tool_")) / "users.json")
+# 9-21 起开放模式要显式开：不开的话这个夹具里那张空账号表 = 成片台领单一律 401，
+# 全链路自测会在"点开始渲染"之前就没声没息地卡住。
+os.environ["VIDEOGEN_OPEN_MODE"] = "1"
 
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))

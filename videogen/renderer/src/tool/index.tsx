@@ -123,7 +123,10 @@ const compositionOf = (durationInFrames: number) => ({
 const App: React.FC = () => {
   const [phase, setPhase] = React.useState<Phase>('drop');
   const [me, setMe] = React.useState<Me | null>(null);
-  const [authst, setAuthst] = React.useState<AuthSt>({smtp: false, dev_email: false, token_auth: false, locked: false});
+  const [authst, setAuthst] = React.useState<AuthSt>({smtp: false, dev_email: false, token_auth: false, locked: false, open: false});
+  // /api/auth/status 回来之前谁都不算"查过"：拿默认值当结论会把访客当成开放模式，
+  // 于是落地页第一帧就去领单、第一帧就 401。
+  const [authReady, setAuthReady] = React.useState(false);
   const [sheet, setSheet] = React.useState<SheetName>('');
   const [authNote, setAuthNote] = React.useState('');
   const [brandOn, setBrandOn] = React.useState(false);
@@ -293,7 +296,10 @@ const App: React.FC = () => {
   // ---- 目录：音色 + 曲库（进页面拉一次） ----
   React.useEffect(() => {
     refreshMe();
-    api('/api/auth/status').then((d) => setAuthst(d as unknown as AuthSt)).catch(() => {});
+    api('/api/auth/status').then((d) => {
+      setAuthst(d as unknown as AuthSt);
+      setAuthReady(true);
+    }).catch(() => setAuthReady(true));
     void loadVoices();
     api('/api/music').then((d) => {
       const list = (Array.isArray(d) ? d : (d.music as typeof music)) || [];
@@ -302,7 +308,12 @@ const App: React.FC = () => {
   }, []);
 
   // ---- 成片台轮询：领任务（本页提交的或别的页提交的都走这里） ----
+  // 访客（未登录）不开这条轮询：poll 一定 401，落地页会凭空糊一屏红字，
+  // 说的还是"这一单已作废"——可他连单都还没有。开放模式例外，问服务端要结论别自己猜。
+  const mayPoll = authReady && (!!me || authst.open);
+
   React.useEffect(() => {
+    if (!mayPoll) return;
     let alive = true;
     let fails = 0;
     // 重试要有上限、要分性质。以前这里是无限循环：签名密钥轮换或登录过期之后，
@@ -393,14 +404,21 @@ const App: React.FC = () => {
             packRef.current = null;
             setPack(null);
           }
-          // 停下来给人看，而不是每 3 秒撞一次墙：再试也没用的（登录掉了 / 这一单已作废），
+          // 停下来给人看，而不是每 3 秒撞一次墙：再试也没用的（登录掉了 / 这一单不是你的），
           // 或者已经试够 8 次的，都直接说下一步该干什么。
           if (dead || ++fails > MAX_FAILS) {
-            setErr(msg.includes('HTTP 401') || msg.includes('HTTP 403')
-              ? '这一单已作废或不属于当前账号：刷新这一页重新领单；若反复如此，点右上角「登录」重新登录一次'
-              : msg.includes('HTTP 410')
-                ? '这一单已被云端收回（服务器重启或超时）：刷新这一页就会重新领单'
-                : `${whichStep}（已试 ${MAX_FAILS} 次）：${msg.slice(0, 60)} —— 刷新这一页重新领单`);
+            if (msg.includes('HTTP 401')) {
+              // 会话真的没了：把顶栏换回「登录」，别让人对着付费档的界面空等
+              meRef.current = null;
+              setMe(null);
+            }
+            setErr(msg.includes('HTTP 401')
+              ? '登录状态已失效（或还没登录）：点右上角「登录」重新登录一次，再刷新这一页领单'
+              : msg.includes('HTTP 403')
+                ? '这一单不属于当前账号：刷新这一页重新领单；若反复如此，确认这一单是用哪个账号提交的'
+                : msg.includes('HTTP 410')
+                  ? '这一单已被云端收回（服务器重启或超时）：刷新这一页就会重新领单'
+                  : `${whichStep}（已试 ${MAX_FAILS} 次）：${msg.slice(0, 60)} —— 刷新这一页重新领单`);
             return;
           }
           if (fails >= 2) {
@@ -414,13 +432,14 @@ const App: React.FC = () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mayPoll]);
 
   // ---- 导入：建项目 → 上传 zip → 挂载 → 读摘要 ----
   const importZip = async (file?: File) => {
     if (!file || phaseRef.current === 'importing') return;
-    // 素材包是要花钱的活，账号先到位；本机开放模式（没建过账号）不拦
-    if (!meRef.current && (authst.locked || authst.token_auth)) {
+    // 素材包是要花钱的活，账号先到位；本机开放模式（服务端说 open 才算）不拦。
+    // authReady 之前不拦：那一瞬间的判断不可信，真被服务端 401 了下面的 catch 会补上登录面板。
+    if (!meRef.current && authReady && !authst.open) {
       pendingZip.current = file;
       setAuthNote(`登录后接着导入「${file.name}」，不用重拖一次。`);
       setSheet('auth');
@@ -852,6 +871,7 @@ const App: React.FC = () => {
                    onBrandChanged={() => { void loadVoices(); void loadBrand(); }}
                    onSignedIn={() => {
                      setAuthNote('');
+                     setErr('');       // 那句"登录已失效"到此为止
                      const f = pendingZip.current;
                      pendingZip.current = null;
                      if (f) void importZip(f);

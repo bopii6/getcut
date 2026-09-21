@@ -11929,7 +11929,8 @@ const App = () => {
   var _a, _b, _c, _d, _e, _f, _g;
   const [phase, setPhase] = react.useState("drop");
   const [me, setMe] = react.useState(null);
-  const [authst, setAuthst] = react.useState({ smtp: false, dev_email: false, token_auth: false, locked: false });
+  const [authst, setAuthst] = react.useState({ smtp: false, dev_email: false, token_auth: false, locked: false, open: false });
+  const [authReady, setAuthReady] = react.useState(false);
   const [sheet, setSheet] = react.useState("");
   const [authNote, setAuthNote] = react.useState("");
   const [brandOn, setBrandOn] = react.useState(false);
@@ -12080,8 +12081,10 @@ const App = () => {
   }), []);
   react.useEffect(() => {
     refreshMe();
-    api("/api/auth/status").then((d) => setAuthst(d)).catch(() => {
-    });
+    api("/api/auth/status").then((d) => {
+      setAuthst(d);
+      setAuthReady(true);
+    }).catch(() => setAuthReady(true));
     void loadVoices();
     api("/api/music").then((d) => {
       const list = (Array.isArray(d) ? d : d.music) || [];
@@ -12089,7 +12092,9 @@ const App = () => {
     }).catch(() => {
     });
   }, []);
+  const mayPoll = authReady && (!!me || authst.open);
   react.useEffect(() => {
+    if (!mayPoll) return;
     let alive = true;
     let fails = 0;
     const DEAD_STATUSES = [401, 403, 410];
@@ -12174,7 +12179,11 @@ const App = () => {
             setPack(null);
           }
           if (dead || ++fails > MAX_FAILS) {
-            setErr(msg2.includes("HTTP 401") || msg2.includes("HTTP 403") ? "\u8FD9\u4E00\u5355\u5DF2\u4F5C\u5E9F\u6216\u4E0D\u5C5E\u4E8E\u5F53\u524D\u8D26\u53F7\uFF1A\u5237\u65B0\u8FD9\u4E00\u9875\u91CD\u65B0\u9886\u5355\uFF1B\u82E5\u53CD\u590D\u5982\u6B64\uFF0C\u70B9\u53F3\u4E0A\u89D2\u300C\u767B\u5F55\u300D\u91CD\u65B0\u767B\u5F55\u4E00\u6B21" : msg2.includes("HTTP 410") ? "\u8FD9\u4E00\u5355\u5DF2\u88AB\u4E91\u7AEF\u6536\u56DE\uFF08\u670D\u52A1\u5668\u91CD\u542F\u6216\u8D85\u65F6\uFF09\uFF1A\u5237\u65B0\u8FD9\u4E00\u9875\u5C31\u4F1A\u91CD\u65B0\u9886\u5355" : `${whichStep}\uFF08\u5DF2\u8BD5 ${MAX_FAILS} \u6B21\uFF09\uFF1A${msg2.slice(0, 60)} \u2014\u2014 \u5237\u65B0\u8FD9\u4E00\u9875\u91CD\u65B0\u9886\u5355`);
+            if (msg2.includes("HTTP 401")) {
+              meRef.current = null;
+              setMe(null);
+            }
+            setErr(msg2.includes("HTTP 401") ? "\u767B\u5F55\u72B6\u6001\u5DF2\u5931\u6548\uFF08\u6216\u8FD8\u6CA1\u767B\u5F55\uFF09\uFF1A\u70B9\u53F3\u4E0A\u89D2\u300C\u767B\u5F55\u300D\u91CD\u65B0\u767B\u5F55\u4E00\u6B21\uFF0C\u518D\u5237\u65B0\u8FD9\u4E00\u9875\u9886\u5355" : msg2.includes("HTTP 403") ? "\u8FD9\u4E00\u5355\u4E0D\u5C5E\u4E8E\u5F53\u524D\u8D26\u53F7\uFF1A\u5237\u65B0\u8FD9\u4E00\u9875\u91CD\u65B0\u9886\u5355\uFF1B\u82E5\u53CD\u590D\u5982\u6B64\uFF0C\u786E\u8BA4\u8FD9\u4E00\u5355\u662F\u7528\u54EA\u4E2A\u8D26\u53F7\u63D0\u4EA4\u7684" : msg2.includes("HTTP 410") ? "\u8FD9\u4E00\u5355\u5DF2\u88AB\u4E91\u7AEF\u6536\u56DE\uFF08\u670D\u52A1\u5668\u91CD\u542F\u6216\u8D85\u65F6\uFF09\uFF1A\u5237\u65B0\u8FD9\u4E00\u9875\u5C31\u4F1A\u91CD\u65B0\u9886\u5355" : `${whichStep}\uFF08\u5DF2\u8BD5 ${MAX_FAILS} \u6B21\uFF09\uFF1A${msg2.slice(0, 60)} \u2014\u2014 \u5237\u65B0\u8FD9\u4E00\u9875\u91CD\u65B0\u9886\u5355`);
             return;
           }
           if (fails >= 2) {
@@ -12187,10 +12196,10 @@ const App = () => {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [mayPoll]);
   const importZip = async (file) => {
     if (!file || phaseRef.current === "importing") return;
-    if (!meRef.current && (authst.locked || authst.token_auth)) {
+    if (!meRef.current && authReady && !authst.open) {
       pendingZip.current = file;
       setAuthNote(`\u767B\u5F55\u540E\u63A5\u7740\u5BFC\u5165\u300C${file.name}\u300D\uFF0C\u4E0D\u7528\u91CD\u62D6\u4E00\u6B21\u3002`);
       setSheet("auth");
@@ -12625,6 +12634,7 @@ const App = () => {
       },
       onSignedIn: () => {
         setAuthNote("");
+        setErr("");
         const f = pendingZip.current;
         pendingZip.current = null;
         if (f) void importZip(f);

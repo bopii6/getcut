@@ -9,7 +9,9 @@ export interface Me {
   nickname: string; avatar: string; created: string; avatars: string[];
   builds_today?: number; free_daily_builds?: number;
 }
-export interface AuthSt { smtp: boolean; dev_email: boolean; token_auth: boolean; locked: boolean }
+export interface AuthSt { smtp: boolean; dev_email: boolean; token_auth: boolean; locked: boolean;
+  /** 服务端说了算：本机开放模式下不登录也能领单 */
+  open: boolean }
 export type SheetName = '' | 'auth' | 'pricing' | 'settings' | 'contact' | 'brand';
 
 
