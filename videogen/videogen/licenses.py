@@ -18,7 +18,7 @@ import secrets
 import time
 from pathlib import Path
 
-from . import auth, config
+from . import auth, config, safestore
 
 # 手抄友好的字符表：没有 0/O/1/I/S/5（S/5 也容易混，干脆都不要）
 _ALPHABET = "2346789ABCDEFGHJKMNPQRTUVWXYZ"
@@ -37,18 +37,14 @@ def _new_code(tier: str) -> str:
 
 
 def _load() -> dict:
-    if not _CODE_FILE.is_file():
-        return {"codes": []}
-    try:
-        data = json.loads(_CODE_FILE.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) and isinstance(data.get("codes"), list) else {"codes": []}
-    except Exception:  # noqa: BLE001 - 损坏文件当空库，别把兑换接口整个挂掉
-        return {"codes": []}
+    data = safestore.read_json(
+        _CODE_FILE, default={"codes": []},
+        shape=lambda d: isinstance(d, dict) and isinstance(d.get("codes"), list))
+    return data if isinstance(data, dict) and isinstance(data.get("codes"), list) else {"codes": []}
 
 
 def _save(data: dict) -> None:
-    _CODE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _CODE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    safestore.write_json(_CODE_FILE, data)
 
 
 def generate(tier: str, count: int, note: str = "") -> list[str]:

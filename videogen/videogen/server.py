@@ -28,7 +28,7 @@ import uvicorn
 from fastapi import FastAPI, File, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
-from . import agenthub, auth, config, cos_store, licenses, preview, voice_clone
+from . import agenthub, auth, config, cos_store, licenses, preview, safestore, voice_clone
 from . import brand as brand_kit
 from . import tts as tts_mod
 from .schemas import Content, Manifest, JobCancelled
@@ -360,18 +360,16 @@ BUNDLES_META = WORKSPACES / "bundles.json"   # 素材包归属：{"bundles": {�
 
 
 def _bundles_meta() -> dict:
-    if BUNDLES_META.is_file():
-        try:
-            return json.loads(BUNDLES_META.read_text(encoding="utf-8")).get("bundles", {})
-        except Exception:  # noqa: BLE001 - 元数据坏了不该让素材包整体不可用
-            return {}
-    return {}
+    # 归属表读坏了不能当"谁都不属于"：那样下一次保存就把所有素材包的归属冲没了
+    data = safestore.read_json(BUNDLES_META, default={"bundles": {}},
+                               shape=lambda d: isinstance(d.get("bundles"), dict))
+    return data.get("bundles", {})
 
 
 def _bundles_meta_save(meta: dict) -> None:
     try:
-        BUNDLES_META.write_text(json.dumps({"bundles": meta}, ensure_ascii=False, indent=1),
-                                encoding="utf-8")
+        safestore.write_json(BUNDLES_META, {"bundles": meta},
+                             count=lambda d: len(d.get("bundles") or {}))
     except OSError:
         pass
 
@@ -482,7 +480,7 @@ def _usage_bump(email: str) -> int:
         data[email] = user
         try:
             USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
-            USAGE_FILE.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            safestore.write_json(USAGE_FILE, data, indent=None)
         except OSError:
             pass
         return user[today]
@@ -1000,7 +998,7 @@ def _jobs_load() -> None:
 
 def _jobs_save() -> None:
     try:
-        JOBS_FILE.write_text(json.dumps(JOBS, ensure_ascii=False), encoding="utf-8")
+        safestore.write_json(JOBS_FILE, JOBS, indent=None)
     except Exception:
         pass
 
@@ -1017,13 +1015,12 @@ with _LOCK:
 
 
 def _reg() -> dict:
-    if REG.is_file():
-        return json.loads(REG.read_text(encoding="utf-8"))
-    return {"projects": []}
+    return safestore.read_json(REG, default={"projects": []},
+                               shape=lambda d: isinstance(d.get("projects"), list))
 
 
 def _reg_save(reg: dict) -> None:
-    REG.write_text(json.dumps(reg, ensure_ascii=False, indent=1), encoding="utf-8")
+    safestore.write_json(REG, reg, count=lambda d: len(d.get("projects") or []))
 
 
 # 渲染阶段：与真实流水线执行顺序一致（前端 timeline 直接照此渲染）

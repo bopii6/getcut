@@ -13,6 +13,8 @@ import json
 import time
 from pathlib import Path
 
+from . import safestore
+
 ROOT = Path(__file__).resolve().parent.parent          # videogen/
 TRY_BUNDLE_ROOT = ROOT / "samples"                     # 试玩素材包随代码走（不用往服务器手工拷）
 
@@ -53,7 +55,7 @@ def remember_cookie(workspaces: Path, cookie: str) -> None:
     data = _load(path)
     data["cookies"][cookie] = time.time()
     try:
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+        safestore.write_json(path, data, indent=None)
     except Exception:  # noqa: BLE001
         pass
 
@@ -64,11 +66,8 @@ def _store_path(workspaces: Path) -> Path:
 
 
 def _load(path: Path) -> dict:
-    try:
-        d = json.loads(path.read_text(encoding="utf-8"))
-        return {"cookies": d.get("cookies") or {}, "ips": d.get("ips") or {}}
-    except Exception:  # noqa: BLE001 - 文件坏了就重来，不该拦住试玩
-        return {"cookies": {}, "ips": {}}
+    d = safestore.read_json(path, default={}, shape=lambda x: isinstance(x, dict))
+    return {"cookies": d.get("cookies") or {}, "ips": d.get("ips") or {}}
 
 
 def guard(workspaces: Path, ip: str, cookie: str) -> tuple[bool, str]:
@@ -88,7 +87,7 @@ def guard(workspaces: Path, ip: str, cookie: str) -> tuple[bool, str]:
     # 顺手清掉过期的 cookie 记录，文件不会越滚越大
     data["cookies"] = {k: v for k, v in data["cookies"].items() if now - v < 30 * 24 * 3600}
     try:
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+        safestore.write_json(path, data, indent=None)
     except Exception:  # noqa: BLE001
         pass
     return True, ""

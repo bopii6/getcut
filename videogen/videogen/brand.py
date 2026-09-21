@@ -13,7 +13,7 @@ import re
 import time
 from pathlib import Path
 
-from . import config
+from . import config, safestore
 
 DIR = Path(config.WORKSPACES) / ".videogen-brand"
 HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -39,15 +39,14 @@ def _json_path(email: str) -> Path:
 
 
 def load(email: str) -> dict | None:
-    """读品牌资料；没设置过返回 None。"""
+    """读品牌资料；没设置过返回 None。
+
+    坏档不当"没设置"：先让 safestore 留现场并试自愈，救不回来就抛 ——
+    否则调用方 save 时会把空档写回去，把客户的 logo/水印设置冲掉。
+    """
     f = _json_path(email)
-    if not f.is_file():
-        return None
-    try:
-        data = json.loads(f.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else None
-    except Exception:  # noqa: BLE001 - 坏档当没设置
-        return None
+    data = safestore.read_json(f, default=None, shape=lambda d: isinstance(d, dict))
+    return data if isinstance(data, dict) else None
 
 
 def save(email: str, fields: dict) -> dict:
@@ -84,8 +83,7 @@ def save(email: str, fields: dict) -> dict:
     data.pop("accent_override", None)
     data["updated"] = time.strftime("%Y-%m-%d %H:%M")
     _dir(email).mkdir(parents=True, exist_ok=True)
-    _json_path(email).write_text(json.dumps(data, ensure_ascii=False, indent=1),
-                                 encoding="utf-8")
+    safestore.write_json(_json_path(email), data)
     return data
 
 
@@ -178,7 +176,7 @@ def set_clone(email: str, voice_id: str, sample: bytes) -> dict:
     (_dir(email) / "sample.mp3").write_bytes(sample)
     data = load(email) or {}
     data["clone"] = {"voice_id": voice_id, "created": time.strftime("%Y-%m-%d %H:%M")}
-    _json_path(email).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    safestore.write_json(_json_path(email), data)
     return data["clone"]
 
 
@@ -188,7 +186,7 @@ def clear_clone(email: str) -> str | None:
     if c:
         data["updated"] = time.strftime("%Y-%m-%d %H:%M")
         _dir(email).mkdir(parents=True, exist_ok=True)
-        _json_path(email).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+        safestore.write_json(_json_path(email), data)
         p = _dir(email) / "sample.mp3"
         if p.is_file():
             p.unlink()

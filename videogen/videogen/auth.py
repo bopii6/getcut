@@ -20,7 +20,7 @@ from email.header import Header
 from email.mime.text import MIMEText
 from pathlib import Path
 
-from . import config
+from . import config, safestore
 
 PBKDF2_ITERS = 200_000
 SESSION_TTL_SHORT = 7 * 24 * 3600     # 不勾"记住我"：7 天
@@ -131,19 +131,18 @@ def _smtp_send(to: str, code: str, purpose: str = "注册") -> None:
 # ---------- 用户存储 ----------
 
 def _load_users() -> list[dict]:
-    if not USERS_FILE.is_file():
-        return []
-    try:
-        data = json.loads(USERS_FILE.read_text(encoding="utf-8"))
-        return data.get("users", []) if isinstance(data, dict) else []
-    except Exception:  # noqa: BLE001 - 损坏文件视为无用户，别把登录整个挂掉
-        return []
+    """读账号表。坏了先自愈（留现场 + 从每日备份恢复），救不回来就抛 ——
+    这里绝不能返回 []：调用方紧接着就会把"空 + 新客户"写回盘，把整份名单冲掉。
+    """
+    data = safestore.read_json(
+        USERS_FILE, default={"users": []},
+        shape=lambda d: isinstance(d, dict) and isinstance(d.get("users"), list))
+    return data.get("users", [])
 
 
 def _save_users(users: list[dict]) -> None:
-    USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    USERS_FILE.write_text(json.dumps({"users": users}, ensure_ascii=False, indent=1),
-                          encoding="utf-8")
+    safestore.write_json(USERS_FILE, {"users": users},
+                         count=lambda d: len(d.get("users") or []))
 
 
 def has_users() -> bool:
