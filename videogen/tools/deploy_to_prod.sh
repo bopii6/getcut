@@ -92,8 +92,16 @@ $SSH "$HOST" "mkdir -p $BK && cp -a $BASE/code $BK/code && cp -a $BASE/.env $BK/
 push_dir() {  # push_dir <目录> [keep|clean]：本机没有 rsync，用 tar 管道；clean=顺带清掉线上多余文件
   local d="$1" mode="${2:-keep}" tag
   tag=$(printf '%s' "$d" | tr '/' '_')
-  echo "  传 $d"
-  tar -C "$SRC/$d" -cf - . | $SSH "$HOST" "mkdir -p $BASE/code/$d && tar -xf - -C $BASE/code/$d" || return 1
+  # 只送"大小不一样或线上没有"的文件：整目录 16MB 一次推过去，这条链路会掐断（今晚实测）
+  $SSH "$HOST" "cd $BASE/code/$d && find . -type f -printf '%P %s
+' | sort" > "/tmp/rs-$tag.txt" 2>/dev/null || : > "/tmp/rs-$tag.txt"
+  (cd "$SRC/$d" && find . -type f -printf '%P %s
+' | sort) > "/tmp/ls-$tag.txt"
+  join -a1 -e MISSING -o 0,1.2,2.2 "/tmp/ls-$tag.txt" "/tmp/rs-$tag.txt"     | awk '{if ($2 != $3) print $1}' > "/tmp/up-$tag.txt"
+  n=$(wc -l < "/tmp/up-$tag.txt")
+  if [ "$n" -eq 0 ]; then echo "  $d 已经一致，不传"; return 0; fi
+  echo "  传 $d（$n 个文件有变化）"
+  (cd "$SRC/$d" && tar -cf - --files-from="/tmp/up-$tag.txt")     | $SSH "$HOST" "tar -xf - -C $BASE/code/$d" || return 1
   [ "$mode" = clean ] || return 0
   $SSH "$HOST" "cd $BASE/code/$d && find . -type f -printf '%P\n'" 2>/dev/null | sort > "/tmp/remote-$tag.txt"
   (cd "$SRC/$d" && find . -type f -printf '%P\n') | sort > "/tmp/local-$tag.txt"
