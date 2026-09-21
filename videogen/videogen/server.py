@@ -53,8 +53,8 @@ MAX_JOBS_KEPT = 80                            # jobs.json 只留最近这么多�
 
 app = FastAPI(title="GetCut studio")
 JOBS: dict[str, dict] = {}
-JOBS_FILE = ROOT / "jobs.json"
-REG = ROOT / "registry.json"
+JOBS_FILE = Path(config.JOBS_FILE)
+REG = Path(config.REGISTRY_FILE)
 # 全局锁：JOBS / registry / 渲染工作目录都是共享可变状态，串行化写操作
 _LOCK = threading.RLock()
 # 双通道流水线：
@@ -426,6 +426,36 @@ def _job_visible(j: dict, request: Request) -> bool:
     with _LOCK:
         p = next((p for p in _reg()["projects"] if p["project_id"] == pid), None)
     return bool(p) and _project_visible(p, request)
+
+
+def _agent_job_ok(job_id: str, request: Request):
+    """成片台系接口的统一放行：任务得是调用者自己的（管理员与开放模式除外）。
+
+    身份取 `_agent_identity` —— 成片台有两条通道：浏览器带会话 cookie，或用
+    /api/agent/login 换到的设备令牌。只认 cookie 会把令牌那条正路误伤成 403。
+    设备名是客户端自己填的，不能当身份凭证，它只用来挡同一账号下两个浏览器抢单。
+    返回 None 表示放行；否则把返回的响应直接发给调用方。
+    """
+    ident = _agent_identity(request)
+    if ident is None:
+        return JSONResponse({"error": "成片台未登录"}, status_code=401)
+    if ident in ("__admin__", "__open__"):
+        return None
+    with _LOCK:
+        j = JOBS.get(str(job_id))
+        if j is None:
+            owner = None
+        elif j.get("try"):
+            return None                      # 试玩样片本就是公开引流物
+        elif j.get("owner") is not None:
+            owner = j["owner"]
+        else:                                # 老任务没记 owner，退到项目归属
+            p = next((x for x in _reg()["projects"]
+                      if x["project_id"] == j.get("project_id")), None)
+            owner = (p or {}).get("owner")
+    if owner != ident:
+        return JSONResponse({"error": "任务不属于你"}, status_code=403)
+    return None
 
 
 def _request_authed(request: Request) -> bool:
@@ -891,6 +921,12 @@ def voice_preview(request: Request, voice: str = "xiaoxia"):
             return JSONResponse({"error": "还没有克隆声音，先到「我的 → 品牌套装」里录制"},
                                 status_code=404)
         voice = c["voice_id"]
+    elif voice not in tts_mod.load_voices():
+        # 目录外的音色 id 只认调用者自己克隆的那一个：光知道别人的 id 借不到他的声音
+        email = _session_email(request)
+        c = brand_kit.clone_info(email) if email else None
+        if not c or c.get("voice_id") != voice:
+            return JSONResponse({"error": "音色不存在"}, status_code=404)
     f = _preview_file(voice)
     if not f.exists() or f.stat().st_size == 0:
         try:
@@ -1258,6 +1294,9 @@ def _preview_render_body(body: dict, request: Request = None) -> dict:
     if not bundle:
         raise ValueError("缺少素材包")
     bundle_dir = _resolve_bundle(bundle)
+    # 预演会读包里的口播文案出分镜，所以"包存在"不够，还得是调用者自己的包
+    if request is not None and not _bundle_visible(str(bundle), request):
+        raise ValueError("素材包不存在")
     _resolve_bgm(body.get("bgm"))
     fmt = body.get("format") or DEFAULT_TEMPLATE
     if fmt not in SUPPORTED_FORMATS:
@@ -1320,6 +1359,8 @@ def preview_shots(pid: str, body: dict, request: Request):
     bundle = body.get("bundle") or ""
     d = (WORKSPACES / bundle).resolve()
     if not bundle or WORKSPACES.resolve() not in d.parents:
+        return JSONResponse({"error": "素材包不合法"}, status_code=400)
+    if not _bundle_visible(bundle, request):
         return JSONResponse({"error": "素材包不合法"}, status_code=400)
     return preview.build_preview_payload(pid, {"bundle": bundle})
 
@@ -1970,7 +2011,7 @@ def my_jobs(request: Request):
     finished = sorted((i for i in items if i["stage"] in ("done", "failed", "cancelled")),
                       key=lambda x: x.get("t0") or 0, reverse=True)[:8]
     out = {"concurrency": _RENDER_STAGE_WORKERS, "active": active, "recent": finished,
-           "agent": agenthub.snapshot()}
+           "agent": agenthub.snapshot() if (_is_adminish(request) or _open_mode()) else None}
     return out
 
 
@@ -2104,6 +2145,8 @@ def agent_job_file(job_id: str, request: Request, path: str = ""):
     """下载渲染包里的一个文件（只放行挂单时登记过的相对路径）。"""
     if _agent_identity(request) is None:
         return JSONResponse({"error": "成片台未登录"}, status_code=401)
+    if (denied := _agent_job_ok(job_id, request)) is not None:
+        return denied
     p = agenthub.file_path(job_id, path)
     if p is None:
         return JSONResponse({"error": "文件不存在"}, status_code=404)
@@ -2115,6 +2158,8 @@ def agent_job_progress(job_id: str, body: dict, request: Request, device: str = 
     """成片台上报进度；响应里带 cancel 旗子，让成片台知道该收手了。"""
     if _agent_identity(request) is None:
         return JSONResponse({"error": "成片台未登录"}, status_code=401)
+    if (denied := _agent_job_ok(job_id, request)) is not None:
+        return denied
     return agenthub.progress(job_id, _agent_device(request, device),
                              int(body.get("pct") or 0), body.get("detail"),
                              failed=body.get("status") == "error",
@@ -2127,6 +2172,8 @@ async def agent_job_visual(job_id: str, request: Request, device: str = ""):
     """成片台交回产物（默认 final=1 带声成片）：落临时名，原子转正唤醒灶台。"""
     if _agent_identity(request) is None:
         return JSONResponse({"error": "成片台未登录"}, status_code=401)
+    if (denied := _agent_job_ok(job_id, request)) is not None:
+        return denied
     dev = _agent_device(request, device)
     tmp = agenthub.upload_target(job_id, dev)
     if tmp is None:
@@ -2159,6 +2206,8 @@ async def agent_job_layer(job_id: str, request: Request, device: str = "",
     """
     if _agent_identity(request) is None:
         return JSONResponse({"error": "成片台未登录"}, status_code=401)
+    if (denied := _agent_job_ok(job_id, request)) is not None:
+        return denied
     dst = agenthub.layer_target(job_id, _agent_device(request, device), name)
     if dst is None:
         return JSONResponse({"error": "没有等图层的那台成片台，或文件名不合法"},
@@ -2176,7 +2225,16 @@ async def agent_job_layer(job_id: str, request: Request, device: str = "",
 def agent_status(request: Request):
     if _agent_identity(request) is None:
         return JSONResponse({"error": "成片台未登录"}, status_code=401)
-    return agenthub.snapshot()
+    snap = agenthub.snapshot()
+    if _is_adminish(request) or _open_mode():
+        return snap
+    # 普通用户只看自己那几个任务：全站任务号与别人电脑的设备名不外泄
+    with _LOCK:
+        mine = {jid for jid, j in JOBS.items() if _job_visible(j, request)}
+    jobs = [d for d in snap.get("jobs") or [] if d.get("job") in mine]
+    return {"devices": [], "jobs": jobs,
+            "waiting": sum(1 for d in jobs if d.get("status") == "waiting"),
+            "rendering": sum(1 for d in jobs if d.get("status") == "rendering")}
 
 
 BROWSERPOC_DIR = STATIC / "poc"
@@ -2198,8 +2256,9 @@ def poc_page(rel_path: str = "index.html"):
     同源部署，正式环境里登录用户的会话 cookie 随页面自动可用。"""
     target = (BROWSERPOC_DIR / rel_path).resolve()
     try:
-        inside = str(target).startswith(str(BROWSERPOC_DIR.resolve()))
-    except OSError:
+        # 用真包含判断：str().startswith 会让 /poc/../隔壁目录 混进来
+        inside = target.is_relative_to(BROWSERPOC_DIR.resolve())
+    except (OSError, ValueError):
         inside = False
     if not inside or not target.is_file():
         html = _poc_html()
@@ -2213,6 +2272,8 @@ def agent_media(job_id: str, request: Request, rel_path: str = ""):
     fonts/ 这类模板公共资产不入渲染包，回退到 renderer/public。"""
     if _agent_identity(request) is None:
         return JSONResponse({"error": "成片台未登录"}, status_code=401)
+    if (denied := _agent_job_ok(job_id, request)) is not None:
+        return denied
     p = agenthub.file_path(job_id, rel_path)
     if p is None and rel_path.startswith("fonts/") and ".." not in rel_path:
         cand = Path(__file__).resolve().parent.parent / "renderer" / "public" / rel_path

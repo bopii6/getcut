@@ -78,6 +78,11 @@ USAGE_FILE = _env("VIDEOGEN_USAGE_FILE") or str(WORKSPACES / ".videogen-usage.js
 # 品牌套装（客户 logo / 术语表 / 克隆声音 ID）：属于客户资料，同样不该待在取货口里
 BRAND_DIR = _env("VIDEOGEN_BRAND_DIR") or str(WORKSPACES / ".videogen-brand")
 
+# 任务表与项目登记：生产要放进"目录挂载"里（如 /state），不能是单文件挂载 ——
+# 挂载点会被 os.replace 判 EBUSY，原子写直接失败（2026-09-21 线上踩过）。
+JOBS_FILE = _env("VIDEOGEN_JOBS_FILE") or str(ROOT / "jobs.json")
+REGISTRY_FILE = _env("VIDEOGEN_REGISTRY_FILE") or str(ROOT / "registry.json")
+
 # 发信邮箱（注册验证码）。任意支持 SMTP 的邮箱均可（QQ/163/企业邮箱）：
 #   EMAIL_SMTP_HOST=smtp.qq.com  EMAIL_SMTP_PORT=465（SSL）
 #   EMAIL_SMTP_USER=你的邮箱     EMAIL_SMTP_PASS=授权码（不是登录密码）

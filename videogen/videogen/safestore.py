@@ -53,6 +53,11 @@ def atomic_write_text(path: Path, text: str) -> None:
                 if attempt == 3:
                     raise
                 time.sleep(0.05 * (attempt + 1))
+            except OSError as exc:
+                # 目标是 Docker 单文件挂载点时会 EBUSY：换名换不动挂载点。
+                # 这种要改成"挂整个目录"，所以把话说响，别让它躲在 except 里。
+                print("safestore: 原子换名失败 %s → %s: %s" % (tmp.name, path, exc))
+                raise
     finally:
         tmp.unlink(missing_ok=True)
 

@@ -32,9 +32,7 @@ docker rename videogen videogen-old
 docker run -d --name videogen --restart unless-stopped --network host \
   --env-file .env \
   -v /opt/videogen/data:/data \
-  -v /opt/videogen/jobs.json:/app/jobs.json \
   -v /opt/videogen/outputs:/app/outputs \
-  -v /opt/videogen/registry.json:/app/registry.json \
   -v /opt/videogen/code/server_static:/app/server_static \
   -v /opt/videogen/code/videogen:/app/videogen \
   -v /opt/videogen/code/renderer/src:/app/renderer/src \
