@@ -171,11 +171,7 @@ img,video{display:block}
 .tag.err{background:var(--err-soft);color:var(--err)}
 
 /* ── 顶栏任务入口 + 全局任务面板 ── */
-.tasks-btn{position:relative;display:inline-flex;align-items:center;gap:7px;min-height:36px;
-  padding:0 13px;border-radius:8px;color:var(--ink-2);font-size:14px;font-weight:700;
-  box-shadow:inset 0 0 0 1px var(--line2);background:var(--surface)}
-.tasks-btn:hover{color:var(--ink)}
-.tasks-btn .tbadge{min-width:18px;height:18px;padding:0 5px;border-radius:999px;
+.tbadge{min-width:18px;height:18px;padding:0 5px;border-radius:999px;
   background:var(--acc);color:var(--acc-ink);font-size:13px;font-weight:800;
   display:grid;place-items:center}
 .tasks-panel{position:fixed;top:64px;right:20px;z-index:65;width:360px;max-width:calc(100vw - 24px);
@@ -626,7 +622,7 @@ textarea:focus{outline:none;border-color:var(--acc)}
   .mainwrap{padding:18px 14px 96px}
   .top .in{padding:0 14px;gap:10px}
   .tact{gap:8px;white-space:nowrap}
-  .tact .btn,.tasks-btn{white-space:nowrap}
+  .tact .btn{white-space:nowrap}
   .tact .who{display:none}
   .import .pick{display:none}
   .switcher{display:none}
@@ -846,7 +842,6 @@ body.lp-mode .top{display:none}
         <div class="switcher hide" id="switcher"></div>
         <span class="sp"></span>
         <div class="tact">
-          <button class="tasks-btn hide" id="tasksBtn" aria-label="进行中的渲染任务">任务 <span class="tbadge" id="tasksCount">0</span></button>
           <span class="theme-w"><select class="theme-sel" id="themeSel" aria-label="配色主题"><option value="ziyu">配色 · 紫玉描金</option><option value="xuanqing">配色 · 玄青</option><option value="shimo">配色 · 石墨</option><option value="zhimu">配色 · 纸墨</option><option value="daiqing">配色 · 黛青</option></select><i>▾</i></span>
           <button class="btn sm line" id="topNew">＋ 新建项目</button>
           <span id="account" style="display:flex;align-items:center;gap:8px"></span>
@@ -3397,6 +3392,18 @@ function toast(m){
   t.textContent = m; t.classList.add("on");
   clearTimeout(t.__h); t.__h = setTimeout(() => t.classList.remove("on"), 2400);
 }
+function keyable(node, fn){
+  // 没有 href 的 <a> 既 Tab 不到、回车也按不动 —— 这类"长得像链接、其实是按钮"的
+  // 元素补上 role/tabindex 与键盘事件；本来就是 button 或带 href 的不动它。
+  if (!node) return;
+  const tag = node.tagName;
+  if (tag !== "BUTTON" && !(tag === "A" && node.hasAttribute("href"))){
+    node.setAttribute("role", "button");
+    node.setAttribute("tabindex", "0");   // 属性，不是 JS 属性：浏览器只认前者
+  }
+  node.onclick = fn;
+  node.onkeydown = (e) => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); fn(e); } };
+}
 function dialog(title, desc, onOk, okText, readonly, extraHTML){
   const m = document.createElement("div"); m.className = "modal";
   m.innerHTML = `<div class="box" role="dialog" aria-modal="true">
@@ -3404,11 +3411,14 @@ function dialog(title, desc, onOk, okText, readonly, extraHTML){
     <div class="row">${readonly ? `<button class="btn sm line" data-c>关闭</button>`
       : `<button class="btn sm line" data-c>取消</button>
          <button class="btn sm" data-k style="background:var(--err)">${esc(okText||"删除")}</button>`}</div></div>`;
-  m.querySelectorAll("[data-c]").forEach(b => b.onclick = () => m.remove());
+  const close = () => { document.removeEventListener("keydown", onKey); m.remove(); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  m.querySelectorAll("[data-c]").forEach(b => b.onclick = close);
   const k = m.querySelector("[data-k]");
-  if (k) k.onclick = () => { m.remove(); onOk && onOk(); };
-  m.onclick = (e) => { if (e.target === m) m.remove(); };
-  document.body.appendChild(m); (k || m.querySelector("[data-c]")).focus();
+  if (k) k.onclick = () => { close(); onOk && onOk(); };
+  m.onclick = (e) => { if (e.target === m) close(); };
+  document.body.appendChild(m); document.addEventListener("keydown", onKey);
+  (k || m.querySelector("[data-c]")).focus();
 }
 async function playDialog(r){
   const p = HOME_PS.find(p => p.project_id === r.project || (p.renders || []).some(x => x.id === r.id));
@@ -3535,13 +3545,13 @@ async function renderLanding(){
     }), {threshold:.12});
     secs.forEach(s => io.observe(s));
   } else secs.forEach(s => s.classList.add("inview"));
-  document.querySelectorAll(".lp-nav nav [data-to]").forEach(a => a.onclick = () => scrollTo(a.dataset.to));
+  document.querySelectorAll(".lp-nav nav [data-to]").forEach(a => keyable(a, () => scrollTo(a.dataset.to)));
   $("lpEnter").onclick = () => showAuth();
-  $("lpPrice").onclick = () => openPricing();
-  $("lpLogin").onclick = () => { AUTHMODE = "login"; showAuth(); };
-  $("lpReg").onclick = () => { AUTHMODE = "register"; showAuth(); };
+  keyable($("lpPrice"), () => openPricing());
+  keyable($("lpLogin"), () => { AUTHMODE = "login"; showAuth(); });
+  keyable($("lpReg"), () => { AUTHMODE = "register"; showAuth(); });
   $("lpTryGo").onclick = () => scrollTo("lp-try");
-  document.querySelectorAll('[data-to="lp-gallery"]').forEach(a => a.onclick = () => scrollTo("lp-gallery"));
+  document.querySelectorAll('[data-to="lp-gallery"]').forEach(a => keyable(a, () => scrollTo("lp-gallery")));
   const strip = $("lpStrip");
   strip.querySelectorAll("button").forEach(b => b.onclick = () => {
     strip.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
@@ -3929,7 +3939,7 @@ function openAccount(){
     <h3>账号设置</h3>
     <p>换个头像和名字，出片报告里认得出是你。</p>
     <div class="me-avbig" id="acPrev" aria-hidden="true">${esc(ME.avatar || avs[0])}</div>
-    <div class="av-grid" id="acAvs" role="radiogroup" aria-label="选择头像">
+    <div class="av-grid" id="acAvs" role="group" aria-label="选择头像">
       ${avs.map(a => `<button type="button" data-av="${esc(a)}" aria-pressed="${a === (ME.avatar || avs[0])}"
         title="选这个头像">${esc(a)}</button>`).join("")}
     </div>
@@ -4220,7 +4230,6 @@ window.addEventListener("hashchange", () => route());
 $("brand").onclick = (e) => { e.preventDefault(); goHome(); };
 
 $("topNew").onclick = newProject;
-$("tasksBtn").onclick = toggleTasksPanel;
 
 async function newProject(){
   leaveFlow(); const epoch = viewEpoch;
@@ -4410,8 +4419,8 @@ function pcard(p){
       fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
   const open = () => { CUR = p; setHash("#/project/" + p.project_id); renderProject(); };
-  el.querySelector(".cover").onclick = open;      // 封面永远只有一个含义：打开这个项目
-  el.querySelector(".body").onclick = open;
+  keyable(el.querySelector(".cover"), open);      // 封面永远只有一个含义：打开这个项目
+  el.querySelector(".body").onclick = open;      // 键盘走 .cover，这里不重复收 Tab
   if (last){
     previewSeek(el.querySelector(".cover video"), 0.8);
     const w = el.querySelector("[data-watch]");
@@ -5042,9 +5051,11 @@ async function openBrandKit(){
   </div>`;
   let mediaRec = null;
   const stopRec = () => { if (mediaRec && mediaRec.state === "recording") mediaRec.stop(); };
-  const close = () => { stopRec(); m.remove(); };
+  const close = () => { stopRec(); document.removeEventListener("keydown", onKey); m.remove(); };
+  // 键盘退路：这一族弹窗里只有它漏了 Esc（其余四处都有），漏一处就等于让用户以为没关
+  const onKey = (e) => { if (e.key === "Escape") close(); };
   m.querySelector("#bkClose").onclick = close;
-  m.onclick = (e) => { if (e.target === m){ stopRec(); m.remove(); } };
+  m.onclick = (e) => { if (e.target === m) close(); };
   // Logo：传完即存，就地刷新预览
   const logoMsg = m.querySelector("#bkLogoMsg");
   const file = m.querySelector("#bkLogo");
@@ -5055,12 +5066,12 @@ async function openBrandKit(){
     try { await api("/api/brand/logo", {method: "POST", body: fd});
       logoMsg.textContent = "已上传，之后的出片自动带上";
       toast("Logo 已上传");
-      setTimeout(() => { m.remove(); openBrandKit(); }, 600);
+      setTimeout(() => { close(); openBrandKit(); }, 600);
     } catch (e) { logoMsg.textContent = e.message || "上传失败"; }
   };
   const del = m.querySelector("#bkLogoDel");
   if (del) del.onclick = async () => {
-    try { await api("/api/brand/logo", {method: "DELETE"}); m.remove(); openBrandKit(); }
+    try { await api("/api/brand/logo", {method: "DELETE"}); close(); openBrandKit(); }
     catch (e) { toast(e.message || "移除失败"); }
   };
   // 文字水印：改完就走（失焦/回车保存）
@@ -5125,6 +5136,7 @@ async function openBrandKit(){
     }
   };
   document.body.appendChild(m);
+  document.addEventListener("keydown", onKey);
 }
 function openBundleModal(){
   if (!CUR || flowBusy()) return;
@@ -5342,10 +5354,6 @@ async function refreshTasks(){
     const n = r.active.length;
     const b = $("tasksBadge");
     if (b){ b.textContent = String(n); b.classList.toggle("hide", n === 0); }
-    const c = $("tasksCount");
-    if (c) c.textContent = String(n);
-    const pill = $("tasksBtn");
-    if (pill) pill.classList.toggle("hide", n === 0);
     const panel = $("tasksPanel");
     if (!panel || panel.classList.contains("hide")) return;
     const rows = [...r.active, ...r.recent].map(i => {
@@ -5416,7 +5424,7 @@ function toggleTasksPanel(){
 document.addEventListener("click", (e) => {
   if (!TASKS_OPEN) return;
   const t = e.target;
-  if (t.closest && (t.closest("#tasksPanel") || t.closest("#meBtn") || t.closest("#tasksBtn"))) return;
+  if (t.closest && (t.closest("#tasksPanel") || t.closest("#meBtn"))) return;
   TASKS_OPEN = false;
   $("tasksPanel").classList.add("hide");
 });

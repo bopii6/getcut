@@ -1,0 +1,14 @@
+# 只闸"会出事"的三类，不闸排版：
+#   F  = 未定义名字、无用导入、f-string 忘了占位符……（这些是真缺陷）
+#   E9 = 语法/缩进错
+#   B  = 常见陷阱：zip 静默截断、异常链丢失、循环变量误用
+# 排版类（E1–E5 / W / D / I）一律不开，免得 review 的 diff 淹在格式改动里。
+target-version = "py312"
+line-length = 110
+
+[lint]
+select = ["F", "E9", "B"]
+
+[lint.per-file-ignores]
+# 离线测试里 import 顺序要先设环境变量、再导业务模块，那条 import 一定"看起来没用"
+"tests/test_*.py" = ["E402", "F401", "B017"]

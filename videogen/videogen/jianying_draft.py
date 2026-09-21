@@ -387,6 +387,7 @@ def build_multitrack_content(plan: dict) -> dict:
 
     tpl["materials"]["speeds"] = speeds
     tpl["tracks"] = tracks
+    _clamp_to_timeline(tpl)
     # track_render_index 是「轨内第几个片段」（0 起），不是渲染层级——
     # 官方草稿如此，新版剪映的升级转换器按它重排轨内顺序
     for track in tracks:
@@ -394,6 +395,35 @@ def build_multitrack_content(plan: dict) -> dict:
             seg["track_render_index"] = i
     _validate_content(tpl)
     return tpl
+
+
+def _clamp_to_timeline(tpl: dict) -> None:
+    """任何片段都不许超出草稿时长。
+
+    字幕/配音的尾句常比成片长一点（TTS 按整句给时长，最后一句常常顶过最后一帧）。
+    不夹取的话剪映会把时间轴拉长，草稿比成片多出一截空画面；旧兜底路径
+    build_flat_content:445 一直有这道夹取，多轨路径以前没有。整段都在片外的直接丢掉。
+    """
+    cap = int(tpl.get("duration") or 0)
+    if cap <= 0:
+        return
+    kept: list[dict] = []
+    for track in tpl["tracks"]:
+        segs: list[dict] = []
+        for seg in track["segments"]:
+            target = seg["target_timerange"]
+            start = int(target["start"])
+            if start >= cap:
+                continue
+            target["start"] = start
+            target["duration"] = min(int(target["duration"]), cap - start)
+            if target["duration"] <= 0:
+                continue
+            segs.append(seg)
+        track["segments"] = segs
+        if segs:
+            kept.append(track)
+    tpl["tracks"] = kept
 
 
 def _validate_content(tpl: dict) -> None:

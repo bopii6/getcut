@@ -235,7 +235,6 @@ def align_timeline(clauses: list[tuple[int, str]], events: list[dict]) -> list[C
             spoken_positions.append((idx + k, ev["offset_ms"] + ev["duration_ms"] * k / max(n, 1)))
         idx += n
     pos2t = dict(spoken_positions)
-    total_spoken = idx
 
     result: list[Clause] = []
     consumed = 0
@@ -956,13 +955,26 @@ def build_plan_clone(content: Content, clauses, timeline: dict,
     """按参考片时间轴图纸复刻：槽位边界按我的配音总时长等比缩放。"""
     spans = sentence_spans(clauses)
     ids = sorted(spans)
+    if not ids:
+        raise ValueError("复刻分镜要先有对齐好的子句")
+    slots = timeline.get("slots") or []
+    if not slots:
+        # 图纸是浏览器交上来的外部输入：空槽位以前会在这里 IndexError，
+        # 客户只看到任务失败、错误信息是一句看不懂的 traceback。
+        raise ValueError("复刻图纸里没有任何槽位（slots 是空的）")
+    for i, slot in enumerate(slots):
+        # 槽位字段也是浏览器交上来的：缺 start/end/kind 以前是当场 KeyError，
+        # 错误信息里连是哪个槽位都不说。
+        missing = [k for k in ("start", "end", "kind") if k not in slot]
+        if missing:
+            raise ValueError("复刻图纸第 %d 个槽位缺字段：%s" % (i + 1, "、".join(missing)))
     my_total = spans[ids[-1]][1] + 400.0
     ref_total = float(timeline.get("ref_total", 84.4)) * 1000.0
     scale = my_total / ref_total
 
     plan = Plan()
     shot_list: list[Shot] = []
-    for slot in timeline["slots"]:
+    for slot in slots:
         start = slot["start"] * scale * 1000.0   # 秒 -> 毫秒
         end = slot["end"] * scale * 1000.0
         kind = slot["kind"]
@@ -980,7 +992,7 @@ def build_plan_clone(content: Content, clauses, timeline: dict,
                               chapter_label=slot.get("chapterLabel", ""),
                               overlay=overlay))
     # 镜头之间不留缝
-    for a, b in zip(shot_list, shot_list[1:]):
+    for a, b in zip(shot_list, shot_list[1:], strict=False):
         a.end_ms = b.start_ms
     shot_list[-1].end_ms = max(shot_list[-1].end_ms, my_total)
     # 事实性防线：设计卡里的年份若未在文案中出现，一律删除（禁止编造）

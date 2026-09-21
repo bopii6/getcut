@@ -33,6 +33,12 @@ function bundle(name) {
 function project(id = 'aa', name = 'bundle-a') {
   return {project_id: id, title: 'Project ' + id, bundle: name, renders: [], renders_count: 0, assets_count: 1};
 }
+// 「这个元素必须已经下线」的断言一律走这里：把 DOM 节点交给 assert.equal(actual, null) 后，
+// 失败时 Node 会 inspect 整棵 LinkeDOM 节点图，实测一次就吃掉 63GB external、卡 87 秒再 OOM
+// 崩掉进程（真实原因被崩溃盖住，看起来像环境问题）。
+function assertAbsent(element, message) {
+  assert(element === null || element === undefined, message);
+}
 const queued = (pid = 'aa') => ({project_id: pid, stage: 'queued', stage8: 1, progress: 3,
   detail: '排队中 · 前面还有 1 个任务', queued_pos: 1, error: null, video: null, elapsed: 0, stills: []});
 
@@ -131,6 +137,12 @@ async function createHarness({storage = {}} = {}) {
   return {
     document, localStorage, requests, unexpected, errors, timers, projects, jobStates, respond, evaluate, flush,
     get: id => document.getElementById(id),
+    // 键盘事件的补位：沙箱里没有 Event，测试也得以真实 DOM 的方式派发
+    pressKey(key) {
+      const event = new domWindow.Event('keydown');
+      event.key = key;
+      document.dispatchEvent(event);
+    },
     async openProject(p = projects[0]) {
       const result = evaluate(`CUR = ${JSON.stringify(clone(p))}; setHash('#/project/' + CUR.project_id); renderProject()`);
       await result; await flush();
@@ -158,4 +170,4 @@ async function createHarness({storage = {}} = {}) {
     }
   };
 }
-module.exports = {createHarness, deferred, bundle, project, queued};
+module.exports = {createHarness, deferred, bundle, project, queued, assertAbsent};

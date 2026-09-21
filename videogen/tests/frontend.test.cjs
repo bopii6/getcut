@@ -9,7 +9,7 @@
 //   Config lives in native <dialog> via [data-setting="style"|"sound"]; build button is #go.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {createHarness, deferred, project} = require('./frontend-harness.cjs');
+const {createHarness, deferred, project, assertAbsent} = require('./frontend-harness.cjs');
 
 async function setup(t, options) {
   const h = await createHarness(options);
@@ -69,8 +69,8 @@ test('actual configuration controls serialize the exact production build payload
 test('节奏不给用户调：确认页上没有语速控件', async t => {
   const h = await setup(t);
   await h.openProject();
-  assert.equal(h.document.querySelector('#rateSeg'), null, '语速选择器必须已下线');
-  assert.equal(h.document.querySelector('#rateTxt'), null);
+  assertAbsent(h.document.querySelector('#rateSeg'), '语速选择器必须已下线');
+  assertAbsent(h.document.querySelector('#rateTxt'), '语速说明文案必须已下线');
 });
 
 test('all sound effect modes preserve production sfx boolean semantics', async t => {
@@ -415,7 +415,7 @@ test('档位与定价：顶栏「我的」入口带档位徽标，免费档先�
 test('「我的」菜单：权益齐全，顶栏没有独立任务按钮，联系创始人给微信号', async t => {
   const h = await setup(t);
   await h.flush();
-  assert.equal(h.get('tasksBtn'), null, '顶栏不再有独立「任务」按钮（收进我的菜单）');
+  assertAbsent(h.get('tasksBtn'), '顶栏不再有独立「任务」按钮（收进我的菜单）');
   assert(h.get('tasksBadge'), '任务角标长在「我的」入口上');
   h.click('#meBtn'); await h.flush();
   const menu = h.get('meMenu');
@@ -504,8 +504,8 @@ test('音色目录：boot 时拉 /api/voices，百炼没配就回退内置目录
 test('品牌套装：入口收进「我的」菜单，确认页不再打扰；高级版平铺三件事，水印文字存 /api/brand', async t => {
   const h = await setup(t);
   await h.openProject();
-  assert.equal(h.get('brandBtn'), null, '确认页不再有品牌套件入口（用户只管点点点）');
-  assert.equal(h.get('epBadge'), null, '期数角标输入已下线');
+  assertAbsent(h.get('brandBtn'), '确认页不再有品牌套件入口（用户只管点点点）');
+  assertAbsent(h.get('epBadge'), '期数角标输入已下线');
   // 免费档：菜单里带锁，点了进权益页
   await h.evaluate('ME = {...ME, tier: "free", tier_label: "免费版"}');
   h.click('#meBtn'); await h.flush();
@@ -544,8 +544,103 @@ test('出片请求不带 brand 字段——品牌由服务端按账号自动注�
 test('栏目角标已下线：确认页没有期数输入，出片请求也不带 series', async t => {
   const h = await setup(t);
   await h.openProject();
-  assert.equal(h.get('epBadge'), null, '期数角标输入已下线');
+  assertAbsent(h.get('epBadge'), '期数角标输入已下线');
   await start(h);
   const body = JSON.parse(builds(h)[0].body);
   assert(!('series' in body), '出片请求不再带 series');
+});
+
+// ---------- 键盘可达性（第 14 节复查后补的四处，逐条钉住） ----------
+test('项目卡封面键盘可达：Tab 得到、回车能打开项目', async t => {
+  const h = await setup(t);
+  await h.evaluate('renderHome()'); await h.flush();
+  const cover = h.document.querySelector('.pcard .cover');
+  assert(cover, '首页要有项目卡');
+  assert.equal(cover.getAttribute('role'), 'button', '封面没有 role');
+  assert.equal(cover.getAttribute('tabindex'), '0', '没有 tabindex 就 Tab 不到');
+  assert.equal(typeof cover.onkeydown, 'function', '封面没有键盘处理');
+  cover.onkeydown({key: 'Enter', target: cover, preventDefault() {}, stopPropagation() {}});
+  await h.flush();
+  assert.match(String(h.evaluate('location.hash')), /#\/project\//, '回车应当打开项目');
+});
+
+test('无 href 的链接走 keyable：补 role/tabindex/回车，真正的 button 不重复挂 role', async t => {
+  const h = await setup(t);
+  const anchor = h.evaluate('(()=>{const a=document.createElement("a");a.textContent="注册";' +
+    'keyable(a,()=>{});return [a.getAttribute("role"),a.getAttribute("tabindex"),typeof a.onkeydown].join("|");})()');
+  assert.equal(anchor, 'button|0|function', '无 href 的 <a> 必须变成键盘可达');
+  const button = h.evaluate('(()=>{const b=document.createElement("button");keyable(b,()=>{});' +
+    'return String(b.hasAttribute("role"));})()');
+  assert.equal(button, 'false', '本来就是 button 的不该再挂一遍 role');
+});
+
+test('dialog() 能被 Esc 关掉：键盘用户不该只有点背景这一条路', async t => {
+  const h = await setup(t);
+  h.evaluate('dialog("起个名字","说明",()=>{},"确定")');
+  assert(h.document.querySelector('.modal'), '弹窗没开起来');
+  h.pressKey('Escape');
+  await h.flush();
+  assertAbsent(h.document.querySelector('.modal'), 'Esc 之后弹窗还在');
+});
+
+// 键盘可达性的"天花板"断言：不追求一次修完，但不许新增。
+// 两处挂账例外（都是**故意**留的，理由写在这）：
+//   · DIV.body —— 项目卡下半截也点了能打开，是鼠标便利区；键盘走 .cover（已 keyable）。
+//     再给它补 tabindex 只会让同一张卡出现两个 Tab 停靠点，对读屏用户更糟。
+//   · EM.pv    —— 音色 pill 里嵌的试听按钮，确实是非法的嵌套交互控件；但 `.pill .pv`
+//     是后代选择器，挪出按钮就是改视觉，等业主看过样张再动。
+// 数量对不上就是"新增了例外"或"某条被修掉了"—— 修掉了请把例外一起删掉。
+const focusable = (el) => {
+  const tag = el.tagName;
+  if (tag === 'BUTTON' || tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return true;
+  if (tag === 'A' && el.hasAttribute('href')) return true;
+  return el.hasAttribute('tabindex');
+};
+const KNOWN_LOOSE = ['DIV.body', 'DIV.body'];
+const KNOWN_NESTED = ['EM.pv', 'EM.pv', 'EM.pv'];
+function auditKeyboard(h) {
+  const loose = [], nested = [];
+  for (const el of h.document.querySelectorAll('*')) {
+    if (typeof el.onclick !== 'function' || focusable(el)) continue;
+    const owner = el.parentElement && el.parentElement.closest && el.parentElement.closest('button');
+    (owner ? nested : loose).push(`${el.tagName}.${el.className}`.split(' ')[0]);
+  }
+  return {loose, nested};
+}
+
+test('键盘可达性没有新增漏洞（两处挂账例外见 auditKeyboard 上方注释）', async t => {
+  const h = await setup(t);
+  await h.evaluate('renderHome()'); await h.flush();
+  let seen = auditKeyboard(h);
+  assert.deepEqual(seen.loose, KNOWN_LOOSE, '首页新增/减少了键盘不可达的点击区');
+  assert.deepEqual(seen.nested, [], '首页不该有嵌套交互控件');
+
+  await h.openProject(); await h.flush();
+  seen = auditKeyboard(h);
+  assert.deepEqual(seen.loose, [], '项目页有挂了 onclick 却键盘不可达的元素');
+  assert.deepEqual(seen.nested, KNOWN_NESTED, '项目页（音色 pill 里的试听）数量变了');
+});
+
+test('品牌套装弹窗也能用 Esc 关（手写弹窗五处，它最后补上）', async t => {
+  const h = await setup(t);
+  h.respond('GET', '/api/brand', {brand: {watermark_text: '@老王看财经'}, premium: true, has_logo: false});
+  h.respond('GET', '/api/voice-clone', {premium: true, dashscope: false, has_voice: false});
+  h.click('#meBtn'); await h.flush();
+  h.click('#meBrand'); await h.flush();
+  assert(h.document.querySelector('[aria-label="品牌套装"]'), '品牌套装弹窗要打开');
+  h.pressKey('Escape');
+  await h.flush();
+  assertAbsent(h.document.querySelector('[aria-label="品牌套装"]'), 'Esc 关不掉，键盘用户只能去点背景');
+});
+
+test('头像选择器不再自称 radiogroup：里面是 aria-pressed 的按钮', async t => {
+  const h = await setup(t);
+  await h.flush();
+  h.click('#meBtn'); await h.flush();
+  h.click('#meSettings'); await h.flush();
+  const grid = h.get('acAvs');
+  assert(grid, '账号设置里要有头像选择区');
+  assert.equal(grid.getAttribute('role'), 'group',
+    'radiogroup 里的子项必须是 role=radio + aria-checked；这里用的是 aria-pressed 按钮，角色要对得上');
+  assert.equal(grid.querySelector('button').getAttribute('aria-pressed'), 'true');
 });
