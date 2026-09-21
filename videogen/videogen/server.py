@@ -773,6 +773,11 @@ _NO_STORE_PREFIXES = ("/api", "/media", "/agent-media", "/outputs", "/try/", "/v
 # /studio 与 /i/ 只是同一份 SPA 外壳（客户数据都走 /api，已 no-store），
 # 它们要的是「必须回源校验 + ETag」：内容没变回 304，省的是整页 764KB。
 _LONG_CACHE_PREFIXES = ("/fonts/",)              # 文件名稳定、体积大
+# 成片台自己的代码包：文件名不带内容哈希（bundle.js 永远是这个名字）。
+# 给它 max-age 等于每次部署后一小时内客户仍在跑旧程序 —— 修好的 bug 在服务器上、
+# 不在客户屏幕上（2026-09-21 就是这么被将了一军：红字明明删掉了，客户截图里还在）。
+# no-cache 不是"不许缓存"，是"每次回源校验"：没变就 304，几个字节。
+_APP_CODE_PREFIXES = ("/poc/",)
 _SHORT_CACHE_SUFFIXES = (".js", ".css", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico",
                          ".woff2", ".mp3", ".mp4", ".wav")   # 产物名不带内容哈希，只给 1 小时
 
@@ -780,6 +785,8 @@ _SHORT_CACHE_SUFFIXES = (".js", ".css", ".png", ".jpg", ".jpeg", ".webp", ".svg"
 def _cache_control(path: str) -> str:
     if path.startswith(_NO_STORE_PREFIXES):
         return "no-store"
+    if path.startswith(_APP_CODE_PREFIXES):
+        return "no-cache"
     if path.startswith(_LONG_CACHE_PREFIXES):
         return "public, max-age=604800"          # 7 天
     if path.endswith(_SHORT_CACHE_SUFFIXES):
@@ -2439,8 +2446,14 @@ def _poc_html():
 
 
 
+def _file_tag(target: Path) -> str:
+    """文件版 ETag：改动时间 + 字节数，不读文件内容（3.7MB 的包不该为算标签整份读一遍）。"""
+    st = target.stat()
+    return '"%x-%x"' % (int(st.st_mtime), st.st_size)
+
+
 @app.get("/poc/{rel_path:path}")
-def poc_page(rel_path: str = "index.html"):
+def poc_page(request: Request, rel_path: str = "index.html"):
     """浏览器成片台（web-renderer 逐帧渲染 + 浏览器内混音，产出带声 mp4）。
     同源部署，正式环境里登录用户的会话 cookie 随页面自动可用。"""
     target = (BROWSERPOC_DIR / rel_path).resolve()
@@ -2452,7 +2465,13 @@ def poc_page(rel_path: str = "index.html"):
     if not inside or not target.is_file():
         html = _poc_html()
         return html if isinstance(html, JSONResponse) else HTMLResponse(html)
-    return FileResponse(target)
+    # 文件名不带哈希，所以只能"每次回源校验"。光把 Cache-Control 改成 no-cache 不够：
+    # FileResponse 自己不看 If-None-Match，浏览器会次次重下 3.7MB（3Mbps 出网 = 十几秒白等），
+    # 这个 304 得我们自己回。
+    tag = _file_tag(target)
+    if any(t.strip() == tag for t in (request.headers.get("if-none-match") or "").split(",")):
+        return Response(status_code=304, headers={"etag": tag})
+    return FileResponse(target, headers={"etag": tag})
 
 
 @app.get("/agent-media/{job_id}/{rel_path:path}")

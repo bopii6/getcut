@@ -196,11 +196,24 @@ class ResponseHeaderTest(unittest.TestCase):
         self.assertGreaterEqual(r.status_code, 400)
         self.assertEqual(r.headers["cache-control"], "no-store", "404 被缓存 7 天会把好字体一直挡在门外")
 
-    def test_static_bundle_gets_a_short_public_cache(self):
-        r = self.client.get("/poc/bundle.js")
-        if r.status_code == 404:
+    def test_compositor_bundle_revalidates_instead_of_aging_in_cache(self):
+        """成片台代码包：文件名不带内容哈希，给它 max-age 等于部署后一小时内客户还在跑旧程序。
+
+        2026-09-21 被将的一军：报错文案在服务器上明明删掉了，客户截图里还在，
+        就是这条 `public, max-age=3600`。改 no-cache 的同时必须自己回 304 ——
+        FileResponse 不认 If-None-Match，否则 3.7MB 的包每次进页面重下一遍。
+        """
+        first = self.client.get("/poc/bundle.js")
+        if first.status_code == 404:
             self.skipTest("成片台产物未打包")
-        self.assertEqual(r.headers["cache-control"], "public, max-age=3600")
+        self.assertEqual(first.headers["cache-control"], "no-cache",
+                         "代码包带 max-age 会让修好的 bug 在客户屏幕上多活一小时")
+        tag = first.headers.get("etag")
+        self.assertTrue(tag, "没配 ETag 的 no-cache 等于每次都重传整包")
+        again = self.client.get("/poc/bundle.js", headers={"if-none-match": tag})
+        self.assertEqual(again.status_code, 304)
+        self.assertEqual(again.content, b"", "304 不许带正文")
+        self.assertEqual(again.headers["cache-control"], "no-cache")
 
     def test_html_revalidates_and_answers_304(self):
         """回访最该省的是整页 HTML：必须回源校验，内容没变就一个字节都不传。"""
