@@ -36,10 +36,16 @@ _WAIT_PATIENCE = 24 * 3600   # 待领取最长等 24 小时（成片台可能就
 # 分轨图层的文件名是成片台报上来的，只认这三种写法（挡住一切路径拼接花样）
 LAYER_NAME = re.compile(r"^(?:base\.png|cards/shot_[0-9]{3}\.png|texts\.json)$")
 _LAYER_TTL = 3600            # 交片后 1 小时内还允许补图层，过期即弃
+# 摘牌后渲染包的素材下载链接再活 30 分钟：成片交回那一刻任务就摘牌了，
+# 而页面还停在「已完成」上——刷新回到预览态、或过一阵再点「重试这一步」，
+# 都会重新去 /agent-media 取素材。链接当场失效时浏览器拿到的是 404 的 JSON，
+# 喂给解码器就变成一句看不懂的 "Unknown container format"（2026-09-21 线上撞过）
+_MEDIA_GRACE = 1800
 
 _JOBS: dict[str, dict] = {}
 _DEVICES: dict[str, dict] = {}       # device -> {email-ish owners, last_seen, job}
 _LAYER_SLOTS: dict[str, dict] = {}   # jid -> {device, dir, t}：摘牌后的图层认领凭据
+_GRACE_FILES: dict[str, tuple] = {}  # jid -> (files, 摘牌时刻)：摘牌后的素材宽限表
 _CV = threading.Condition()
 on_claim = None                      # server 注入：fn(job_id, device)，更新任务卡
 
@@ -74,13 +80,20 @@ def register(job_id: str, owner: str | None, props: dict,
 
 
 def discard(job_id: str) -> None:
-    """任务完结（成片已交付/失败/取消）后摘牌。素材文件在主站原地，无需清理。"""
+    """任务完结（成片已交付/失败/取消）后摘牌。素材文件在主站原地，无需清理。
+
+    摘牌不等于把下载链接掐死：把 files 挪进宽限表再留 _MEDIA_GRACE 秒，
+    让停在「已完成」上的那页还能取到素材（见 _MEDIA_GRACE 那段）。
+    """
     with _CV:
         j = _JOBS.pop(_jid(job_id), None)
-        if j and j["device"]:
-            d = _DEVICES.get(j["device"])
-            if d and d.get("job") == _jid(job_id):
-                d["job"] = None
+        if j:
+            if j.get("files"):
+                _GRACE_FILES[_jid(job_id)] = (dict(j["files"]), time.time())
+            if j["device"]:
+                d = _DEVICES.get(j["device"])
+                if d and d.get("job") == _jid(job_id):
+                    d["job"] = None
         _CV.notify_all()
 
 
@@ -121,12 +134,18 @@ def wait_for_job(owners: list, device: str, timeout: float = 25.0,
 
 
 def file_path(job_id: str, rel: str) -> Path | None:
-    """成片台下载渲染包里的一个文件：只放行挂单时登记过的相对路径。"""
+    """成片台下载渲染包里的一个文件：只放行挂单时登记过的相对路径。
+    摘牌后 _MEDIA_GRACE 秒内仍按宽限表放行（页面还开着，素材链接不该当场作废）。"""
+    now = time.time()
     with _CV:
         j = _JOBS.get(_jid(job_id))
-        if not j:
-            return None
-        p = j["files"].get(rel)
+        p = j["files"].get(rel) if j else None
+        if p is None:
+            g = _GRACE_FILES.get(_jid(job_id))
+            if g and now - g[1] <= _MEDIA_GRACE:
+                p = g[0].get(rel)
+        for k in [k for k, v in _GRACE_FILES.items() if now - v[1] > _MEDIA_GRACE]:
+            _GRACE_FILES.pop(k, None)
     return Path(p) if p and Path(p).is_file() else None
 
 
