@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import secrets
 import time
@@ -23,6 +24,7 @@ from . import auth, config, safestore
 # 手抄友好的字符表：没有 0/O/1/I/S/5（S/5 也容易混，干脆都不要）
 _ALPHABET = "2346789ABCDEFGHJKMNPQRTUVWXYZ"
 _CODE_FILE = Path(config.LICENSES_FILE)
+_AUDIT_FILE = Path(config.LICENSE_AUDIT_FILE)
 
 
 def _norm(code: str) -> str:
@@ -140,3 +142,60 @@ if __name__ == "__main__":
     else:
         print("用法: python -m videogen.licenses gen <basic|premium> <数量> [备注]\n"
               "      python -m videogen.licenses list")
+
+
+def anonymize(email: str) -> int:
+    """把这张账号名下的核销记录去掉身份：卡密本身留着（财务要能对账），
+    但"谁核销的"换成不可逆摘要。返回改了几条。"""
+    want = (email or "").strip().lower()
+    if not want:
+        return 0
+    data = _load()
+    digest = hashlib.sha256((want + _anon_salt()).encode("utf-8")).hexdigest()[:10]
+    n = 0
+    for c in data["codes"]:
+        if (c.get("redeemed_by") or "").strip().lower() == want:
+            c["redeemed_by"] = "erased-" + digest
+            n += 1
+    if n:
+        _save(data)
+    return n
+
+
+def _anon_salt() -> str:
+    """同一份密钥下算出的摘要才稳定；用会话签名密钥当盐，不落明文邮箱。"""
+    from . import auth
+    try:
+        return auth._secret().hex()
+    except Exception:  # noqa: BLE001 - 拿不到就用固定盐，注销去身份这件事不该失败
+        return "videogen-anon"
+
+
+def log_issue(operator: str, tier: str, codes: list[str], note: str = "") -> None:
+    """发一批卡密就追加一行流水。只追加、不改写；写失败要喊出来（这是账）。"""
+    line = {"ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "operator": (operator or "").strip().lower() or "?",
+            "tier": tier, "count": len(codes), "note": (note or "")[:120],
+            "codes": [c[:7] + "***" for c in codes[:200]]}
+    try:
+        _AUDIT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with _AUDIT_FILE.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(line, ensure_ascii=False) + chr(10))
+    except OSError as e:
+        print("license audit write failed: %s" % e)
+
+
+def list_audit(limit: int = 200) -> list[dict]:
+    """最近若干条发放流水（倒序：最新的在前）。"""
+    if not _AUDIT_FILE.is_file():
+        return []
+    rows = []
+    for raw in _AUDIT_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            rows.append(json.loads(raw))
+        except ValueError:
+            rows.append({"unparsed": raw[:120]})
+    return list(reversed(rows[-max(1, int(limit)):]))

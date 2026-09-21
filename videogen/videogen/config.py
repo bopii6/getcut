@@ -92,6 +92,11 @@ USERS_FILE = _env("VIDEOGEN_USERS_FILE") or str(WORKSPACES / ".videogen-users.js
 AUTH_SECRET_FILE = _env("VIDEOGEN_AUTH_SECRET") or str(WORKSPACES / ".videogen-auth-secret")
 # 卡密与用量记账（工作区持久卷）
 LICENSES_FILE = _env("VIDEOGEN_LICENSES_FILE") or str(WORKSPACES / ".videogen-licenses.json")
+# 卡密发放流水：谁在什么时候生了哪一批、备注是什么。
+# 单独一个只追加的文件，不跟卡密表混在一起 —— 混在一起的话，改卡密的那次写入
+# 顺手就能把流水抹了，"留痕"就成了空话。对账与扯皮都靠它。
+LICENSE_AUDIT_FILE = _env("VIDEOGEN_LICENSE_AUDIT") or str(
+    Path(LICENSES_FILE).parent / ".videogen-license-audit.jsonl")
 USAGE_FILE = _env("VIDEOGEN_USAGE_FILE") or str(WORKSPACES / ".videogen-usage.json")
 # 品牌套装（客户 logo / 术语表 / 克隆声音 ID）：属于客户资料，同样不该待在取货口里
 BRAND_DIR = _env("VIDEOGEN_BRAND_DIR") or str(WORKSPACES / ".videogen-brand")

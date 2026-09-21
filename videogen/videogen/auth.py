@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import threading
 import random
 import re
 import secrets
@@ -248,7 +249,7 @@ def set_password(email: str, password: str) -> None:
         raise ValueError("邮箱格式不对")
     if len(password or "") < MIN_PASSWORD_LEN:
         raise ValueError(f"密码至少 {MIN_PASSWORD_LEN} 位")
-    users = _load_users()
+    users = _load_users()   # 下面会顺手把 pw_gen +1：改密码＝所有设备重登
     user = next((u for u in users if u["email"] == email), None)
     if user is None:
         raise ValueError("这个邮箱还没注册过")
@@ -257,7 +258,12 @@ def set_password(email: str, password: str) -> None:
     user["hash"] = _hash_password(password, salt).hex()
     user["iters"] = PBKDF2_ITERS
     user["pw_reset"] = time.strftime("%Y-%m-%d %H:%M")
+    for u in users:
+        if u["email"] == email:
+            u["pw_gen"] = int(u.get("pw_gen") or 0) + 1
     _save_users(users)
+    # 代次 +1 之后这些票全废了：留着记录只会让「登录设备」那一页骗人
+    revoke_all_sessions(email)
 
 
 def verify_login(email: str, password: str) -> bool:
@@ -373,6 +379,7 @@ def change_password(email: str, old: str, new: str) -> None:
     """登录状态下改密码：必须先验当前密码。非法输入抛 ValueError。"""
     if not verify_login(email, old or ""):
         raise ValueError("当前密码不对")
+    # 先自增代次再改密：set_password 里那一次 +1 就是这次改密的生效点
     set_password(email, new)
 
 
@@ -391,25 +398,193 @@ def _secret() -> bytes:
     return sec
 
 
-def make_session(email: str, ttl: int = SESSION_TTL_SHORT) -> str:
+def make_session(email: str, ttl: int = SESSION_TTL_SHORT,
+                 device: str = "", ip: str = "") -> str:
+    """签一张通行证：`邮箱|到期|密码代次|会话号|签名`。
+
+    加"密码代次"与"会话号"是为了两件以前做不到的事：
+      · 改密码 → 代次 +1 → 旧通行证整批作废（以前改密码不影响已登录的人）
+      · 只撕某一张 → 会话号进吊销表（以前只能换全局密钥＝所有人一起掉线）
+    ⚠️ 旧格式（3 段）的通行证一律不再接受：那批票既撕不掉也不随改密码作废，
+    留着它们等于给"改密码也踢不掉的人"留门。代价是所有人重登一次。
+    """
     exp = int(time.time()) + ttl
-    payload = f"{email}|{exp}"
+    gen = _pw_gen(email)
+    sid = secrets.token_hex(6)
+    payload = f"{email}|{exp}|{gen}|{sid}"
     sig = hmac.new(_secret(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    _record_session(sid, email, device, ip, exp)
     return f"{payload}|{sig}"
 
 
 def read_session(token: str) -> str | None:
-    """会话有效返回邮箱，无效返回 None（过期/签名不对/格式不对）。"""
+    """会话有效返回邮箱，无效返回 None（过期/签名不对/格式不对/已吊销/改过密码）。"""
     parts = (token or "").split("|")
-    if len(parts) != 3:
+    if len(parts) != 5:
         return None
-    email, exp, sig = parts
+    email, exp, gen, sid, sig = parts
     if not exp.isdigit():
         return None
-    expect = hmac.new(_secret(), f"{email}|{exp}".encode("utf-8"),
+    expect = hmac.new(_secret(), f"{email}|{exp}|{gen}|{sid}".encode("utf-8"),
                       hashlib.sha256).hexdigest()
     if not hmac.compare_digest(sig, expect):
         return None
     if int(exp) < time.time():
         return None
+    if sid in _revoked_set():
+        return None
+    if str(gen) != str(_pw_gen(email)):
+        return None
+    _touch_session(sid)
     return email
+
+
+def delete_user(email: str, password: str = "") -> tuple[bool, str]:
+    """注销账号：把这个人从账号表里去掉。
+
+    返回 (是否成功, 给用户的提示)。要密码再确认一次：登录状态被别人看到时，
+    仅凭 cookie 就能删号是不可接受的破坏力。改密码那条已经会让所有旧通行证失效，
+    这里删掉记录后同样立刻全端掉线。
+    """
+    email = _norm_email(email)
+    users = _load_users()
+    me = next((u for u in users if u["email"] == email), None)
+    if not me:
+        return False, "账号不存在"
+    if password:
+        salt = bytes.fromhex(me["salt"])
+        want = _hash_password(password, salt, int(me.get("iters") or PBKDF2_ITERS))
+        if not hmac.compare_digest(want.hex(), me["hash"]):
+            return False, "密码不对，注销没有生效"
+    rest = [u for u in users if u["email"] != email]
+    _save_users(rest)
+    return True, ""
+
+
+# ---------- 会话登记与吊销（"这张票只撕这一张"） ----------
+# 以前通行证里只有"邮箱 + 到期"，所以要么不动、要么换全局密钥让所有人一起掉线。
+# 现在每张票带一个随机 sid：登记在案就能列出来，进吊销表就立刻失效。
+SESSIONS_FILE = USERS_FILE.parent / ".videogen-sessions.json"
+_MAX_SESSION_RECORDS = 500
+_MAX_REVOKED = 1000
+_sessions_lock = threading.Lock()
+_sessions_state: dict | None = None
+
+
+def _sessions_load() -> dict:
+    """会话表读坏了不许当"没有会话"：那会让已吊销的票重新有效。
+    救不回来就抛，宁可登录接口报错，也不能把吊销表忘掉。"""
+    global _sessions_state
+    if _sessions_state is not None:
+        return _sessions_state
+    data = safestore.read_json(
+        SESSIONS_FILE, default={"records": [], "revoked": {}},
+        shape=lambda d: isinstance(d, dict) and isinstance(d.get("records"), list))
+    data.setdefault("records", [])
+    data.setdefault("revoked", {})
+    _sessions_state = data
+    return data
+
+
+def _sessions_save(state: dict) -> None:
+    try:
+        SESSIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        safestore.write_json(SESSIONS_FILE, state, indent=None)
+    except OSError as e:
+        print("sessions save failed: %s" % e)
+
+
+def _prune(state: dict, now: float) -> None:
+    """记录与吊销表都要有界：这是公开接口能不断签新票的地方，不设上限就是磁盘炸弹。"""
+    keep = sorted(state["records"], key=lambda r: r.get("exp") or 0,
+                  reverse=True)[:_MAX_SESSION_RECORDS]
+    state["records"] = [r for r in keep if (r.get("exp") or 0) > now]
+    rev = {k: v for k, v in state["revoked"].items() if v > now}
+    if len(rev) > _MAX_REVOKED:
+        newest = sorted(rev.items(), key=lambda kv: kv[1], reverse=True)[:_MAX_REVOKED]
+        rev = dict(newest)
+    state["revoked"] = rev
+
+
+def _record_session(sid: str, email: str, device: str, ip: str, exp: int) -> None:
+    with _sessions_lock:
+        state = _sessions_load()
+        now = time.time()
+        state["records"].append({"sid": sid, "email": email, "device": (device or "")[:60],
+                                 "ip": (ip or "")[:60], "created": int(now), "exp": int(exp),
+                                 "last_seen": int(now)})
+        _prune(state, now)
+        _sessions_save(state)
+
+
+def _touch_session(sid: str) -> None:
+    """last_seen 只每 10 分钟回写一次：每次请求都写状态文件是白给的磁盘压力。"""
+    with _sessions_lock:
+        state = _sessions_load()
+        now = time.time()
+        hit = False
+        for r in state["records"]:
+            if r.get("sid") == sid and now - (r.get("last_seen") or 0) > 600:
+                r["last_seen"] = int(now)
+                hit = True
+        if hit:
+            _prune(state, now)
+            _sessions_save(state)
+
+
+def _revoked_set() -> set:
+    with _sessions_lock:
+        return set(_sessions_load().get("revoked") or {})
+
+
+def _pw_gen(email: str) -> int:
+    for u in _load_users():
+        if u["email"] == _norm_email(email):
+            return int(u.get("pw_gen") or 0)
+    return 0
+
+
+def list_sessions(email: str) -> list[dict]:
+    """这个账号当前在哪些设备上登录着（给"我的设备"页用，也给自己踢人用）。"""
+    email = _norm_email(email)
+    now = time.time()
+    revoked = _revoked_set()
+    with _sessions_lock:
+        state = _sessions_load()
+    rows = [r for r in state["records"]
+            if r.get("email") == email and (r.get("exp") or 0) > now
+            and r.get("sid") not in revoked]
+    rows.sort(key=lambda r: r.get("last_seen") or 0, reverse=True)
+    return [{"sid": r["sid"], "device": r.get("device") or "未知设备",
+             "ip": r.get("ip") or "", "created": r.get("created"),
+             "last_seen": r.get("last_seen")} for r in rows]
+
+
+def revoke_session(email: str, sid: str) -> bool:
+    """撕掉一张票：只有本人（或管理员走后台）能撕自己账号下的。"""
+    email = _norm_email(email)
+    with _sessions_lock:
+        state = _sessions_load()
+        rec = next((r for r in state["records"]
+                    if r.get("sid") == sid and r.get("email") == email), None)
+        if rec is None:
+            return False
+        state["revoked"][sid] = int(rec.get("exp") or (time.time() + SESSION_TTL_LONG))
+        state["records"] = [r for r in state["records"] if r.get("sid") != sid]
+        _prune(state, time.time())
+        _sessions_save(state)
+    return True
+
+
+def revoke_all_sessions(email: str) -> int:
+    """注销账号时用：这个人名下所有票一律作废。"""
+    email = _norm_email(email)
+    with _sessions_lock:
+        state = _sessions_load()
+        mine = [r for r in state["records"] if r.get("email") == email]
+        for r in mine:
+            state["revoked"][r["sid"]] = int(r.get("exp") or (time.time() + 3600))
+        state["records"] = [r for r in state["records"] if r.get("email") != email]
+        _prune(state, time.time())
+        _sessions_save(state)
+        return len(mine)

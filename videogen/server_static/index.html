@@ -719,6 +719,18 @@ body.lp-mode .top{display:none}
 .lp-foot{max-width:1060px;margin:30px auto 0;padding:22px 22px 40px;border-top:1px solid var(--line);
   display:flex;align-items:center;justify-content:space-between;color:var(--ink-2);font-size:13.5px}
 .lp-foot a{color:var(--acc);font-weight:700;cursor:pointer;margin-left:16px}
+.lp-foot .legal{font-size:13px;color:var(--ink-3);margin-bottom:10px;line-height:1.9}
+.lp-foot .legal a{margin-left:0;margin-right:10px;font-weight:600}
+.dv-h{font-size:13px;color:var(--ink-3);margin:0 0 8px}
+.dv-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.dv-row small{display:block;color:var(--ink-3);font-size:12px;margin-top:2px}
+.dv-sep{height:1px;background:var(--line);margin:16px 0}
+.dv-t{font-size:15px;font-weight:700;margin-bottom:6px}
+.dv-p{font-size:13.5px;color:var(--ink-2);line-height:1.8;margin:0 0 10px}
+.dv-chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:8px 0}
+.dv-in{width:100%;min-height:40px;padding:0 12px;border-radius:9px;background:var(--surface2,#211d31);
+  border:1px solid var(--line);color:var(--ink);font-size:14.5px;font-family:inherit}
+.dv-err{color:var(--err,#ff6b6b);font-size:13px;min-height:18px;margin-top:8px}
 @media(max-width:900px){.lp-hero{grid-template-columns:1fr;gap:26px}.lp-hero h1{font-size:34px}
   .lp-nav nav{display:none}.lp-gallery{grid-template-columns:repeat(3,1fr)}.lp-how{grid-template-columns:1fr 1fr}}
 
@@ -3538,7 +3550,12 @@ async function renderLanding(){
       </div>
     </section>
 
-    <div class="lp-foot">
+    <div class="lp-foot"><div class="legal">
+      <a href="/privacy" target="_blank" rel="noopener">隐私政策</a><span>·</span>
+      <a href="/terms" target="_blank" rel="noopener">用户协议</a><span>·</span>
+      <a href="/refund" target="_blank" rel="noopener">退款说明</a>
+      <span class="legal-note">　录音不留档 · 素材与成片 90 天后清理 · 可随时注销</span>
+    </div>
       <span>© GetCut · 一段文案，变成能发的竖屏短片</span>
       <span><a id="lpLogin">登录</a><a id="lpReg">注册</a></span>
     </div>
@@ -3915,6 +3932,7 @@ function toggleMeMenu(){
         : `<button class="me-item go" id="mePricing" role="menuitem"><i class="mi">⚡</i>升级 / 兑换卡密</button>`}
     <button class="me-item" id="meTasks" role="menuitem"><i class="mi">🖼</i>渲染任务<i class="mr">排队与进度</i></button>
     <button class="me-item" id="meContact" role="menuitem"><i class="mi">💬</i>联系创始人</button>
+    <button class="me-item" id="meDevices" role="menuitem"><i class="mi">🖥</i>登录设备与注销<i class="mr">踢掉某一台 · 删除账号</i></button>
     <button class="me-item warn" id="meLogout" role="menuitem"><i class="mi">⎋</i>退出登录</button>`;
   document.body.appendChild(m);
   $("meBtn").setAttribute("aria-expanded", "true");
@@ -3924,12 +3942,58 @@ function toggleMeMenu(){
   $("mePricing").onclick = () => { closeMeMenu(); openPricing(); };
   $("meTasks").onclick = () => { closeMeMenu(); toggleTasksPanel(); };
   $("meContact").onclick = () => { closeMeMenu(); openContact(); };
+  $("meDevices").onclick = () => { closeMeMenu(); openDevices(); };
   $("meLogout").onclick = async () => {
     closeMeMenu();
     try { await api("/api/auth/logout", {method:"POST"}); } catch (e) {}
     ME = null; paintAccount(); showAuth();
   };
 }
+/* ── 登录设备与注销 ──
+   隐私政策里承诺了"可随时注销""可撤回某台设备的登录"，这两句必须有入口，
+   否则政策就是空话；被投诉时"我们支持注销"却找不到按钮，比不写更糟。 */
+function openDevices(){
+  api("/api/auth/sessions").then(rs => {
+    if (rs && rs.error){ dialog("登录设备与注销", "读取失败：" + rs.error, null, "", true); return; }
+    const rows = (rs && rs.sessions) || [];
+    const list = rows.length
+      ? `<div class="dv-h">当前登录中的设备（${rows.length} 台）</div>` + rows.map(x =>
+          `<div class="dv-row"><span>${esc(x.device)}<small>${esc(x.ip || "")} · 最近活跃 ${
+            x.last_seen ? new Date(x.last_seen * 1000).toLocaleString("zh-CN") : "—"}</small></span>
+            <button type="button" class="btn sm line" data-sid="${esc(x.sid)}">踢掉</button></div>`).join("")
+      : `<div class="dv-h">当前登录中的设备：只有这一台。</div>`;
+    dialog("登录设备与注销", "", null, "", true, list + `
+      <div class="dv-sep"></div>
+      <div class="dv-t">注销这个账号</div>
+      <div class="dv-p">注销会删除你的素材包、成片、品牌套装与克隆音色登记，<b>无法恢复</b>。
+        卡密与购买记录会保留但去掉你的邮箱（财务对账需要）。
+        详见<a href="/privacy" target="_blank" rel="noopener">隐私政策</a> ·
+        <a href="/terms" target="_blank" rel="noopener">用户协议</a>。</div>
+      <label class="dv-chk"><input type="checkbox" id="dvYes">我确认删除以上全部内容</label>
+      <input class="dv-in" id="dvPwd" type="password" placeholder="再输一次密码确认" autocomplete="current-password">
+      <div class="dv-err" id="dvErr" role="status" aria-live="polite"></div>
+      <div class="row"><button class="btn sm line" data-c>关闭</button>
+        <button class="btn sm" id="dvGo" style="background:var(--err,#ff6b6b)">确认注销</button></div>`);
+    const box = [...document.querySelectorAll(".modal")].pop();
+    if (!box) return;
+    box.querySelectorAll("[data-sid]").forEach(b => b.onclick = async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const r = await api("/api/auth/session/revoke", {method:"POST", body:{sid:b.dataset.sid}});
+      if (r && r.error) b.textContent = "没踢掉"; else b.closest(".dv-row").remove();
+    });
+    const go = box.querySelector("#dvGo"), err = box.querySelector("#dvErr");
+    if (go) go.onclick = async () => {
+      const yes = box.querySelector("#dvYes"), pw = box.querySelector("#dvPwd");
+      if (!yes.checked || !pw.value){ err.textContent = "请先勾选确认并输入密码"; pw.focus(); return; }
+      go.disabled = true; go.textContent = "正在删除…";
+      const r = await api("/api/auth/delete-account", {method:"POST", body:{confirm:true, password:pw.value}});
+      go.disabled = false; go.textContent = "确认注销";
+      if (r && r.error){ err.textContent = r.error; return; }
+      location.href = "/";
+    };
+  });
+}
+
 document.addEventListener("click", (e) => {
   if (!$("meMenu")) return;
   const t = e.target;

@@ -1195,6 +1195,10 @@ const App: React.FC = () => {
           {codecOk ? '本机出片能力 正常' : '浏览器太旧，请换新版 Chrome / Edge'}
         </span>
         <div className="right">
+          <a href="/privacy" target="_blank" rel="noopener">隐私政策</a>
+          <a href="/terms" target="_blank" rel="noopener">用户协议</a>
+          <a href="/refund" target="_blank" rel="noopener">退款说明</a>
+          <span className="sep" />
           <span>画面与声音都在这台电脑上完成</span>
           <span className="sep" />
           <span>服务器零排队</span>

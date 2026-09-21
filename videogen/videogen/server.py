@@ -30,7 +30,7 @@ import uvicorn
 from fastapi import FastAPI, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
-from . import agenthub, auth, config, cos_store, licenses, preview, safestore, version, voice_clone
+from . import agenthub, auth, config, cos_store, legal, licenses, preview, safestore, version, voice_clone
 from . import brand as brand_kit
 from . import tts as tts_mod
 from .schemas import Content, Manifest, JobCancelled
@@ -341,7 +341,10 @@ SESSION_COOKIE = "vg_session"
 _PUBLIC_PATHS = {"/", "/index.html", "/studio", "/healthz", "/api/templates",
                  "/api/auth/status", "/api/auth/login", "/api/auth/register",
                  "/api/auth/send-code", "/api/auth/reset-code", "/api/auth/reset",
-                 "/api/pricing", "/api/sample-bundle"}
+                 "/api/pricing", "/api/sample-bundle",
+                 # 三页法定文本必须匿名可读：客户在付款前就要能看到，
+                 # 而且支付通道/应用市场抽查时"登录后可见"不算提供
+                 "/privacy", "/terms", "/refund"}
 
 
 def _is_public(path: str) -> bool:
@@ -945,6 +948,142 @@ def auth_change_password(body: dict, request: Request):
     return {"ok": True}
 
 
+
+# ---------- 三页法定文本（公开，无需登录） ----------
+# 与代码逐条对齐：留存数字来自 legal.RETENTION，改数字只改那一处，
+# 免得出现"文案说 30 天、代码清 90 天"这种被投诉一句就翻车的写法。
+for _kind in ("privacy", "terms", "refund"):
+
+    def _legal_page(request: Request, _k: str = _kind) -> Response:
+        return _page(request, legal.page(_k))
+
+    _legal_page.__name__ = "legal_" + _kind
+    app.get("/" + _kind, response_class=HTMLResponse)(_legal_page)
+
+
+def _usage_drop(email: str) -> None:
+    """注销时把用量账本里这个人的键去掉（额度是跟账号走的，账号没了不留）。"""
+    with _LOCK:
+        data = _usage_load()
+        if email in data:
+            data.pop(email, None)
+            try:
+                safestore.write_json(USAGE_FILE, data, indent=None)
+            except OSError:
+                pass
+
+
+def _purge_account(email: str) -> dict:
+    """删掉这个人名下的一切，并回报删了哪些、各多少。
+
+    每类都单独数一遍是有用的：客户问"你们到底删了什么"，我们答得出；
+    答不出来的"我们已彻底删除"，在投诉与诉讼里等于没删。
+    素材包目录只删归属明确是自己的 —— 无主的历史包可能是别人的，不能顺手带走。
+    """
+    out: dict = {"bundles": [], "projects": 0, "jobs": 0, "cos": 0, "brand": False}
+    meta = _bundles_meta()
+    for name, info in list(meta.items()):
+        if (info or {}).get("owner") != email:
+            continue
+        d = (WORKSPACES / name).resolve()
+        if WORKSPACES.resolve() in d.parents and d.is_dir():
+            shutil.rmtree(d, ignore_errors=True)
+        meta.pop(name, None)
+        out["bundles"].append(name)
+    _bundles_meta_save(meta)
+
+    with _LOCK:
+        reg = _reg()
+        mine = [x for x in reg["projects"] if x.get("owner") == email]
+        reg["projects"] = [x for x in reg["projects"] if x.get("owner") != email]
+        _reg_save(reg)
+    out["projects"] = len(mine)
+
+    with _LOCK:
+        for jid, j in list(JOBS.items()):
+            if j.get("owner") != email:
+                continue
+            v = j.get("video")
+            if v and Path(v).is_file():
+                Path(v).unlink(missing_ok=True)
+            key = j.get("cos_key")
+            if key and cos_store.enabled():
+                try:
+                    cos_store.drop(key)
+                    out["cos"] += 1
+                except Exception as exc:  # noqa: BLE001 - 云上删不掉要喊，但别挡住注销
+                    print("cos drop failed on purge %s: %s" % (key, exc))
+            JOBS.pop(jid, None)
+            out["jobs"] += 1
+        _jobs_save()
+
+    vid = brand_kit.clear_clone(email)
+    if vid:
+        try:
+            voice_clone.remove(vid)
+        except Exception as exc:  # noqa: BLE001
+            print("voice clone remove failed: %s" % exc)
+    bdir = brand_kit._dir(email)
+    if bdir.is_dir():
+        shutil.rmtree(bdir, ignore_errors=True)
+        out["brand"] = True
+    return out
+
+
+@app.post("/api/auth/delete-account")
+def auth_delete_account(body: dict, request: Request, response: Response):
+    """注销账号：本人登录 + 再输一次密码确认。
+
+    要密码是因为只凭登录状态就能删掉全部作品，破坏力太大（共享电脑、
+    被看到的 cookie 都够）。删完所有设备的通行证立刻失效，卡密记录去身份保留，
+    因为财务要能对账 —— 这两条都写在隐私政策里，代码与文案必须一致。
+    """
+    email = _session_email(request)
+    if not email:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    if not body.get("confirm"):
+        return JSONResponse({"error": "请勾选确认：注销会删除素材包、成片与品牌套装，无法恢复"},
+                            status_code=400)
+    if not auth.verify_login(email, str(body.get("password") or "")):
+        return JSONResponse({"error": "密码不对，注销没有生效"}, status_code=403)
+    deleted = _purge_account(email)
+    ok, why = auth.delete_user(email)
+    if not ok:
+        return JSONResponse({"error": why or "注销失败"}, status_code=400)
+    anonymized = licenses.anonymize(email)
+    _usage_drop(email)
+    auth.revoke_all_sessions(email)
+    resp = JSONResponse({"ok": True, "deleted": deleted, "license_records_anonymized": anonymized})
+    resp.delete_cookie(SESSION_COOKIE, path="/")
+    print("account deleted: %s 素材包%d 项目%d 任务%d 云成片%d" % (
+        email, len(deleted["bundles"]), deleted["projects"], deleted["jobs"], deleted["cos"]))
+    return resp
+
+
+@app.get("/api/auth/sessions")
+def auth_sessions(request: Request):
+    """我这个账号现在在哪些设备上登录着。"""
+    email = _session_email(request)
+    if not email:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    return {"sessions": auth.list_sessions(email)}
+
+
+@app.post("/api/auth/session/revoke")
+def auth_session_revoke(body: dict, request: Request):
+    """撕掉指定那一台的通行证 —— 以前只能换全局密钥＝所有人一起掉线。"""
+    email = _session_email(request)
+    if not email:
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    sid = str(body.get("sid") or "").strip()
+    if not sid:
+        return JSONResponse({"error": "要踢哪一台：缺少会话标识"}, status_code=400)
+    if not auth.revoke_session(email, sid):
+        # 别人的 sid 与不存在的 sid 回同一个码：不能拿它探测"这个会话在不在"
+        return JSONResponse({"error": "这台设备已经不在线了"}, status_code=404)
+    return {"ok": True}
+
+
 @app.get("/api/me")
 def me(request: Request):
     email = _session_email(request)
@@ -1029,12 +1168,24 @@ def admin_gen_licenses(body: dict, request: Request):
     try:
         codes = licenses.generate(str(body.get("tier") or ""), int(body.get("count") or 0),
                                   str(body.get("note") or ""))
+        # 发一批记一笔：谁发的、什么时候、几片、什么档、备注。
+        # 没有这行流水，直播间卖完货对不上账时我们连"这张码是我给的"都证不了。
+        licenses.log_issue(_session_email(request) or "token",
+                           str(body.get("tier") or ""), codes, str(body.get("note") or ""))
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     return {"codes": codes, "stats": licenses.stats()}
 
 
 # ---------- 试听（B5）----------
+
+@app.get("/api/admin/licenses/audit")
+def admin_license_audit(request: Request, limit: int = 100):
+    """卡密发放流水（最近若干条，倒序）。只有管理员能看。"""
+    if not _is_adminish(request):
+        return JSONResponse({"error": "只有管理员能看"}, status_code=403)
+    return {"rows": licenses.list_audit(max(1, min(int(limit or 100), 1000)))}
+
 
 @app.get("/api/voices")
 def voices_list(request: Request):
@@ -2465,9 +2616,9 @@ def poc_page(request: Request, rel_path: str = "index.html"):
     if not inside or not target.is_file():
         html = _poc_html()
         return html if isinstance(html, JSONResponse) else HTMLResponse(html)
-    # 文件名不带哈希，所以只能"每次回源校验"。光把 Cache-Control 改成 no-cache 不够：
-    # FileResponse 自己不看 If-None-Match，浏览器会次次重下 3.7MB（3Mbps 出网 = 十几秒白等），
-    # 这个 304 得我们自己回。
+    # 这些文件名不带内容哈希（bundle.js 永远是这个名字），所以只能"每次回源校验"：
+    # 光把 Cache-Control 改成 no-cache 会让浏览器每次重下 3.7MB（FileResponse 自己
+    # 不认 If-None-Match），3Mbps 的出网带宽上就是十几秒白等 —— 304 得我们自己回。
     tag = _file_tag(target)
     if any(t.strip() == tag for t in (request.headers.get("if-none-match") or "").split(",")):
         return Response(status_code=304, headers={"etag": tag})
