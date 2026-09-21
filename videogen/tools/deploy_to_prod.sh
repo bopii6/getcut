@@ -3,7 +3,7 @@
 #
 # 为什么是"推"不是服务器上"拉"（2026-09-21 夜实测）：
 #   · 服务器到 GitHub 的浅克隆卡在 4.1M 不动，还会留后台进程互相挖墙角 → 那台机不适合
-#     自己 git pull；本机 scp/rsync 到服务器一直是通的。
+#     自己 git pull；本机 tar/scp 到服务器一直是通的（Git Bash 里没有 rsync，所以脚本不依赖它）。
 #   · 只送 **已提交的 HEAD**（git archive），不送工作树 —— 工作树里可能混着别的会话
 #     未提交的改动，那种"顺手一起上线"迟早出事。
 #   · 整包同步，不再逐文件拷：上一版逐文件传攒出过"server.py 新、agenthub.py 旧"，
@@ -20,8 +20,6 @@ HOST="${VIDEOGEN_DEPLOY_HOST:-root@152.136.119.62}"
 KEY="${VIDEOGEN_DEPLOY_KEY:-$HOME/.ssh/videogen_ecs}"
 BASE=/opt/videogen
 SSH="ssh -i $KEY -o BatchMode=yes"
-RS="rsync -az --human-readable -e ssh"
-RSH="ssh -i $KEY -o BatchMode=yes"
 
 MODE=deploy; REBUILD=0
 for a in "$@"; do
@@ -52,25 +50,35 @@ rm -rf "$STAGE"; mkdir -p "$STAGE"
 git -C .. archive --format=tar "$SHA" | tar -x -C "$STAGE" || { echo "[deploy] 导出 HEAD 失败"; exit 1; }
 SRC="$STAGE/videogen"
 [ -d "$SRC/videogen" ] || { echo "[deploy] 导出结构不对（找 $SRC/videogen）"; exit 1; }
+# 文本文件归一成 LF：Windows 侧导出的 CRLF 会让每一行都"变了"，
+# 比对与回滚都会被这种假差异带偏（二进制原样不动）。
+find "$SRC" -type f \( -name '*.py' -o -name '*.js' -o -name '*.mjs' -o -name '*.css'   -o -name '*.html' -o -name '*.json' -o -name '*.md' -o -name '*.txt' -o -name '*.ts' -o -name '*.tsx' \)   -print0 | xargs -0 -r sed -i 's/
+$//'
+echo "[deploy] 文本已归一为 LF"
 
-drift() {  # 线上有、这次要送的版本里没有 → 只报告，不擅自删
-  local d="$1"
-  $SSH "$HOST" "cd $BASE/code/$d 2>/dev/null && find . -type f -printf '%P\n'" 2>/dev/null | sort > /tmp/remote-$d.txt
-  (cd "$SRC/$d" 2>/dev/null && find . -type f -printf '%P\n' | sort > /tmp/local-$d.txt) || : > /tmp/local-$d.txt
-  local only
-  only=$(comm -23 /tmp/remote-$d.txt /tmp/local-$d.txt | head -25)
-  if [ -n "$only" ]; then
-    echo "  [$d] 线上独有、这次不动它（$(comm -23 /tmp/remote-$d.txt /tmp/local-$d.txt | wc -l) 个）:"
+drift() {  # 线上有、这次要送的版本里没有 → 只报告，不擅自删（缓存类就在这堆里）
+  local d="$1" tag only n
+  tag=$(printf '%s' "$d" | tr '/' '_')        # renderer/src 这种带斜杠的名字不能直接当文件名
+  $SSH "$HOST" "cd $BASE/code/$d 2>/dev/null && find . -type f -printf '%P\n'" 2>/dev/null | sort > "/tmp/remote-$tag.txt"
+  (cd "$SRC/$d" 2>/dev/null && find . -type f -printf '%P\n') | sort > "/tmp/local-$tag.txt"
+  only=$(comm -23 "/tmp/remote-$tag.txt" "/tmp/local-$tag.txt" | head -25)
+  n=$(comm -23 "/tmp/remote-$tag.txt" "/tmp/local-$tag.txt" | wc -l)
+  if [ "$n" -gt 0 ]; then
+    echo "  [$d] 线上独有 $n 个，这次不动它们:"
     echo "$only" | sed 's/^/      /'
   fi
 }
 
-echo "[deploy] 线上与 HEAD 的差异（左=只在线上，右=只在这版）"
+echo "[deploy] 线上与 HEAD 的差异（按 路径+字节 比，MISSING=只有一边有）"
 for d in videogen server_static renderer/src assets samples; do
-  $SSH "$HOST" "test -d $BASE/code/$d" || { echo "  [$d] 线上没有这个目录，跳过"; continue; }
-  out=$($RS -n --out-format='%n' -e "$RSH" "$SRC/$d/" "$HOST:$BASE/code/$d/" 2>/dev/null | grep -v '^$' | head -20)
-  [ -n "$out" ] && { echo "  [$d] 要更新:"; echo "$out" | sed 's/^/      /'; }
-  [ "$MODE" = check ] && drift "$d"
+  $SSH "$HOST" "test -d $BASE/code/$d" || { echo "  [$d] 线上没有这个目录"; continue; }
+  tag=$(printf '%s' "$d" | tr '/' '_')
+  (cd "$SRC/$d" && find . -type f -printf '%P %s
+' | sort) > "/tmp/l-$tag.txt"
+  $SSH "$HOST" "cd $BASE/code/$d && find . -type f -printf '%P %s
+' | sort" > "/tmp/r-$tag.txt"
+  out=$(join -a1 -a2 -e MISSING -o 0,1.2,2.2 "/tmp/l-$tag.txt" "/tmp/r-$tag.txt"         | awk -v me=BUILD_INFO.json '$2!=$3 || $1 ~ /[^\/]$/ {} $2!=$3 {print}' | grep -v "^BUILD_INFO.json " | head -20)
+  if [ -n "$out" ]; then echo "  [$d] 有出入:"; echo "$out" | sed 's/^/      本地= 线上=  /'; else echo "  [$d] 与 HEAD 一致"; fi
 done
 if [ "$MODE" = check ]; then
   echo "[check] 只报告，什么都没改。要上线去掉 --check。"
@@ -81,16 +89,37 @@ echo "[deploy] 改前备份整包"
 BK="$BASE/backup/pre-$SHA-$(date +%H%M%S)"
 $SSH "$HOST" "mkdir -p $BK && cp -a $BASE/code $BK/code && cp -a $BASE/.env $BK/env && echo '  备份 -> $BK'"
 
-for d in videogen server_static; do          # 代码与前端产物：整包对齐
-  $RS -e "$RSH" "$SRC/$d/" "$HOST:$BASE/code/$d/" || { echo "[deploy] 传 $d 失败"; exit 1; }
-done
-for d in renderer/src assets samples; do     # 体积大、可能含运行时内容：只前进不删
-  [ -d "$SRC/$d" ] && $RS -e "$RSH" "$SRC/$d/" "$HOST:$BASE/code/$d/"
+push_dir() {  # push_dir <目录> [keep|clean]：本机没有 rsync，用 tar 管道；clean=顺带清掉线上多余文件
+  local d="$1" mode="${2:-keep}" tag
+  tag=$(printf '%s' "$d" | tr '/' '_')
+  echo "  传 $d"
+  tar -C "$SRC/$d" -cf - . | $SSH "$HOST" "mkdir -p $BASE/code/$d && tar -xf - -C $BASE/code/$d" || return 1
+  [ "$mode" = clean ] || return 0
+  $SSH "$HOST" "cd $BASE/code/$d && find . -type f -printf '%P\n'" 2>/dev/null | sort > "/tmp/remote-$tag.txt"
+  (cd "$SRC/$d" && find . -type f -printf '%P\n') | sort > "/tmp/local-$tag.txt"
+  # 只删"线上有、这版没有"的，且绝不碰版本戳、缓存与备份
+  # 删除范围只限 .py（死模块那一类）：字体/样片/图片这类被前端直接引用的东西
+  # 一律不删，宁可留着一个多余文件，也不能删出客户看得见的 404。
+  comm -23 "/tmp/remote-$tag.txt" "/tmp/local-$tag.txt" \
+    | grep -E '[.]py$' | grep -vE '(__init__|[.])pyc$' > "/tmp/kill-$tag.txt" || true
+  if [ -s "/tmp/kill-$tag.txt" ]; then
+    echo "  清掉 $d 下 $(wc -l < /tmp/kill-$tag.txt) 个多余文件（死模块就在这个清单里）"
+    sed 's/.*/&/' /tmp/kill-$tag.txt | tr '\n' '\0' \
+      | $SSH "$HOST" "cd $BASE/code/$d && xargs -0 -r rm -f"
+  fi
+}
+
+# videogen 只按 .py 清（死模块那一类）；server_static 只传不删 ——
+# 那底下是被前端直接引用的字体与样片，仓库一旦滞后，删除动作就是在删客户看得见的东西。
+push_dir videogen clean || { echo "[deploy] 传 videogen 失败"; exit 1; }
+push_dir server_static keep || { echo "[deploy] 传 server_static 失败"; exit 1; }
+for d in renderer/src assets samples; do     # 体积大、可能含运行时内容：只前进不删除
+  [ -d "$SRC/$d" ] && push_dir "$d" keep
 done
 
 printf '{"sha":"%s","branch":"%s","built":"%s","source":"deploy_to_prod.sh","dirty":false}\n' \
   "$SHA" "$BRANCH" "$(date -Iseconds)" > /tmp/BUILD_INFO.json
-$RS -e "$RSH" /tmp/BUILD_INFO.json "$HOST:$BASE/code/videogen/BUILD_INFO.json"
+cat /tmp/BUILD_INFO.json | $SSH "$HOST" "cat > $BASE/code/videogen/BUILD_INFO.json"
 
 if [ "$REBUILD" = 1 ]; then
   echo "[deploy] 重建容器（.env 改动只有重建才生效）"
