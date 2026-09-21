@@ -14,6 +14,8 @@ var client = __webpack_require__(5338);
 var esm = __webpack_require__(4229);
 // EXTERNAL MODULE: ./node_modules/@remotion/web-renderer/dist/esm/index.mjs + 1 modules
 var dist_esm = __webpack_require__(8451);
+// EXTERNAL MODULE: ./node_modules/react/jsx-runtime.js
+var jsx_runtime = __webpack_require__(4848);
 // EXTERNAL MODULE: ./node_modules/remotion/dist/esm/index.mjs
 var remotion_dist_esm = __webpack_require__(3947);
 // EXTERNAL MODULE: ./node_modules/mediabunny/dist/modules/src/media-sink.js
@@ -24,8 +26,6 @@ var src_input = __webpack_require__(2030);
 var source = __webpack_require__(4709);
 // EXTERNAL MODULE: ./node_modules/mediabunny/dist/modules/src/input-format.js
 var input_format = __webpack_require__(5608);
-// EXTERNAL MODULE: ./node_modules/react/jsx-runtime.js
-var jsx_runtime = __webpack_require__(4848);
 ;// ./node_modules/@remotion/media/dist/esm/index.mjs
 var __dispose = Symbol.dispose || /* @__PURE__ */ Symbol.for("Symbol.dispose");
 var __asyncDispose = Symbol.asyncDispose || /* @__PURE__ */ Symbol.for("Symbol.asyncDispose");
@@ -8044,7 +8044,8 @@ const ChoreoCard = ({ cues, fps, media, mediaKind, dur, mediaOrigin, bare }) => 
 };
 
 ;// ./src/ZhiguVideo.tsx
-/* unused harmony import specifier */ var React;
+/* unused harmony import specifier */ var jsx;
+
 
 
 
@@ -8073,7 +8074,7 @@ const Enter = ({ children, delay = 0, y = 34 }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const o = (0,remotion_dist_esm.interpolate)(f, [delay, delay + 8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const ty = (0,remotion_dist_esm.interpolate)(f, [delay, delay + 10], [y, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { opacity: o, transform: `translateY(${ty}px)` } }, children);
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { opacity: o, transform: `translateY(${ty}px)` }, children });
 };
 const msToF = (ms, fps) => Math.round(ms / 1e3 * fps);
 const rng = (seed) => {
@@ -8110,10 +8111,9 @@ const ParticleField = ({ height, seed }) => {
       const d = Math.hypot(a.x + a.dx - (b.x + b.dx), a.y + a.dy - (b.y + b.dy));
       if (d < 280) {
         lines.push(
-          /* @__PURE__ */ react.createElement(
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
             "line",
             {
-              key: `${i}-${j}`,
               x1: a.x + a.dx,
               y1: a.y + a.dy,
               x2: b.x + b.dx,
@@ -8121,26 +8121,36 @@ const ParticleField = ({ height, seed }) => {
               stroke: "#4d5d7c",
               strokeWidth: 1,
               opacity: Math.max(0, (1 - d / 280) * 0.55)
-            }
+            },
+            `${i}-${j}`
           )
         );
       }
     }
   }
-  return /* @__PURE__ */ react.createElement("svg", { width: W, height, viewBox: `0 0 ${W} ${height}`, style: { position: "absolute", inset: 0 } }, lines, moved.map((p) => /* @__PURE__ */ react.createElement(
-    "circle",
-    {
-      key: p.key,
-      cx: p.x + p.dx,
-      cy: p.y + p.dy,
-      r: p.r,
-      fill: "#93a7cd",
-      opacity: 0.4 + 0.32 * Math.abs(Math.sin(frame * 0.03 * p.sp + p.ph))
-    }
-  )));
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("svg", { width: W, height, viewBox: `0 0 ${W} ${height}`, style: { position: "absolute", inset: 0 }, children: [
+    lines,
+    moved.map((p) => /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "circle",
+      {
+        cx: p.x + p.dx,
+        cy: p.y + p.dy,
+        r: p.r,
+        fill: "#93a7cd",
+        opacity: 0.4 + 0.32 * Math.abs(Math.sin(frame * 0.03 * p.sp + p.ph))
+      },
+      p.key
+    ))
+  ] });
 };
-const DarkStage = ({ seed = 7, children }) => /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: DARK, overflow: "hidden" } }, /* @__PURE__ */ react.createElement(ParticleField, { height: STAGE_H, seed }), children);
-const ChannelMark = () => /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 52, top: 44, display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ react.createElement("span", { style: { width: 16, height: 16, borderRadius: 5, background: YELLOW, display: "inline-block" } }), /* @__PURE__ */ react.createElement("span", { style: { ...ZhiguVideo_heavy, fontSize: 34, color: "#ffffff", letterSpacing: 1 } }, "GetCut"));
+const DarkStage = ({ seed = 7, children }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { background: DARK, overflow: "hidden" }, children: [
+  /* @__PURE__ */ (0,jsx_runtime.jsx)(ParticleField, { height: STAGE_H, seed }),
+  children
+] });
+const ChannelMark = () => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 52, top: 44, display: "flex", alignItems: "center", gap: 12 }, children: [
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { width: 16, height: 16, borderRadius: 5, background: YELLOW, display: "inline-block" } }),
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...ZhiguVideo_heavy, fontSize: 34, color: "#ffffff", letterSpacing: 1 }, children: "GetCut" })
+] });
 const estWL = (text, size) => {
   let w = 0;
   for (const ch of text) w += ch.charCodeAt(0) > 11904 ? size : size * 0.56;
@@ -8152,19 +8162,23 @@ const Headline = ({ lines }) => {
   const dx = (r() - 0.5) * 3;
   const dy = (r() - 0.5) * 2;
   const shown = lines.slice(0, 2);
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 40, right: 40, top: 148, textAlign: "center", transform: `translate(${dx}px, ${dy}px)` } }, shown.map((l, i) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 40, right: 40, top: 148, textAlign: "center", transform: `translate(${dx}px, ${dy}px)` }, children: shown.map((l, i) => {
     const size = Math.min(86, Math.max(56, 960 / Math.max(estWL(l.text, 84), 1) * 84));
     const isTail = shown.length > 1 && i === shown.length - 1;
     const parts = l.highlight && l.text.includes(l.highlight) ? l.text.split(l.highlight) : null;
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: {
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
       ...ZhiguVideo_heavy,
       fontSize: size,
       lineHeight: 1.22,
       color: isTail ? YELLOW : "#ffffff",
       marginTop: i === 0 ? 0 : 14,
       textShadow: "0 4px 18px rgba(0,0,0,0.6)"
-    } }, parts ? /* @__PURE__ */ react.createElement(react.Fragment, null, parts[0], /* @__PURE__ */ react.createElement("span", { style: { background: YELLOW, color: INK, padding: "0 14px", borderRadius: 10 } }, l.highlight), parts[1]) : l.text);
-  }));
+    }, children: parts ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      parts[0],
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { background: YELLOW, color: INK, padding: "0 14px", borderRadius: 10 }, children: l.highlight }),
+      parts[1]
+    ] }) : l.text }, i);
+  }) });
 };
 const pop = (f, at) => ({
   o: (0,remotion_dist_esm.interpolate)(f, [at, at + 5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
@@ -8177,21 +8191,21 @@ const pop = (f, at) => ({
 const GlassPill = ({ text, at, small }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const { o, s } = pop(f, at);
-  return /* @__PURE__ */ react.createElement("div", { style: { opacity: o, transform: `scale(${s})` } }, /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { opacity: o, transform: `scale(${s})` }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     background: "linear-gradient(180deg, rgba(190,214,255,0.88), rgba(150,178,235,0.82))",
     borderRadius: 999,
     padding: small ? "14px 40px" : "22px 58px",
     boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
     border: "1px solid rgba(255,255,255,0.5)",
     textAlign: "center"
-  } }, /* @__PURE__ */ react.createElement("span", { style: { ...ZhiguVideo_heavy, fontSize: small ? 40 : 56, color: "#ffffff", textShadow: "0 2px 8px rgba(20,40,90,0.4)" } }, text)));
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...ZhiguVideo_heavy, fontSize: small ? 40 : 56, color: "#ffffff", textShadow: "0 2px 8px rgba(20,40,90,0.4)" }, children: text }) }) });
 };
 const ChipRow = ({ items, mode = "dark" }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const shown = items.filter(Boolean).slice(0, 3);
-  return /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 24, justifyContent: "center", flexWrap: "nowrap" } }, shown.map((it, i) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "flex", gap: 24, justifyContent: "center", flexWrap: "nowrap" }, children: shown.map((it, i) => {
     const { o, s } = pop(f, 4 + i * 8);
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: { opacity: o, transform: `scale(${s})` } }, /* @__PURE__ */ react.createElement("div", { style: {
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { opacity: o, transform: `scale(${s})` }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
       background: YELLOW,
       color: INK,
       ...ZhiguVideo_heavy,
@@ -8200,8 +8214,8 @@ const ChipRow = ({ items, mode = "dark" }) => {
       borderRadius: 14,
       boxShadow: mode === "dark" ? "0 10px 26px rgba(0,0,0,0.45)" : "0 12px 30px rgba(0,0,0,0.5)",
       border: mode === "media" ? "3px solid rgba(255,255,255,0.85)" : "none"
-    } }, it));
-  }));
+    }, children: it }) }, i);
+  }) });
 };
 const TreeStage = ({ stage }) => {
   const tree = stage.tree || {};
@@ -8212,52 +8226,63 @@ const TreeStage = ({ stage }) => {
   const kidAt = (i) => 14 + i * 8;
   const n = Math.max(1, kids.length);
   const slot = Math.min(250, 960 / n);
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 31 }, /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: STAGE_H * 0.14,
-    display: "flex",
-    justifyContent: "center",
-    opacity: cIn,
-    transform: `translateY(${(1 - cIn) * 30}px)`
-  } }, /* @__PURE__ */ react.createElement("div", { style: {
-    ...{ background: "#ffffff", borderRadius: 20, boxShadow: "0 18px 44px rgba(0,0,0,0.5)" },
-    display: "inline-flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "30px 56px",
-    minWidth: 430
-  } }, center.logo ? /* @__PURE__ */ react.createElement(remotion_dist_esm.Img, { src: (0,remotion_dist_esm.staticFile)(`media/${center.logo}`), style: { height: 92, objectFit: "contain", marginBottom: 14 } }) : null, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 54, color: INK } }, center.title), center.sub ? /* @__PURE__ */ react.createElement("div", { style: { fontFamily: T.fontMono, fontSize: 28, color: MUTED, marginTop: 10 } }, center.sub) : null)), /* @__PURE__ */ react.createElement("svg", { width: W, height: STAGE_H, style: { position: "absolute", top: 0, left: 0, pointerEvents: "none" } }, kids.map((_, i) => {
-    const cx = W / 2 + (i - (n - 1) / 2) * slot;
-    const on = f >= kidAt(i);
-    return /* @__PURE__ */ react.createElement(
-      "line",
-      {
-        key: i,
-        x1: W / 2,
-        y1: STAGE_H * 0.14 + 148,
-        x2: cx,
-        y2: STAGE_H * 0.14 + 300,
-        stroke: LINE,
-        strokeWidth: 3,
-        strokeDasharray: "10 8",
-        opacity: on ? 0.85 : 0
-      }
-    );
-  })), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, right: 0, top: STAGE_H * 0.14 + 300, display: "flex", justifyContent: "center" } }, kids.map((k, i) => {
-    const on = f >= kidAt(i);
-    const o2 = (0,remotion_dist_esm.interpolate)(f, [kidAt(i), kidAt(i) + 6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    const width = Math.min(226, slot - 18);
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: { width: slot, display: "flex", justifyContent: "center" } }, on ? /* @__PURE__ */ react.createElement("div", { style: { width, opacity: o2 } }, /* @__PURE__ */ react.createElement("div", { style: {
-      background: "#ffffff",
-      borderRadius: 16,
-      padding: "18px 8px",
-      textAlign: "center",
-      border: `2px solid ${LINE}`,
-      boxShadow: "0 12px 30px rgba(0,0,0,0.4)"
-    } }, k.logo ? /* @__PURE__ */ react.createElement(remotion_dist_esm.Img, { src: (0,remotion_dist_esm.staticFile)(`media/${k.logo}`), style: { height: 42, objectFit: "contain", marginBottom: 8 } }) : null, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 30, color: INK } }, k.title || k))) : null);
-  })));
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(DarkStage, { seed: 31, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: STAGE_H * 0.14,
+      display: "flex",
+      justifyContent: "center",
+      opacity: cIn,
+      transform: `translateY(${(1 - cIn) * 30}px)`
+    }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      ...{ background: "#ffffff", borderRadius: 20, boxShadow: "0 18px 44px rgba(0,0,0,0.5)" },
+      display: "inline-flex",
+      flexDirection: "column",
+      alignItems: "center",
+      padding: "30px 56px",
+      minWidth: 430
+    }, children: [
+      center.logo ? /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Img, { src: (0,remotion_dist_esm.staticFile)(`media/${center.logo}`), style: { height: 92, objectFit: "contain", marginBottom: 14 } }) : null,
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 54, color: INK }, children: center.title }),
+      center.sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontFamily: T.fontMono, fontSize: 28, color: MUTED, marginTop: 10 }, children: center.sub }) : null
+    ] }) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("svg", { width: W, height: STAGE_H, style: { position: "absolute", top: 0, left: 0, pointerEvents: "none" }, children: kids.map((_, i) => {
+      const cx = W / 2 + (i - (n - 1) / 2) * slot;
+      const on = f >= kidAt(i);
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "line",
+        {
+          x1: W / 2,
+          y1: STAGE_H * 0.14 + 148,
+          x2: cx,
+          y2: STAGE_H * 0.14 + 300,
+          stroke: LINE,
+          strokeWidth: 3,
+          strokeDasharray: "10 8",
+          opacity: on ? 0.85 : 0
+        },
+        i
+      );
+    }) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 0, right: 0, top: STAGE_H * 0.14 + 300, display: "flex", justifyContent: "center" }, children: kids.map((k, i) => {
+      const on = f >= kidAt(i);
+      const o2 = (0,remotion_dist_esm.interpolate)(f, [kidAt(i), kidAt(i) + 6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+      const width = Math.min(226, slot - 18);
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { width: slot, display: "flex", justifyContent: "center" }, children: on ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { width, opacity: o2 }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+        background: "#ffffff",
+        borderRadius: 16,
+        padding: "18px 8px",
+        textAlign: "center",
+        border: `2px solid ${LINE}`,
+        boxShadow: "0 12px 30px rgba(0,0,0,0.4)"
+      }, children: [
+        k.logo ? /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Img, { src: (0,remotion_dist_esm.staticFile)(`media/${k.logo}`), style: { height: 42, objectFit: "contain", marginBottom: 8 } }) : null,
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 30, color: INK }, children: k.title || k })
+      ] }) }) : null }, i);
+    }) })
+  ] });
 };
 const RankStage = ({ stage }) => {
   var _a, _b, _c;
@@ -8267,52 +8292,70 @@ const RankStage = ({ stage }) => {
   const hi = rows.findIndex((r) => r.highlight);
   const tooltip = typeof table.tooltip === "string" ? table.tooltip : null;
   const tipAt = 26;
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 53 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0 60px" } }, /* @__PURE__ */ react.createElement(Enter, { delay: 2 }, /* @__PURE__ */ react.createElement("div", { style: {
-    width: 940,
-    background: "#ffffff",
-    borderRadius: 18,
-    overflow: "hidden",
-    boxShadow: "0 30px 80px rgba(0,0,0,0.6)"
-  } }, table.title ? /* @__PURE__ */ react.createElement("div", { style: { background: "#241a4d", padding: "20px 30px" } }, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 34, color: "#ffffff", letterSpacing: 1 } }, table.title)) : null, rows.map((r, i) => {
-    const at = 8 + i * 6;
-    const on = f >= at;
-    const o2 = (0,remotion_dist_esm.interpolate)(f, [at, at + 5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 53, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0 60px" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(Enter, { delay: 2, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      width: 940,
+      background: "#ffffff",
+      borderRadius: 18,
+      overflow: "hidden",
+      boxShadow: "0 30px 80px rgba(0,0,0,0.6)"
+    }, children: [
+      table.title ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { background: "#241a4d", padding: "20px 30px" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 34, color: "#ffffff", letterSpacing: 1 }, children: table.title }) }) : null,
+      rows.map((r, i) => {
+        const at = 8 + i * 6;
+        const on = f >= at;
+        const o2 = (0,remotion_dist_esm.interpolate)(f, [at, at + 5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          padding: "15px 26px",
+          opacity: o2,
+          background: r.highlight ? "rgba(255,217,61,0.32)" : "transparent",
+          borderLeft: r.highlight ? `8px solid ${YELLOW}` : "8px solid transparent"
+        }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: T.fontMono, fontSize: 28, color: MUTED, width: 40 }, children: i + 1 }),
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { style: { flex: 1, minWidth: 0 }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...ZhiguVideo_heavy, fontSize: 30, color: INK, display: "block" }, children: r.name || "" }),
+            r.sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 21, color: MUTED }, children: r.sub }) : null
+          ] }),
+          r.value ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: T.fontMono, fontWeight: 700, fontSize: 32, color: INK }, children: r.value }) : null,
+          r.delta ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+            fontFamily: T.fontMono,
+            fontSize: 24,
+            fontWeight: 700,
+            color: "#0e9f6e",
+            background: "rgba(52,211,153,0.16)",
+            padding: "4px 12px",
+            borderRadius: 8
+          }, children: r.delta }) : null
+        ] }, i);
+      })
+    ] }) }),
+    tooltip && f >= tipAt ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      position: "absolute",
+      left: "50%",
+      top: STAGE_H * 0.52,
+      transform: `translate(-50%, 0) scale(${(0,remotion_dist_esm.interpolate)(f, [tipAt, tipAt + 7], [0.7, 1], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: (x) => 1 + Math.sin(Math.min(x, 1) * Math.PI) * 0.15
+      })})`,
+      opacity: (0,remotion_dist_esm.interpolate)(f, [tipAt, tipAt + 5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
+    }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      background: "#ffffff",
+      borderRadius: 14,
+      padding: "16px 24px",
+      boxShadow: "0 16px 44px rgba(0,0,0,0.55)",
       display: "flex",
-      alignItems: "center",
       gap: 16,
-      padding: "15px 26px",
-      opacity: o2,
-      background: r.highlight ? "rgba(255,217,61,0.32)" : "transparent",
-      borderLeft: r.highlight ? `8px solid ${YELLOW}` : "8px solid transparent"
-    } }, /* @__PURE__ */ react.createElement("span", { style: { fontFamily: T.fontMono, fontSize: 28, color: MUTED, width: 40 } }, i + 1), /* @__PURE__ */ react.createElement("span", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ react.createElement("span", { style: { ...ZhiguVideo_heavy, fontSize: 30, color: INK, display: "block" } }, r.name || ""), r.sub ? /* @__PURE__ */ react.createElement("span", { style: { fontSize: 21, color: MUTED } }, r.sub) : null), r.value ? /* @__PURE__ */ react.createElement("span", { style: { fontFamily: T.fontMono, fontWeight: 700, fontSize: 32, color: INK } }, r.value) : null, r.delta ? /* @__PURE__ */ react.createElement("span", { style: {
-      fontFamily: T.fontMono,
-      fontSize: 24,
-      fontWeight: 700,
-      color: "#0e9f6e",
-      background: "rgba(52,211,153,0.16)",
-      padding: "4px 12px",
-      borderRadius: 8
-    } }, r.delta) : null);
-  }))), tooltip && f >= tipAt ? /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    left: "50%",
-    top: STAGE_H * 0.52,
-    transform: `translate(-50%, 0) scale(${(0,remotion_dist_esm.interpolate)(f, [tipAt, tipAt + 7], [0.7, 1], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: (x) => 1 + Math.sin(Math.min(x, 1) * Math.PI) * 0.15
-    })})`,
-    opacity: (0,remotion_dist_esm.interpolate)(f, [tipAt, tipAt + 5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
-  } }, /* @__PURE__ */ react.createElement("div", { style: {
-    background: "#ffffff",
-    borderRadius: 14,
-    padding: "16px 24px",
-    boxShadow: "0 16px 44px rgba(0,0,0,0.55)",
-    display: "flex",
-    gap: 16,
-    alignItems: "center"
-  } }, ((_a = rows[hi]) == null ? void 0 : _a.name) ? /* @__PURE__ */ react.createElement("span", { style: { ...ZhiguVideo_heavy, fontSize: 28, color: INK } }, rows[hi].name) : null, ((_b = rows[hi]) == null ? void 0 : _b.value) ? /* @__PURE__ */ react.createElement("span", { style: { fontFamily: T.fontMono, fontWeight: 700, fontSize: 28, color: "#6a5acd" } }, rows[hi].value) : null, ((_c = rows[hi]) == null ? void 0 : _c.delta) ? /* @__PURE__ */ react.createElement("span", { style: { fontFamily: T.fontMono, fontSize: 24, fontWeight: 700, color: "#0e9f6e" } }, rows[hi].delta) : null)) : null));
+      alignItems: "center"
+    }, children: [
+      ((_a = rows[hi]) == null ? void 0 : _a.name) ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...ZhiguVideo_heavy, fontSize: 28, color: INK }, children: rows[hi].name }) : null,
+      ((_b = rows[hi]) == null ? void 0 : _b.value) ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: T.fontMono, fontWeight: 700, fontSize: 28, color: "#6a5acd" }, children: rows[hi].value }) : null,
+      ((_c = rows[hi]) == null ? void 0 : _c.delta) ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: T.fontMono, fontSize: 24, fontWeight: 700, color: "#0e9f6e" }, children: rows[hi].delta }) : null
+    ] }) }) : null
+  ] }) });
 };
 const QuoteStage = ({ shot }) => {
   var _a;
@@ -8326,54 +8369,80 @@ const QuoteStage = ({ shot }) => {
     extrapolateRight: "clamp"
   }));
   const shown = quote.slice(0, chars);
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 77 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0 80px" } }, /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 77, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0 80px" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     background: "linear-gradient(135deg, #1d3557, #2a5a8c)",
     borderRadius: 20,
     padding: "36px 44px",
     maxWidth: 920,
     boxShadow: "0 24px 70px rgba(0,0,0,0.55)"
-  } }, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 46, color: "#ffffff", lineHeight: 1.55 } }, /* @__PURE__ */ react.createElement("span", { style: { background: "rgba(255,255,255,0.16)", padding: "2px 12px", borderRadius: 10 } }, shown), /* @__PURE__ */ react.createElement("span", { style: { opacity: Math.floor(f / 4) % 2 === 0 ? 1 : 0.2 } }, "|")))));
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { ...ZhiguVideo_heavy, fontSize: 46, color: "#ffffff", lineHeight: 1.55 }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { background: "rgba(255,255,255,0.16)", padding: "2px 12px", borderRadius: 10 }, children: shown }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { opacity: Math.floor(f / 4) % 2 === 0 ? 1 : 0.2 }, children: "|" })
+  ] }) }) }) });
 };
 const NumberStage = ({ shot }) => {
   const o = shot.overlay ?? {};
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 13 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center" } }, /* @__PURE__ */ react.createElement(Enter, null, /* @__PURE__ */ react.createElement("div", { style: { textAlign: "center" } }, o.label ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 30, color: "#aab2bd", letterSpacing: 4, marginBottom: 24 } }, o.label) : null, /* @__PURE__ */ react.createElement("div", { style: {
-    ...ZhiguVideo_heavy,
-    fontSize: String(o.number || "").length > 8 ? 110 : 170,
-    color: "#ffffff",
-    display: "inline-block",
-    borderBottom: `16px solid ${YELLOW}`,
-    paddingBottom: 8
-  } }, o.number || ""), o.caption ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 36, color: "#ffffff", marginTop: 30, ...ZhiguVideo_heavy } }, o.caption) : null))));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 13, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Enter, { children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { textAlign: "center" }, children: [
+    o.label ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 30, color: "#aab2bd", letterSpacing: 4, marginBottom: 24 }, children: o.label }) : null,
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      ...ZhiguVideo_heavy,
+      fontSize: String(o.number || "").length > 8 ? 110 : 170,
+      color: "#ffffff",
+      display: "inline-block",
+      borderBottom: `16px solid ${YELLOW}`,
+      paddingBottom: 8
+    }, children: o.number || "" }),
+    o.caption ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 36, color: "#ffffff", marginTop: 30, ...ZhiguVideo_heavy }, children: o.caption }) : null
+  ] }) }) }) });
 };
 const CompareStage = ({ shot }) => {
   const o = shot.overlay ?? {};
   const sides = [o.left, o.right].filter(Boolean);
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 19 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 70px" } }, /* @__PURE__ */ react.createElement(Enter, null, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 42, color: "#ffffff", marginBottom: 30, textAlign: "center" } }, o.title || ""), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 26 } }, sides.map((s, i) => /* @__PURE__ */ react.createElement("div", { key: i, style: { flex: 1, background: "rgba(255,255,255,0.96)", borderRadius: 18, padding: "30px 30px" } }, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 34, color: i === 0 ? "#6a5acd" : "#0e9f6e" } }, s.head), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 30, color: INK, marginTop: 12, lineHeight: 1.5 } }, s.body)))))));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 19, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 70px" }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(Enter, { children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 42, color: "#ffffff", marginBottom: 30, textAlign: "center" }, children: o.title || "" }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "flex", gap: 26 }, children: sides.map((s, i) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { flex: 1, background: "rgba(255,255,255,0.96)", borderRadius: 18, padding: "30px 30px" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 34, color: i === 0 ? "#6a5acd" : "#0e9f6e" }, children: s.head }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 30, color: INK, marginTop: 12, lineHeight: 1.5 }, children: s.body })
+    ] }, i)) })
+  ] }) }) });
 };
 const ChecklistStage = ({ shot }) => {
   const o = shot.overlay ?? {};
   const items = (Array.isArray(o.items) ? o.items : []).slice(0, 5);
   const f = (0,remotion_dist_esm.useCurrentFrame)();
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 29 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center" } }, /* @__PURE__ */ react.createElement(Enter, null, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center" } }, /* @__PURE__ */ react.createElement("div", { style: { background: "#171a20", borderRadius: 26, padding: 14, boxShadow: "0 24px 60px rgba(0,0,0,0.5)" } }, /* @__PURE__ */ react.createElement("div", { style: { background: "#ffffff", borderRadius: 14, width: 760, minHeight: 280 + items.length * 52, padding: "30px 40px" } }, o.title ? /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 34, color: INK, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 } }, /* @__PURE__ */ react.createElement("span", { style: { width: 12, height: 12, borderRadius: 999, background: YELLOW, display: "inline-block" } }), o.title) : null, items.map((it, i) => {
-    const at = 8 + i * 9;
-    const done = f >= at;
-    const popv = (0,remotion_dist_esm.interpolate)(f, [at, at + 6], [0.4, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 18, padding: "10px 0" } }, /* @__PURE__ */ react.createElement("span", { style: {
-      width: 34,
-      height: 34,
-      borderRadius: 999,
-      flex: "none",
-      border: done ? `3px solid ${GREEN}` : "3px solid #d8d6cf",
-      background: done ? GREEN : "#fff",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: "#fff",
-      fontSize: 22,
-      fontWeight: 900,
-      transform: done ? `scale(${popv})` : "scale(1)"
-    } }, done ? "\u2713" : ""), /* @__PURE__ */ react.createElement("span", { style: { fontSize: 30, color: INK } }, it));
-  }))), /* @__PURE__ */ react.createElement("div", { style: { width: 130, height: 46, background: "#171a20", clipPath: "polygon(22% 0, 78% 0, 100% 100%, 0 100%)" } }), /* @__PURE__ */ react.createElement("div", { style: { width: 230, height: 14, background: "#171a20", borderRadius: 6 } })))));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 29, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Enter, { children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", flexDirection: "column", alignItems: "center" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { background: "#171a20", borderRadius: 26, padding: 14, boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { background: "#ffffff", borderRadius: 14, width: 760, minHeight: 280 + items.length * 52, padding: "30px 40px" }, children: [
+      o.title ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { ...ZhiguVideo_heavy, fontSize: 34, color: INK, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { width: 12, height: 12, borderRadius: 999, background: YELLOW, display: "inline-block" } }),
+        o.title
+      ] }) : null,
+      items.map((it, i) => {
+        const at = 8 + i * 9;
+        const done = f >= at;
+        const popv = (0,remotion_dist_esm.interpolate)(f, [at, at + 6], [0.4, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 18, padding: "10px 0" }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+            width: 34,
+            height: 34,
+            borderRadius: 999,
+            flex: "none",
+            border: done ? `3px solid ${GREEN}` : "3px solid #d8d6cf",
+            background: done ? GREEN : "#fff",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            fontSize: 22,
+            fontWeight: 900,
+            transform: done ? `scale(${popv})` : "scale(1)"
+          }, children: done ? "\u2713" : "" }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 30, color: INK }, children: it })
+        ] }, i);
+      })
+    ] }) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { width: 130, height: 46, background: "#171a20", clipPath: "polygon(22% 0, 78% 0, 100% 100%, 0 100%)" } }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { width: 230, height: 14, background: "#171a20", borderRadius: 6 } })
+  ] }) }) }) });
 };
 const CardStage = ({ shot }) => {
   var _a, _b;
@@ -8381,14 +8450,18 @@ const CardStage = ({ shot }) => {
   const title = o.title || ((_a = o.card) == null ? void 0 : _a.title) || o.card_title || "";
   const body = ((_b = o.card) == null ? void 0 : _b.body) || o.card_body || o.subtitle || "";
   const badge = o.badge || o.label || "";
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 41 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0 80px" } }, /* @__PURE__ */ react.createElement(Enter, null, /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 41, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0 80px" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Enter, { children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     background: "#ffffff",
     borderRadius: 20,
     padding: "44px 52px",
     width: 900,
     borderLeft: `12px solid ${YELLOW}`,
     boxShadow: "0 24px 70px rgba(0,0,0,0.5)"
-  } }, badge ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 26, color: MUTED, letterSpacing: 3, marginBottom: 16 } }, badge) : null, title ? /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 50, color: INK, lineHeight: 1.3 } }, title) : null, body ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 30, color: "#454b56", marginTop: 20, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, body) : null))));
+  }, children: [
+    badge ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 26, color: MUTED, letterSpacing: 3, marginBottom: 16 }, children: badge }) : null,
+    title ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 50, color: INK, lineHeight: 1.3 }, children: title }) : null,
+    body ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 30, color: "#454b56", marginTop: 20, lineHeight: 1.7, whiteSpace: "pre-wrap" }, children: body }) : null
+  ] }) }) }) });
 };
 const MediaStage = ({ shot, index }) => {
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
@@ -8401,11 +8474,11 @@ const MediaStage = ({ shot, index }) => {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp"
     });
-    return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" } }, /* @__PURE__ */ react.createElement(remotion_dist_esm.Img, { src, style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transform: `scale(${zoom})` } }));
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Img, { src, style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transform: `scale(${zoom})` } }) });
   }
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" } }, /* @__PURE__ */ react.createElement(remotion_dist_esm.Loop, { durationInFrames: dur }, /* @__PURE__ */ react.createElement(ShotVideo, { src, style: { width: "100%", height: "100%", objectFit: "cover" } })));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Loop, { durationInFrames: dur, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(ShotVideo, { src, style: { width: "100%", height: "100%", objectFit: "cover" } }) }) });
 };
-const ChipsOverlay = ({ chips }) => /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: 0, right: 0, bottom: 46, display: "flex", justifyContent: "center" } }, /* @__PURE__ */ React.createElement(ChipRow, { items: chips, mode: "media" }));
+const ChipsOverlay = ({ chips }) => /* @__PURE__ */ jsx("div", { style: { position: "absolute", left: 0, right: 0, bottom: 46, display: "flex", justifyContent: "center" }, children: /* @__PURE__ */ jsx(ChipRow, { items: chips, mode: "media" }) });
 const SwapStage = ({ swap }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const total = (0,remotion_dist_esm.useVideoConfig)().durationInFrames;
@@ -8416,7 +8489,7 @@ const SwapStage = ({ swap }) => {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp"
   });
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 23 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0 90px" } }, /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 23, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0 90px" }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     opacity: o,
     width: "100%",
     border: "2px solid rgba(255,255,255,0.55)",
@@ -8424,49 +8497,62 @@ const SwapStage = ({ swap }) => {
     padding: "40px 40px",
     textAlign: "center",
     background: "rgba(10,12,18,0.55)"
-  } }, /* @__PURE__ */ react.createElement("div", { style: {
-    display: "inline-block",
-    background: YELLOW,
-    color: INK,
-    ...ZhiguVideo_heavy,
-    fontSize: 52,
-    padding: "10px 40px",
-    borderRadius: 12
-  } }, cur.label), /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 46, color: "#ffffff", marginTop: 26, lineHeight: 1.4 } }, "\u201C", cur.text, "\u201D"))));
+  }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      display: "inline-block",
+      background: YELLOW,
+      color: INK,
+      ...ZhiguVideo_heavy,
+      fontSize: 52,
+      padding: "10px 40px",
+      borderRadius: 12
+    }, children: cur.label }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { ...ZhiguVideo_heavy, fontSize: 46, color: "#ffffff", marginTop: 26, lineHeight: 1.4 }, children: [
+      "\u201C",
+      cur.text,
+      "\u201D"
+    ] })
+  ] }) }) });
 };
 const PersonChipsStage = ({ person }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const chips = (person.chips || []).slice(0, 4);
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 37 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 44, padding: "0 70px" } }, /* @__PURE__ */ react.createElement(Enter, null, /* @__PURE__ */ react.createElement("div", { style: {
-    background: "#ffffff",
-    borderRadius: 20,
-    padding: "30px 46px",
-    textAlign: "center",
-    boxShadow: "0 20px 50px rgba(0,0,0,0.45)"
-  } }, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 52, color: INK } }, person.name), person.caption ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 28, color: MUTED, marginTop: 8 } }, person.caption) : null)), /* @__PURE__ */ react.createElement("div", { style: { display: "grid", gridTemplateColumns: chips.length > 3 ? "1fr 1fr" : "1fr", gap: 18, width: 620 } }, chips.map((c, i) => {
-    const at = 12 + i * 8;
-    const o2 = (0,remotion_dist_esm.interpolate)(f, [at, at + 6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: {
-      opacity: o2,
-      background: YELLOW,
-      borderRadius: 12,
-      padding: "16px 10px",
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 37, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 44, padding: "0 70px" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(Enter, { children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      background: "#ffffff",
+      borderRadius: 20,
+      padding: "30px 46px",
       textAlign: "center",
-      ...ZhiguVideo_heavy,
-      fontSize: 34,
-      color: INK
-    } }, c);
-  }))));
+      boxShadow: "0 20px 50px rgba(0,0,0,0.45)"
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 52, color: INK }, children: person.name }),
+      person.caption ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 28, color: MUTED, marginTop: 8 }, children: person.caption }) : null
+    ] }) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "grid", gridTemplateColumns: chips.length > 3 ? "1fr 1fr" : "1fr", gap: 18, width: 620 }, children: chips.map((c, i) => {
+      const at = 12 + i * 8;
+      const o2 = (0,remotion_dist_esm.interpolate)(f, [at, at + 6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+        opacity: o2,
+        background: YELLOW,
+        borderRadius: 12,
+        padding: "16px 10px",
+        textAlign: "center",
+        ...ZhiguVideo_heavy,
+        fontSize: 34,
+        color: INK
+      }, children: c }, i);
+    }) })
+  ] }) });
 };
 const ThreeCardsStage = ({ cards }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const list = (cards || []).slice(0, 3);
   const tints = [["#ffe3ec", "#ffd3a8"], ["#dff3ff", "#cfe0ff"], ["#e2ffdf", "#c9f0d8"]];
-  return /* @__PURE__ */ react.createElement(DarkStage, { seed: 43 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 26, padding: "0 46px" } }, list.map((c, i) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 43, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 26, padding: "0 46px" }, children: list.map((c, i) => {
     const at = 4 + i * 8;
     const o = (0,remotion_dist_esm.interpolate)(f, [at, at + 8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
     const y = (0,remotion_dist_esm.interpolate)(f, [at, at + 10], [40, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: {
+    return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
       flex: 1,
       opacity: o,
       transform: `translateY(${y}px)`,
@@ -8479,45 +8565,59 @@ const ThreeCardsStage = ({ cards }) => {
       alignItems: "center",
       justifyContent: "center",
       gap: 14
-    } }, /* @__PURE__ */ react.createElement("div", { style: {
-      width: 64,
-      height: 64,
-      borderRadius: 16,
-      background: "rgba(255,255,255,0.75)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 34
-    } }, "\u{1F916}"), /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 32, color: INK, textAlign: "center" } }, c.title), c.sub ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 22, color: "#4a4f58", textAlign: "center" } }, c.sub) : null);
-  })));
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+        width: 64,
+        height: 64,
+        borderRadius: 16,
+        background: "rgba(255,255,255,0.75)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 34
+      }, children: "\u{1F916}" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 32, color: INK, textAlign: "center" }, children: c.title }),
+      c.sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 22, color: "#4a4f58", textAlign: "center" }, children: c.sub }) : null
+    ] }, i);
+  }) }) });
 };
 const EndStage = ({ end }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const slogan = end.slogan || "\u6709\u5927\u4E8B\u770B GetCut";
   const hi = end.highlight || "GetCut";
   const parts = slogan.includes(hi) ? slogan.split(hi) : [slogan];
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: {
     background: "#000000",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     gap: 90
-  } }, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 92, color: "#ffffff", textAlign: "center" } }, parts.length > 1 ? /* @__PURE__ */ react.createElement(react.Fragment, null, parts[0], /* @__PURE__ */ react.createElement("span", { style: { color: YELLOW } }, hi), parts[1]) : slogan), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 120 } }, ["\u{1F44D}", "\u2197", "\u2764"].map((ic, i) => {
-    const at = 20 + i * 12;
-    const on = f >= at;
-    const o = (0,remotion_dist_esm.interpolate)(f, [at, at + 8], [0.15, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    return /* @__PURE__ */ react.createElement("span", { key: i, style: { fontSize: 64, opacity: o, filter: on ? "none" : "grayscale(1)" } }, ic);
-  })));
+  }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 92, color: "#ffffff", textAlign: "center" }, children: parts.length > 1 ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      parts[0],
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { color: YELLOW }, children: hi }),
+      parts[1]
+    ] }) : slogan }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "flex", gap: 120 }, children: ["\u{1F44D}", "\u2197", "\u2764"].map((ic, i) => {
+      const at = 20 + i * 12;
+      const on = f >= at;
+      const o = (0,remotion_dist_esm.interpolate)(f, [at, at + 8], [0.15, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 64, opacity: o, filter: on ? "none" : "grayscale(1)" }, children: ic }, i);
+    }) })
+  ] });
 };
 const BrandStage = ({ shot }) => {
   const o = shot.overlay ?? {};
   const main = o.keyword || o.title || o.number || "GetCut";
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: {
     alignItems: "center",
     justifyContent: "center",
     background: "linear-gradient(120deg, #dfe7ff 0%, #f3e6ff 45%, #ffe9f3 100%)"
-  } }, /* @__PURE__ */ react.createElement(Enter, null, /* @__PURE__ */ react.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 128, color: "#3d4470", textShadow: "0 12px 34px rgba(61,68,112,0.28)" } }, main), o.subtitle ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 38, color: "#5c6470", marginTop: 26, fontWeight: 700 } }, o.subtitle) : null)));
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Enter, { children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { textAlign: "center" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 128, color: "#3d4470", textShadow: "0 12px 34px rgba(61,68,112,0.28)" }, children: main }),
+    o.subtitle ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 38, color: "#5c6470", marginTop: 26, fontWeight: 700 }, children: o.subtitle }) : null
+  ] }) }) });
 };
 const Stage = ({ shot, index }) => {
   const o = shot.overlay ?? {};
@@ -8526,51 +8626,86 @@ const Stage = ({ shot, index }) => {
   const chips = Array.isArray(st.chips) ? st.chips : Array.isArray(o.chips) ? o.chips : [];
   let node;
   if (mode === "hook") {
-    node = /* @__PURE__ */ react.createElement(react.Fragment, null, shot.media ? /* @__PURE__ */ react.createElement(MediaStage, { shot, index }) : /* @__PURE__ */ react.createElement(DarkStage, { seed: 7 }), /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(6,8,12,0.30)" } }), /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 36, padding: "0 60px" } }, (st.pills || []).map((t, i) => /* @__PURE__ */ react.createElement(GlassPill, { key: i, text: t, at: 6 + i * 12, small: i > 0 }))));
+    node = /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      shot.media ? /* @__PURE__ */ (0,jsx_runtime.jsx)(MediaStage, { shot, index }) : /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 7 }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(6,8,12,0.30)" } }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 36, padding: "0 60px" }, children: (st.pills || []).map((t, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(GlassPill, { text: t, at: 6 + i * 12, small: i > 0 }, i)) })
+    ] });
   } else if (mode === "media" || mode === "chips-media") {
-    node = /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(MediaStage, { shot, index }), mode === "chips-media" ? /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(6,8,12,0.22)" } }), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, right: 0, bottom: 44 } }, /* @__PURE__ */ react.createElement(ChipRow, { items: chips, mode: "media" }))) : null);
+    node = /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(MediaStage, { shot, index }),
+      mode === "chips-media" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(6,8,12,0.22)" } }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 0, right: 0, bottom: 44 }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(ChipRow, { items: chips, mode: "media" }) })
+      ] }) : null
+    ] });
   } else if (mode === "chips-dark") {
-    node = /* @__PURE__ */ react.createElement(DarkStage, { seed: 61 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 42, padding: "0 60px" } }, st.title ? /* @__PURE__ */ react.createElement(Enter, null, /* @__PURE__ */ react.createElement("div", { style: { ...ZhiguVideo_heavy, fontSize: 44, color: "#ffffff", textAlign: "center" } }, /* @__PURE__ */ react.createElement("span", { style: { borderBottom: `6px solid ${YELLOW}`, paddingBottom: 6 } }, st.title))) : null, /* @__PURE__ */ react.createElement(ChipRow, { items: chips })));
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 61, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 42, padding: "0 60px" }, children: [
+      st.title ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Enter, { children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...ZhiguVideo_heavy, fontSize: 44, color: "#ffffff", textAlign: "center" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { borderBottom: `6px solid ${YELLOW}`, paddingBottom: 6 }, children: st.title }) }) }) : null,
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(ChipRow, { items: chips })
+    ] }) });
   } else if (mode === "tree") {
-    node = /* @__PURE__ */ react.createElement(TreeStage, { stage: st });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(TreeStage, { stage: st });
   } else if (mode === "table") {
-    node = /* @__PURE__ */ react.createElement(RankStage, { stage: st });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(RankStage, { stage: st });
   } else if (mode === "swap") {
-    node = /* @__PURE__ */ react.createElement(SwapStage, { swap: st.swap });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(SwapStage, { swap: st.swap });
   } else if (mode === "quote") {
-    node = /* @__PURE__ */ react.createElement(QuoteStage, { shot: { ...shot, overlay: { quote: st.quote || o.quote || "", label: st.label || o.label } } });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(QuoteStage, { shot: { ...shot, overlay: { quote: st.quote || o.quote || "", label: st.label || o.label } } });
   } else if (mode === "number") {
-    node = /* @__PURE__ */ react.createElement(NumberStage, { shot: { ...shot, overlay: { label: st.label ?? o.label, number: st.number ?? o.number, caption: st.caption ?? o.caption } } });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(NumberStage, { shot: { ...shot, overlay: { label: st.label ?? o.label, number: st.number ?? o.number, caption: st.caption ?? o.caption } } });
   } else if (mode === "checklist") {
-    node = /* @__PURE__ */ react.createElement(ChecklistStage, { shot: { ...shot, overlay: { title: st.title ?? o.title, items: st.items ?? o.items ?? [] } } });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(ChecklistStage, { shot: { ...shot, overlay: { title: st.title ?? o.title, items: st.items ?? o.items ?? [] } } });
   } else if (mode === "person") {
-    node = /* @__PURE__ */ react.createElement(PersonChipsStage, { person: st.person || {} });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(PersonChipsStage, { person: st.person || {} });
   } else if (mode === "cards3") {
-    node = /* @__PURE__ */ react.createElement(ThreeCardsStage, { cards: st.cards || [] });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(ThreeCardsStage, { cards: st.cards || [] });
   } else if (mode === "brand") {
-    node = /* @__PURE__ */ react.createElement(BrandStage, { shot: { ...shot, overlay: { keyword: st.name || o.keyword || "GetCut", subtitle: st.sub || o.subtitle } } });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(BrandStage, { shot: { ...shot, overlay: { keyword: st.name || o.keyword || "GetCut", subtitle: st.sub || o.subtitle } } });
   } else if (mode === "end") {
-    node = /* @__PURE__ */ react.createElement(EndStage, { end: st.end || { slogan: "\u6709\u5927\u4E8B\u770B GetCut", highlight: "GetCut" } });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(EndStage, { end: st.end || { slogan: "\u6709\u5927\u4E8B\u770B GetCut", highlight: "GetCut" } });
   } else if (shot.media) {
-    node = /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(MediaStage, { shot, index }), chips.length ? /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(6,8,12,0.22)" } }), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, right: 0, bottom: 44 } }, /* @__PURE__ */ react.createElement(ChipRow, { items: chips, mode: "media" }))) : null);
+    node = /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(MediaStage, { shot, index }),
+      chips.length ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(6,8,12,0.22)" } }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 0, right: 0, bottom: 44 }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(ChipRow, { items: chips, mode: "media" }) })
+      ] }) : null
+    ] });
   } else if (shot.kind === "title_card") {
-    node = /* @__PURE__ */ react.createElement(DarkStage, { seed: 7 }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 30 } }, /* @__PURE__ */ react.createElement(GlassPill, { text: o.keyword || o.title || "GetCut", at: 4 }), o.subtitle ? /* @__PURE__ */ react.createElement(GlassPill, { text: o.subtitle, at: 14, small: true }) : null));
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(DarkStage, { seed: 7, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 30 }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(GlassPill, { text: o.keyword || o.title || "GetCut", at: 4 }),
+      o.subtitle ? /* @__PURE__ */ (0,jsx_runtime.jsx)(GlassPill, { text: o.subtitle, at: 14, small: true }) : null
+    ] }) });
   } else if (shot.kind === "quote_card") {
-    node = /* @__PURE__ */ react.createElement(QuoteStage, { shot });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(QuoteStage, { shot });
   } else if (shot.kind === "callout") {
-    node = /* @__PURE__ */ react.createElement(NumberStage, { shot });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(NumberStage, { shot });
   } else if (o.variant === "compare" && (o.left || o.right)) {
-    node = /* @__PURE__ */ react.createElement(CompareStage, { shot });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(CompareStage, { shot });
   } else if (o.variant === "fact" && o.items) {
-    node = /* @__PURE__ */ react.createElement(ChecklistStage, { shot });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(ChecklistStage, { shot });
   } else {
-    node = /* @__PURE__ */ react.createElement(CardStage, { shot });
+    node = /* @__PURE__ */ (0,jsx_runtime.jsx)(CardStage, { shot });
   }
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { position: "absolute", top: STAGE_TOP, height: STAGE_H, overflow: "hidden" } }, node);
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { position: "absolute", top: STAGE_TOP, height: STAGE_H, overflow: "hidden" }, children: node });
 };
 const ZhiguVideo = (props) => {
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: DARK, fontFamily: T.font } }, /* @__PURE__ */ react.createElement(FontFace, null), isCard() ? null : /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", top: 0, width: "100%", height: BAND_TOP, background: DARK, overflow: "hidden" } }, /* @__PURE__ */ react.createElement(ParticleField, { height: BAND_TOP, seed: 7 }), /* @__PURE__ */ react.createElement(ChannelMark, null), /* @__PURE__ */ react.createElement(Headline, { lines: props.headline.lines })), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", top: STAGE_TOP, width: "100%", height: STAGE_H, background: isCard() ? "transparent" : DARK } }), isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ react.createElement(remotion_dist_esm.Sequence, { key: i, from: msToF(shot.startMs, fps), durationInFrames: msToF(shot.endMs - shot.startMs, fps) + 1 }, /* @__PURE__ */ react.createElement(Stage, { shot, index: i }))), isCard() ? null : /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", top: 1920 - BAND_BOTTOM, width: "100%", height: BAND_BOTTOM, background: DARK, overflow: "hidden" } }, /* @__PURE__ */ react.createElement(ParticleField, { height: BAND_BOTTOM, seed: 99 }), props.showSubtitles !== false ? /* @__PURE__ */ react.createElement(BottomSubtitle, { clauses: props.clauses }) : null));
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { background: DARK, fontFamily: T.font }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(FontFace, {}),
+    isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", top: 0, width: "100%", height: BAND_TOP, background: DARK, overflow: "hidden" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(ParticleField, { height: BAND_TOP, seed: 7 }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(ChannelMark, {}),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(Headline, { lines: props.headline.lines })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", top: STAGE_TOP, width: "100%", height: STAGE_H, background: isCard() ? "transparent" : DARK } }),
+    isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Sequence, { from: msToF(shot.startMs, fps), durationInFrames: msToF(shot.endMs - shot.startMs, fps) + 1, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Stage, { shot, index: i }) }, i)),
+    isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", top: 1920 - BAND_BOTTOM, width: "100%", height: BAND_BOTTOM, background: DARK, overflow: "hidden" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(ParticleField, { height: BAND_BOTTOM, seed: 99 }),
+      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BottomSubtitle, { clauses: props.clauses }) : null
+    ] })
+  ] });
 };
 const BottomSubtitle = ({ clauses }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
@@ -8579,7 +8714,7 @@ const BottomSubtitle = ({ clauses }) => {
   if (hideMedia()) return null;
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
   if (!active) return null;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
     left: 56,
     right: 56,
@@ -8590,7 +8725,7 @@ const BottomSubtitle = ({ clauses }) => {
     color: "#ffffff",
     lineHeight: 1.3,
     textShadow: "0 3px 16px rgba(0,0,0,0.7)"
-  } }, active.text);
+  }, children: active.text });
 };
 
 ;// ./src/MacroVideo.tsx
@@ -8897,13 +9032,15 @@ const MacroVideo = (props) => {
 };
 
 ;// ./src/NiwoVideo.tsx
-/* unused harmony import specifier */ var NiwoVideo_React;
+/* unused harmony import specifier */ var jsxs;
+/* unused harmony import specifier */ var NiwoVideo_jsx;
 /* unused harmony import specifier */ var interpolate;
 /* unused harmony import specifier */ var useCurrentFrame;
 /* unused harmony import specifier */ var NiwoVideo_T;
 /* unused harmony import specifier */ var NiwoVideo_useAnimFrame;
 /* unused harmony import specifier */ var NiwoVideo_Tick;
 /* unused harmony import specifier */ var NiwoVideo_heavy;
+
 
 
 
@@ -8924,7 +9061,7 @@ const FontFace = () => {
     const list = used.length ? used : [FONTS[0]];
     Promise.all(list.map((f) => document.fonts.load(`${f.loadWeight} 64px '${f.family}'`))).then(() => (0,remotion_dist_esm.continueRender)(handle)).catch(() => (0,remotion_dist_esm.continueRender)(handle));
   }, []);
-  return /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "style",
     {
       dangerouslySetInnerHTML: {
@@ -8968,15 +9105,15 @@ const holeClip = (frameW, frameH, hole) => {
 };
 const ChromeClip = ({ hole, children }) => {
   const { width, height } = (0,remotion_dist_esm.useVideoConfig)();
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { clipPath: holeClip(width, height, hole) } }, children);
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { clipPath: holeClip(width, height, hole) }, children });
 };
 const RectWithHole = ({ rect, hole, radius = 0, fill, style }) => {
   const hx = hole.left - rect.left;
   const hy = hole.top - rect.top;
   const w = rect.width;
   const h = rect.height;
-  const band = (s, key) => /* @__PURE__ */ react.createElement("div", { key, style: { position: "absolute", ...fill, ...s } });
-  return /* @__PURE__ */ react.createElement(
+  const band = (s, key) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", ...fill, ...s } }, key);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(
     "div",
     {
       style: {
@@ -8988,12 +9125,14 @@ const RectWithHole = ({ rect, hole, radius = 0, fill, style }) => {
         borderRadius: radius,
         overflow: "hidden",
         ...style
-      }
-    },
-    band({ left: 0, top: 0, width: w, height: hy }, "top"),
-    band({ left: 0, top: hy + hole.height, width: w, height: h - hy - hole.height }, "bottom"),
-    band({ left: 0, top: hy, width: hx, height: hole.height }, "left"),
-    band({ left: hx + hole.width, top: hy, width: w - hx - hole.width, height: hole.height }, "right")
+      },
+      children: [
+        band({ left: 0, top: 0, width: w, height: hy }, "top"),
+        band({ left: 0, top: hy + hole.height, width: w, height: h - hy - hole.height }, "bottom"),
+        band({ left: 0, top: hy, width: hx, height: hole.height }, "left"),
+        band({ left: hx + hole.width, top: hy, width: w - hx - hole.width, height: hole.height }, "right")
+      ]
+    }
   );
 };
 
@@ -9001,7 +9140,10 @@ const RectWithHole = ({ rect, hole, radius = 0, fill, style }) => {
 const Label = ({ text, delay = 0 }) => {
   const frame = NiwoVideo_useAnimFrame();
   const o = interpolate(frame, [delay, delay + 10], [0, 1], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ NiwoVideo_React.createElement("div", { style: { display: "flex", alignItems: "center", opacity: o } }, /* @__PURE__ */ NiwoVideo_React.createElement("span", { style: NiwoVideo_Tick }), /* @__PURE__ */ NiwoVideo_React.createElement("span", { style: { ...NiwoVideo_heavy, fontSize: 30, color: NiwoVideo_T.accentSoft } }, text));
+  return /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", opacity: o }, children: [
+    /* @__PURE__ */ NiwoVideo_jsx("span", { style: NiwoVideo_Tick }),
+    /* @__PURE__ */ NiwoVideo_jsx("span", { style: { ...NiwoVideo_heavy, fontSize: 30, color: NiwoVideo_T.accentSoft }, children: text })
+  ] });
 };
 const Badge = ({ text, delay = 0 }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
@@ -9009,7 +9151,7 @@ const Badge = ({ text, delay = 0 }) => {
     extrapolateRight: "clamp",
     extrapolateLeft: "clamp"
   });
-  return /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "div",
     {
       style: {
@@ -9023,9 +9165,9 @@ const Badge = ({ text, delay = 0 }) => {
         borderRadius: 22,
         transform: `scale(${s})`,
         ...heavy
-      }
-    },
-    text
+      },
+      children: text
+    }
   );
 };
 const RedRule = ({
@@ -9038,7 +9180,7 @@ const RedRule = ({
     extrapolateRight: "clamp",
     extrapolateLeft: "clamp"
   });
-  return /* @__PURE__ */ NiwoVideo_React.createElement("div", { style: { position: "absolute", height: 2, background: NiwoVideo_T.accent, width: w, ...style } });
+  return /* @__PURE__ */ NiwoVideo_jsx("div", { style: { position: "absolute", height: 2, background: NiwoVideo_T.accent, width: w, ...style } });
 };
 const TitleCard = ({ spec, fps }) => {
   const f = useAnimFrame();
@@ -9052,103 +9194,120 @@ const TitleCard = ({ spec, fps }) => {
   const codeO = (0,remotion_dist_esm.interpolate)(f, [36, 46], [0, 1], { extrapolateRight: "clamp" });
   const tealW = (0,remotion_dist_esm.interpolate)(f, [40, 56], [0, 264], { extrapolateRight: "clamp" });
   const botH = (0,remotion_dist_esm.interpolate)(f, [46, 58], [0, 94], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.panel, overflow: "hidden" } }, /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: cx - 12,
-        top: 26,
-        width: 24,
-        height: barH,
-        background: T.accent
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.panel, overflow: "hidden" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          left: cx - 12,
+          top: 26,
+          width: 24,
+          height: barH,
+          background: T.accent
+        }
       }
-    }
-  ), /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: 36,
-        top: 178,
-        width: ruleW,
-        height: 8,
-        background: T.accent
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          left: 36,
+          top: 178,
+          width: ruleW,
+          height: 8,
+          background: T.accent
+        }
       }
-    }
-  ), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 224, opacity: kwO } }, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", alignItems: "center" } }, /* @__PURE__ */ react.createElement("span", { style: { ...Tick, height: 32 } }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 34, color: T.accentSoft } }, spec.label))), /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: 52,
-        top: 380 + kwY,
-        opacity: kwO,
-        ...heavy,
-        fontSize: 120,
-        color: T.accentSoft
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 36, top: 224, opacity: kwO }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", alignItems: "center" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...Tick, height: 32 } }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 34, color: T.accentSoft }, children: spec.label })
+    ] }) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          left: 52,
+          top: 380 + kwY,
+          opacity: kwO,
+          ...heavy,
+          fontSize: 120,
+          color: T.accentSoft
+        },
+        children: spec.keyword
       }
-    },
-    spec.keyword
-  ), /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        right: 60,
-        bottom: 148,
-        opacity: codeO,
-        fontSize: 26,
-        color: T.codeInk,
-        letterSpacing: 2,
-        fontFamily: T.fontMono
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          right: 60,
+          bottom: 148,
+          opacity: codeO,
+          fontSize: 26,
+          color: T.codeInk,
+          letterSpacing: 2,
+          fontFamily: T.fontMono
+        },
+        children: spec.code
       }
-    },
-    spec.code
-  ), /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: 36,
-        bottom: 147,
-        width: tealW,
-        height: 3,
-        background: T.teal
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          left: 36,
+          bottom: 147,
+          width: tealW,
+          height: 3,
+          background: T.teal
+        }
       }
-    }
-  ), /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: cx - 12,
-        bottom: 26,
-        width: 24,
-        height: botH,
-        background: T.accent
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          left: cx - 12,
+          bottom: 26,
+          width: 24,
+          height: botH,
+          background: T.accent
+        }
       }
-    }
-  ));
+    )
+  ] });
 };
 const QuoteCard = ({ spec }) => {
   const f = useAnimFrame();
   const o = (0,remotion_dist_esm.interpolate)(f, [8, 30], [0, 1], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.panel, overflow: "hidden" } }, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 118, display: "flex", alignItems: "center" } }, /* @__PURE__ */ react.createElement("span", { style: { ...Tick, height: 32 } }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 36, color: T.accentSoft } }, spec.label)), /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: 52,
-        top: 250,
-        opacity: o * 0.55,
-        ...heavy,
-        fontSize: 96,
-        color: T.mutedInk
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.panel, overflow: "hidden" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 36, top: 118, display: "flex", alignItems: "center" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...Tick, height: 32 } }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 36, color: T.accentSoft }, children: spec.label })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          left: 52,
+          top: 250,
+          opacity: o * 0.55,
+          ...heavy,
+          fontSize: 96,
+          color: T.mutedInk
+        },
+        children: spec.quote
       }
-    },
-    spec.quote
-  ));
+    )
+  ] });
 };
 const NumberCallout = ({ spec }) => {
   const f = useAnimFrame();
@@ -9156,7 +9315,7 @@ const NumberCallout = ({ spec }) => {
   const numO = (0,remotion_dist_esm.interpolate)(f, [10, 22], [0, 1], { extrapolateRight: "clamp" });
   const numX = (0,remotion_dist_esm.interpolate)(f, [10, 22], [30, 0], { extrapolateRight: "clamp" });
   const capO = (0,remotion_dist_esm.interpolate)(f, [20, 30], [0, 1], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(
     "div",
     {
       style: {
@@ -9166,36 +9325,45 @@ const NumberCallout = ({ spec }) => {
         bottom: 0,
         width: "46%",
         background: T.calloutScrim
-      }
-    },
-    /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          left: 0,
-          top: 40,
-          width: 8,
-          height: barH,
-          background: T.accent
-        }
-      }
-    ),
-    /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 34, top: 44 } }, /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 32, color: T.accentSoft } }, spec.label), /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          ...heavy,
-          fontSize: 84,
-          whiteSpace: "nowrap",
-          color: T.white,
-          opacity: numO,
-          transform: `translateX(${numX}px)`,
-          marginTop: 8
-        }
       },
-      spec.number
-    ), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 26, color: T.mutedInk, opacity: capO, marginTop: 6 } }, "\u2014 ", spec.caption))
+      children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "div",
+          {
+            style: {
+              position: "absolute",
+              left: 0,
+              top: 40,
+              width: 8,
+              height: barH,
+              background: T.accent
+            }
+          }
+        ),
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 34, top: 44 }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 32, color: T.accentSoft }, children: spec.label }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "div",
+            {
+              style: {
+                ...heavy,
+                fontSize: 84,
+                whiteSpace: "nowrap",
+                color: T.white,
+                opacity: numO,
+                transform: `translateX(${numX}px)`,
+                marginTop: 8
+              },
+              children: spec.number
+            }
+          ),
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { fontSize: 26, color: T.mutedInk, opacity: capO, marginTop: 6 }, children: [
+            "\u2014 ",
+            spec.caption
+          ] })
+        ] })
+      ]
+    }
   );
 };
 const PacePanel = ({ spec }) => {
@@ -9205,124 +9373,171 @@ const PacePanel = ({ spec }) => {
   const cardO = (0,remotion_dist_esm.interpolate)(f, [12, 24], [0, 1], { extrapolateRight: "clamp" });
   const lineW = (0,remotion_dist_esm.interpolate)(f, [26, 44], [0, 640], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const check = (0,remotion_dist_esm.interpolate)(f, [46, 56], [0, 1], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.scrim } }, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 30, opacity: tO } }, /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 72, color: T.white } }, spec.title), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 30, color: T.mutedInk, marginTop: 8 } }, spec.subtitle)), /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: 36,
-        right: 36,
-        top: 210 + cardY,
-        height: 180,
-        background: T.cardWhite,
-        borderRadius: 14,
-        opacity: cardO,
-        padding: "26px 30px"
-      }
-    },
-    /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 16 } }, /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 26, color: T.onAccent, background: T.accent, padding: "6px 20px", borderRadius: 20 } }, spec.pillA), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 26, color: T.cardMuted, border: `2px solid ${T.cardLine}`, padding: "4px 18px", borderRadius: 20 } }, spec.pillB)),
-    /* @__PURE__ */ react.createElement("div", { style: { marginTop: 22, height: 12, width: 420, background: T.cardLine, borderRadius: 6 } }),
-    /* @__PURE__ */ react.createElement("div", { style: { position: "relative", marginTop: 20 } }, /* @__PURE__ */ react.createElement("div", { style: { height: 4, width: lineW, background: T.accent, borderRadius: 2 } }), /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.scrim }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 36, top: 30, opacity: tO }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 72, color: T.white }, children: spec.title }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 30, color: T.mutedInk, marginTop: 8 }, children: spec.subtitle })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)(
       "div",
       {
         style: {
           position: "absolute",
-          right: 0,
-          top: -26,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          border: `3px solid ${T.red}`,
-          opacity: check,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: T.red,
-          fontSize: 34,
-          ...heavy
-        }
-      },
-      "\u2713"
-    ))
-  ));
+          left: 36,
+          right: 36,
+          top: 210 + cardY,
+          height: 180,
+          background: T.cardWhite,
+          borderRadius: 14,
+          opacity: cardO,
+          padding: "26px 30px"
+        },
+        children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", gap: 16 }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 26, color: T.onAccent, background: T.accent, padding: "6px 20px", borderRadius: 20 }, children: spec.pillA }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 26, color: T.cardMuted, border: `2px solid ${T.cardLine}`, padding: "4px 18px", borderRadius: 20 }, children: spec.pillB })
+          ] }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 22, height: 12, width: 420, background: T.cardLine, borderRadius: 6 } }),
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "relative", marginTop: 20 }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { height: 4, width: lineW, background: T.accent, borderRadius: 2 } }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(
+              "div",
+              {
+                style: {
+                  position: "absolute",
+                  right: 0,
+                  top: -26,
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  border: `3px solid ${T.red}`,
+                  opacity: check,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: T.red,
+                  fontSize: 34,
+                  ...heavy
+                },
+                children: "\u2713"
+              }
+            )
+          ] })
+        ]
+      }
+    )
+  ] });
 };
 const ComparePanel = ({ spec }) => {
   const f = useAnimFrame();
   const tO = (0,remotion_dist_esm.interpolate)(f, [4, 14], [0, 1], { extrapolateRight: "clamp" });
   const colO = (0,remotion_dist_esm.interpolate)(f, [24, 36], [0, 1], { extrapolateRight: "clamp" });
   const ruleW = (0,remotion_dist_esm.interpolate)(f, [34, 50], [0, 320], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.scrim } }, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 30, display: "flex", alignItems: "center", opacity: tO } }, /* @__PURE__ */ react.createElement("span", { style: Tick }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 30, color: T.accentSoft } }, spec.label)), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 34, top: 84, opacity: tO, ...heavy, fontSize: 64, color: T.accentSoft } }, spec.title), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 168, fontSize: 28, color: T.white, opacity: tO } }, spec.subtitle), spec.badge ? /* @__PURE__ */ react.createElement(Badge, { text: spec.badge, delay: 18 }) : null, [
-    { x: 30, d: spec.left },
-    { x: 30 + 334 + 30, d: spec.right }
-  ].map((col, ci) => {
-    var _a, _b;
-    return /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        key: ci,
-        style: {
-          position: "absolute",
-          left: col.x,
-          top: 218,
-          width: 334,
-          height: 190,
-          background: T.slotBg,
-          border: `2px solid ${T.accentSoft}`,
-          borderRadius: 10,
-          opacity: colO,
-          padding: "16px 20px"
-        }
-      },
-      /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 27, color: T.accentSoft } }, (_a = col.d) == null ? void 0 : _a.head),
-      /* @__PURE__ */ react.createElement("div", { style: { fontSize: 25, color: T.white, marginTop: 8, lineHeight: 1.35 } }, (_b = col.d) == null ? void 0 : _b.body),
-      /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.scrim }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 36, top: 30, display: "flex", alignItems: "center", opacity: tO }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: Tick }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 30, color: T.accentSoft }, children: spec.label })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 34, top: 84, opacity: tO, ...heavy, fontSize: 64, color: T.accentSoft }, children: spec.title }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 36, top: 168, fontSize: 28, color: T.white, opacity: tO }, children: spec.subtitle }),
+    spec.badge ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Badge, { text: spec.badge, delay: 18 }) : null,
+    [
+      { x: 30, d: spec.left },
+      { x: 30 + 334 + 30, d: spec.right }
+    ].map((col, ci) => {
+      var _a, _b;
+      return /* @__PURE__ */ (0,jsx_runtime.jsxs)(
         "div",
         {
           style: {
             position: "absolute",
-            left: 20,
-            bottom: 16,
-            width: ruleW / 2,
-            height: 2,
-            background: T.accent
-          }
-        }
-      )
-    );
-  }));
+            left: col.x,
+            top: 218,
+            width: 334,
+            height: 190,
+            background: T.slotBg,
+            border: `2px solid ${T.accentSoft}`,
+            borderRadius: 10,
+            opacity: colO,
+            padding: "16px 20px"
+          },
+          children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 27, color: T.accentSoft }, children: (_a = col.d) == null ? void 0 : _a.head }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 25, color: T.white, marginTop: 8, lineHeight: 1.35 }, children: (_b = col.d) == null ? void 0 : _b.body }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(
+              "div",
+              {
+                style: {
+                  position: "absolute",
+                  left: 20,
+                  bottom: 16,
+                  width: ruleW / 2,
+                  height: 2,
+                  background: T.accent
+                }
+              }
+            )
+          ]
+        },
+        ci
+      );
+    })
+  ] });
 };
 const FactPanel = ({ spec }) => {
   var _a, _b;
   const f = useAnimFrame();
   const cardY = (0,remotion_dist_esm.interpolate)(f, [10, 22], [36, 0], { extrapolateRight: "clamp" });
   const cardO = (0,remotion_dist_esm.interpolate)(f, [10, 22], [0, 1], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.scrim } }, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 30, display: "flex", alignItems: "center" } }, /* @__PURE__ */ react.createElement("span", { style: Tick }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 30, color: T.accentSoft } }, spec.label)), /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: 30,
-        right: 200,
-        top: 110 + cardY,
-        background: T.cardWhite,
-        borderRadius: 12,
-        opacity: cardO,
-        padding: "26px 30px"
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.scrim }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 36, top: 30, display: "flex", alignItems: "center" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: Tick }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 30, color: T.accentSoft }, children: spec.label })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          left: 30,
+          right: 200,
+          top: 110 + cardY,
+          background: T.cardWhite,
+          borderRadius: 12,
+          opacity: cardO,
+          padding: "26px 30px"
+        },
+        children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 40, color: T.cardInk }, children: (_a = spec.card) == null ? void 0 : _a.title }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 26, color: T.cardMuted, marginTop: 14, lineHeight: 1.4 }, children: (_b = spec.card) == null ? void 0 : _b.body })
+        ]
       }
-    },
-    /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 40, color: T.cardInk } }, (_a = spec.card) == null ? void 0 : _a.title),
-    /* @__PURE__ */ react.createElement("div", { style: { fontSize: 26, color: T.cardMuted, marginTop: 14, lineHeight: 1.4 } }, (_b = spec.card) == null ? void 0 : _b.body)
-  ));
+    )
+  ] });
 };
 const StatementPanel = ({ spec }) => {
   const f = useAnimFrame();
   const tO = (0,remotion_dist_esm.interpolate)(f, [4, 14], [0, 1], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.scrim } }, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 30, opacity: tO } }, /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 64, color: T.white } }, spec.title), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 28, color: T.mutedInk, marginTop: 10 } }, spec.subtitle)), spec.rightNote ? /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", right: 40, top: 190, ...heavy, fontSize: 30, color: T.accentSoft } }, spec.rightNote) : null, (spec.rows ?? []).map((row, i) => {
-    const d = 20 + i * 14;
-    const o = (0,remotion_dist_esm.interpolate)(f, [d, d + 10], [0, 1], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
-    const w = (0,remotion_dist_esm.interpolate)(f, [d + 6, d + 22], [0, 560], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: { position: "absolute", left: 40, top: 250 + i * 92, opacity: o, width: 600 } }, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 16 } }, /* @__PURE__ */ react.createElement("span", { style: { fontSize: 24, color: T.accentSoft, fontFamily: T.fontMono } }, row.code), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 32, color: T.white } }, row.text)), /* @__PURE__ */ react.createElement("div", { style: { marginTop: 12, height: 2, width: w, background: T.red } }));
-  }), spec.badge ? /* @__PURE__ */ react.createElement(Badge, { text: spec.badge, delay: 30 }) : null);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.scrim }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 36, top: 30, opacity: tO }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 64, color: T.white }, children: spec.title }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 28, color: T.mutedInk, marginTop: 10 }, children: spec.subtitle })
+    ] }),
+    spec.rightNote ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", right: 40, top: 190, ...heavy, fontSize: 30, color: T.accentSoft }, children: spec.rightNote }) : null,
+    (spec.rows ?? []).map((row, i) => {
+      const d = 20 + i * 14;
+      const o = (0,remotion_dist_esm.interpolate)(f, [d, d + 10], [0, 1], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
+      const w = (0,remotion_dist_esm.interpolate)(f, [d + 6, d + 22], [0, 560], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
+      return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 40, top: 250 + i * 92, opacity: o, width: 600 }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", alignItems: "baseline", gap: 16 }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 24, color: T.accentSoft, fontFamily: T.fontMono }, children: row.code }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 32, color: T.white }, children: row.text })
+        ] }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 12, height: 2, width: w, background: T.red } })
+      ] }, i);
+    }),
+    spec.badge ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Badge, { text: spec.badge, delay: 30 }) : null
+  ] });
 };
 const StatementMedia = ({ spec, media }) => {
   const f = useAnimFrame();
@@ -9331,22 +9546,25 @@ const StatementMedia = ({ spec, media }) => {
   const appear = NiwoVideo_msToF(spec.appearMs ?? 3500, fps);
   const imgX = (0,remotion_dist_esm.interpolate)(f, [appear, appear + 12], [420, 0], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
   const imgO = (0,remotion_dist_esm.interpolate)(f, [appear, appear + 12], [0, 1], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.panel } }, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 60, opacity: tO, ...heavy, fontSize: 76, color: T.white } }, spec.title), media && !hideMedia() ? /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        right: 0,
-        bottom: 0,
-        width: 480,
-        height: 460,
-        opacity: imgO,
-        transform: `translateX(${imgX}px)`,
-        overflow: "hidden"
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.panel }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 36, top: 60, opacity: tO, ...heavy, fontSize: 76, color: T.white }, children: spec.title }),
+    media && !hideMedia() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          right: 0,
+          bottom: 0,
+          width: 480,
+          height: 460,
+          opacity: imgO,
+          transform: `translateX(${imgX}px)`,
+          overflow: "hidden"
+        },
+        children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Img, { src: media, style: { width: "100%", height: "100%", objectFit: "cover" } })
       }
-    },
-    /* @__PURE__ */ react.createElement(remotion_dist_esm.Img, { src: media, style: { width: "100%", height: "100%", objectFit: "cover" } })
-  ) : null);
+    ) : null
+  ] });
 };
 const MediaWindow = ({ shot, index = 0 }) => {
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
@@ -9365,40 +9583,46 @@ const MediaWindow = ({ shot, index = 0 }) => {
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
   if (shot.mediaKind === "image") {
-    return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, overflow: "hidden" } }, /* @__PURE__ */ react.createElement(
-      remotion_dist_esm.Img,
-      {
-        src,
-        style: {
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          filter: "blur(18px) brightness(0.82)",
-          transform: "scale(1.15)"
+    return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, overflow: "hidden" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        remotion_dist_esm.Img,
+        {
+          src,
+          style: {
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            filter: "blur(18px) brightness(0.82)",
+            transform: "scale(1.15)"
+          }
         }
-      }
-    ), /* @__PURE__ */ react.createElement(
-      remotion_dist_esm.Img,
-      {
-        src,
-        style: {
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          transform: `scale(${zoom}) translateX(${panX}px)`
+      ),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        remotion_dist_esm.Img,
+        {
+          src,
+          style: {
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            transform: `scale(${zoom}) translateX(${panX}px)`
+          }
         }
-      }
-    ));
+      )
+    ] });
   }
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, overflow: "hidden" } }, /* @__PURE__ */ react.createElement(remotion_dist_esm.Loop, { durationInFrames: durFrames }, /* @__PURE__ */ react.createElement(ShotVideo, { src, style: { width: "100%", height: "100%", objectFit: "cover" } })));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", inset: 0, overflow: "hidden" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Loop, { durationInFrames: durFrames, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(ShotVideo, { src, style: { width: "100%", height: "100%", objectFit: "cover" } }) }) });
 };
 const ChapterLabel = ({ text }) => {
   if (!text) return null;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 522, display: "flex", alignItems: "center" } }, /* @__PURE__ */ react.createElement("span", { style: { ...Tick, height: 30 } }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 30, color: T.accentSoft } }, text));
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 36, top: 522, display: "flex", alignItems: "center" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...Tick, height: 30 } }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 30, color: T.accentSoft }, children: text })
+  ] });
 };
 const ShotView = ({ shot, index = 0 }) => {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
@@ -9408,7 +9632,7 @@ const ShotView = ({ shot, index = 0 }) => {
   const dur = NiwoVideo_msToF(shot.endMs - shot.startMs, fps) + 1;
   const mediaSrc = shot.media ? (0,remotion_dist_esm.staticFile)(`media/${shot.media}`) : void 0;
   const choreoCues = sanitizeChoreo((_a = shot.overlay) == null ? void 0 : _a.choreo);
-  const shotInner = /* @__PURE__ */ react.createElement(
+  const shotInner = /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "div",
     {
       style: {
@@ -9420,38 +9644,8 @@ const ShotView = ({ shot, index = 0 }) => {
         borderRadius: T.panelRadius,
         background: hideMedia() ? "transparent" : T.panel,
         overflow: "hidden"
-      }
-    },
-    shot.kind === "title_card" ? choreoCues ? /* @__PURE__ */ react.createElement(
-      ChoreoCard,
-      {
-        cues: choreoCues,
-        fps,
-        media: mediaSrc,
-        mediaKind: shot.mediaKind,
-        dur
-      }
-    ) : /* @__PURE__ */ react.createElement(TitleCard, { spec: shot.overlay ?? {}, fps }) : shot.kind === "quote_card" ? choreoCues ? /* @__PURE__ */ react.createElement(
-      ChoreoCard,
-      {
-        cues: choreoCues,
-        fps,
-        media: mediaSrc,
-        mediaKind: shot.mediaKind,
-        dur
-      }
-    ) : /* @__PURE__ */ react.createElement(QuoteCard, { spec: shot.overlay ?? {} }) : shot.kind === "statement" && ((_b = shot.overlay) == null ? void 0 : _b.variant) === "statement_media" ? /* @__PURE__ */ react.createElement(StatementMedia, { spec: { ...shot.overlay, appearMs: shot.overlay.appearMs }, media: mediaSrc }) : shot.kind === "callout" && choreoCues ? /* @__PURE__ */ react.createElement(
-      ChoreoCard,
-      {
-        cues: choreoCues,
-        fps,
-        media: mediaSrc,
-        mediaKind: shot.mediaKind,
-        dur
-      }
-    ) : shot.kind === "panel" && choreoCues && (((_c = shot.overlay) == null ? void 0 : _c.variant) === "fact" || ((_d = shot.overlay) == null ? void 0 : _d.variant) === "statement") ? (
-      // fact/statement 卡谱：字段当主角现场摆（谱内元素只从词汇表出）
-      /* @__PURE__ */ react.createElement(
+      },
+      children: shot.kind === "title_card" ? choreoCues ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
         ChoreoCard,
         {
           cues: choreoCues,
@@ -9460,80 +9654,115 @@ const ShotView = ({ shot, index = 0 }) => {
           mediaKind: shot.mediaKind,
           dur
         }
-      )
-    ) : /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0 } }, /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          left: mediaWindow().left,
-          top: mediaWindow().top,
-          width: mediaWindow().width,
-          height: mediaWindow().height,
-          overflow: "hidden",
-          opacity: (0,remotion_dist_esm.interpolate)(shotFrame, [0, globalThis.__motionFrames || 7], [0, 1], { extrapolateRight: "clamp" }),
-          transform: `scale(${(0,remotion_dist_esm.interpolate)(shotFrame, [0, (globalThis.__motionFrames || 7) + 2], [1.05, 1], { extrapolateRight: "clamp" })})`
-        }
-      },
-      /* @__PURE__ */ react.createElement(MediaWindow, { shot, index }),
-      shot.kind === "callout" ? /* @__PURE__ */ react.createElement(NumberCallout, { spec: shot.overlay ?? {} }) : null,
-      shot.kind === "panel" && ((_e = shot.overlay) == null ? void 0 : _e.variant) === "pace" ? /* @__PURE__ */ react.createElement(PacePanel, { spec: shot.overlay }) : null,
-      shot.kind === "panel" && ((_f = shot.overlay) == null ? void 0 : _f.variant) === "compare" ? /* @__PURE__ */ react.createElement(ComparePanel, { spec: shot.overlay }) : null,
-      shot.kind === "panel" && ((_g = shot.overlay) == null ? void 0 : _g.variant) === "fact" ? /* @__PURE__ */ react.createElement(FactPanel, { spec: shot.overlay }) : null,
-      shot.kind === "panel" && ((_h = shot.overlay) == null ? void 0 : _h.variant) === "statement" ? /* @__PURE__ */ react.createElement(StatementPanel, { spec: shot.overlay }) : null,
-      shot.kind === "panel" && ((_i = shot.overlay) == null ? void 0 : _i.variant) === "stat" ? /* @__PURE__ */ react.createElement(StatCard, { spec: shot.overlay }) : null,
-      shot.kind === "panel" && ((_j = shot.overlay) == null ? void 0 : _j.variant) === "branches" ? /* @__PURE__ */ react.createElement(Branches, { spec: shot.overlay }) : null,
-      shot.kind === "panel" && ((_k = shot.overlay) == null ? void 0 : _k.variant) === "timeline" ? /* @__PURE__ */ react.createElement(Timeline3, { spec: shot.overlay }) : null,
-      shot.kind === "panel" && ((_l = shot.overlay) == null ? void 0 : _l.variant) === "person" ? /* @__PURE__ */ react.createElement(PersonCard, { spec: shot.overlay }) : null,
-      shot.code ? /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            position: "absolute",
-            left: 24,
-            top: 14,
-            fontSize: 22,
-            color: T.codeInk,
-            fontFamily: T.fontMono,
-            letterSpacing: 2
-          }
-        },
-        shot.code
-      ) : null,
-      shot.kind === "footage" && !choreoCues ? /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            position: "absolute",
-            left: 24,
-            bottom: 18,
-            width: 220,
-            height: 2,
-            background: T.accent
-          }
-        }
-      ) : null
-    ), shot.kind === "footage" ? choreoCues ? (
-      // 信息层编舞谱：挂在面板坐标系（媒体窗外层），media-* 锚位经 mediaOrigin
-      // 换算进媒体窗；只画谱里的元素，媒体窗本身照常走 MediaWindow
-      /* @__PURE__ */ react.createElement(
+      ) : /* @__PURE__ */ (0,jsx_runtime.jsx)(TitleCard, { spec: shot.overlay ?? {}, fps }) : shot.kind === "quote_card" ? choreoCues ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
         ChoreoCard,
         {
           cues: choreoCues,
           fps,
-          dur,
-          bare: true,
-          mediaOrigin: {
-            left: mediaWindow().left,
-            top: mediaWindow().top,
-            width: mediaWindow().width,
-            height: mediaWindow().height
-          }
+          media: mediaSrc,
+          mediaKind: shot.mediaKind,
+          dur
         }
-      )
-    ) : /* @__PURE__ */ react.createElement(ChapterLabel, { text: shot.chapterLabel ?? "" }) : null)
+      ) : /* @__PURE__ */ (0,jsx_runtime.jsx)(QuoteCard, { spec: shot.overlay ?? {} }) : shot.kind === "statement" && ((_b = shot.overlay) == null ? void 0 : _b.variant) === "statement_media" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(StatementMedia, { spec: { ...shot.overlay, appearMs: shot.overlay.appearMs }, media: mediaSrc }) : shot.kind === "callout" && choreoCues ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        ChoreoCard,
+        {
+          cues: choreoCues,
+          fps,
+          media: mediaSrc,
+          mediaKind: shot.mediaKind,
+          dur
+        }
+      ) : shot.kind === "panel" && choreoCues && (((_c = shot.overlay) == null ? void 0 : _c.variant) === "fact" || ((_d = shot.overlay) == null ? void 0 : _d.variant) === "statement") ? (
+        // fact/statement 卡谱：字段当主角现场摆（谱内元素只从词汇表出）
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          ChoreoCard,
+          {
+            cues: choreoCues,
+            fps,
+            media: mediaSrc,
+            mediaKind: shot.mediaKind,
+            dur
+          }
+        )
+      ) : /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0 }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+          "div",
+          {
+            style: {
+              position: "absolute",
+              left: mediaWindow().left,
+              top: mediaWindow().top,
+              width: mediaWindow().width,
+              height: mediaWindow().height,
+              overflow: "hidden",
+              opacity: (0,remotion_dist_esm.interpolate)(shotFrame, [0, globalThis.__motionFrames || 7], [0, 1], { extrapolateRight: "clamp" }),
+              transform: `scale(${(0,remotion_dist_esm.interpolate)(shotFrame, [0, (globalThis.__motionFrames || 7) + 2], [1.05, 1], { extrapolateRight: "clamp" })})`
+            },
+            children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)(MediaWindow, { shot, index }),
+              shot.kind === "callout" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(NumberCallout, { spec: shot.overlay ?? {} }) : null,
+              shot.kind === "panel" && ((_e = shot.overlay) == null ? void 0 : _e.variant) === "pace" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PacePanel, { spec: shot.overlay }) : null,
+              shot.kind === "panel" && ((_f = shot.overlay) == null ? void 0 : _f.variant) === "compare" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(ComparePanel, { spec: shot.overlay }) : null,
+              shot.kind === "panel" && ((_g = shot.overlay) == null ? void 0 : _g.variant) === "fact" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(FactPanel, { spec: shot.overlay }) : null,
+              shot.kind === "panel" && ((_h = shot.overlay) == null ? void 0 : _h.variant) === "statement" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(StatementPanel, { spec: shot.overlay }) : null,
+              shot.kind === "panel" && ((_i = shot.overlay) == null ? void 0 : _i.variant) === "stat" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(StatCard, { spec: shot.overlay }) : null,
+              shot.kind === "panel" && ((_j = shot.overlay) == null ? void 0 : _j.variant) === "branches" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Branches, { spec: shot.overlay }) : null,
+              shot.kind === "panel" && ((_k = shot.overlay) == null ? void 0 : _k.variant) === "timeline" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Timeline3, { spec: shot.overlay }) : null,
+              shot.kind === "panel" && ((_l = shot.overlay) == null ? void 0 : _l.variant) === "person" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PersonCard, { spec: shot.overlay }) : null,
+              shot.code ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                "div",
+                {
+                  style: {
+                    position: "absolute",
+                    left: 24,
+                    top: 14,
+                    fontSize: 22,
+                    color: T.codeInk,
+                    fontFamily: T.fontMono,
+                    letterSpacing: 2
+                  },
+                  children: shot.code
+                }
+              ) : null,
+              shot.kind === "footage" && !choreoCues ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                "div",
+                {
+                  style: {
+                    position: "absolute",
+                    left: 24,
+                    bottom: 18,
+                    width: 220,
+                    height: 2,
+                    background: T.accent
+                  }
+                }
+              ) : null
+            ]
+          }
+        ),
+        shot.kind === "footage" ? choreoCues ? (
+          // 信息层编舞谱：挂在面板坐标系（媒体窗外层），media-* 锚位经 mediaOrigin
+          // 换算进媒体窗；只画谱里的元素，媒体窗本身照常走 MediaWindow
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            ChoreoCard,
+            {
+              cues: choreoCues,
+              fps,
+              dur,
+              bare: true,
+              mediaOrigin: {
+                left: mediaWindow().left,
+                top: mediaWindow().top,
+                width: mediaWindow().width,
+                height: mediaWindow().height
+              }
+            }
+          )
+        ) : /* @__PURE__ */ (0,jsx_runtime.jsx)(ChapterLabel, { text: shot.chapterLabel ?? "" }) : null
+      ] })
+    }
   );
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.Sequence, { from, durationInFrames: dur }, shotInner);
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Sequence, { from, durationInFrames: dur, children: shotInner });
 };
 function hexA(hex, a) {
   const s = String(hex).replace("#", "");
@@ -9559,53 +9788,55 @@ function decorLayer(kind, tint, strength = 1) {
   }
   return {};
 }
-const Background = () => /* @__PURE__ */ react.createElement(
+const Background = () => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
   remotion_dist_esm.AbsoluteFill,
   {
     style: {
       background: `radial-gradient(120% 90% at 50% 30%, ${T.bgTop} 0%, ${T.bgBottom} 78%, ${T.bgBottom} 100%)`
-    }
-  },
-  /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: decorLayer(T.decor, T.decor === "grid" ? T.accent : "#78736e") }),
-  T.vignette ? /* @__PURE__ */ react.createElement(
-    remotion_dist_esm.AbsoluteFill,
-    {
-      style: {
-        background: "radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.78) 100%)"
-      }
-    }
-  ) : null
+    },
+    children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: decorLayer(T.decor, T.decor === "grid" ? T.accent : "#78736e") }),
+      T.vignette ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        remotion_dist_esm.AbsoluteFill,
+        {
+          style: {
+            background: "radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.78) 100%)"
+          }
+        }
+      ) : null
+    ]
+  }
 );
 const HeadlineBand = ({ lines }) => {
   const H = T.geo.headline;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, top: 0, width: "100%" } }, lines.map((line, i) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 0, top: 0, width: "100%" }, children: lines.map((line, i) => {
     if (i === 0 || !line.highlight) {
-      return /* @__PURE__ */ react.createElement(
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)(
         "div",
         {
-          key: i,
           style: {
             ...heavy,
             fontSize: H.size,
             color: T.ink,
             textAlign: "center",
             marginTop: i === 0 ? H.top : H.lineGap ?? 14
-          }
+          },
+          children: line.text
         },
-        line.text
+        i
       );
     }
     const idx = line.text.indexOf(line.highlight);
     const before = idx > 0 ? line.text.slice(0, idx) : "";
     const after = idx >= 0 ? line.text.slice(idx + line.highlight.length) : line.text;
     const stretch = !after;
-    const budget = H.budget ?? 840;
+    const budget = Number(H.budget ?? 840);
     const totalW = estW(before, H.size) + estW(line.highlight, H.size) + estW(after, H.size) + (stretch ? 0 : 48);
-    const fs = stretch ? H.size : Math.min(H.size, Math.max(46, budget / Math.max(totalW, 1) * H.size));
-    return /* @__PURE__ */ react.createElement(
+    const size = H.size;
+    const fs = stretch ? size : Math.min(size, Math.max(46, budget / Math.max(totalW, 1) * size));
+    return /* @__PURE__ */ (0,jsx_runtime.jsxs)(
       "div",
       {
-        key: i,
         style: {
           display: "flex",
           alignItems: "center",
@@ -9613,35 +9844,46 @@ const HeadlineBand = ({ lines }) => {
           marginTop: H.lineGap ?? 14,
           paddingLeft: stretch ? panelRect().left : 40,
           paddingRight: 22
-        }
-      },
-      before ? /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: fs, color: T.ink, whiteSpace: "pre" } }, before) : null,
-      /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          style: {
-            flex: stretch ? 1 : "0 0 auto",
-            marginLeft: 8,
-            background: T.highlightBg,
-            borderRadius: T.panelRadius - 4,
-            padding: stretch ? "2px 0 6px 0" : "2px 18px 6px 18px",
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: H.highlightHeight ?? 104
-          }
         },
-        /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 2, top: 0, bottom: 0, width: 10, background: T.red } }),
-        /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: fs, color: T.highlightInk } }, line.highlight)
-      ),
-      after ? /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: fs, color: T.ink, whiteSpace: "pre" } }, after) : null
+        children: [
+          before ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: fs, color: T.ink, whiteSpace: "pre" }, children: before }) : null,
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+            "div",
+            {
+              style: {
+                flex: stretch ? 1 : "0 0 auto",
+                marginLeft: 8,
+                background: T.highlightBg,
+                borderRadius: T.panelRadius - 4,
+                padding: stretch ? "2px 0 6px 0" : "2px 18px 6px 18px",
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: H.highlightHeight ?? 104
+              },
+              children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 2, top: 0, bottom: 0, width: 10, background: T.red } }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: fs, color: T.highlightInk }, children: line.highlight })
+              ]
+            }
+          ),
+          after ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: fs, color: T.ink, whiteSpace: "pre" }, children: after }) : null
+        ]
+      },
+      i
     );
-  }));
+  }) });
 };
 const Footer = ({ sources, disclaimer }) => {
   const F = T.geo.footer;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, top: F.top, width: "100%", textAlign: "center" } }, sources.length ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: fitSize("\u8D44\u6599\u6765\u6E90\uFF1A" + sources.join(" \uFF5C "), F.size, F.width), color: T.gray, marginBottom: 12, whiteSpace: "nowrap" } }, "\u8D44\u6599\u6765\u6E90\uFF1A", sources.join(" \uFF5C ")) : null, disclaimer ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: fitSize(disclaimer, F.size, F.width), color: T.gray, whiteSpace: "nowrap" } }, disclaimer) : null);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 0, top: F.top, width: "100%", textAlign: "center" }, children: [
+    sources.length ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { fontSize: fitSize("\u8D44\u6599\u6765\u6E90\uFF1A" + sources.join(" \uFF5C "), F.size, F.width), color: T.gray, marginBottom: 12, whiteSpace: "nowrap" }, children: [
+      "\u8D44\u6599\u6765\u6E90\uFF1A",
+      sources.join(" \uFF5C ")
+    ] }) : null,
+    disclaimer ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: fitSize(disclaimer, F.size, F.width), color: T.gray, whiteSpace: "nowrap" }, children: disclaimer }) : null
+  ] });
 };
 const buildSubtitleChunks = (clauses) => {
   const chunks = [];
@@ -9675,7 +9917,7 @@ const Subtitles = ({ clauses, holes }) => {
   const active = chunks.find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   if (holes == null ? void 0 : holes.some(([a, b]) => active.startMs >= a - 200 && active.endMs <= b + 200)) return null;
-  return /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "div",
     {
       style: {
@@ -9688,9 +9930,9 @@ const Subtitles = ({ clauses, holes }) => {
         fontSize: T.geo.subtitle.size,
         color: T.white,
         textShadow: "0 2px 10px rgba(0,0,0,0.45)"
-      }
-    },
-    active.text
+      },
+      children: active.text
+    }
   );
 };
 const PortraitMedia = ({ shot, index }) => {
@@ -9704,48 +9946,55 @@ const PortraitMedia = ({ shot, index }) => {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp"
     });
-    return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" } }, /* @__PURE__ */ react.createElement(remotion_dist_esm.Img, { src, style: {
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Img, { src, style: {
       position: "absolute",
       inset: 0,
       width: "100%",
       height: "100%",
       objectFit: "cover",
       transform: `scale(${zoom})`
-    } }));
+    } }) });
   }
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" } }, /* @__PURE__ */ react.createElement(remotion_dist_esm.Loop, { durationInFrames: durFrames }, /* @__PURE__ */ react.createElement(ShotVideo, { src, style: { width: "100%", height: "100%", objectFit: "cover" } })));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Loop, { durationInFrames: durFrames, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(ShotVideo, { src, style: { width: "100%", height: "100%", objectFit: "cover" } }) }) });
 };
 const PortraitSectionLabel = ({ text }) => {
   const S = T.geo.sectionLabel ?? { left: 64, top: 84, size: 28 };
   if (!text) return null;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     position: "absolute",
     left: S.left,
     top: S.top,
     display: "flex",
     alignItems: "center",
     textShadow: "0 2px 10px rgba(0,0,0,0.7)"
-  } }, /* @__PURE__ */ react.createElement("span", { style: { ...Tick, height: 28 } }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: S.size, color: T.white, letterSpacing: 1 } }, text));
+  }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...Tick, height: 28 } }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: S.size, color: T.white, letterSpacing: 1 }, children: text })
+  ] });
 };
 const PortraitHeadline = ({ lines }) => {
   const H = T.geo.headline;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, top: H.top, width: "100%" } }, lines.map((l, i) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 0, top: H.top, width: "100%" }, children: lines.map((l, i) => {
     const parts = l.highlight && l.text.includes(l.highlight) ? l.text.split(l.highlight) : null;
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: {
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
       ...heavy,
       fontSize: H.size,
       color: T.white,
       textAlign: "center",
       marginTop: i === 0 ? 0 : H.lineGap ?? 12,
       textShadow: "0 3px 18px rgba(0,0,0,0.65)"
-    } }, parts ? /* @__PURE__ */ react.createElement(react.Fragment, null, parts[0], /* @__PURE__ */ react.createElement("span", { style: {
-      background: T.red,
-      color: T.white,
-      padding: "0 12px 4px",
-      borderRadius: 8,
-      marginLeft: 6
-    } }, l.highlight), parts[1]) : l.text);
-  }));
+    }, children: parts ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      parts[0],
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+        background: T.red,
+        color: T.white,
+        padding: "0 12px 4px",
+        borderRadius: 8,
+        marginLeft: 6
+      }, children: l.highlight }),
+      parts[1]
+    ] }) : l.text }, i);
+  }) });
 };
 const PortraitSubtitles = ({ clauses }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
@@ -9753,7 +10002,7 @@ const PortraitSubtitles = ({ clauses }) => {
   const t = frame / fps * 1e3;
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
     left: T.geo.subtitle.side ?? 80,
     right: T.geo.subtitle.side ?? 80,
@@ -9763,7 +10012,7 @@ const PortraitSubtitles = ({ clauses }) => {
     fontSize: T.geo.subtitle.size,
     color: T.white,
     textShadow: "0 3px 16px rgba(0,0,0,0.75)"
-  } }, active.text);
+  }, children: active.text });
 };
 const PortraitCard = ({ spec }) => {
   var _a, _b;
@@ -9774,7 +10023,7 @@ const PortraitCard = ({ spec }) => {
   const main = spec.amount || spec.title || ((_a = spec.card) == null ? void 0 : _a.title) || spec.number || spec.card_title || spec.name || "";
   const sub = spec.desc || spec.subtitle || ((_b = spec.card) == null ? void 0 : _b.body) || spec.card_body || spec.caption || "";
   const showCompare = spec.left || spec.right;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     position: "absolute",
     left: C.side,
     right: C.side,
@@ -9786,7 +10035,15 @@ const PortraitCard = ({ spec }) => {
     borderRadius: T.cardRadius,
     padding: "30px 34px",
     boxShadow: "0 18px 50px rgba(0,0,0,0.5)"
-  } }, spec.label ? /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: C.titleSize, color: T.redBright, marginBottom: 12, letterSpacing: 1 } }, spec.label) : null, main ? /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: C.size, color: T.white, lineHeight: 1.15 } }, main) : null, sub ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: C.subSize, color: T.cardMuted, marginTop: 10 } }, sub) : null, showCompare ? /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 22, marginTop: 18 } }, [spec.left, spec.right].map((side, i) => side ? /* @__PURE__ */ react.createElement("div", { key: i, style: { flex: 1, background: hexA(T.cardInk, 0.08), borderRadius: T.cardRadius, padding: "16px 18px" } }, /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 28, color: i === 0 ? T.redBright : T.teal } }, side.head), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 28, color: T.cardInk, marginTop: 6 } }, side.body)) : null)) : null);
+  }, children: [
+    spec.label ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: C.titleSize, color: T.redBright, marginBottom: 12, letterSpacing: 1 }, children: spec.label }) : null,
+    main ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: C.size, color: T.white, lineHeight: 1.15 }, children: main }) : null,
+    sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: C.subSize, color: T.cardMuted, marginTop: 10 }, children: sub }) : null,
+    showCompare ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "flex", gap: 22, marginTop: 18 }, children: [spec.left, spec.right].map((side, i) => side ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { flex: 1, background: hexA(T.cardInk, 0.08), borderRadius: T.cardRadius, padding: "16px 18px" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 28, color: i === 0 ? T.redBright : T.teal }, children: side.head }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 28, color: T.cardInk, marginTop: 6 }, children: side.body })
+    ] }, i) : null) }) : null
+  ] });
 };
 const PortraitBigText = ({
   label,
@@ -9798,14 +10055,18 @@ const PortraitBigText = ({
   const B = T.geo.bigText ?? { size: 108, subSize: 34, side: 110 };
   const o = (0,remotion_dist_esm.interpolate)(f, [0, 12], [0, 1], { extrapolateRight: "clamp" });
   const box = centerY === void 0 ? { position: "absolute", inset: 0 } : { position: "absolute", left: 0, right: 0, top: centerY - 420, height: 840 };
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { ...box, justifyContent: "center", alignItems: "center", opacity: o, padding: `0 ${B.side}px` } }, label ? /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 30, color: T.redBright, marginBottom: 22, letterSpacing: 2 } }, label) : null, main ? /* @__PURE__ */ react.createElement("div", { style: {
-    ...heavy,
-    fontSize: B.size,
-    color: T.white,
-    textAlign: "center",
-    lineHeight: 1.1,
-    textShadow: "0 4px 22px rgba(0,0,0,0.7)"
-  } }, main) : null, sub ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: B.subSize, color: T.onMedia, marginTop: 22, textAlign: "center" } }, sub) : null);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { ...box, justifyContent: "center", alignItems: "center", opacity: o, padding: `0 ${B.side}px` }, children: [
+    label ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 30, color: T.redBright, marginBottom: 22, letterSpacing: 2 }, children: label }) : null,
+    main ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      ...heavy,
+      fontSize: B.size,
+      color: T.white,
+      textAlign: "center",
+      lineHeight: 1.1,
+      textShadow: "0 4px 22px rgba(0,0,0,0.7)"
+    }, children: main }) : null,
+    sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: B.subSize, color: T.onMedia, marginTop: 22, textAlign: "center" }, children: sub }) : null
+  ] });
 };
 const PortraitShot = ({ shot, index }) => {
   var _a, _b, _c, _d, _e, _f, _g;
@@ -9813,34 +10074,49 @@ const PortraitShot = ({ shot, index }) => {
   const from = NiwoVideo_msToF(shot.startMs, fps);
   const dur = NiwoVideo_msToF(shot.endMs - shot.startMs, fps) + 1;
   const card = shot.kind === "panel" || shot.kind === "callout";
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.Sequence, { from, durationInFrames: dur }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" } }, /* @__PURE__ */ react.createElement(PortraitMedia, { shot, index }), /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: T.scrim } }), shot.kind === "title_card" ? /* @__PURE__ */ react.createElement(PortraitBigText, { label: (_a = shot.overlay) == null ? void 0 : _a.label, main: ((_b = shot.overlay) == null ? void 0 : _b.number) || ((_c = shot.overlay) == null ? void 0 : _c.keyword) || ((_d = shot.overlay) == null ? void 0 : _d.title) }) : null, shot.kind === "quote_card" ? /* @__PURE__ */ react.createElement(PortraitBigText, { label: (_e = shot.overlay) == null ? void 0 : _e.label, main: ((_f = shot.overlay) == null ? void 0 : _f.quote) || ((_g = shot.overlay) == null ? void 0 : _g.title) }) : null, card ? /* @__PURE__ */ react.createElement(PortraitCard, { spec: shot.overlay ?? {} }) : null, shot.chapterLabel && !card ? /* @__PURE__ */ react.createElement(PortraitSectionLabel, { text: shot.chapterLabel }) : null));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Sequence, { from, durationInFrames: dur, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitMedia, { shot, index }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: T.scrim } }),
+    shot.kind === "title_card" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitBigText, { label: (_a = shot.overlay) == null ? void 0 : _a.label, main: ((_b = shot.overlay) == null ? void 0 : _b.number) || ((_c = shot.overlay) == null ? void 0 : _c.keyword) || ((_d = shot.overlay) == null ? void 0 : _d.title) }) : null,
+    shot.kind === "quote_card" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitBigText, { label: (_e = shot.overlay) == null ? void 0 : _e.label, main: ((_f = shot.overlay) == null ? void 0 : _f.quote) || ((_g = shot.overlay) == null ? void 0 : _g.title) }) : null,
+    card ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitCard, { spec: shot.overlay ?? {} }) : null,
+    shot.chapterLabel && !card ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitSectionLabel, { text: shot.chapterLabel }) : null
+  ] }) });
 };
 const PortraitFooter = ({ sources, disclaimer }) => {
   const F = T.geo.footer;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, top: F.top, width: "100%", textAlign: "center" } }, sources.length ? /* @__PURE__ */ react.createElement("div", { style: {
-    fontSize: fitSize("\u8D44\u6599\u6765\u6E90\uFF1A" + sources.join(" \uFF5C "), F.size, F.width),
-    color: T.gray,
-    marginBottom: 10,
-    whiteSpace: "nowrap",
-    textShadow: "0 2px 8px rgba(0,0,0,0.8)"
-  } }, "\u8D44\u6599\u6765\u6E90\uFF1A", sources.join(" \uFF5C ")) : null, disclaimer ? /* @__PURE__ */ react.createElement("div", { style: {
-    fontSize: fitSize(disclaimer, F.size, F.width),
-    color: T.grayDim,
-    whiteSpace: "nowrap",
-    textShadow: "0 2px 8px rgba(0,0,0,0.8)"
-  } }, disclaimer) : null);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 0, top: F.top, width: "100%", textAlign: "center" }, children: [
+    sources.length ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      fontSize: fitSize("\u8D44\u6599\u6765\u6E90\uFF1A" + sources.join(" \uFF5C "), F.size, F.width),
+      color: T.gray,
+      marginBottom: 10,
+      whiteSpace: "nowrap",
+      textShadow: "0 2px 8px rgba(0,0,0,0.8)"
+    }, children: [
+      "\u8D44\u6599\u6765\u6E90\uFF1A",
+      sources.join(" \uFF5C ")
+    ] }) : null,
+    disclaimer ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      fontSize: fitSize(disclaimer, F.size, F.width),
+      color: T.grayDim,
+      whiteSpace: "nowrap",
+      textShadow: "0 2px 8px rgba(0,0,0,0.8)"
+    }, children: disclaimer }) : null
+  ] });
 };
-const PortraitVideo = (props) => /* @__PURE__ */ react.createElement(
+const PortraitVideo = (props) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
   remotion_dist_esm.AbsoluteFill,
   {
     "data-vg-frame": "1",
-    style: { background: hideMedia() ? "transparent" : T.bgTop, fontFamily: T.font }
-  },
-  /* @__PURE__ */ react.createElement(FontFace, null),
-  isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ react.createElement(PortraitShot, { key: i, shot, index: i })),
-  isCard() ? null : /* @__PURE__ */ react.createElement(PortraitHeadline, { lines: props.headline.lines }),
-  props.showSubtitles !== false ? /* @__PURE__ */ react.createElement(PortraitSubtitles, { clauses: props.clauses }) : null,
-  isCard() ? null : /* @__PURE__ */ react.createElement(PortraitFooter, { sources: props.sources, disclaimer: props.disclaimer })
+    style: { background: hideMedia() ? "transparent" : T.bgTop, fontFamily: T.font },
+    children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(FontFace, {}),
+      isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitShot, { shot, index: i }, i)),
+      isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitHeadline, { lines: props.headline.lines }),
+      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitSubtitles, { clauses: props.clauses }) : null,
+      isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitFooter, { sources: props.sources, disclaimer: props.disclaimer })
+    ]
+  }
 );
 const probeSink = () => globalThis.__vgProbe ??= {};
 const measureTextGeometry = (anchor) => {
@@ -9900,9 +10176,9 @@ const TextProbe = ({ tag }) => {
   react.useLayoutEffect(() => {
     if (tag) probeSink()[tag] = measureTextGeometry(anchorRef.current);
   }, [tag]);
-  return /* @__PURE__ */ react.createElement("span", { ref: anchorRef, style: { display: "none" } });
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { ref: anchorRef, style: { display: "none" } });
 };
-const Watermark = ({ logo, text }) => /* @__PURE__ */ react.createElement(
+const Watermark = ({ logo, text }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
   "div",
   {
     style: {
@@ -9918,16 +10194,24 @@ const Watermark = ({ logo, text }) => /* @__PURE__ */ react.createElement(
       color: "#ffffff",
       fontFamily: T.font,
       lineHeight: 1
-    }
-  },
-  logo ? (
-    // 品牌套装：右上角摆用户自己的 Logo（等比缩进 34px 高的胶囊里）
-    /* @__PURE__ */ react.createElement(remotion_dist_esm.Img, { src: (0,remotion_dist_esm.staticFile)(logo), alt: "", style: { height: 30, maxWidth: 150, objectFit: "contain", display: "block" } })
-  ) : null,
-  text ? /* @__PURE__ */ react.createElement("span", { style: { fontSize: 21, fontWeight: 700, letterSpacing: 0.4, whiteSpace: "nowrap" } }, text) : null,
-  !logo && !text ? /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement("span", { style: { width: 15, height: 15, borderRadius: 5, background: "#B7AAFF", display: "inline-block" } }), /* @__PURE__ */ react.createElement("span", { style: { fontSize: 21, fontWeight: 700, letterSpacing: 0.4, whiteSpace: "nowrap" } }, "Powered by ", /* @__PURE__ */ react.createElement("span", { style: { color: "#C9BEFF" } }, "GetCut"))) : null
+    },
+    children: [
+      logo ? (
+        // 品牌套装：右上角摆用户自己的 Logo（等比缩进 34px 高的胶囊里）
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Img, { src: (0,remotion_dist_esm.staticFile)(logo), alt: "", style: { height: 30, maxWidth: 150, objectFit: "contain", display: "block" } })
+      ) : null,
+      text ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 21, fontWeight: 700, letterSpacing: 0.4, whiteSpace: "nowrap" }, children: text }) : null,
+      !logo && !text ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { width: 15, height: 15, borderRadius: 5, background: "#B7AAFF", display: "inline-block" } }),
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { style: { fontSize: 21, fontWeight: 700, letterSpacing: 0.4, whiteSpace: "nowrap" }, children: [
+          "Powered by ",
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { color: "#C9BEFF" }, children: "GetCut" })
+        ] })
+      ] }) : null
+    ]
+  }
 );
-const SeriesBadge = ({ text }) => /* @__PURE__ */ react.createElement("div", { style: {
+const SeriesBadge = ({ text }) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
   position: "absolute",
   top: 34,
   left: 38,
@@ -9941,23 +10225,27 @@ const SeriesBadge = ({ text }) => /* @__PURE__ */ react.createElement("div", { s
   letterSpacing: 0.5,
   lineHeight: 1,
   whiteSpace: "nowrap"
-} }, text);
+}, children: text });
 const AudioLayer = ({ audio }) => {
   const { fps, durationInFrames } = (0,remotion_dist_esm.useVideoConfig)();
   const totalMs = (audio.durationMs || 0) > 0 ? audio.durationMs : durationInFrames / fps * 1e3;
   const fadeStart = totalMs - 3e3;
-  return /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(esm_Audio, { src: (0,remotion_dist_esm.staticFile)(audio.voice) }), audio.bgm ? /* @__PURE__ */ react.createElement(
-    esm_Audio,
-    {
-      src: (0,remotion_dist_esm.staticFile)(audio.bgm),
-      loop: true,
-      volume: (f) => {
-        const t = f / fps * 1e3;
-        const fade = t <= fadeStart ? 1 : Math.max(0, (totalMs - t) / 3e3);
-        return 0.2 * fade;
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(esm_Audio, { src: (0,remotion_dist_esm.staticFile)(audio.voice) }),
+    audio.bgm ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      esm_Audio,
+      {
+        src: (0,remotion_dist_esm.staticFile)(audio.bgm),
+        loop: true,
+        volume: (f) => {
+          const t = f / fps * 1e3;
+          const fade = t <= fadeStart ? 1 : Math.max(0, (totalMs - t) / 3e3);
+          return 0.2 * fade;
+        }
       }
-    }
-  ) : null, (audio.sfx || []).map((e, i) => /* @__PURE__ */ react.createElement(remotion_dist_esm.Sequence, { key: i, from: Math.round(e.t * fps) }, /* @__PURE__ */ react.createElement(esm_Audio, { src: (0,remotion_dist_esm.staticFile)(e.file), volume: e.vol }))));
+    ) : null,
+    (audio.sfx || []).map((e, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Sequence, { from: Math.round(e.t * fps), children: /* @__PURE__ */ (0,jsx_runtime.jsx)(esm_Audio, { src: (0,remotion_dist_esm.staticFile)(e.file), volume: e.vol }) }, i))
+  ] });
 };
 const NiwoVideo = (props) => {
   var _a, _b, _c;
@@ -9965,102 +10253,115 @@ const NiwoVideo = (props) => {
   applySkin(skin);
   const mode = props.exportMode ?? (props.chromeOnly ? "card" : "full");
   setExportMode(mode);
-  const probe = mode === "card" ? /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(
-    "style",
-    {
-      id: "vg-hide-text",
-      dangerouslySetInnerHTML: {
-        __html: ".vg-frame,.vg-frame *{color:transparent !important;text-shadow:none !important;}"
+  const probe = mode === "card" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "style",
+      {
+        id: "vg-hide-text",
+        dangerouslySetInnerHTML: {
+          __html: ".vg-frame,.vg-frame *{color:transparent !important;text-shadow:none !important;}"
+        }
       }
-    }
-  ), /* @__PURE__ */ react.createElement(TextProbe, { tag: props.probeTag })) : null;
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(TextProbe, { tag: props.probeTag })
+  ] }) : null;
   let body;
-  if (skin.layout === "bleed") body = /* @__PURE__ */ react.createElement(PortraitVideo, { ...props });
-  else if (skin.layout === "zhigu") body = /* @__PURE__ */ react.createElement(ZhiguVideo, { ...props });
-  else if (skin.layout === "macro") body = /* @__PURE__ */ react.createElement(MacroVideo, { ...props });
-  else if (skin.layout === "lower") body = /* @__PURE__ */ react.createElement(LowerVideo, { ...props });
-  else if (skin.layout === "poster") body = /* @__PURE__ */ react.createElement(PosterVideo, { ...props });
-  else if (skin.layout === "data") body = /* @__PURE__ */ react.createElement(DataVideo, { ...props });
-  else body = /* @__PURE__ */ react.createElement(EditorialVideo, { props });
+  if (skin.layout === "bleed") body = /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitVideo, { ...props });
+  else if (skin.layout === "zhigu") body = /* @__PURE__ */ (0,jsx_runtime.jsx)(ZhiguVideo, { ...props });
+  else if (skin.layout === "macro") body = /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo, { ...props });
+  else if (skin.layout === "lower") body = /* @__PURE__ */ (0,jsx_runtime.jsx)(LowerVideo, { ...props });
+  else if (skin.layout === "poster") body = /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterVideo, { ...props });
+  else if (skin.layout === "data") body = /* @__PURE__ */ (0,jsx_runtime.jsx)(DataVideo, { ...props });
+  else body = /* @__PURE__ */ (0,jsx_runtime.jsx)(EditorialVideo, { props });
   return (
     // 画面根节点统一在这里给：七个版式各有自己的 AbsoluteFill，靠它们各自挂
     // 标记会漏（宏观/智谷两版就没挂），文字几何也就量不到正确的原点。
-    /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { "data-vg-frame": "1", className: "vg-frame" }, probe, body, ((_a = props.series) == null ? void 0 : _a.badge) && !isCard() ? /* @__PURE__ */ react.createElement(SeriesBadge, { text: props.series.badge }) : null, props.watermark !== false && !isCard() ? /* @__PURE__ */ react.createElement(Watermark, { logo: (_b = props.brand) == null ? void 0 : _b.logo, text: (_c = props.brand) == null ? void 0 : _c.watermarkText }) : null, props.audio && mode === "full" ? /* @__PURE__ */ react.createElement(AudioLayer, { audio: props.audio }) : null)
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { "data-vg-frame": "1", className: "vg-frame", children: [
+      probe,
+      body,
+      ((_a = props.series) == null ? void 0 : _a.badge) && !isCard() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(SeriesBadge, { text: props.series.badge }) : null,
+      props.watermark !== false && !isCard() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Watermark, { logo: (_b = props.brand) == null ? void 0 : _b.logo, text: (_c = props.brand) == null ? void 0 : _c.watermarkText }) : null,
+      props.audio && mode === "full" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(AudioLayer, { audio: props.audio }) : null
+    ] })
   );
 };
-const EditorialVideo = ({ props }) => /* @__PURE__ */ react.createElement(
+const EditorialVideo = ({ props }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
   remotion_dist_esm.AbsoluteFill,
   {
     "data-vg-frame": "1",
-    style: { background: hideMedia() ? "transparent" : T.bgTop, fontFamily: T.font }
-  },
-  /* @__PURE__ */ react.createElement(FontFace, null),
-  isCard() ? null : isBase() ? /* @__PURE__ */ react.createElement(ChromeClip, { hole: mediaRect() }, /* @__PURE__ */ react.createElement(Background, null)) : /* @__PURE__ */ react.createElement(Background, null),
-  isCard() ? null : isBase() ? /* @__PURE__ */ react.createElement(
-    RectWithHole,
-    {
-      rect: paperRect(),
-      hole: mediaRect(),
-      radius: paperRect().radius,
-      fill: { background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)` },
-      style: { boxShadow: T.paperShadow }
-    }
-  ) : /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: paperRect().left,
-        top: paperRect().top,
-        width: paperRect().width,
-        height: paperRect().height,
-        borderRadius: paperRect().radius,
-        background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)`,
-        boxShadow: T.paperShadow,
-        overflow: "hidden"
-      }
-    },
-    /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          inset: 0,
-          ...decorLayer(T.paperTexture, T.paperTexture === "grid" ? T.accent : "#78736e", 1.4)
+    style: { background: hideMedia() ? "transparent" : T.bgTop, fontFamily: T.font },
+    children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(FontFace, {}),
+      isCard() ? null : isBase() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(ChromeClip, { hole: mediaRect(), children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Background, {}) }) : /* @__PURE__ */ (0,jsx_runtime.jsx)(Background, {}),
+      isCard() ? null : isBase() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        RectWithHole,
+        {
+          rect: paperRect(),
+          hole: mediaRect(),
+          radius: paperRect().radius,
+          fill: { background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)` },
+          style: { boxShadow: T.paperShadow }
         }
-      }
-    )
-  ),
-  isCard() ? null : /* @__PURE__ */ react.createElement(HeadlineBand, { lines: props.headline.lines }),
-  isCard() ? null : isBase() ? /* @__PURE__ */ react.createElement(RectWithHole, { rect: panelRect(), hole: mediaRect(), radius: T.panelRadius, fill: { background: T.panel } }) : /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        left: panelRect().left,
-        top: panelRect().top,
-        width: panelRect().width,
-        height: panelRect().height,
-        borderRadius: T.panelRadius,
-        background: T.panel
-      }
-    }
-  ),
-  isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ react.createElement(ShotView, { key: i, shot, index: i })),
-  props.showSubtitles !== false ? /* @__PURE__ */ react.createElement(Subtitles, { clauses: props.clauses, holes: props.subtitleHoles }) : null,
-  isCard() ? null : /* @__PURE__ */ react.createElement(Footer, { sources: props.sources, disclaimer: props.disclaimer })
+      ) : /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "div",
+        {
+          style: {
+            position: "absolute",
+            left: paperRect().left,
+            top: paperRect().top,
+            width: paperRect().width,
+            height: paperRect().height,
+            borderRadius: paperRect().radius,
+            background: `linear-gradient(160deg, ${T.paperTop} 0%, ${T.paper} 55%, ${T.paperBottom} 100%)`,
+            boxShadow: T.paperShadow,
+            overflow: "hidden"
+          },
+          children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "div",
+            {
+              style: {
+                position: "absolute",
+                inset: 0,
+                ...decorLayer(T.paperTexture, T.paperTexture === "grid" ? T.accent : "#78736e", 1.4)
+              }
+            }
+          )
+        }
+      ),
+      isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(HeadlineBand, { lines: props.headline.lines }),
+      isCard() ? null : isBase() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(RectWithHole, { rect: panelRect(), hole: mediaRect(), radius: T.panelRadius, fill: { background: T.panel } }) : /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "div",
+        {
+          style: {
+            position: "absolute",
+            left: panelRect().left,
+            top: panelRect().top,
+            width: panelRect().width,
+            height: panelRect().height,
+            borderRadius: T.panelRadius,
+            background: T.panel
+          }
+        }
+      ),
+      isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(ShotView, { shot, index: i }, i)),
+      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Subtitles, { clauses: props.clauses, holes: props.subtitleHoles }) : null,
+      isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(Footer, { sources: props.sources, disclaimer: props.disclaimer })
+    ]
+  }
 );
-const LowerVideo = (props) => /* @__PURE__ */ react.createElement(
+const LowerVideo = (props) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
   remotion_dist_esm.AbsoluteFill,
   {
     "data-vg-frame": "1",
-    style: { background: hideMedia() ? "transparent" : T.pageBg ?? "#000", fontFamily: T.font }
-  },
-  /* @__PURE__ */ react.createElement(FontFace, null),
-  isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ react.createElement(LowerShot, { key: i, shot, index: i })),
-  isCard() ? null : /* @__PURE__ */ react.createElement(LowerBar, { lines: props.headline.lines }),
-  props.showSubtitles !== false ? /* @__PURE__ */ react.createElement(LowerSubtitles, { clauses: props.clauses }) : null,
-  isCard() ? null : /* @__PURE__ */ react.createElement(Footer, { sources: props.sources, disclaimer: props.disclaimer })
+    style: { background: hideMedia() ? "transparent" : T.pageBg ?? "#000", fontFamily: T.font },
+    children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(FontFace, {}),
+      isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(LowerShot, { shot, index: i }, i)),
+      isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(LowerBar, { lines: props.headline.lines }),
+      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(LowerSubtitles, { clauses: props.clauses }) : null,
+      isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(Footer, { sources: props.sources, disclaimer: props.disclaimer })
+    ]
+  }
 );
 const LowerShot = ({ shot, index }) => {
   var _a, _b, _c, _d, _e, _f, _g;
@@ -10068,25 +10369,31 @@ const LowerShot = ({ shot, index }) => {
   const from = NiwoVideo_msToF(shot.startMs, fps);
   const dur = NiwoVideo_msToF(shot.endMs - shot.startMs, fps) + 1;
   const card = shot.kind === "panel" || shot.kind === "callout";
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.Sequence, { from, durationInFrames: dur }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" } }, /* @__PURE__ */ react.createElement(PortraitMedia, { shot, index }), /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: T.scrim } }), shot.kind === "title_card" ? /* @__PURE__ */ react.createElement(
-    PortraitBigText,
-    {
-      centerY: T.geo.contentCenterY ?? 560,
-      label: (_a = shot.overlay) == null ? void 0 : _a.label,
-      main: ((_b = shot.overlay) == null ? void 0 : _b.number) || ((_c = shot.overlay) == null ? void 0 : _c.keyword) || ((_d = shot.overlay) == null ? void 0 : _d.title)
-    }
-  ) : null, shot.kind === "quote_card" ? /* @__PURE__ */ react.createElement(
-    PortraitBigText,
-    {
-      centerY: T.geo.contentCenterY ?? 560,
-      label: (_e = shot.overlay) == null ? void 0 : _e.label,
-      main: ((_f = shot.overlay) == null ? void 0 : _f.quote) || ((_g = shot.overlay) == null ? void 0 : _g.title)
-    }
-  ) : null, card ? /* @__PURE__ */ react.createElement(PortraitCard, { spec: shot.overlay ?? {} }) : null));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Sequence, { from, durationInFrames: dur, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitMedia, { shot, index }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: T.scrim } }),
+    shot.kind === "title_card" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      PortraitBigText,
+      {
+        centerY: T.geo.contentCenterY ?? 560,
+        label: (_a = shot.overlay) == null ? void 0 : _a.label,
+        main: ((_b = shot.overlay) == null ? void 0 : _b.number) || ((_c = shot.overlay) == null ? void 0 : _c.keyword) || ((_d = shot.overlay) == null ? void 0 : _d.title)
+      }
+    ) : null,
+    shot.kind === "quote_card" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      PortraitBigText,
+      {
+        centerY: T.geo.contentCenterY ?? 560,
+        label: (_e = shot.overlay) == null ? void 0 : _e.label,
+        main: ((_f = shot.overlay) == null ? void 0 : _f.quote) || ((_g = shot.overlay) == null ? void 0 : _g.title)
+      }
+    ) : null,
+    card ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitCard, { spec: shot.overlay ?? {} }) : null
+  ] }) });
 };
 const LowerBar = ({ lines }) => {
   const B = T.geo.headline;
-  return /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "div",
     {
       style: {
@@ -10097,38 +10404,42 @@ const LowerBar = ({ lines }) => {
         background: T.barBg ?? "rgba(3,8,16,0.94)",
         borderTop: `${B.borderTop ?? 6}px solid ${T.accent}`,
         padding: `${B.padTop ?? 26}px 0 ${B.padBottom ?? 30}px 0`
-      }
-    },
-    lines.map((l, i) => {
-      const parts = l.highlight && l.text.includes(l.highlight) ? l.text.split(l.highlight) : null;
-      return /* @__PURE__ */ react.createElement(
-        "div",
-        {
-          key: i,
-          style: {
-            ...heavy,
-            fontSize: i === 0 ? B.size : B.size2 ?? B.size - 8,
-            color: i === 0 ? T.white : T.highlightInk,
-            textAlign: "left",
-            paddingLeft: B.padLeft ?? 64,
-            paddingRight: B.padLeft ?? 64,
-            marginTop: i === 0 ? 0 : 10
-          }
-        },
-        parts ? /* @__PURE__ */ react.createElement(react.Fragment, null, parts[0], /* @__PURE__ */ react.createElement(
-          "span",
+      },
+      children: lines.map((l, i) => {
+        const parts = l.highlight && l.text.includes(l.highlight) ? l.text.split(l.highlight) : null;
+        return /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "div",
           {
             style: {
-              background: i === 0 ? T.accent : T.highlightBg,
-              color: T.onAccent,
-              padding: "0 12px 4px",
-              marginLeft: 6
-            }
+              ...heavy,
+              fontSize: i === 0 ? B.size : B.size2 ?? B.size - 8,
+              color: i === 0 ? T.white : T.highlightInk,
+              textAlign: "left",
+              paddingLeft: B.padLeft ?? 64,
+              paddingRight: B.padLeft ?? 64,
+              marginTop: i === 0 ? 0 : 10
+            },
+            children: parts ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+              parts[0],
+              /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                "span",
+                {
+                  style: {
+                    background: i === 0 ? T.accent : T.highlightBg,
+                    color: T.onAccent,
+                    padding: "0 12px 4px",
+                    marginLeft: 6
+                  },
+                  children: l.highlight
+                }
+              ),
+              parts[1]
+            ] }) : l.text
           },
-          l.highlight
-        ), parts[1]) : l.text
-      );
-    })
+          i
+        );
+      })
+    }
   );
 };
 const LowerSubtitles = ({ clauses }) => {
@@ -10137,13 +10448,13 @@ const LowerSubtitles = ({ clauses }) => {
   const t = frame / fps * 1e3;
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
     left: T.geo.subtitle.side ?? 70,
     right: T.geo.subtitle.side ?? 70,
     bottom: T.geo.subtitle.bottom,
     textAlign: "center"
-  } }, /* @__PURE__ */ react.createElement(
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "span",
     {
       style: {
@@ -10154,10 +10465,10 @@ const LowerSubtitles = ({ clauses }) => {
         padding: "6px 22px 12px 22px",
         borderRadius: 8,
         lineHeight: 1.3
-      }
-    },
-    active.text
-  ));
+      },
+      children: active.text
+    }
+  ) });
 };
 const overlayText = (spec = {}) => ({
   label: spec.label || "",
@@ -10168,14 +10479,14 @@ const PosterKicker = ({ text }) => {
   const f = useAnimFrame();
   const o = (0,remotion_dist_esm.interpolate)(f, [0, 8], [0, 1], { extrapolateRight: "clamp" });
   if (!text) return null;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 90, bottom: 320, opacity: o } }, /* @__PURE__ */ react.createElement("span", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 90, bottom: 320, opacity: o }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
     ...heavy,
     fontSize: 30,
     color: T.onAccent,
     background: T.accent,
     padding: "4px 16px 8px 16px",
     letterSpacing: 2
-  } }, text));
+  }, children: text }) });
 };
 const PosterBig = ({
   label,
@@ -10187,38 +10498,42 @@ const PosterBig = ({
   const B = T.geo.bigText ?? { size: 168, subSize: 40, side: 90 };
   const o = (0,remotion_dist_esm.interpolate)(f, [0, 9], [0, 1], { extrapolateRight: "clamp" });
   const y = (0,remotion_dist_esm.interpolate)(f, [0, 13], [44, 0], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: {
     justifyContent: "center",
     alignItems: "flex-start",
     padding: `0 ${B.side}px`,
     opacity: o,
     transform: `translateY(${y}px)`
-  } }, label ? /* @__PURE__ */ react.createElement("div", { style: {
-    ...heavy,
-    fontSize: 34,
-    color: T.onAccent,
-    background: T.accentSoft,
-    padding: "2px 14px 6px 14px",
-    marginBottom: 30,
-    letterSpacing: 3
-  } }, label) : null, main ? /* @__PURE__ */ react.createElement("div", { style: {
-    ...heavy,
-    fontSize: B.size,
-    color: onBlock ? T.onAccent : T.white,
-    lineHeight: 1.1,
-    textShadow: onBlock ? "none" : "0 6px 30px rgba(0,0,0,0.85)"
-  } }, /* @__PURE__ */ react.createElement("span", { style: {
-    background: onBlock ? "transparent" : T.accent,
-    padding: "0 18px 10px 18px",
-    boxDecorationBreak: "clone",
-    WebkitBoxDecorationBreak: "clone"
-  } }, main)) : null, sub ? /* @__PURE__ */ react.createElement("div", { style: {
-    fontSize: B.subSize,
-    color: T.onMedia,
-    marginTop: 32,
-    lineHeight: 1.45,
-    textShadow: "0 3px 16px rgba(0,0,0,0.85)"
-  } }, sub) : null);
+  }, children: [
+    label ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      ...heavy,
+      fontSize: 34,
+      color: T.onAccent,
+      background: T.accentSoft,
+      padding: "2px 14px 6px 14px",
+      marginBottom: 30,
+      letterSpacing: 3
+    }, children: label }) : null,
+    main ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      ...heavy,
+      fontSize: B.size,
+      color: onBlock ? T.onAccent : T.white,
+      lineHeight: 1.1,
+      textShadow: onBlock ? "none" : "0 6px 30px rgba(0,0,0,0.85)"
+    }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+      background: onBlock ? "transparent" : T.accent,
+      padding: "0 18px 10px 18px",
+      boxDecorationBreak: "clone",
+      WebkitBoxDecorationBreak: "clone"
+    }, children: main }) }) : null,
+    sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      fontSize: B.subSize,
+      color: T.onMedia,
+      marginTop: 32,
+      lineHeight: 1.45,
+      textShadow: "0 3px 16px rgba(0,0,0,0.85)"
+    }, children: sub }) : null
+  ] });
 };
 const PosterCard = ({ spec }) => {
   const f = useAnimFrame();
@@ -10227,14 +10542,24 @@ const PosterCard = ({ spec }) => {
   const y = (0,remotion_dist_esm.interpolate)(f, [0, 12], [30, 0], { extrapolateRight: "clamp" });
   const t = overlayText(spec);
   const compare = spec.left || spec.right;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     position: "absolute",
     left: C.side,
     right: C.side,
     top: `${C.topPct}%`,
     opacity: o,
     transform: `translateY(${y}px)`
-  } }, /* @__PURE__ */ react.createElement("div", { style: { background: T.accent, padding: "34px 38px 38px 38px" } }, t.label ? /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 30, color: T.onAccent, opacity: 0.8, letterSpacing: 3 } }, t.label) : null, t.main ? /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: C.size, color: T.onAccent, lineHeight: 1.1, marginTop: 4 } }, t.main) : null, t.sub ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: C.subSize ?? 36, color: T.onAccent, opacity: 0.92, marginTop: 14 } }, t.sub) : null), compare ? /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 0, marginTop: 6 } }, [spec.left, spec.right].map((side, i) => side ? /* @__PURE__ */ react.createElement("div", { key: i, style: { flex: 1, background: i === 0 ? T.cardWhite : T.accent, padding: "22px 24px 26px 24px" } }, /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 30, color: i === 0 ? T.redBright : T.onAccent } }, side.head), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 32, color: i === 0 ? T.cardInk : T.onAccent, marginTop: 8 } }, side.body)) : null)) : null);
+  }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { background: T.accent, padding: "34px 38px 38px 38px" }, children: [
+      t.label ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 30, color: T.onAccent, opacity: 0.8, letterSpacing: 3 }, children: t.label }) : null,
+      t.main ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: C.size, color: T.onAccent, lineHeight: 1.1, marginTop: 4 }, children: t.main }) : null,
+      t.sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: C.subSize ?? 36, color: T.onAccent, opacity: 0.92, marginTop: 14 }, children: t.sub }) : null
+    ] }),
+    compare ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "flex", gap: 0, marginTop: 6 }, children: [spec.left, spec.right].map((side, i) => side ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { flex: 1, background: i === 0 ? T.cardWhite : T.accent, padding: "22px 24px 26px 24px" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 30, color: i === 0 ? T.redBright : T.onAccent }, children: side.head }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 32, color: i === 0 ? T.cardInk : T.onAccent, marginTop: 8 }, children: side.body })
+    ] }, i) : null) }) : null
+  ] });
 };
 const PosterShot = ({ shot, index }) => {
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
@@ -10243,25 +10568,36 @@ const PosterShot = ({ shot, index }) => {
   const solid = shot.kind === "title_card";
   const isDesign = shot.kind === "panel" || shot.kind === "callout";
   const t = overlayText(shot.overlay ?? {});
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.Sequence, { from, durationInFrames: dur }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" } }, solid ? /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: `linear-gradient(150deg, ${T.accent} 0%, ${T.accentSoft} 100%)` } }) : /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(PortraitMedia, { shot, index }), /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(10,10,12,0.60)" } })), solid || shot.kind === "quote_card" ? /* @__PURE__ */ react.createElement(PosterBig, { label: t.label, main: t.main, sub: t.sub, onBlock: solid }) : null, isDesign ? /* @__PURE__ */ react.createElement(PosterCard, { spec: shot.overlay ?? {} }) : null, shot.kind === "footage" && shot.chapterLabel ? /* @__PURE__ */ react.createElement(PosterKicker, { text: shot.chapterLabel }) : null));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Sequence, { from, durationInFrames: dur, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" }, children: [
+    solid ? /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: `linear-gradient(150deg, ${T.accent} 0%, ${T.accentSoft} 100%)` } }) : /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitMedia, { shot, index }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(10,10,12,0.60)" } })
+    ] }),
+    solid || shot.kind === "quote_card" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterBig, { label: t.label, main: t.main, sub: t.sub, onBlock: solid }) : null,
+    isDesign ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterCard, { spec: shot.overlay ?? {} }) : null,
+    shot.kind === "footage" && shot.chapterLabel ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterKicker, { text: shot.chapterLabel }) : null
+  ] }) });
 };
 const PosterHeadline = ({ lines }) => {
   const H = T.geo.headline;
   if (!lines.length) return null;
   const [first, ...rest] = lines;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, top: H.top, width: "100%", padding: "0 90px", boxSizing: "border-box" } }, /* @__PURE__ */ react.createElement("div", { style: {
-    ...heavy,
-    fontSize: H.size,
-    color: T.white,
-    lineHeight: 1.12,
-    textShadow: "0 4px 20px rgba(0,0,0,0.85)"
-  } }, first.text), rest.map((l, i) => /* @__PURE__ */ react.createElement("div", { key: i, style: {
-    ...heavy,
-    fontSize: Math.round(H.size * 0.6),
-    color: T.accentSoft,
-    marginTop: H.lineGap ?? 14,
-    textShadow: "0 4px 20px rgba(0,0,0,0.85)"
-  } }, l.text)));
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 0, top: H.top, width: "100%", padding: "0 90px", boxSizing: "border-box" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      ...heavy,
+      fontSize: H.size,
+      color: T.white,
+      lineHeight: 1.12,
+      textShadow: "0 4px 20px rgba(0,0,0,0.85)"
+    }, children: first.text }),
+    rest.map((l, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      ...heavy,
+      fontSize: Math.round(H.size * 0.6),
+      color: T.accentSoft,
+      marginTop: H.lineGap ?? 14,
+      textShadow: "0 4px 20px rgba(0,0,0,0.85)"
+    }, children: l.text }, i))
+  ] });
 };
 const PosterSubtitles = ({ clauses }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
@@ -10270,7 +10606,7 @@ const PosterSubtitles = ({ clauses }) => {
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   const S = T.geo.subtitle;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
     left: 0,
     right: 0,
@@ -10278,27 +10614,33 @@ const PosterSubtitles = ({ clauses }) => {
     background: T.barBg ?? "rgba(10,10,12,0.86)",
     borderTop: `5px solid ${T.accent}`,
     padding: "22px 90px 26px 90px"
-  } }, /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: S.size, color: T.white, lineHeight: 1.25 } }, active.text));
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: S.size, color: T.white, lineHeight: 1.25 }, children: active.text }) });
 };
 const PosterFooter = ({ sources, disclaimer }) => {
   const F = T.geo.footer;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, top: F.top, width: "100%", textAlign: "center" } }, sources.length ? /* @__PURE__ */ react.createElement("div", { style: {
-    fontSize: fitSize("\u8D44\u6599\u6765\u6E90\uFF1A" + sources.join(" \uFF5C "), F.size, F.width),
-    color: T.gray,
-    whiteSpace: "nowrap",
-    textShadow: "0 2px 8px rgba(0,0,0,0.9)"
-  } }, "\u8D44\u6599\u6765\u6E90\uFF1A", sources.join(" \uFF5C ")) : null, disclaimer ? /* @__PURE__ */ react.createElement("div", { style: {
-    fontSize: fitSize(disclaimer, F.size, F.width),
-    color: T.grayDim,
-    marginTop: 8,
-    whiteSpace: "nowrap",
-    textShadow: "0 2px 8px rgba(0,0,0,0.9)"
-  } }, disclaimer) : null);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 0, top: F.top, width: "100%", textAlign: "center" }, children: [
+    sources.length ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      fontSize: fitSize("\u8D44\u6599\u6765\u6E90\uFF1A" + sources.join(" \uFF5C "), F.size, F.width),
+      color: T.gray,
+      whiteSpace: "nowrap",
+      textShadow: "0 2px 8px rgba(0,0,0,0.9)"
+    }, children: [
+      "\u8D44\u6599\u6765\u6E90\uFF1A",
+      sources.join(" \uFF5C ")
+    ] }) : null,
+    disclaimer ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      fontSize: fitSize(disclaimer, F.size, F.width),
+      color: T.grayDim,
+      marginTop: 8,
+      whiteSpace: "nowrap",
+      textShadow: "0 2px 8px rgba(0,0,0,0.9)"
+    }, children: disclaimer }) : null
+  ] });
 };
 const PosterSubtitlePlate = () => {
   const S = T.geo.subtitle;
   const plateH = 22 + 26 + Math.round(S.size * 1.25);
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
     left: 0,
     right: 0,
@@ -10308,32 +10650,38 @@ const PosterSubtitlePlate = () => {
     borderTop: `5px solid ${T.accent}`
   } });
 };
-const PosterVideo = (props) => /* @__PURE__ */ react.createElement(
+const PosterVideo = (props) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
   remotion_dist_esm.AbsoluteFill,
   {
     "data-vg-frame": "1",
-    style: { background: hideMedia() ? "transparent" : T.pageBg ?? T.bgTop, fontFamily: T.font }
-  },
-  /* @__PURE__ */ react.createElement(FontFace, null),
-  isCard() ? null : isBase() ? /* @__PURE__ */ react.createElement(PosterSubtitlePlate, null) : null,
-  isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ react.createElement(PosterShot, { key: i, shot, index: i })),
-  isCard() ? null : /* @__PURE__ */ react.createElement(PosterHeadline, { lines: props.headline.lines }),
-  props.showSubtitles !== false ? /* @__PURE__ */ react.createElement(PosterSubtitles, { clauses: props.clauses }) : null,
-  isCard() ? null : /* @__PURE__ */ react.createElement(PosterFooter, { sources: props.sources, disclaimer: props.disclaimer })
+    style: { background: hideMedia() ? "transparent" : T.pageBg ?? T.bgTop, fontFamily: T.font },
+    children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(FontFace, {}),
+      isCard() ? null : isBase() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterSubtitlePlate, {}) : null,
+      isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterShot, { shot, index: i }, i)),
+      isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterHeadline, { lines: props.headline.lines }),
+      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterSubtitles, { clauses: props.clauses }) : null,
+      isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterFooter, { sources: props.sources, disclaimer: props.disclaimer })
+    ]
+  }
 );
 const DataHeader = ({ lines }) => {
   const H = T.geo.headline;
   if (!lines.length) return null;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, top: H.top, width: "100%", padding: "0 70px", boxSizing: "border-box" } }, lines.map((l, i) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 0, top: H.top, width: "100%", padding: "0 70px", boxSizing: "border-box" }, children: lines.map((l, i) => {
     const parts = l.highlight && l.text.includes(l.highlight) ? l.text.split(l.highlight) : null;
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: {
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
       ...heavy,
       fontSize: i === 0 ? H.size : Math.round(H.size * 0.78),
       color: i === 0 ? T.ink : T.mutedInk,
       lineHeight: 1.15,
       marginTop: i === 0 ? 0 : H.lineGap ?? 12
-    } }, parts ? /* @__PURE__ */ react.createElement(react.Fragment, null, parts[0], /* @__PURE__ */ react.createElement("span", { style: { background: T.highlightBg, color: T.highlightInk, padding: "0 10px 4px", marginLeft: 6 } }, l.highlight), parts[1]) : l.text);
-  }));
+    }, children: parts ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      parts[0],
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { background: T.highlightBg, color: T.highlightInk, padding: "0 10px 4px", marginLeft: 6 }, children: l.highlight }),
+      parts[1]
+    ] }) : l.text }, i);
+  }) });
 };
 const DataRunningText = ({ text, chapterLabel }) => {
   const f = useAnimFrame();
@@ -10341,23 +10689,27 @@ const DataRunningText = ({ text, chapterLabel }) => {
   const W = T.geo.mediaWin ?? { left: 40 };
   const o = (0,remotion_dist_esm.interpolate)(f, [0, 8], [0, 1], { extrapolateRight: "clamp" });
   const y = (0,remotion_dist_esm.interpolate)(f, [0, 12], [18, 0], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     position: "absolute",
     left: P.left + 46,
     top: P.top + 56,
     width: Math.max(200, W.left - 92),
     opacity: o,
     transform: `translateY(${y}px)`
-  } }, chapterLabel ? /* @__PURE__ */ react.createElement("div", { style: {
-    ...heavy,
-    fontSize: 24,
-    color: T.onAccent,
-    background: T.accent,
-    display: "inline-block",
-    padding: "3px 12px 7px 12px",
-    letterSpacing: 2,
-    marginBottom: 20
-  } }, chapterLabel) : null, /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 56, color: T.ink, lineHeight: 1.32 } }, text), /* @__PURE__ */ react.createElement("div", { style: { width: 120, height: 8, background: T.accent, marginTop: 26 } }));
+  }, children: [
+    chapterLabel ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      ...heavy,
+      fontSize: 24,
+      color: T.onAccent,
+      background: T.accent,
+      display: "inline-block",
+      padding: "3px 12px 7px 12px",
+      letterSpacing: 2,
+      marginBottom: 20
+    }, children: chapterLabel }) : null,
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 56, color: T.ink, lineHeight: 1.32 }, children: text }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { width: 120, height: 8, background: T.accent, marginTop: 26 } })
+  ] });
 };
 const DataCard = ({
   spec,
@@ -10374,33 +10726,47 @@ const DataCard = ({
   const t = overlayText(spec);
   const rows = spec.rows || ((_a = spec.table) == null ? void 0 : _a.rows) || [];
   const big = kind === "title_card" || kind === "quote_card";
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     position: "absolute",
     left: P.left + 46,
     top: P.top + 56,
     width: Math.max(200, W.left - 92),
     opacity: o,
     transform: `translateY(${y}px)`
-  } }, chapterLabel ? /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 24, color: T.accentSoft, letterSpacing: 3, marginBottom: 14 } }, chapterLabel) : null, t.label ? /* @__PURE__ */ react.createElement("div", { style: {
-    ...heavy,
-    fontSize: 28,
-    color: T.onAccent,
-    background: T.accent,
-    display: "inline-block",
-    padding: "2px 12px 6px 12px",
-    marginBottom: 16
-  } }, t.label) : null, t.main ? /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: big ? C.size : C.size + 16, color: T.ink, lineHeight: 1.12 } }, t.main) : null, t.sub ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: C.subSize ?? 32, color: T.mutedInk, marginTop: 12, lineHeight: 1.4 } }, t.sub) : null, rows.length ? /* @__PURE__ */ react.createElement("div", { style: { marginTop: 20, borderTop: `2px solid ${T.cardLine}` } }, rows.slice(0, 5).map((r, i) => /* @__PURE__ */ react.createElement("div", { key: i, style: {
-    display: "flex",
-    alignItems: "baseline",
-    gap: 10,
-    padding: "10px 0",
-    borderBottom: `1px solid ${T.cardLine}`,
-    background: r.highlight ? hexA(T.accent, 0.16) : "transparent"
-  } }, /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 30, color: T.ink, flex: 1 } }, r.name || r.text), r.value ? /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 32, color: r.highlight ? T.accent : T.ink } }, r.value) : null, r.delta ? /* @__PURE__ */ react.createElement("span", { style: { fontSize: 26, color: T.teal, width: 96, textAlign: "right" } }, r.delta) : null))) : null, spec.left || spec.right ? /* @__PURE__ */ react.createElement("div", { style: { marginTop: 20, display: "flex", flexDirection: "column", gap: 12 } }, [spec.left, spec.right].map((side, i) => side ? /* @__PURE__ */ react.createElement("div", { key: i, style: {
-    background: hexA(i === 0 ? T.cardInk : T.accent, 0.1),
-    borderLeft: `5px solid ${i === 0 ? T.teal : T.accent}`,
-    padding: "14px 16px"
-  } }, /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 28, color: i === 0 ? T.ink : T.accent } }, side.head), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 28, color: T.mutedInk, marginTop: 4 } }, side.body)) : null)) : null);
+  }, children: [
+    chapterLabel ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 24, color: T.accentSoft, letterSpacing: 3, marginBottom: 14 }, children: chapterLabel }) : null,
+    t.label ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      ...heavy,
+      fontSize: 28,
+      color: T.onAccent,
+      background: T.accent,
+      display: "inline-block",
+      padding: "2px 12px 6px 12px",
+      marginBottom: 16
+    }, children: t.label }) : null,
+    t.main ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: big ? C.size : C.size + 16, color: T.ink, lineHeight: 1.12 }, children: t.main }) : null,
+    t.sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: C.subSize ?? 32, color: T.mutedInk, marginTop: 12, lineHeight: 1.4 }, children: t.sub }) : null,
+    rows.length ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 20, borderTop: `2px solid ${T.cardLine}` }, children: rows.slice(0, 5).map((r, i) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      display: "flex",
+      alignItems: "baseline",
+      gap: 10,
+      padding: "10px 0",
+      borderBottom: `1px solid ${T.cardLine}`,
+      background: r.highlight ? hexA(T.accent, 0.16) : "transparent"
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 30, color: T.ink, flex: 1 }, children: r.name || r.text }),
+      r.value ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 32, color: r.highlight ? T.accent : T.ink }, children: r.value }) : null,
+      r.delta ? /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 26, color: T.teal, width: 96, textAlign: "right" }, children: r.delta }) : null
+    ] }, i)) }) : null,
+    spec.left || spec.right ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }, children: [spec.left, spec.right].map((side, i) => side ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      background: hexA(i === 0 ? T.cardInk : T.accent, 0.1),
+      borderLeft: `5px solid ${i === 0 ? T.teal : T.accent}`,
+      padding: "14px 16px"
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 28, color: i === 0 ? T.ink : T.accent }, children: side.head }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 28, color: T.mutedInk, marginTop: 4 }, children: side.body })
+    ] }, i) : null) }) : null
+  ] });
 };
 const DataShot = ({ shot, index, runningText }) => {
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
@@ -10409,23 +10775,26 @@ const DataShot = ({ shot, index, runningText }) => {
   const P = T.geo.panel;
   const W = T.geo.mediaWin;
   const showCard = shot.kind !== "footage";
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.Sequence, { from, durationInFrames: dur }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" } }, /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    left: P.left + W.left,
-    top: P.top + W.top,
-    width: W.width,
-    height: W.height,
-    overflow: "hidden",
-    borderRadius: 12,
-    background: isCard() ? "transparent" : hexA(T.cardInk, 0.06)
-  } }, /* @__PURE__ */ react.createElement(PortraitMedia, { shot, index })), showCard ? /* @__PURE__ */ react.createElement(
-    DataCard,
-    {
-      spec: shot.overlay ?? {},
-      kind: shot.kind,
-      chapterLabel: shot.chapterLabel
-    }
-  ) : /* @__PURE__ */ react.createElement(DataRunningText, { text: runningText, chapterLabel: shot.chapterLabel })));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Sequence, { from, durationInFrames: dur, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { overflow: "hidden" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      position: "absolute",
+      left: P.left + W.left,
+      top: P.top + W.top,
+      width: W.width,
+      height: W.height,
+      overflow: "hidden",
+      borderRadius: 12,
+      background: isCard() ? "transparent" : hexA(T.cardInk, 0.06)
+    }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitMedia, { shot, index }) }),
+    showCard ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      DataCard,
+      {
+        spec: shot.overlay ?? {},
+        kind: shot.kind,
+        chapterLabel: shot.chapterLabel
+      }
+    ) : /* @__PURE__ */ (0,jsx_runtime.jsx)(DataRunningText, { text: runningText, chapterLabel: shot.chapterLabel })
+  ] }) });
 };
 const DataProgress = ({ shots }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
@@ -10435,7 +10804,7 @@ const DataProgress = ({ shots }) => {
   const idx = shots.findIndex((s) => t >= s.startMs && t < s.endMs);
   if (!shots.length) return null;
   const cur = Math.max(0, idx);
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     position: "absolute",
     left: P.left + 46,
     top: P.top + P.height - 96,
@@ -10443,36 +10812,47 @@ const DataProgress = ({ shots }) => {
     display: "flex",
     alignItems: "center",
     gap: 16
-  } }, /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 26, color: T.mutedInk, letterSpacing: 1 } }, String(cur + 1).padStart(2, "0"), /* @__PURE__ */ react.createElement("span", { style: { opacity: 0.5 } }, " / ", String(shots.length).padStart(2, "0"))), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 4, flex: 1 } }, shots.map((_, i) => /* @__PURE__ */ react.createElement("span", { key: i, style: { flex: 1, height: 10, background: i <= cur ? T.accent : T.cardLine } }))));
+  }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { style: { ...heavy, fontSize: 26, color: T.mutedInk, letterSpacing: 1 }, children: [
+      String(cur + 1).padStart(2, "0"),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { style: { opacity: 0.5 }, children: [
+        " / ",
+        String(shots.length).padStart(2, "0")
+      ] })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "flex", gap: 4, flex: 1 }, children: shots.map((_, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { flex: 1, height: 10, background: i <= cur ? T.accent : T.cardLine } }, i)) })
+  ] });
 };
 const DataVideo = (props) => {
   const runningOf = (s) => props.clauses.filter((c) => c.endMs > s.startMs && c.startMs < s.endMs).map((c) => c.text).join("");
   const P = T.geo.panel;
   const hole = mediaRect();
-  return /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(
     remotion_dist_esm.AbsoluteFill,
     {
       "data-vg-frame": "1",
-      style: { background: hideMedia() ? "transparent" : T.pageBg ?? T.bgTop, fontFamily: T.font }
-    },
-    /* @__PURE__ */ react.createElement(FontFace, null),
-    isCard() ? null : isBase() ? /* @__PURE__ */ react.createElement(ChromeClip, { hole }, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: T.pageBg ?? T.bgTop } })) : null,
-    isCard() ? null : isBase() ? /* @__PURE__ */ react.createElement(RectWithHole, { rect: P, hole, radius: P.radius ?? 20, fill: { background: T.panel } }) : /* @__PURE__ */ react.createElement("div", { style: {
-      position: "absolute",
-      left: P.left,
-      top: P.top,
-      width: P.width,
-      height: P.height,
-      borderRadius: P.radius ?? 20,
-      background: T.panel,
-      border: `1px solid ${T.cardLine}`,
-      boxShadow: T.paperShadow
-    } }),
-    isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ react.createElement(DataShot, { key: i, shot, index: i, runningText: runningOf(shot) })),
-    isBase() ? null : /* @__PURE__ */ react.createElement(DataProgress, { shots: props.shots }),
-    isCard() ? null : /* @__PURE__ */ react.createElement(DataHeader, { lines: props.headline.lines }),
-    props.showSubtitles !== false ? /* @__PURE__ */ react.createElement(DataSubtitles, { clauses: props.clauses }) : null,
-    isCard() ? null : /* @__PURE__ */ react.createElement(Footer, { sources: props.sources, disclaimer: props.disclaimer })
+      style: { background: hideMedia() ? "transparent" : T.pageBg ?? T.bgTop, fontFamily: T.font },
+      children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(FontFace, {}),
+        isCard() ? null : isBase() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(ChromeClip, { hole, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: T.pageBg ?? T.bgTop } }) }) : null,
+        isCard() ? null : isBase() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(RectWithHole, { rect: P, hole, radius: P.radius ?? 20, fill: { background: T.panel } }) : /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+          position: "absolute",
+          left: P.left,
+          top: P.top,
+          width: P.width,
+          height: P.height,
+          borderRadius: P.radius ?? 20,
+          background: T.panel,
+          border: `1px solid ${T.cardLine}`,
+          boxShadow: T.paperShadow
+        } }),
+        isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(DataShot, { shot, index: i, runningText: runningOf(shot) }, i)),
+        isBase() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(DataProgress, { shots: props.shots }),
+        isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(DataHeader, { lines: props.headline.lines }),
+        props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(DataSubtitles, { clauses: props.clauses }) : null,
+        isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(Footer, { sources: props.sources, disclaimer: props.disclaimer })
+      ]
+    }
   );
 };
 const DataSubtitles = ({ clauses }) => {
@@ -10482,7 +10862,7 @@ const DataSubtitles = ({ clauses }) => {
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   const S = T.geo.subtitle;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: S.side ?? 80, right: S.side ?? 80, bottom: S.bottom, textAlign: "center" } }, /* @__PURE__ */ react.createElement("span", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: S.side ?? 80, right: S.side ?? 80, bottom: S.bottom, textAlign: "center" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
     ...heavy,
     fontSize: S.size,
     color: T.white,
@@ -10490,117 +10870,151 @@ const DataSubtitles = ({ clauses }) => {
     borderLeft: `6px solid ${T.accent}`,
     padding: "10px 26px 14px 26px",
     lineHeight: 1.3
-  } }, active.text));
+  }, children: active.text }) });
 };
 const StatCard = ({ spec }) => {
   const f = useAnimFrame();
   const o = (0,remotion_dist_esm.interpolate)(f, [4, 14], [0, 1], { extrapolateRight: "clamp" });
   const numO = (0,remotion_dist_esm.interpolate)(f, [12, 24], [0, 1], { extrapolateRight: "clamp" });
   const numY = (0,remotion_dist_esm.interpolate)(f, [12, 24], [24, 0], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.scrim } }, spec.year ? /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    top: 26,
-    right: 28,
-    background: T.accent,
-    color: T.onAccent,
-    fontSize: 24,
-    padding: "5px 18px",
-    borderRadius: 20,
-    ...heavy
-  } }, spec.year) : null, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 30, display: "flex", alignItems: "center", opacity: o } }, /* @__PURE__ */ react.createElement("span", { style: Tick }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 28, color: T.accentSoft } }, spec.label)), /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    left: 38,
-    top: 110,
-    opacity: numO,
-    ...heavy,
-    fontSize: 96,
-    color: T.white,
-    transform: `translateY(${numY}px)`
-  } }, spec.amount), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 42, top: 236, fontSize: 26, color: T.mutedInk, opacity: numO } }, spec.desc));
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.scrim }, children: [
+    spec.year ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      position: "absolute",
+      top: 26,
+      right: 28,
+      background: T.accent,
+      color: T.onAccent,
+      fontSize: 24,
+      padding: "5px 18px",
+      borderRadius: 20,
+      ...heavy
+    }, children: spec.year }) : null,
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 36, top: 30, display: "flex", alignItems: "center", opacity: o }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: Tick }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 28, color: T.accentSoft }, children: spec.label })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      position: "absolute",
+      left: 38,
+      top: 110,
+      opacity: numO,
+      ...heavy,
+      fontSize: 96,
+      color: T.white,
+      transform: `translateY(${numY}px)`
+    }, children: spec.amount }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 42, top: 236, fontSize: 26, color: T.mutedInk, opacity: numO }, children: spec.desc })
+  ] });
 };
 const Branches = ({ spec }) => {
   const f = useAnimFrame();
   const srcO = (0,remotion_dist_esm.interpolate)(f, [4, 12], [0, 1], { extrapolateRight: "clamp" });
   const targets = spec.targets ?? [];
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.scrim } }, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 30, top: 30, display: "flex", alignItems: "center" } }, /* @__PURE__ */ react.createElement("span", { style: Tick }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 28, color: T.accentSoft } }, spec.label)), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 30, top: 150, opacity: srcO } }, /* @__PURE__ */ react.createElement("div", { style: {
-    ...heavy,
-    fontSize: 40,
-    color: T.white,
-    background: T.chipBg,
-    padding: "12px 26px",
-    borderRadius: 10,
-    display: "inline-block"
-  } }, spec.source)), targets.map((_, i) => {
-    const y1 = 196;
-    const y2 = 210 + i * ((440 - 230) / Math.max(targets.length - 1, 1));
-    const w = (0,remotion_dist_esm.interpolate)(
-      f,
-      [14 + i * 6, 26 + i * 6],
-      [0, 260],
-      { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
-    );
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: {
-      position: "absolute",
-      left: 210,
-      top: y1,
-      width: w,
-      height: 2,
-      background: `${T.accent}88`,
-      transform: `rotate(${(y2 - y1) * 0.05}deg)`,
-      transformOrigin: "left center"
-    } });
-  }), targets.map((t, i) => {
-    const o2 = (0,remotion_dist_esm.interpolate)(f, [20 + i * 6, 30 + i * 6], [0, 1], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
-    const y2 = 210 + i * ((440 - 230) / Math.max(targets.length - 1, 1));
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: { position: "absolute", left: 430, top: y2 - 24, opacity: o2 } }, /* @__PURE__ */ react.createElement("div", { style: {
-      background: T.chipBg,
-      color: T.white,
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.scrim }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 30, top: 30, display: "flex", alignItems: "center" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: Tick }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 28, color: T.accentSoft }, children: spec.label })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 30, top: 150, opacity: srcO }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
       ...heavy,
-      fontSize: 26,
-      padding: "8px 20px",
-      borderRadius: 8,
+      fontSize: 40,
+      color: T.white,
+      background: T.chipBg,
+      padding: "12px 26px",
+      borderRadius: 10,
       display: "inline-block"
-    } }, t.text ?? t));
-  }));
+    }, children: spec.source }) }),
+    targets.map((_, i) => {
+      const y1 = 196;
+      const y2 = 210 + i * ((440 - 230) / Math.max(targets.length - 1, 1));
+      const w = (0,remotion_dist_esm.interpolate)(
+        f,
+        [14 + i * 6, 26 + i * 6],
+        [0, 260],
+        { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
+      );
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+        position: "absolute",
+        left: 210,
+        top: y1,
+        width: w,
+        height: 2,
+        background: `${T.accent}88`,
+        transform: `rotate(${(y2 - y1) * 0.05}deg)`,
+        transformOrigin: "left center"
+      } }, i);
+    }),
+    targets.map((t, i) => {
+      const o2 = (0,remotion_dist_esm.interpolate)(f, [20 + i * 6, 30 + i * 6], [0, 1], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
+      const y2 = 210 + i * ((440 - 230) / Math.max(targets.length - 1, 1));
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 430, top: y2 - 24, opacity: o2 }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+        background: T.chipBg,
+        color: T.white,
+        ...heavy,
+        fontSize: 26,
+        padding: "8px 20px",
+        borderRadius: 8,
+        display: "inline-block"
+      }, children: t.text ?? t }) }, i);
+    })
+  ] });
 };
 const PersonCard = ({ spec }) => {
   const f = useAnimFrame();
   const o = (0,remotion_dist_esm.interpolate)(f, [6, 18], [0, 1], { extrapolateRight: "clamp" });
   const cardX = (0,remotion_dist_esm.interpolate)(f, [10, 22], [-60, 0], { extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0 } }, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 30, display: "flex", alignItems: "center" } }, /* @__PURE__ */ react.createElement("span", { style: Tick }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 28, color: T.accentSoft } }, spec.kicker)), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 90, opacity: o, ...heavy, fontSize: 56, color: T.white } }, spec.title), /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    right: 24,
-    bottom: 20,
-    width: 460,
-    opacity: o,
-    transform: `translateX(${cardX * -0.4}px)`,
-    background: T.cardWhite,
-    borderRadius: T.cardRadius,
-    padding: "22px 28px"
-  } }, /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: 30, color: T.cardInk } }, spec.name), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 24, color: T.cardMuted, marginTop: 10, lineHeight: 1.45 } }, spec.caption)));
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0 }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 36, top: 30, display: "flex", alignItems: "center" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: Tick }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 28, color: T.accentSoft }, children: spec.kicker })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 36, top: 90, opacity: o, ...heavy, fontSize: 56, color: T.white }, children: spec.title }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      position: "absolute",
+      right: 24,
+      bottom: 20,
+      width: 460,
+      opacity: o,
+      transform: `translateX(${cardX * -0.4}px)`,
+      background: T.cardWhite,
+      borderRadius: T.cardRadius,
+      padding: "22px 28px"
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: 30, color: T.cardInk }, children: spec.name }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 24, color: T.cardMuted, marginTop: 10, lineHeight: 1.45 }, children: spec.caption })
+    ] })
+  ] });
 };
 const Timeline3 = ({ spec }) => {
   const f = useAnimFrame();
   const cols = spec.cols ?? [];
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.scrim } }, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 36, top: 30, ...heavy, fontSize: 48, color: T.white } }, spec.title), spec.subtitle ? /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 38, top: 104, fontSize: 26, color: T.mutedInk } }, spec.subtitle) : null, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 30, right: 30, top: 180, display: "flex", gap: 18 } }, cols.map((col, i) => {
-    const o = (0,remotion_dist_esm.interpolate)(f, [16 + i * 10, 28 + i * 10], [0, 1], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: {
-      flex: 1,
-      background: T.timelineBg,
-      borderRadius: T.cardRadius,
-      border: `2px solid ${T.accent}66`,
-      opacity: o,
-      padding: "16px 18px"
-    } }, /* @__PURE__ */ react.createElement("div", { style: {
-      display: "inline-block",
-      background: T.accent,
-      color: T.onAccent,
-      fontSize: 22,
-      padding: "3px 14px",
-      borderRadius: 6,
-      ...heavy
-    } }, col.year), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 24, color: T.white, marginTop: 12, lineHeight: 1.45 } }, col.text));
-  })), spec.badge ? /* @__PURE__ */ react.createElement(Badge, { text: spec.badge, delay: 34 }) : null);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", inset: 0, background: T.scrim }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 36, top: 30, ...heavy, fontSize: 48, color: T.white }, children: spec.title }),
+    spec.subtitle ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 38, top: 104, fontSize: 26, color: T.mutedInk }, children: spec.subtitle }) : null,
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 30, right: 30, top: 180, display: "flex", gap: 18 }, children: cols.map((col, i) => {
+      const o = (0,remotion_dist_esm.interpolate)(f, [16 + i * 10, 28 + i * 10], [0, 1], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
+      return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+        flex: 1,
+        background: T.timelineBg,
+        borderRadius: T.cardRadius,
+        border: `2px solid ${T.accent}66`,
+        opacity: o,
+        padding: "16px 18px"
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+          display: "inline-block",
+          background: T.accent,
+          color: T.onAccent,
+          fontSize: 22,
+          padding: "3px 14px",
+          borderRadius: 6,
+          ...heavy
+        }, children: col.year }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 24, color: T.white, marginTop: 12, lineHeight: 1.45 }, children: col.text })
+      ] }, i);
+    }) }),
+    spec.badge ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Badge, { text: spec.badge, delay: 34 }) : null
+  ] });
 };
 
 ;// ./src/tool/ui.tsx

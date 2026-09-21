@@ -107,3 +107,22 @@ class NormalizationTest(unittest.TestCase):
         self.assertNotIn("-printf '%P %s", s, "报告还在比字节数：换等长色值会被判成没变")
         self.assertIn("md5sum", s)
 
+
+class TypeCheckGateTest(unittest.TestCase):
+    """类型检查不许被"SKIP 当通过"糊过去，也不许把上限抬高。"""
+
+    def test_baseline_is_zero_and_skip_is_loud(self):
+        s = read("tools/ts_check.sh")
+        self.assertIn('MAX="${VIDEOGEN_TS_MAX_ERRORS:-0}"', s, "基线不再是 0")
+        self.assertIn("SKIP 不等于通过", s)
+
+    def test_selfcheck_reports_the_fourth_gate(self):
+        s = read("tools/selfcheck.sh")
+        self.assertIn("ts_check.sh", s)
+        self.assertIn("跳过 前端类型检查", s, "跳过要单独显示，不能混进绿")
+
+    def test_rollback_by_sha_exists(self):
+        s = read("tools/rollback_prod.sh")
+        self.assertIn("pre-$SHA-", s, "回滚不是按 sha 找备份，还是要人肉挑")
+        self.assertIn("code.before-rollback-", s, "回滚前不给当前代码留底")
+        self.assertIn("healthz", s, "回滚完不探活")

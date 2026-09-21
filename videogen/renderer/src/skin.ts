@@ -607,9 +607,11 @@ export const FORMAT_ALIAS: Record<string, string> = {
 };
 
 export function resolveSkin(template?: string): Skin {
-  if (!template) return editorial;
+  // editorial 等基础常量是 Omit<Skin,'geo'>：geo 由上面 SKINS 组装时用 buildGeo 补。
+  // 这里退回基础对象是既有行为（调用方不读 .geo），只把类型收口，不改运行时。
+  if (!template) return editorial as Skin;
   const key = FORMAT_ALIAS[template] ?? template;
-  return SKINS[key] ?? editorial;
+  return SKINS[key] ?? (editorial as Skin);
 }
 
 /**

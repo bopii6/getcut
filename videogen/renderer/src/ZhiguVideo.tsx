@@ -340,7 +340,7 @@ const QuoteStage: React.FC<{shot: Shot}> = ({shot}) => {
   const f = useCurrentFrame();
   const fps = useVideoConfig().fps;
   const dur = msToF(shot.endMs - shot.startMs, fps);
-  const chars = Math.round(interpolate(f, [4, Math.max(10, dur * 0.7)], [0, quote.length], {
+  const chars = Math.round(interpolate(f, [4, Math.max(10, dur * 0.7)] as number[], [0, quote.length] as number[], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   }));
   const shown = quote.slice(0, chars);

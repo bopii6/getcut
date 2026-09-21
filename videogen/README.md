@@ -155,6 +155,21 @@ bash deploy.sh          # 自动生成 .env 与访问令牌，拉取或构建镜
 顺带把"开放模式"（免登录本机自用）改成要显式 `VIDEOGEN_OPEN_MODE=1`：
 以前它同样只看"没令牌 + 没账号"，那在生产上会和上面的场景一起把全站素材匿名敞开。
 
+## 上线与回滚（2026-09-21 起一条命令）
+
+```bash
+cd videogen
+bash tools/deploy_to_prod.sh --check     # 只看线上与 HEAD 差哪些文件（按 md5）
+bash tools/deploy_to_prod.sh             # 上线：门禁→只送已提交内容→传→回读校验→重启→探活
+bash tools/deploy_to_prod.sh --rebuild   # 改了 .env 才需要（docker restart 不读 --env-file）
+bash tools/rollback_prod.sh              # 列可回滚点
+bash tools/rollback_prod.sh 0deed07      # 一键回到那个提交（回滚前也给当前代码留底）
+```
+生产 `/opt/videogen/code` 不是 git 仓库（服务器到 GitHub 传不动），所以是**从本机推**。
+门禁共 4 条：后端 unittest、ruff、前端 node --test、`tools/ts_check.sh`（tsc 0 错误为基线，
+本机没装 typescript 时显示"跳过"而不是绿）。三页法定文本在 `videogen/legal.py`，
+留存天数只有 `legal.RETENTION` 一处，改文案与改清理逻辑必须同时改它。
+
 ## 客户 IP 与限流（改反向代理拓扑前必读）
 
 发验证码、登录、公开试玩、素材直投四处都按 IP 限流。`_client_ip` 只在**直连来源本身是代理段**

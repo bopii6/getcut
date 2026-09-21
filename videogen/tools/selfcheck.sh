@@ -25,7 +25,7 @@ done
 
 want() { [ -z "$ONLY" ] || [ "$ONLY" = "$1" ]; }
 
-PASS=0; FAIL=0; ROWS=""
+PASS=0; FAIL=0; SKIP=0; ROWS=""
 
 # 判定不靠退出码单独看：解析器要求"确实跑过 N 条"，
 # 否则 import 失败、0 条测试也能被当成绿。
@@ -59,7 +59,23 @@ want ruff     && run "ruff 静态检查" "$PY" -m ruff check .
 want frontend && run "前端 node --test" env \
   NODE_PATH=tests/.deps/node_modules "$NODE" --test tests/frontend.test.cjs
 
-echo "门禁结果：$PASS 绿 / $FAIL 红$ROWS"
+# 类型检查单独处理：本机没装 typescript 时是「跳过」—— 既不算绿也不算红，
+# 但必须打出来，不然"三条门禁全绿"会悄悄变成"其实没查"。
+if want ts; then
+  tsout="$(bash tools/ts_check.sh 2>&1)"; tsrr=$?
+  if [ "$tsrr" -ne 0 ]; then
+    FAIL=$((FAIL+1)); ROWS="$ROWS
+  红  前端类型检查  ·  $(printf '%s' "$tsout" | grep -E 'error TS' | head -1)"
+  elif printf '%s' "$tsout" | grep -q "SKIP"; then
+    SKIP=$((SKIP+1)); ROWS="$ROWS
+  跳过 前端类型检查  ·  本机没装 typescript：cd renderer && npm i -D typescript"
+  else
+    PASS=$((PASS+1)); ROWS="$ROWS
+  绿  前端类型检查  ·  $(printf '%s' "$tsout" | tail -1)"
+  fi
+fi
+
+echo "门禁结果：$PASS 绿 / $FAIL 红${SKIP:+ / $SKIP 跳过}$ROWS"
 [ "$FAIL" -eq 0 ] || {
   echo "有红的就别往下走：先修到全绿再提交/部署。"; exit 1; }
 echo "全绿。想核线上是哪一版：GET /api/version（要登录），服务器上 docker exec videogen cat /app/BUILD_INFO.json"

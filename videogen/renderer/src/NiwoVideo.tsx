@@ -978,9 +978,14 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
         // 后面还有字时若仍 flex:1，会把后半句挤出画面。这种情况改为按内容排布并整体居中，
         // 同时按整行可见宽度缩字号，保证再长的标题也放得下。
         const stretch = !after;
-        const budget = H.budget ?? 840;
+        // H.budget 的类型里带了非数字分支：用 Number() 收口。
+        // 除法本来就会做同样的隐式转换，所以这一步不改变任何一帧的字号。
+        const budget = Number(H.budget ?? 840);
         const totalW = estW(before, H.size) + estW(line.highlight, H.size) + estW(after, H.size) + (stretch ? 0 : 48);
-        const fs = stretch ? H.size : Math.min(H.size, Math.max(46, (budget / Math.max(totalW, 1)) * H.size));
+        // H.size 类型上可选、实际由 props 保证有值：这里用断言而不是补默认值，
+        // 补默认值等于改字号算法，画面会变
+        const size = H.size as number;
+        const fs = stretch ? size : Math.min(size, Math.max(46, (budget / Math.max(totalW, 1)) * size));
         return (
           <div
             key={i}
