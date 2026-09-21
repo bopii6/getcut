@@ -44,9 +44,11 @@ renderer/draft_stills.log
 # 音效归一化缓存（一条音效只跑一次 loudnorm，可再生）
 assets/sfx/.norm/
 
-# 浏览器成片台构建产物（可再生，_tool_bundle.mjs 一键重建）
+# 浏览器成片台：构建中间物不入库；**线上真正服务的 poc/*.js 入 git**，
+# 否则"推 GitHub"里没有前端，服务器一拉就把线上前端倒回旧版（2026-09-21 踩过）
 renderer/browsertool-dist/
 renderer/browserpoc-dist/
-server_static/poc/
 server_static/poc_webm_bak/
+server_static/poc/public/
+server_static/poc/*.map
 *.log

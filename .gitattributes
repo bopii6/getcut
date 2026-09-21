@@ -1,0 +1,3 @@
+# 成片台构建产物：压缩过的整包 js，不做行尾转换、不按行 diff
+videogen/server_static/poc/*.js -text
+videogen/server_static/poc/*.map -text
