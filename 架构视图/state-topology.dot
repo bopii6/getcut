@@ -1,0 +1,78 @@
+// 数据与状态拓扑（现状）— 谁写哪份文件、住在哪、丢了怎么办
+// 视图问题：这台机器上的业务状态存在哪里，owner 是谁，护栏在哪一层
+// 置信度：实线=读写代码直证；灰虚线=推断；红框=无原子写保护
+// 读法：三个方框是三个"地段"（/state、/data、/app），文件按地段归位；右侧是护栏与备份
+digraph state {
+    graph [rankdir=TB, nodesep=0.45, ranksep=0.68, fontname="Microsoft YaHei",
+           labelloc=t, label="数据与状态拓扑 — system-modeler + graphviz", fontsize=19];
+    node  [fontname="Microsoft YaHei", fontsize=11, style=filled, margin="0.14,0.08"];
+    edge  [fontname="Microsoft YaHei", fontsize=10];
+
+    # ── 地段一：/state（生产 bind 挂载，密钥已搬出工作区）──
+    subgraph cluster_state {
+        label="地段 /state  （生产由 -v /opt/videogen/state:/state 挂入；密钥住这里=离 git 更远）"
+        style=bold; color="#8C7B62"; fontsize=12;
+        ujson [label=".videogen-users.json\n账号：email/salt/hash/iters/role\n/tier/tier_since/nickname/pw_reset", shape=cylinder, fillcolor="#D8C79A"];
+        ljson [label=".videogen-licenses.json\n卡密 codes[]：tier/redeemed_by/at\n（当前未生成文件）", shape=cylinder, fillcolor="#EDE4CC", style="filled,dashed"];
+        bdir  [label=".videogen-brand/<sha1(email)[:16]>/\nbrand.json + logo.png + sample.mp3\n含声音复刻 clone.voice_id", shape=folder, fillcolor="#EDE4CC"];
+        sec   [label=".videogen-auth-secret\n32 字节 HMAC 会话签名密钥", shape=cylinder, fillcolor="#F7E0DC", color="#B4574A", peripheries=2];
+        jobs  [label="jobs.json\n任务表内存快照\n只留最近 80 条\n（.env 用 VIDEOGEN_JOBS_FILE 指到 /state）", shape=cylinder, fillcolor="#D8C79A"];
+        reg   [label="registry.json\nprojects[] + renders[]（含 cos_key）\n无上限增长（当前 69 项目）\n（.env 用 VIDEOGEN_REGISTRY_FILE 指到 /state）", shape=cylinder, fillcolor="#D8C79A", peripheries=2];
+    }
+
+    # ── 地段二：/data（WORKSPACES）────────────────────────
+    subgraph cluster_data {
+        label="地段 WORKSPACES = /data  （客户数据：素材包、项目工作目录、投递口）"
+        style=bold; color="#5A6E8C"; fontsize=12;
+        tryj  [label=".videogen-try.json\n试玩账本 cookies{} + ips[]", shape=cylinder, fillcolor="#D8C79A"];
+        usj   [label=".videogen-usage.json\n免费档日额度 <email>→<日期>→n\n只留 3 天", shape=cylinder, fillcolor="#D8C79A"];
+        bund  [label="bundles.json\n素材包归属 <包名>→{owner,created}", shape=cylinder, fillcolor="#D8C79A"];
+        intake[label=".intakes/\n代客投递暂存（/i/<码> 短链）", shape=folder, fillcolor="#E6EBF2"];
+        ws    [label="项目工作目录\nprops.json / prep.json / tts.mp3\n+ outputs/*.mp4", shape=folder, fillcolor="#E6EBF2"];
+    }
+
+    # ── 地段三：/app（镜像 + bind 遮蔽的代码目录）──────────
+    subgraph cluster_app {
+        label="地段 /app  （生产把 code/videogen、code/renderer/src、code/server_static 整目录 bind 覆盖镜像同名目录）"
+        style=bold; color="#B4574A"; fontsize=12;
+        poc   [label="server_static/poc/*.js\n线上真正服务的成片台\n24 个 bundle 已入 git（8554f8c）\n镜像里 toolbundle 烘的那份被盖掉", shape=folder, fillcolor="#DCE8E0"];
+    }
+
+    # ── 护栏 ───────────────────────────────────────────────
+    subgraph cluster_guard {
+        label="写盘护栏 safestore.py"
+        style=bold; color="#4E7A66"; fontsize=12;
+        aw [label="atomic_write_text\n同目录 tmp + fsync + os.replace\nWindows PermissionError 重试 4 次", fillcolor="#8FB5A5"];
+        sn [label="_snapshot_if_shrinking\n记录数变短先存 *.pre-<ts>\n最多 10 份", fillcolor="#DCE8E0"];
+        hl [label="_heal\n坏文件改名 *.bad-<ts> 留现场\n再从备份回捞同名文件\n翻不到→抛 StoreUnrecoverable 拒写\n绝不返回空库", fillcolor="#8FB5A5", peripheries=2];
+        sh [label="shape 参数\n结构校验，坏文件不当空库", fillcolor="#DCE8E0"];
+    }
+
+    lock [label="_LOCK 全局可重入锁\nJOBS / registry 的写全部串行", shape=component, fillcolor="#C7D3E4"];
+    cos  [label="腾讯云 COS（成片的最终归属地）\nfilms/<job前8>/<文件名>\n上传失败→返 False，本地那份保留", shape=hexagon, fillcolor="#F0E3D2", style=filled];
+    bak  [label="宿主机 cron 每日 04:30\nbackup_state.sh 打 tar.gz\n当场 tzf 验、chmod 600\n保留 90 天，剩<3 才告警\n容器侧只读挂载", shape=box3d, fillcolor="#EDE7D9"];
+
+    # ── 谁写谁 ────────────────────────────────────────────
+    lock -> jobs
+    lock -> reg
+    ujson -> sec  [label="HMAC 签名\nemail|exp|sig，无服务端撤销列表", style=dashed, color="#B4574A"]
+
+    jobs -> aw; reg -> aw; bund -> aw; ujson -> aw; usj -> aw; tryj -> aw; ljson -> aw; bdir -> aw
+    jobs -> sn; reg -> sn; bund -> sn; ujson -> sn; ljson -> sn; bdir -> sn
+    jobs -> hl; reg -> hl; bund -> hl; ujson -> hl; bdir -> hl
+    jobs -> sh; reg -> sh; bund -> sh; ujson -> sh; ljson -> sh; bdir -> sh
+    hl -> bak [label="回捞来源：最近 5 个包", color="#4E7A66", penwidth=2]
+    sec -> bak [label="一起打包", style=dashed, color="#9A9A9A"]
+
+    jobs -> cos [label="_cos_archive 后台线程双写 cos_key\n到 jobs.json 与 registry.json", style=dashed, color="#B08A5E"]
+    ws -> cos   [label="画面校验完成后才删本地那份", style=dashed, color="#B08A5E"]
+    cos -> ws   [label="按需回捞 _film_or_fetch 到 outputs/ 临时件\n用完 _drop_staged 删", style=dashed, color="#B08A5E"]
+
+    cluster_state -> cluster_guard [label="挂载点：单文件挂载会让 os.replace EBUSY\n所以只能挂目录、不能挂单文件", style=invis]
+    edge [color="#9A9A9A", style=dotted, fontsize=9]
+    ws  -> intake [label="同一物理盘，边界一旦写错即互穿"]
+
+    note1 [label="线上实况（2026-09-21 上机核对，非本仓代码可推）：\n/state 与 /data 是宿主机 700 目录 bind 进来的\n8600 只绑 127.0.0.1，对外由 Caddy 反代 + encode zstd gzip\n代码里的默认路径只在无 env 时生效",
+           shape=note, fillcolor="#E8F0EA", color="#4E7A66"];
+    cluster_state -> note1 [style=invis]
+}
