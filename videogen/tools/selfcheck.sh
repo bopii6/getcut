@@ -34,7 +34,7 @@ run() {  # run <标签> <命令...>
   local out rc
   out="$("$@" 2>&1)"; rc=$?
   local line
-  line=$(printf '%s\n' "$out" | grep -E "^(Ran [0-9]+ tests|ℹ tests [0-9]+|All checks passed!)" | head -1)
+  line=$(printf '%s\n' "$out" | grep -E "^(Ran [0-9]+ tests|后端合计|ℹ tests [0-9]+|All checks passed!|tsc --noEmit)" | tail -1)
   if [ "$rc" -eq 0 ] && [ -n "$line" ]; then
     PASS=$((PASS+1)); ROWS="$ROWS
   绿  $label  ·  $line"
@@ -54,7 +54,7 @@ if [ "$FAIL_DEMO" -eq 1 ]; then
   echo "好：它确实会红。"; exit 0
 fi
 
-want backend  && run "后端 unittest" "$PY" -m unittest discover -s tests -t tests
+want backend  && run "后端 unittest（每模块独立进程）" bash tools/run_backend.sh
 want ruff     && run "ruff 静态检查" "$PY" -m ruff check .
 want frontend && run "前端 node --test" env \
   NODE_PATH=tests/.deps/node_modules "$NODE" --test tests/frontend.test.cjs
@@ -78,4 +78,4 @@ fi
 echo "门禁结果：$PASS 绿 / $FAIL 红${SKIP:+ / $SKIP 跳过}$ROWS"
 [ "$FAIL" -eq 0 ] || {
   echo "有红的就别往下走：先修到全绿再提交/部署。"; exit 1; }
-echo "全绿。想核线上是哪一版：GET /api/version（要登录），服务器上 docker exec videogen cat /app/BUILD_INFO.json"
+echo "全绿。想核线上是哪一版：GET /api/version（要登录），服务器上 docker exec videogen cat /app/videogen/BUILD_INFO.json"

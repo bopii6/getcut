@@ -76,10 +76,16 @@ class DeployScriptTest(unittest.TestCase):
 class SelfCheckScriptTest(unittest.TestCase):
     def test_all_three_gates_are_present_and_it_can_fail(self):
         s = read("tools/selfcheck.sh")
-        for needle in ("unittest discover -s tests", "ruff check", "--test tests/frontend.test.cjs"):
+        for needle in ("run_backend.sh", "ruff check", "--test tests/frontend.test.cjs"):
             self.assertIn(needle, s, f"自检查脚本少了一条门禁：{needle}")
         self.assertIn("--fail-demo", s, "不会红的闸门等于没在把关")
         self.assertNotIn("pip install", s, "自检查必须只读，不许顺手装包")
+
+    def test_backend_runs_one_process_per_module(self):
+        """这些模块都改 import 期全局常量，同进程混跑会偶发假红 —— 分开跑才可信。"""
+        s = read("tools/run_backend.sh")
+        self.assertIn("for f in tests/test_*.py", s)
+        self.assertIn('python -m unittest "$m"', s)
 
 
 class BackupScriptTest(unittest.TestCase):

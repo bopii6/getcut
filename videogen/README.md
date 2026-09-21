@@ -221,7 +221,8 @@ XFF 第一段是客户端自己写的，无条件信就等于"换一行 header �
   "某控件已下线"这类断言走 `assertAbsent(...)`，别把 DOM 节点交给 `assert.equal(x, null)` ——
   失败时 Node 会 inspect 整棵 LinkeDOM 树，实测一次吃掉 63GB 内存再 OOM 崩进程，真原因被盖住。
 - 后端闸门（184 条，全离线：鉴权边界 / 状态文件 / 卡密与档位 / 分镜节奏与素材包解析 / 成片台两端协议字段 / 剪映分轨草稿 / 依赖锁定策略 / 版本链路 / 试玩额度 / 路径边界普查；
-  只开发环境要 `pip install httpx`）：`python -m unittest discover -s tests -t tests`。
+  只开发环境要 `pip install httpx`）：`bash tools/run_backend.sh`（每个模块独立进程：这些用例都会改 import 期全局常量，
+  同一进程混跑会偶发假红 —— 2026-09-21 查「偶发红」查到的根因就在这）。
   三条门禁一起跑（后端 + ruff + 前端，只读不装包）：`bash tools/selfcheck.sh`；单跑一条用 `--only=frontend`；
   想确认这脚本不是在自我安慰就跑 `--fail-demo`，或临时加一条会红的测试看它报不报红。
   改 `/media`、`/api/*` 的鉴权或归属、卡密兑换规则、Plan 落盘字段与节奏分块时先看它红不红。
