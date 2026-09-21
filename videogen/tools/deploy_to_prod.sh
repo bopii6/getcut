@@ -173,7 +173,7 @@ for i in \$(seq 1 25); do sleep 2; curl -fsS --max-time 4 http://127.0.0.1:8600/
 if [ \$ok != 1 ]; then echo '[deploy] 探活失败，回滚'; cp -a $BK/code/. $BASE/code/; cp -a $BK/env $BASE/.env; docker restart videogen >/dev/null 2>&1; sleep 6; docker logs videogen --tail 15; exit 1; fi
 echo '[deploy] 服务正常'
 curl -s http://127.0.0.1:8600/healthz; echo
-docker exec videogen cat $BASE/code/videogen/BUILD_INFO.json 2>/dev/null | head -c 160; echo"
+docker exec videogen cat /app/videogen/BUILD_INFO.json 2>/dev/null | head -c 160; echo"
 rc=$?
 rm -rf "$STAGE" /tmp/BUILD_INFO.json
 [ $rc -eq 0 ] && echo "[deploy] 完成。回滚：ssh 到服务器执行  cp -a $BK/code/. $BASE/code/ && docker restart videogen"
