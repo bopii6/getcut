@@ -93,7 +93,7 @@ img,video{display:block}
 /* ── 配色主题：与成片台 renderer/src/tool/ui.css 同一套名字与令牌 ── */
 [data-theme='xuanqing']{
   --bg:#0A1014; --surface:#121B21; --surface2:#1A262D; --sunken:#0D1519;
-  --ink:#E6EEF2; --ink-2:#93A8B3; --ink-3:#6F8590;
+  --ink:#E6EEF2; --ink-2:#93A8B3; --ink-3:#778E9A;
   --line:#1E2C34; --line2:#2B3D47;
   --acc:#9CC3D5; --acc-ink:#0B1A22; --acc-soft:rgba(156,195,213,.10);
   --ok:#6FD0A0; --ok-soft:rgba(111,208,160,.12);
@@ -102,7 +102,7 @@ img,video{display:block}
 }
 [data-theme='shimo']{
   --bg:#121212; --surface:#1B1B1B; --surface2:#242424; --sunken:#161616;
-  --ink:#F2F2F2; --ink-2:#A3A3A3; --ink-3:#7A7A7A;
+  --ink:#F2F2F2; --ink-2:#A3A3A3; --ink-3:#8C8C8C;
   --line:#2E2E2E; --line2:#3D3D3D;
   --acc:#E8E4DC; --acc-ink:#17170F; --acc-soft:rgba(232,228,220,.10);
   --ok:#7FD6A0; --ok-soft:rgba(127,214,160,.12);
@@ -111,7 +111,7 @@ img,video{display:block}
 }
 [data-theme='zhimu']{
   --bg:#F4F1EA; --surface:#FFF; --surface2:#ECE7DC; --sunken:#E7E2D6;
-  --ink:#1A1817; --ink-2:#6B655C; --ink-3:#8D867B;
+  --ink:#1A1817; --ink-2:#6B655C; --ink-3:#6C665E;
   --line:#DDD7CB; --line2:#C9C2B3;
   --acc:#A44231; --acc-ink:#FFF; --acc-soft:rgba(164,66,49,.09);
   --ok:#166534; --ok-soft:rgba(22,101,52,.10);
@@ -120,7 +120,7 @@ img,video{display:block}
 }
 [data-theme='daiqing']{
   --bg:#EEF2F0; --surface:#FFF; --surface2:#E2EAE6; --sunken:#DDE6E1;
-  --ink:#16211E; --ink-2:#5C6B66; --ink-3:#7D8A85;
+  --ink:#16211E; --ink-2:#5C6B66; --ink-3:#5F6965;
   --line:#D3DDD8; --line2:#B9C8C1;
   --acc:#14655A; --acc-ink:#FFF; --acc-soft:rgba(20,101,90,.09);
   --ok:#14655A; --ok-soft:rgba(20,101,90,.10);
@@ -374,8 +374,12 @@ img,video{display:block}
 .vgrp-pills{display:flex;gap:6px;flex-wrap:wrap}
 .adv-caret{font-style:normal;display:inline-block;transition:transform .18s}
 #advSum{color:var(--ink-2)}
-.pill .pv{font-style:normal;font-size:13px;opacity:.85;border:1px solid currentColor;
-  border-radius:8px;padding:0 6px;line-height:1.5}
+.vpill{display:inline-flex;align-items:center;gap:4px}
+.pv{font-size:13px;border:1px solid var(--line2);border-radius:8px;padding:2px 8px;
+  background:transparent;color:var(--ink-2);cursor:pointer;font-family:inherit}
+.pv:hover{color:var(--ink);border-color:var(--ink-3)}
+.pv:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
 .swt{width:42px;height:24px;border-radius:999px;background:var(--line2);position:relative;flex:none;
   transition:background .2s}
 .swt i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;
@@ -3335,15 +3339,19 @@ function renderVoiceSeg(){
   });
   const order = ["我的声音", "沉稳播报", "清爽男声", "女声", "特色口音"].filter(g => groups[g]);
   vs.innerHTML = order.map(g => `<div class="vgrp"><span class="vgrp-t">${g}</span><span class="vgrp-pills">${
-    groups[g].map(v => `<button class="pill ${v === CFG.voice ? "on" : ""}" data-v="${v}">${esc(String(VOICE[v]).split(" · ")[0])}<em class="pv" data-v="${v}" title="试听这个声音">▶ 试听</em></button>`).join("")
+    groups[g].map(v => {
+      const nm = esc(String(VOICE[v]).split(" · ")[0]);
+      // 试听与选音色是两个动作，就必须是两个控件：以前 <em class="pv"> 塞在
+      // <button> 里，键盘 Tab 到不了、读屏也念不出，只能靠 e.target 特判绕
+      return `<span class="vpill"><button type="button" class="pill ${v === CFG.voice ? "on" : ""}" data-v="${v}">${nm}</button>`
+        + `<button type="button" class="pv" data-v="${v}" aria-label="试听 ${nm}" title="试听这个声音">▶ 试听</button></span>`;
+    }).join("")
   }</span></div>`).join("");
-  vs.querySelectorAll(".pill").forEach(p => p.onclick = (e) => {
-    if (e.target.classList.contains("pv")) return;
+  vs.querySelectorAll(".pill").forEach(p => p.onclick = () => {
     vs.querySelectorAll(".pill").forEach(x => x.classList.remove("on"));
     p.classList.add("on"); CFG.voice = p.dataset.v; saveCfg();
   });
-  vs.querySelectorAll(".pv").forEach(pv => pv.onclick = (e) => {
-    e.stopPropagation();
+  vs.querySelectorAll(".pv").forEach(pv => pv.onclick = () => {
     preview(qs("/api/voice-preview?voice=" + encodeURIComponent(pv.dataset.v)));
   });
 }

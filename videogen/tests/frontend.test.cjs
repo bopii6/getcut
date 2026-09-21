@@ -584,12 +584,11 @@ test('dialog() 能被 Esc 关掉：键盘用户不该只有点背景这一条路
 });
 
 // 键盘可达性的"天花板"断言：不追求一次修完，但不许新增。
-// 两处挂账例外（都是**故意**留的，理由写在这）：
+// 一处挂账例外（**故意**留的，理由写在这）：
 //   · DIV.body —— 项目卡下半截也点了能打开，是鼠标便利区；键盘走 .cover（已 keyable）。
 //     再给它补 tabindex 只会让同一张卡出现两个 Tab 停靠点，对读屏用户更糟。
-//   · EM.pv    —— 音色 pill 里嵌的试听按钮，确实是非法的嵌套交互控件；但 `.pill .pv`
-//     是后代选择器，挪出按钮就是改视觉，等业主看过样张再动。
-// 数量对不上就是"新增了例外"或"某条被修掉了"—— 修掉了请把例外一起删掉。
+// 曾经挂着的 EM.pv（音色 pill 里嵌的试听）已在 2026-09-21 夜拆成同级 <button class="pv">，
+// 站长点头改视觉后一并销账 —— 数量对不上就是"新增了例外"或"某条被修掉了"，修掉了请把例外一起删掉。
 const focusable = (el) => {
   const tag = el.tagName;
   if (tag === 'BUTTON' || tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return true;
@@ -597,7 +596,7 @@ const focusable = (el) => {
   return el.hasAttribute('tabindex');
 };
 const KNOWN_LOOSE = ['DIV.body', 'DIV.body'];
-const KNOWN_NESTED = ['EM.pv', 'EM.pv', 'EM.pv'];
+const KNOWN_NESTED = [];   // 试听已拆成同级按钮：这一类例外清零，再出现嵌套就是新增债务
 function auditKeyboard(h) {
   const loose = [], nested = [];
   for (const el of h.document.querySelectorAll('*')) {
@@ -608,7 +607,7 @@ function auditKeyboard(h) {
   return {loose, nested};
 }
 
-test('键盘可达性没有新增漏洞（两处挂账例外见 auditKeyboard 上方注释）', async t => {
+test('键盘可达性没有新增漏洞（挂账例外见 auditKeyboard 上方注释）', async t => {
   const h = await setup(t);
   await h.evaluate('renderHome()'); await h.flush();
   let seen = auditKeyboard(h);
@@ -618,7 +617,7 @@ test('键盘可达性没有新增漏洞（两处挂账例外见 auditKeyboard �
   await h.openProject(); await h.flush();
   seen = auditKeyboard(h);
   assert.deepEqual(seen.loose, [], '项目页有挂了 onclick 却键盘不可达的元素');
-  assert.deepEqual(seen.nested, KNOWN_NESTED, '项目页（音色 pill 里的试听）数量变了');
+  assert.deepEqual(seen.nested, KNOWN_NESTED, '出现了新的「按钮里套可点元素」，或旧例外被改动');
 });
 
 test('品牌套装弹窗也能用 Esc 关（手写弹窗五处，它最后补上）', async t => {
@@ -643,4 +642,84 @@ test('头像选择器不再自称 radiogroup：里面是 aria-pressed 的按钮'
   assert.equal(grid.getAttribute('role'), 'group',
     'radiogroup 里的子项必须是 role=radio + aria-checked；这里用的是 aria-pressed 按钮，角色要对得上');
   assert.equal(grid.querySelector('button').getAttribute('aria-pressed'), 'true');
+});
+
+// ---- 两条视觉/结构闸门（2026-09-21 夜，改小字对比度与试听按钮时加的） ----
+const fs = require('node:fs');
+const path = require('node:path');
+
+function lum(hex) {
+  const h = hex.replace('#', '');
+  const c = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255)
+    .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+function contrast(a, b) {
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+test('按钮里不套可点元素：试听与选音色必须是两个控件', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'server_static', 'index.html'), 'utf8');
+  const bad = [];
+  const re = /<button[^>]*>/g;
+  let m;
+  while ((m = re.exec(src))) {
+    const end = src.indexOf('</button>', m.index);
+    if (end < 0) continue;
+    const inner = src.slice(m.index + m[0].length, end);
+    // class="pv" 也在列：上次就是 <em class="pv"> 塞在 button 里，
+    // 键盘 Tab 永远到不了「试听」，只能靠 e.target 特判绕
+    if (/<button|<a\s+href|<input|<select|<textarea|class="pv"/.test(inner)) {
+      bad.push(inner.slice(0, 60).replace(/\s+/g, ' '));
+    }
+  }
+  assert.deepEqual(bad, [], 'button 里套了可点元素：读屏与键盘都用不了里面那个');
+});
+
+test('每套主题的小字色 --ink-3 对三种底色都不低于 4.5:1（WCAG AA）', () => {
+  const files = [
+    ['工作台', path.join(__dirname, '..', 'server_static', 'index.html')],
+    ['成片台', path.join(__dirname, '..', 'renderer', 'src', 'tool', 'ui.css')],
+  ];
+  // 不靠"选择器长什么样"的正则（两套文件写法不同，还有空格差异），
+  // 改成从每个 --ink-3 声明出发往回找它所在的那个 { } 块，块内解析变量。
+  const blockOf = (src, at) => {
+    const open = src.lastIndexOf('{', at);
+    const close = src.indexOf('}', at);
+    return open < 0 || close < 0 ? '' : src.slice(open + 1, close);
+  };
+  let checked = 0;
+  for (const [name, f] of files) {
+    const src = fs.readFileSync(f, 'utf8');
+    let at = -1;
+    while ((at = src.indexOf('--ink-3:', at + 1)) >= 0) {
+      const body = blockOf(src, at);
+      const vars = {};
+      for (const kv of body.matchAll(/--([a-z0-9-]+)\s*:\s*([^;]+)/gi)) {
+        if (!(kv[1].toLowerCase() in vars)) vars[kv[1].toLowerCase()] = kv[2].trim();
+      }
+      const hex = k => {
+        let v = vars[k];
+        for (let i = 0; i < 3 && v && /^var\(/.test(v); i++) {
+          v = vars[((v.match(/--([a-z0-9-]+)/i) || [])[1] || '').toLowerCase()];
+        }
+        if (/^#[0-9a-f]{3}$/i.test(v || '')) {
+          v = '#' + [1, 2, 3].map(i => v[i] + v[i]).join('');   // #fff 这种三位写法也要能查
+        }
+        return /^#[0-9a-f]{6}$/i.test(v || '') ? v : null;
+      };
+      const ink = hex('ink-3');
+      if (!ink) continue;
+      checked += 1;
+      for (const bgKey of ['bg', 'surface', 'surface2']) {
+        const bg = hex(bgKey);
+        if (!bg) continue;
+        const r = contrast(ink, bg);
+        assert.ok(r >= 4.5,
+          `${name} 的 --ink-3 ${ink} 对 --${bgKey} ${bg} 只有 ${r.toFixed(2)}:1（小字要 4.5:1）`);
+      }
+    }
+  }
+  assert.ok(checked >= 8, `只查到 ${checked} 处 --ink-3 能解析出色值，令牌块写法变了？`);
 });
