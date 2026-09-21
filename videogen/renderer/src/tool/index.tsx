@@ -305,10 +305,17 @@ const App: React.FC = () => {
   React.useEffect(() => {
     let alive = true;
     let fails = 0;
+    // 重试要有上限、要分性质。以前这里是无限循环：签名密钥轮换或登录过期之后，
+    // 页面每 3 秒撞一次 401，客户看到的是"已重试 447 次，还在试"，
+    // 而正确动作只有一个 —— 重新登录。401/403/410 属于"再试也没用"，直接停。
+    const DEAD_STATUSES = [401, 403, 410];
+    const MAX_FAILS = 8;
+    let stage = '领单';
     (async () => {
       for (;;) {
         if (!alive) return;
         try {
+          stage = '领单';
           const r = await fetch(`/api/agent/poll?wait=1&device=${encodeURIComponent(DEVICE)}`,
             {headers: {'x-agent-final': '1'}, credentials: 'same-origin'});
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -333,6 +340,7 @@ const App: React.FC = () => {
             || (!!jobIdRef.current && jobIdRef.current === data.job);
           setPhase(autoRef.current ? 'prepping' : 'ready');
           setPrewarmDone(0);
+          stage = '素材';        // 下面这段失败才是"素材拉不下来"
           let done = 0;
           // 预取期也要报心跳：云端靠「多久没说话」判断成片台还活着。
           // 不报的话，一条 3Mbps 的慢线拉几十兆素材就能被误判成失联。
@@ -369,25 +377,36 @@ const App: React.FC = () => {
             clearInterval(beat);
           }
           if (!alive) return;
+          fails = 0;            // 这一单备料成功，之前的失败计数作废
           setErr('');
           if (autoRef.current) startRender();
           else setPhase('ready');
           return;
         } catch (e) {
           if (!alive) return;
-          fails += 1;
+          const msg = String((e as Error).message || e);
+          const dead = DEAD_STATUSES.some((c) => msg.includes(`HTTP ${c}`));
+          const whichStep = stage === '领单' ? '联系不上云端' : '素材反复拉不下来';
           console.error('GetCut 准备失败', e);
-          // 连续失败要说给人听：只写 console 的话，客户看到的就是一直转圈
-          if (fails >= 2) {
-            setErr(`素材反复拉不下来：${String((e as Error).message || e).slice(0, 60)}`
-              + ' · 已重试 ' + fails + ' 次，还在试');
-          }
           if (packRef.current) {
             await report(0, '浏览器端准备失败，退回队列', true).catch(() => {});
             packRef.current = null;
             setPack(null);
           }
-          await new Promise((res) => setTimeout(res, 3000));
+          // 停下来给人看，而不是每 3 秒撞一次墙：再试也没用的（登录掉了 / 这一单已作废），
+          // 或者已经试够 8 次的，都直接说下一步该干什么。
+          if (dead || ++fails > MAX_FAILS) {
+            setErr(msg.includes('HTTP 401') || msg.includes('HTTP 403')
+              ? '这一单已作废或不属于当前账号：刷新这一页重新领单；若反复如此，点右上角「登录」重新登录一次'
+              : msg.includes('HTTP 410')
+                ? '这一单已被云端收回（服务器重启或超时）：刷新这一页就会重新领单'
+                : `${whichStep}（已试 ${MAX_FAILS} 次）：${msg.slice(0, 60)} —— 刷新这一页重新领单`);
+            return;
+          }
+          if (fails >= 2) {
+            setErr(`${whichStep}：${msg.slice(0, 60)} · 已重试 ${fails} 次，还在试`);
+          }
+          await new Promise((res) => setTimeout(res, Math.min(1000 * 2 ** fails, 15000)));
         }
       }
     })();
@@ -854,14 +873,17 @@ const App: React.FC = () => {
                   summary={bundle ? `${bundle.name} 已导入` : undefined}>
               {phase === 'importing' ? (
                 <div>
-                  <div className="bar"><i style={{width: `${Math.max(4, upPct)}%`}} /></div>
+                  <div className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={100}
+                       aria-valuenow={Math.round(upPct)} aria-label="素材包上传进度"><i style={{width: `${Math.max(4, upPct)}%`}} aria-hidden="true" /></div>
                   <div className="pline"><span className="st">上传中</span>
                     <span className="pc">{upPct}%</span></div>
                 </div>
               ) : bundle ? (
                 <button className="btn ln sm" onClick={pick}>换一个素材包</button>
               ) : (
-                <div className={`drop${hot ? ' hot' : ''}`} onClick={pick}
+                <div className={`drop${hot ? ' hot' : ''}`} role="button" tabIndex={0}
+                     aria-label="点这里选素材包 zip" onClick={pick}
+                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(); } }}
                      onDrop={onDrop} onDragOver={onDragOver} onDragLeave={() => setHot(false)}>
                   <b>点这里选素材包 zip</b>
                   <span>不解压，文案与素材一起读入 · 也可以直接拖到右边那块</span>
@@ -930,7 +952,8 @@ const App: React.FC = () => {
               <Step n={3} title={phase === 'done' ? '视频已生成' : '正在生成视频'} state={st(3)}>
                 {phase !== 'error' && phase !== 'done' ? (
                   <div>
-                    <div className="bar"><i style={{width: `${bar}%`}} /></div>
+                    <div className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={100}
+                         aria-valuenow={Math.round(bar)} aria-label="生成进度"><i style={{width: `${bar}%`}} aria-hidden="true" /></div>
                     <div className="pline">
                       <span className="st">{line}</span>
                       <span className="pc">{Math.round(bar)}%</span>
@@ -1132,7 +1155,9 @@ const App: React.FC = () => {
               </div>
             </article>
           ) : (
-            <div className={`stagedrop${hot ? ' hot' : ''}`} onClick={pick}
+            <div className={`stagedrop${hot ? ' hot' : ''}`} role="button" tabIndex={0}
+                 aria-label="把素材包拖到这里，或按回车选文件" onClick={pick}
+                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(); } }}
                  onDrop={onDrop} onDragOver={onDragOver} onDragLeave={() => setHot(false)}>
               <Mark size={44} />
               <div className="t">素材包拖到这里</div>
