@@ -1,0 +1,9 @@
+{
+	# acme_ca: 强制用 Let-Encrypt 生产 CA，禁止降级到 staging(测试) 环境
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
+}
+
+hellojoy.top, www.hellojoy.top, gc.hellojoy.top, getcut.cn, www.getcut.cn {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8600
+}

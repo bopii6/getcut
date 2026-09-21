@@ -52,8 +52,7 @@ SRC="$STAGE/videogen"
 [ -d "$SRC/videogen" ] || { echo "[deploy] 导出结构不对（找 $SRC/videogen）"; exit 1; }
 # 文本文件归一成 LF：Windows 侧导出的 CRLF 会让每一行都"变了"，
 # 比对与回滚都会被这种假差异带偏（二进制原样不动）。
-find "$SRC" -type f \( -name '*.py' -o -name '*.js' -o -name '*.mjs' -o -name '*.css'   -o -name '*.html' -o -name '*.json' -o -name '*.md' -o -name '*.txt' -o -name '*.ts' -o -name '*.tsx' \)   -print0 | xargs -0 -r sed -i 's/
-$//'
+find "$SRC" -type f \( -name '*.py' -o -name '*.js' -o -name '*.mjs' -o -name '*.css' -o -name '*.html' -o -name '*.json' -o -name '*.md' -o -name '*.txt' -o -name '*.ts' -o -name '*.tsx' \) -print0 | xargs -0 -r sed -i 's/\r$//'
 echo "[deploy] 文本已归一为 LF"
 
 drift() {  # 线上有、这次要送的版本里没有 → 只报告，不擅自删（缓存类就在这堆里）
@@ -69,16 +68,17 @@ drift() {  # 线上有、这次要送的版本里没有 → 只报告，不擅�
   fi
 }
 
-echo "[deploy] 线上与 HEAD 的差异（按 路径+字节 比，MISSING=只有一边有）"
+echo "[deploy] 线上与 HEAD 的差异（与上传时同一套判据：比 md5，不比字节数）"
 for d in videogen server_static renderer/src assets samples; do
   $SSH "$HOST" "test -d $BASE/code/$d" || { echo "  [$d] 线上没有这个目录"; continue; }
   tag=$(printf '%s' "$d" | tr '/' '_')
-  (cd "$SRC/$d" && find . -type f -printf '%P %s
-' | sort) > "/tmp/l-$tag.txt"
-  $SSH "$HOST" "cd $BASE/code/$d && find . -type f -printf '%P %s
-' | sort" > "/tmp/r-$tag.txt"
-  out=$(join -a1 -a2 -e MISSING -o 0,1.2,2.2 "/tmp/l-$tag.txt" "/tmp/r-$tag.txt"         | awk -v me=BUILD_INFO.json '$2!=$3 || $1 ~ /[^\/]$/ {} $2!=$3 {print}' | grep -v "^BUILD_INFO.json " | head -20)
-  if [ -n "$out" ]; then echo "  [$d] 有出入:"; echo "$out" | sed 's/^/      本地= 线上=  /'; else echo "  [$d] 与 HEAD 一致"; fi
+  { cd "$SRC/$d" && find . -type f | sort | xargs -r md5sum -t; }     | while read -r h x; do printf '%s %s
+' "${x#./}" "$h"; done | sort > "/tmp/l-$tag.txt"
+  printf 'cd "%s/code/%s" && find . -type f | sort | xargs -r md5sum
+' "$BASE" "$d"     | $SSH "$HOST" sh 2>/dev/null     | while read -r h x; do printf '%s %s
+' "${x#./}" "$h"; done | sort > "/tmp/r-$tag.txt"
+  out=$(join -a1 -a2 -e NONE -o 0,1.2,2.2 "/tmp/l-$tag.txt" "/tmp/r-$tag.txt"         | awk '$2 != $3 {print $1 "  本地=" substr($2,1,8) " 线上=" substr($3,1,8)}'         | grep -v "^BUILD_INFO.json " | head -20)
+  if [ -n "$out" ]; then echo "  [$d] 有出入："; echo "$out" | sed 's/^/      /'; else echo "  [$d] 与 HEAD 一致"; fi
 done
 if [ "$MODE" = check ]; then
   echo "[check] 只报告，什么都没改。要上线去掉 --check。"
@@ -102,7 +102,10 @@ push_dir() {  # push_dir <目录> [keep|clean]：本机没有 rsync，用 tar �
   # Windows 的 md5sum 默认二进制模式，分隔符是 "*"（路径会被读成 *./auth.py）→ 显式文本模式
   { cd "$SRC/$d" && find . -type f | sort | xargs -r md5sum -t; } \
     | while read -r h p; do printf '%s %s\n' "${p#./}" "$h"; done | sort > "/tmp/ls-$tag.txt"
-  if [ -s "/tmp/rs-$tag.txt" ]; then
+  if [ "$mode" = always ]; then
+    # 代码目录总共 0.4MB：整包发最省事，也不给"比对说谎"留机会（行尾差异曾让它误判为一致）
+    cut -d' ' -f1 "/tmp/ls-$tag.txt" > "/tmp/up-$tag.txt"
+  elif [ -s "/tmp/rs-$tag.txt" ]; then
     join -a1 -e MISSING -o 0,1.2,2.2 "/tmp/ls-$tag.txt" "/tmp/rs-$tag.txt" \
       | awk '{if ($2 != $3) print $1}' > "/tmp/up-$tag.txt"
   else
@@ -113,7 +116,18 @@ push_dir() {  # push_dir <目录> [keep|clean]：本机没有 rsync，用 tar �
   if [ "$n" -eq 0 ]; then echo "  $d 已经一致，不传"; return 0; fi
   echo "  传 $d（$n 个文件有变化）"
   (cd "$SRC/$d" && tar -cf - --files-from="/tmp/up-$tag.txt")     | $SSH "$HOST" "tar -xf - -C $BASE/code/$d" || return 1
-  [ "$mode" = clean ] || return 0
+  # 传完回读校验：线上哈希必须与本地一致，否则这次部署算失败（不许"以为传了"）
+  printf 'cd "%s/code/%s" && find . -type f | sort | xargs -r md5sum\n' "$BASE" "$d" \
+    | $SSH "$HOST" sh 2>/dev/null \
+    | while read -r h p; do printf '%s %s\n' "${p#./}" "$h"; done | sort > "/tmp/rs2-$tag.txt"
+  bad=$(join "/tmp/up-$tag.txt" <(sort "/tmp/ls-$tag.txt") -o 0,1.3,2.2 -2 "/tmp/rs2-$tag.txt" 2>/dev/null \
+        | awk '$2 != $3 {print $1}')
+  if [ -n "$bad" ]; then
+    echo "  [校验失败] 这几个文件传完仍与本地不一致："; echo "$bad" | sed 's/^/      /'
+    return 1
+  fi
+  echo "  $d 已校验一致"
+  [ "$mode" = clean ] || [ "$mode" = always ] || return 0
   $SSH "$HOST" "cd $BASE/code/$d && find . -type f -printf '%P\n'" 2>/dev/null | sort > "/tmp/remote-$tag.txt"
   (cd "$SRC/$d" && find . -type f -printf '%P\n') | sort > "/tmp/local-$tag.txt"
   # 只删"线上有、这版没有"的，且绝不碰版本戳、缓存与备份
@@ -134,8 +148,9 @@ push_dir() {  # push_dir <目录> [keep|clean]：本机没有 rsync，用 tar �
 # （线上偶尔会有别的会话 scp 过、还没提交的文件，整包对齐会把它们退回提交版，
 #   那种时候先只发自己动过的那几个目录，其余留到确认过再对齐）
 for d in ${VIDEOGEN_DIRS:-videogen server_static renderer/src assets samples}; do
-  case " videogen server_static " in
-    *" $d "*) keep=clean ;;
+  case "$d" in
+    videogen) keep=always ;;          # 0.4MB，整包发 + 事后校验，不给误判留空间
+    server_static) keep=clean ;;      # 只清 .py（实际没有），产物一律不删
     *) keep=keep ;;
   esac
   push_dir "$d" "$keep" || { echo "[deploy] 传 $d 失败"; exit 1; }
