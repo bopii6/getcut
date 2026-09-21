@@ -12126,16 +12126,22 @@ const App = () => {
           try {
             for (const f of p.files) {
               const url = `/agent-media/${p.job}/${f.path}`;
-              let ok = false;
-              for (let a = 0; a < 2 && !ok; a++) {
+              let why = "\u672A\u53D6";
+              for (let a = 0; a < 2 && why; a++) {
                 try {
-                  ok = (await fetch(url, { cache: "force-cache" })).ok;
+                  const res = await fetch(url, { cache: "force-cache" });
+                  const ct = res.headers.get("content-type") || "";
+                  if (!res.ok) why = `HTTP ${res.status}`;
+                  else if (ct.includes("json")) why = "\u4E91\u7AEF\u56DE\u7684\u662F\u9519\u8BEF\u4FE1\u606F\uFF0C\u4E0D\u662F\u7D20\u6750";
+                  else why = "";
                 } catch (_) {
-                  ok = false;
+                  why = "\u7F51\u7EDC\u4E2D\u65AD";
                 }
-                if (!ok) await new Promise((res) => setTimeout(res, 800));
+                if (why) await new Promise((r2) => setTimeout(r2, 800));
               }
-              if (!ok) throw new Error(`\u7D20\u6750\u52A0\u8F7D\u5931\u8D25\uFF1A${f.path}`);
+              if (why) {
+                throw new Error(`\u7D20\u6750\u6CA1\u53D6\u56DE\u6765\uFF1A${f.path}\uFF08${why}\uFF09\u2014\u2014\u5237\u65B0\u8FD9\u4E00\u9875\u91CD\u65B0\u9886\u5355`);
+              }
               done += 1;
               setPrewarmDone(done);
             }
@@ -12363,6 +12369,10 @@ const App = () => {
         // 渲染期让位频率调低：预览已卸载，页面只需响应进度条；换回更高吞吐
         pageResponsiveness: "low",
         delayRenderTimeoutInMilliseconds: 18e4,
+        // 解码缓存上限写死：Remotion 不传就按「客户机可用内存的一半」放大（上限 20GB），
+        // 等于让它自己去猜这台电脑还能吃多少——2026-09-21 线上就是这么顶到
+        // Chrome "Aw, Snap! Out of Memory" 的。1GB 是 Remotion 自己的兜底默认值。
+        mediaCacheSizeInBytes: 1024 * 1024 * 1024,
         signal: ac.signal,
         frameRange: FRAMES_LIMIT > 0 && FRAMES_LIMIT < total ? [0, FRAMES_LIMIT] : null,
         onProgress: (p) => {

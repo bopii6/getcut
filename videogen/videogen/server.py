@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import hmac as _hmac
 import html
 import io
@@ -2574,45 +2575,77 @@ def _verify_bg(job_id: str, bundle_dir: Path, video: Path, work_dir: Path | None
         _cos_drop_local(job_id, video)
 
 
+BROWSER_V_BOX = 1920   # 交付给浏览器的视频最长边
+BROWSER_V_FPS = 30     # 交付给浏览器的视频最高帧率
+
+
 def _browser_safe_video(path: str, cache_dir: Path) -> str:
-    """素材库视频有两类会卡死浏览器解码链路（@remotion/media + mediabunny）：
-    1. timed-metadata data 轨（tmcd 时间码等）——mediabunny 首帧提取直接挂起；
-       且 ffmpeg 复制时默认会把时间码再写成一条 tmcd，必须 -write_tmcd 0 关掉；
-    2. 高帧率源（实测 50fps 的 mixkit 素材）——同样卡在 Extracting frame。
-    前者剥轨流复制、后者重编到 30fps（veryfast/crf23，10 秒片段 CPU 数秒），
-    产物按名字缓存在 work/_browsersafe，跨任务复用。"""
+    """素材视频进客户浏览器前，把「解码不起」的那一类重编成浏览器扛得住的一档：
+    长边 ≤1920、帧率 ≤30、每 30 帧一个关键帧、不带音频轨与 timed-metadata 轨。
+
+    四条各对应一个真实事故，改之前先读完：
+    1. 4K 原片：一帧解码出来是 RGBA 33MB，而画面只有 1080×1920——纯白烧客户内存。
+       2026-09-21 线上「华为昇腾960」那条就是渲到 32% 时把标签页顶到
+       Chrome "Aw, Snap! Out of Memory"。
+    2. 稀疏关键帧：随机取帧得从上一个关键帧连解到底，实测 Mixkit 素材 251 帧
+       才一个关键帧。所以**只要决定重编，就顺手把关键帧插密**（-g 30）。
+    3. 高帧率源（实测 50fps 的 mixkit 素材）会卡在 mediabunny 的 Extracting frame。
+    4. tmcd 时间码轨同样卡首帧提取；且 ffmpeg 见输入带时间码就会自己补一条，
+       所以 -write_tmcd 0 两条分支都得带（上一版只在纯剥轨那条加了，
+       4K@60fps 重编出来的产物仍带着 data 轨）。
+
+    干净的小素材**原样放行、不重编**：实测把 540p/720p 也一律重编，体积反而涨
+    六成（0.8MB→1.2MB、2.2MB→3.7MB），而出网只有 3Mbps——那是拿带宽换内存，
+    换错了方向。判据只认三样：带 data 轨、帧率超上限、长边超上限。
+    产物按「素材名 + 大小 + mtime + 编码档」缓存在工作区持久盘（.browsersafe，
+    不放 config.WORK：那是容器层，一次重新部署就清空，而挂给成片台的路径还活着），
+    同一素材跨任务只编一次。"""
     p = Path(path)
     if p.suffix.lower() not in {".mp4", ".mov", ".mkv", ".webm"}:
         return path
     try:
+        st = p.stat()
         probe = subprocess.run(
             ["ffprobe", "-v", "error", "-show_entries",
-             "stream=codec_type,r_frame_rate", "-of", "csv=p=0", str(p)],
-            capture_output=True, text=True, timeout=30)
-        lines = [x.strip().split(",") for x in probe.stdout.strip().splitlines() if x.strip()]
-        has_data = any(len(t) > 1 and t[0] == "data" for t in lines)
+             "stream=codec_type,width,height,r_frame_rate",
+             "-of", "csv=p=0", str(p)],
+            capture_output=True, text=True, timeout=30, check=True)
+        w = h = 0
         fps = 0.0
-        for t in lines:
-            if len(t) > 1 and t[0] == "video" and "/" in t[1]:
-                n, d = t[1].split("/")
-                if float(d):
-                    fps = float(n) / float(d)
-                break
-        if not has_data and (fps == 0 or fps <= 31):
+        has_data = False
+        for line in probe.stdout.strip().splitlines():
+            c = [x.strip() for x in line.split(",")]
+            if c[0] == "data":
+                has_data = True            # 音频/字幕行的宽高字段是空的
+            elif c[0] == "video" and not w and len(c) > 3 and c[1] and c[2]:
+                w, h = int(c[1]), int(c[2])
+                num, _, den = c[3].partition("/")
+                fps = int(num) / int(den or 1) if num and den != "0" else 0.0
+        if not w or not (has_data or fps > BROWSER_V_FPS + 1
+                         or max(w, h) > BROWSER_V_BOX):
             return path
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        mode = "b30" if fps > 31 else "bclean"
-        out = cache_dir / f"{p.stem}.{mode}.mp4"
+        profile = f"b{BROWSER_V_BOX}f{BROWSER_V_FPS}"
+        out = cache_dir / (f"{p.stem}.{profile}.{st.st_size}"
+                           f".{int(st.st_mtime_ns)}.mp4")
         if not out.is_file():
-            tmp = cache_dir / f"{p.stem}.{mode}-tmp.mp4"
-            vf = (["-r", "30", "-c:v", "libx264", "-preset", "veryfast",
-                   "-crf", "23", "-pix_fmt", "yuv420p"] if fps > 31
-                  else ["-c", "copy", "-write_tmcd", "0"])
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            # 临时件必须以 .mp4 结尾：ffmpeg 靠后缀选封装，写成 xxx.tmp 会直接失败
+            tmp = cache_dir / (out.name + ".part.mp4")
+            # 只缩不放：min() 保证重编不会把小素材放大
+            vf = [f"scale='min({BROWSER_V_BOX},iw)':'min({BROWSER_V_BOX},ih)'"
+                  ":force_original_aspect_ratio=decrease:force_divisible_by=2"]
+            if fps > BROWSER_V_FPS + 1:
+                vf.insert(0, f"fps={BROWSER_V_FPS}")
             subprocess.run(
                 ["ffmpeg", "-y", "-v", "error", "-i", str(p),
-                 "-map", "0:v:0", "-map", "0:a?", *vf,
+                 "-map", "0:v:0", "-an", "-write_tmcd", "0",
+                 "-vf", ",".join(vf),
+                 "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+                 "-pix_fmt", "yuv420p",
+                 "-g", str(BROWSER_V_FPS), "-keyint_min", str(BROWSER_V_FPS),
+                 "-sc_threshold", "0",
                  "-movflags", "+faststart", str(tmp)],
-                timeout=600, check=True)
+                timeout=900, check=True)
             tmp.replace(out)
         return str(out)
     except Exception as exc:  # noqa: BLE001 - 清洗失败就用原文件，别拦渲染
@@ -2674,10 +2707,18 @@ def _agent_visual(job_id: str, layers_dir: Path | None = None):
         rename: dict[str, str] = {}
         files: dict[str, str] = {}
         for idx, name in enumerate(sorted(media)):
-            safe = f"{job_id}_m{idx}{Path(name).suffix}"
+            src = _browser_safe_video(str(media[name]),
+                                      config.WORKSPACES / ".browsersafe")
+            # 文件名带上所指向字段的指纹：同一个任务号重新挂单时，镜头增删会让
+            # _m9 指向另一个文件，而客户端预取用 cache:'force-cache'——没有指纹
+            # 就把上次缓存的字节当成本次素材回放，mediabunny 收到一段 JPEG 会报
+            # "Unknown container format"（2026-09-21 线上 F-35 那条撞过）
+            fst = Path(src).stat()
+            fp = hashlib.sha1(f"{fst.st_size}:{int(fst.st_mtime_ns)}"
+                              .encode()).hexdigest()[:8]
+            safe = f"{job_id}_m{idx}-{fp}{Path(name).suffix}"
             rename[name] = safe
-            files[f"media/{safe}"] = _browser_safe_video(str(media[name]),
-                                                         config.WORK / "_browsersafe")
+            files[f"media/{safe}"] = src
         props_out = rr._rewrite_media_names(props, rename)
         if logo_path is not None:
             files[str(props.get("brand").get("logo"))] = str(logo_path)

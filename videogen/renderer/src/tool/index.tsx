@@ -342,16 +342,25 @@ const App: React.FC = () => {
           try {
             for (const f of p.files) {
               const url = `/agent-media/${p.job}/${f.path}`;
-              let ok = false;
-              for (let a = 0; a < 2 && !ok; a++) {
+              let why = '未取';
+              for (let a = 0; a < 2 && why; a++) {
                 try {
-                  ok = (await fetch(url, {cache: 'force-cache'})).ok;
+                  const res = await fetch(url, {cache: 'force-cache'});
+                  const ct = res.headers.get('content-type') || '';
+                  // 拿回 JSON 说明服务端给的是错误页（401 登录掉了 / 404 这一单已作废）。
+                  // 它照样进浏览器缓存，下次 force-cache 直接回放给解码器，
+                  // 报出来就是一句莫名其妙的 "Unknown container format"
+                  if (!res.ok) why = `HTTP ${res.status}`;
+                  else if (ct.includes('json')) why = '云端回的是错误信息，不是素材';
+                  else why = '';
                 } catch (_) {
-                  ok = false;
+                  why = '网络中断';
                 }
-                if (!ok) await new Promise((res) => setTimeout(res, 800));
+                if (why) await new Promise((r) => setTimeout(r, 800));
               }
-              if (!ok) throw new Error(`素材加载失败：${f.path}`);
+              if (why) {
+                throw new Error(`素材没取回来：${f.path}（${why}）——刷新这一页重新领单`);
+              }
               done += 1;
               setPrewarmDone(done);
             }
@@ -568,6 +577,10 @@ const App: React.FC = () => {
         // 渲染期让位频率调低：预览已卸载，页面只需响应进度条；换回更高吞吐
         pageResponsiveness: 'low',
         delayRenderTimeoutInMilliseconds: 180_000,
+        // 解码缓存上限写死：Remotion 不传就按「客户机可用内存的一半」放大（上限 20GB），
+        // 等于让它自己去猜这台电脑还能吃多少——2026-09-21 线上就是这么顶到
+        // Chrome "Aw, Snap! Out of Memory" 的。1GB 是 Remotion 自己的兜底默认值。
+        mediaCacheSizeInBytes: 1024 * 1024 * 1024,
         signal: ac.signal,
         frameRange: FRAMES_LIMIT > 0 && FRAMES_LIMIT < total ? [0, FRAMES_LIMIT] : null,
         onProgress: (p) => {
