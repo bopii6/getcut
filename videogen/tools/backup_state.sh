@@ -16,10 +16,16 @@ KEEP="${VIDEOGEN_BACKUP_KEEP:-90}"              # 保留多少天
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 # 要备的东西：相对 BASE 的路径。少一个就跳过（本机开发/新装机器可能还没有）。
+# 密钥三件套：2026-09-21 起生产放在工作区之外的 state/（本机开发仍落在 data/，
+# 所以下面两行路径都留着 —— 存在哪个备哪个，两条都不存在时上面的空检查会退出。
 ITEMS=(
-  data/.videogen-users.json        # 账号 + 谁买了哪一档：丢了等于客户名单归零
-  data/.videogen-licenses.json     # 卡密：已发/未发都在这
-  data/.videogen-auth-secret       # 会话签名密钥：丢了所有人重登
+  state/.videogen-users.json       # 账号 + 谁买了哪一档：丢了等于客户名单归零
+  state/.videogen-licenses.json    # 卡密：已发/未发都在这
+  state/.videogen-auth-secret      # 会话签名密钥：丢了所有人重登
+  state/.videogen-brand            # 品牌套装（生产位置）
+  data/.videogen-users.json
+  data/.videogen-licenses.json
+  data/.videogen-auth-secret
   data/.videogen-try.json          # 试玩额度账本
   data/bundles.json                # 素材包归属
   data/.videogen-brand             # 品牌套装（logo / 水印 / 术语表）

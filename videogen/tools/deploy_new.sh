@@ -39,6 +39,7 @@ docker run -d --name videogen --restart unless-stopped --network host \
   -v /opt/videogen/code/videogen:/app/videogen \
   -v /opt/videogen/code/renderer/src:/app/renderer/src \
   -v /opt/videogen/code/assets:/app/assets \
+  -v /opt/videogen/state:/state \
   -v /opt/videogen/backups:/opt/videogen/backups:ro \
   -v /opt/videogen/code/samples:/app/samples \
   -v /opt/videogen/renderer-media:/app/renderer/public/media \

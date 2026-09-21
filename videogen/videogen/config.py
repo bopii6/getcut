@@ -67,11 +67,16 @@ WORKSPACES = Path(_env("VIDEOGEN_WORKSPACE") or ROOT.parent).resolve()
 AUTH_TOKEN = _env("VIDEOGEN_TOKEN")
 
 # 账号体系（邮箱密码登录）存储位置：默认放工作区（云上是持久卷，重启不丢）
+# ⚠️ 生产应把这三样指到工作区**之外**（部署机上用 /state）：/media 这类接口的边界
+#    是"只许读工作区以内的文件"，密钥与要给客户的素材包同处一地时，边界只要写错一次
+#    就等于把签名密钥交出去。搬出工作区修的是"这一类错"，不是某一个接口。
 USERS_FILE = _env("VIDEOGEN_USERS_FILE") or str(WORKSPACES / ".videogen-users.json")
 AUTH_SECRET_FILE = _env("VIDEOGEN_AUTH_SECRET") or str(WORKSPACES / ".videogen-auth-secret")
 # 卡密与用量记账（工作区持久卷）
 LICENSES_FILE = _env("VIDEOGEN_LICENSES_FILE") or str(WORKSPACES / ".videogen-licenses.json")
 USAGE_FILE = _env("VIDEOGEN_USAGE_FILE") or str(WORKSPACES / ".videogen-usage.json")
+# 品牌套装（客户 logo / 术语表 / 克隆声音 ID）：属于客户资料，同样不该待在取货口里
+BRAND_DIR = _env("VIDEOGEN_BRAND_DIR") or str(WORKSPACES / ".videogen-brand")
 
 # 发信邮箱（注册验证码）。任意支持 SMTP 的邮箱均可（QQ/163/企业邮箱）：
 #   EMAIL_SMTP_HOST=smtp.qq.com  EMAIL_SMTP_PORT=465（SSL）

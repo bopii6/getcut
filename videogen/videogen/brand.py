@@ -1,6 +1,7 @@
 """品牌套装（高级档）：每用户的 Logo / 我的声音 / 文字水印。
 
-存工作区 .videogen-brand/<email哈希>/（logo.png + brand.json），重启不丢。
+存 <品牌目录>/<email哈希>/（logo.png + brand.json，默认在工作区，生产用
+VIDEOGEN_BRAND_DIR 搬出去 —— 里面是客户资料，不该待在 /media 够得到的地方）。
 片尾卡、固定开场白、品牌色已整体下线（用户拍板：出片不带片尾卡、不要开场白），
 旧字段留在 brand.json 里只是历史数据，管线不再读。
 """
@@ -15,7 +16,7 @@ from pathlib import Path
 
 from . import config, safestore
 
-DIR = Path(config.WORKSPACES) / ".videogen-brand"
+DIR = Path(config.BRAND_DIR)
 HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_LOGO = 2 * 1024 * 1024
 MAX_WATERMARK = 16       # 右上角文字水印（如 @阿伟说财经）
