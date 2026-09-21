@@ -311,11 +311,18 @@ def load_plan(folder: Path) -> dict | None:
 
 
 def plan_fresh(folder: Path, video: Path) -> bool:
-    """资产是否已备好且不比成片旧。"""
+    """资产是否已备好且不比成片旧。
+
+    成片归档到对象存储后本地那份会删掉，这时改跟成片旁的草稿清单比：清单与成片
+    同时落盘，"重渲过就该重做资产"这个判断没变。少了这条，草稿会永远显示"准备中"。
+    """
     folder = Path(folder)
     if not (folder / "draft_plan.json").is_file():
         return False
+    ref = Path(video)
+    if not ref.is_file():
+        ref = ref.with_suffix(".draft.json")
     try:
-        return (folder / "draft_plan.json").stat().st_mtime >= Path(video).stat().st_mtime
+        return (folder / "draft_plan.json").stat().st_mtime >= ref.stat().st_mtime
     except OSError:
         return False

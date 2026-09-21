@@ -7,3 +7,5 @@ Pillow>=10.0
 requests>=2.31
 python-dotenv>=1.0
 websockets>=14
+# 成片外存（对象存储）：只有配了 VIDEOGEN_COS_* 才用到
+cos-python-sdk-v5>=1.9.3

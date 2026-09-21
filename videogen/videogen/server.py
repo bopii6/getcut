@@ -26,9 +26,9 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, File, Request, Response, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
-from . import agenthub, auth, config, licenses, preview, voice_clone
+from . import agenthub, auth, config, cos_store, licenses, preview, voice_clone
 from . import brand as brand_kit
 from . import tts as tts_mod
 from .schemas import Content, Manifest, JobCancelled
@@ -1348,7 +1348,7 @@ def _render_or_404(pid: str, rid: str, request: Request):
         if not render:
             return None, JSONResponse({"error": "成片不存在"}, status_code=404)
         video = _P(render["file"])
-        if not video.is_file():
+        if not video.is_file() and not render.get("cos_key"):
             return None, JSONResponse({"error": "成片文件缺失"}, status_code=404)
     return video, None
 
@@ -1447,32 +1447,35 @@ def jianying_pull(t: str = ""):
     from . import jianying_draft as jyd
     from pathlib import Path as _P
 
-    video = _P(info["video"])
-    if not video.is_file():
+    video, staged = _film_or_fetch(_P(info["video"]))
+    if video is None:
         _JY_PULL_TOKENS.pop(t, None)
         return JSONResponse({"error": "成片文件缺失"}, status_code=404)
-    mf = jyd.load_manifest(video)
-    if mf is None:
-        return JSONResponse({"error": "草稿清单缺失，请回页面重新点「一键导入到剪映」"},
-                            status_code=400)
-    mf["render_id"] = info["rid"]
-    mf.setdefault("title", info["title"])
-    voice = mf.get("voice")
     try:
-        import tempfile
-        with tempfile.TemporaryDirectory() as td:
-            zpath = _P(td) / "draft.zip"
-            jyd.build_zip(mf, video, _P(voice) if voice else None, zpath)
-            data = zpath.read_bytes()
-    except Exception as exc:  # noqa: BLE001 - 打包失败保留 token，助手重试还能用
-        return JSONResponse({"error": f"草稿打包失败: {exc}"}, status_code=500)
-    fname = f"GetCut-剪映草稿-{info['rid'][:6]}.zip"
-    from urllib.parse import quote
-    return Response(
-        content=data, media_type="application/zip",
-        headers={"Content-Disposition":
-                 "attachment; filename=getcut-draft.zip; "
-                 "filename*=UTF-8''{}".format(quote(fname))})
+        mf = jyd.load_manifest(video)
+        if mf is None:
+            return JSONResponse({"error": "草稿清单缺失，请回页面重新点「一键导入到剪映」"},
+                                status_code=400)
+        mf["render_id"] = info["rid"]
+        mf.setdefault("title", info["title"])
+        voice = mf.get("voice")
+        try:
+            import tempfile
+            with tempfile.TemporaryDirectory() as td:
+                zpath = _P(td) / "draft.zip"
+                jyd.build_zip(mf, video, _P(voice) if voice else None, zpath)
+                data = zpath.read_bytes()
+        except Exception as exc:  # noqa: BLE001 - 打包失败保留 token，助手重试还能用
+            return JSONResponse({"error": f"草稿打包失败: {exc}"}, status_code=500)
+        fname = f"GetCut-剪映草稿-{info['rid'][:6]}.zip"
+        from urllib.parse import quote
+        return Response(
+            content=data, media_type="application/zip",
+            headers={"Content-Disposition":
+                     "attachment; filename=getcut-draft.zip; "
+                     "filename*=UTF-8''{}".format(quote(fname))})
+    finally:
+        _drop_staged(video, staged)
 
 
 @app.get("/assistant/GetCut-Setup.bat")
@@ -1507,47 +1510,50 @@ def jianying_draft_zip(pid: str, rid: str, request: Request):
         if not render:
             return JSONResponse({"error": "成片不存在"}, status_code=404)
         video = _P(render["file"])
-        if not video.is_file():
-            return JSONResponse({"error": "成片文件缺失"}, status_code=404)
-
-    mf = jyd.load_manifest(video)
-    if mf is None:
-        # 旧成片没有清单：整条作为单镜头，时长用 ffprobe 探测
-        dur_ms = 0.0
-        try:
-            import subprocess
-            outp = subprocess.run(
-                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                 "-of", "default=noprint_wrappers=1:nokey=1", str(video)],
-                capture_output=True, text=True, timeout=30)
-            dur_ms = float(outp.stdout.strip()) * 1000.0
-        except Exception:
-            dur_ms = 0.0
-        if dur_ms <= 0:
-            return JSONResponse({"error": "无法读取成片时长"}, status_code=500)
-        mf = {"version": 1, "video": str(video), "duration_ms": dur_ms,
-              "fps": 30, "width": 1080, "height": 1920,
-              "title": target.get("title") or "成片", "subtitles": True,
-              "shots": [], "clauses": [], "voice": None, "render_id": rid}
-    mf["render_id"] = rid
-    mf.setdefault("title", target.get("title") or "成片")
-
-    voice = mf.get("voice")
-    title = (mf.get("title") or "成片").replace(" ", "_")[:24]
-    fname = f"GetCut-剪映草稿-{title}-{rid[:6]}.zip"
+    video, staged = _film_or_fetch(video)
+    if video is None:
+        return JSONResponse({"error": "成片文件缺失"}, status_code=404)
     try:
-        with tempfile.TemporaryDirectory() as td:
-            zpath = _P(td) / "draft.zip"
-            jyd.build_zip(mf, video, _P(voice) if voice else None, zpath)
-            data = zpath.read_bytes()
-    except Exception as exc:
-        return JSONResponse({"error": f"草稿打包失败: {exc}"}, status_code=500)
-    return Response(
-        content=data,
-        media_type="application/zip",
-        headers={"Content-Disposition":
-                 "attachment; filename=jianying-draft-{}.zip; "
-                 "filename*=UTF-8''{}".format(rid[:6], quote(fname))})
+        mf = jyd.load_manifest(video)
+        if mf is None:
+            # 旧成片没有清单：整条作为单镜头，时长用 ffprobe 探测
+            dur_ms = 0.0
+            try:
+                import subprocess
+                outp = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                     "-of", "default=noprint_wrappers=1:nokey=1", str(video)],
+                    capture_output=True, text=True, timeout=30)
+                dur_ms = float(outp.stdout.strip()) * 1000.0
+            except Exception:
+                dur_ms = 0.0
+            if dur_ms <= 0:
+                return JSONResponse({"error": "无法读取成片时长"}, status_code=500)
+            mf = {"version": 1, "video": str(video), "duration_ms": dur_ms,
+                  "fps": 30, "width": 1080, "height": 1920,
+                  "title": target.get("title") or "成片", "subtitles": True,
+                  "shots": [], "clauses": [], "voice": None, "render_id": rid}
+        mf["render_id"] = rid
+        mf.setdefault("title", target.get("title") or "成片")
+
+        voice = mf.get("voice")
+        title = (mf.get("title") or "成片").replace(" ", "_")[:24]
+        fname = f"GetCut-剪映草稿-{title}-{rid[:6]}.zip"
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                zpath = _P(td) / "draft.zip"
+                jyd.build_zip(mf, video, _P(voice) if voice else None, zpath)
+                data = zpath.read_bytes()
+        except Exception as exc:
+            return JSONResponse({"error": f"草稿打包失败: {exc}"}, status_code=500)
+        return Response(
+            content=data,
+            media_type="application/zip",
+            headers={"Content-Disposition":
+                     "attachment; filename=jianying-draft-{}.zip; "
+                     "filename*=UTF-8''{}".format(rid[:6], quote(fname))})
+    finally:
+        _drop_staged(video, staged)
 
 
 @app.post("/api/projects/{pid}/delete")
@@ -2259,6 +2265,14 @@ def video(job_id: str, request: Request):
     v = (j or {}).get("video")
     if not v or not _job_visible(j, request):
         return JSONResponse({"error": "not ready"}, status_code=404)
+    key = (j or {}).get("cos_key")
+    if key and cos_store.enabled():
+        try:
+            return RedirectResponse(cos_store.sign_url(key, Path(str(v)).name))
+        except Exception as exc:  # noqa: BLE001 - 外存取不到就回退本地
+            print("cos sign_url failed, fallback local: %s" % exc)
+    if not Path(v).is_file():
+        return JSONResponse({"error": "not ready"}, status_code=404)
     return FileResponse(v, media_type="video/mp4", filename=Path(v).name)
 
 
@@ -2404,6 +2418,80 @@ def _prep_job(job_id: str, body: dict) -> None:
         _mark_failed(job_id, e)
 
 
+def _cos_mark(job_id: str, key: str) -> None:
+    """把 cos_key 记到任务表与项目登记上（两份都要：重启后靠 registry 找得回）。"""
+    with _LOCK:
+        j = JOBS.get(job_id)
+        if j:
+            j["cos_key"] = key
+            _jobs_save()
+        reg = _reg()
+        for pr in reg["projects"]:
+            for r in pr.get("renders") or []:
+                if r.get("id") == job_id:
+                    r["cos_key"] = key
+        _reg_save(reg)
+
+
+def _cos_archive(job_id: str, video: Path) -> None:
+    """成片后台传对象存储：传成之后本地那份等画面校验跑完才删（见 _verify_bg）。
+
+    为什么后台：30MB 上传要几秒，不该压在「点完成」这条路径上；
+    为什么传成也不立刻删：画面校验要抽帧读本地这份文件。
+    """
+    if not cos_store.enabled() or not video.is_file():
+        return
+
+    def go():
+        key = cos_store.archive(job_id, video)
+        if not key:
+            return
+        _cos_mark(job_id, key)
+        _cos_drop_local(job_id, video)
+    threading.Thread(target=go, daemon=True).start()
+
+
+def _cos_drop_local(job_id: str, video: Path) -> None:
+    """外存有了 + 画面校验跑完了，本地这份才删；任一条件不满足就留着。"""
+    with _LOCK:
+        j = JOBS.get(job_id) or {}
+        if not j.get("cos_key") or not j.get("verify"):
+            return
+    try:
+        video.unlink()
+    except OSError:
+        pass
+
+
+def _film_or_fetch(video: Path) -> tuple[Path | None, bool]:
+    """本地在就用本地；本地没了但外存有，拉回一份临时件（剪映草稿、封面要真文件）。
+
+    返回 (可用路径, 是不是外存取回的临时件)。临时件用完必须 `_drop_staged` 删掉：
+    这些副本留着，40G 系统盘又会慢慢被填满，等于白做归档。
+    """
+    if video.is_file():
+        return video, False
+    if not cos_store.enabled():
+        return None, False
+    with _LOCK:
+        reg = _reg()
+        key = next((r.get("cos_key") for pr in reg["projects"] for r in (pr.get("renders") or [])
+                    if r.get("file") == str(video)), None)
+    if not key:
+        return None, False
+    tmp = OUTPUTS / video.name
+    return (tmp, True) if cos_store.fetch(key, tmp) else (None, False)
+
+
+def _drop_staged(video: Path | None, staged: bool) -> None:
+    """删掉刚从对象存储取回的过路副本（本地原本就有的那份不动）。"""
+    if staged and video is not None:
+        try:
+            video.unlink()
+        except OSError:
+            pass
+
+
 def _verify_bg(job_id: str, bundle_dir: Path, video: Path, work_dir: Path | None) -> None:
     """画面校验后台通道：抽帧 + 最多 4 次外部视觉 API，成片交付后才跑。
 
@@ -2425,6 +2513,7 @@ def _verify_bg(job_id: str, bundle_dir: Path, video: Path, work_dir: Path | None
     finally:
         if work_dir:
             _cleanup_work_dir(work_dir)
+        _cos_drop_local(job_id, video)
 
 
 def _browser_safe_video(path: str, cache_dir: Path) -> str:
@@ -2614,6 +2703,8 @@ def _render_job(job_id: str, body: dict) -> None:
                     p.setdefault("renders", []).append({"id": job_id, "file": str(out),
                         "ts": time.strftime("%Y/%m/%d %H:%M")})
             _reg_save(reg)
+        if not body.get("try"):
+            _cos_archive(job_id, out)
         if body.get("try"):
             # 试玩：降成 720p 带水印的样片给公开链接，原始大文件删掉；不备草稿资产
             small = OUTPUTS / f"try-{job_id}.mp4"
