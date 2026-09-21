@@ -415,8 +415,8 @@ def _bundle_visible(name: str, request: Request) -> bool:
     """
     if _is_adminish(request):
         return True
-    if not AUTH_TOKEN and not auth.has_users():
-        return True          # 开放模式（本机自用）
+    if _open_mode():
+        return True          # 开放模式（本机自用，需显式开）
     email = _session_email(request)
     if not email:
         return False
@@ -430,7 +430,7 @@ def _bundle_visible(name: str, request: Request) -> bool:
 def _project_visible(p: dict, request: Request) -> bool:
     if _is_adminish(request):
         return True
-    if not AUTH_TOKEN and not auth.has_users():
+    if _open_mode():
         return True   # 开放模式（本机自用）：不隔离，全部可见
     email = _session_email(request)
     return bool(email) and p.get("owner") == email
@@ -443,7 +443,7 @@ def _job_visible(j: dict, request: Request) -> bool:
         return True
     if _is_adminish(request):
         return True
-    if not AUTH_TOKEN and not auth.has_users():
+    if _open_mode():
         return True          # 开放模式（本机自用）
     email = _session_email(request)
     owner = j.get("owner")
@@ -496,7 +496,7 @@ def _request_authed(request: Request) -> bool:
         return True            # 成片台/脚本的设备令牌（登录接口签发的长会话）
     if _token_ok(request) or _session_email(request):
         return True
-    return not AUTH_TOKEN and not auth.has_users()   # 开放模式
+    return _open_mode()                                # 开放模式（需显式开）
 
 
 def _effective_email(request: Request, body_email=None) -> str | None:
@@ -511,8 +511,12 @@ def _effective_email(request: Request, body_email=None) -> str | None:
 
 
 def _open_mode() -> bool:
-    """本机自用开放模式：没配访问令牌也没建过账号。此时不设付费墙。"""
-    return not AUTH_TOKEN and not auth.has_users()
+    """本机自用开放模式：显式开了 `VIDEOGEN_OPEN_MODE=1`、没配令牌也没建过账号。
+
+    那个开关是关键：以前只看"没令牌 + 没账号"，而生产上状态文件读不到时这条也成立
+    → 全站开门。现在默认关，掉挂载只会变成谁都进不来（报错），不是谁都进得来。
+    """
+    return config.open_mode_allowed() and not AUTH_TOKEN and not auth.has_users()
 
 
 # ---------- 免费档每日出片额度 ----------
@@ -844,11 +848,14 @@ def auth_send_code(body: dict, request: Request):
 
 @app.post("/api/auth/register")
 def auth_register(body: dict, request: Request, response: Response):
-    """注册第二步：邮箱 + 验证码 + 密码。第一个注册的用户自动成为管理员。"""
+    """注册第二步：邮箱 + 验证码 + 密码。管理员只由 `VIDEOGEN_ADMIN_EMAILS` 白名单决定。"""
     email = body.get("email", "")
     if not auth.check_code(email, body.get("code", "")):
         return JSONResponse({"error": "验证码不对或已过期"}, status_code=400)
-    role = "admin" if not auth.has_users() else "user"
+    # 管理员只认 VIDEOGEN_ADMIN_EMAILS 白名单；库里一个账号都没有也**不会**送人管理员，
+    # 否则"账号文件丢了"就等于"最高权限重新待发"（见 config.ADMIN_EMAILS 上方注释）。
+    # body 里传什么都不算，role 只由服务端按邮箱决定。
+    role = "admin" if str(email).strip().lower() in config.ADMIN_EMAILS else "user"
     try:
         user = auth.create_user(email, body.get("password", ""), role=role)
     except ValueError as e:

@@ -66,6 +66,24 @@ WORKSPACES = Path(_env("VIDEOGEN_WORKSPACE") or ROOT.parent).resolve()
 # 留空 = 不鉴权（仅建议本机自用）。前端会通过 x-auth-token 头或 ?token= 携带。
 AUTH_TOKEN = _env("VIDEOGEN_TOKEN")
 
+# 管理员名单（逗号或分号分隔的邮箱）。**权限不再来自"谁先注册"**：
+# 旧写法是 `role = "admin" if not auth.has_users() else "user"`，等于把最高权限
+# （能生成卡密 = 能凭空印钱）挂在"账号文件在不在"上 —— /state 掉挂载、卷被清空、
+# 恢复到一个空目录，任何一次都会让下一个点注册的人当上管理员。
+# 站长 2026-09-21 拍板：管理员只有他一个人，按邮箱白名单认。
+ADMIN_EMAILS = frozenset(
+    e.strip().lower() for e in (_env("VIDEOGEN_ADMIN_EMAILS") or "").replace(";", ",").split(",")
+    if e.strip())
+
+
+def open_mode_allowed() -> bool:
+    """开放模式（没令牌没账号就不设付费墙）只许本机开发显式打开。
+
+    默认关。因为"库里没账号"这一条在生产上会在**状态文件读不到**时成立，
+    那时旧行为是全站开门（匿名能读所有客户的素材与成片），而不是关门报错。
+    """
+    return os.environ.get("VIDEOGEN_OPEN_MODE") == "1"
+
 # 账号体系（邮箱密码登录）存储位置：默认放工作区（云上是持久卷，重启不丢）
 # ⚠️ 生产应把这三样指到工作区**之外**（部署机上用 /state）：/media 这类接口的边界
 #    是"只许读工作区以内的文件"，密钥与要给客户的素材包同处一地时，边界只要写错一次

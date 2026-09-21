@@ -6,7 +6,7 @@ cd /opt/videogen
 # 首次：从现有容器导出环境变量到 .env
 if [ ! -f .env ]; then
   docker inspect videogen --format '{{range .Config.Env}}{{println .}}{{end}}' \
-    | grep -E '^(DEEPSEEK_API_KEY|ZHIPU_API_KEY|ALIYUN_ACCESS_KEY|PEXELS_API_KEY|PIXABAY_API_KEY|VIDEOGEN_TOKEN|VIDEOGEN_DEV_EMAIL|VIDEOGEN_WORKSPACE|HOST|PORT|EMAIL_)' > .env
+    | grep -E '^(DEEPSEEK_API_KEY|ZHIPU_API_KEY|ALIYUN_ACCESS_KEY|PEXELS_API_KEY|PIXABAY_API_KEY|VIDEOGEN_TOKEN|VIDEOGEN_DEV_EMAIL|VIDEOGEN_WORKSPACE|HOST|PORT|VIDEOGEN_ADMIN_EMAILS|EMAIL_)' > .env
   cat >> .env << 'E2'
 # 发信邮箱（注册验证码）：填好后重跑本脚本生效
 EMAIL_SMTP_HOST=
@@ -14,6 +14,12 @@ EMAIL_SMTP_PORT=465
 EMAIL_SMTP_USER=
 EMAIL_SMTP_PASS=
 EMAIL_FROM=
+# 管理员邮箱白名单（逗号分隔）：**必填你自己的邮箱**。
+# 权限不再来自"谁先注册"，只来自这一行 —— 万一 /state 的账号文件丢了，
+# 没有它你就再也当不上管理员，也就生不成卡密。
+VIDEOGEN_ADMIN_EMAILS=
+# 开放模式（免登录本机自用）：生产留空。
+VIDEOGEN_OPEN_MODE=
 E2
   echo "[deploy] 已生成 .env"
 fi
