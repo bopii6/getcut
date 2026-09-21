@@ -50,15 +50,23 @@ class _Base(unittest.TestCase):
     def setUp(self):
         self.ws = Path(_TMP) / ("ws-" + type(self).__name__)
         self.ws.mkdir(exist_ok=True)
-        auth.USERS_FILE = Path(_TMP) / "users.json"
-        auth.SECRET_FILE = Path(_TMP) / "auth-secret"
-        auth.SESSIONS_FILE = Path(_TMP) / "sessions.json"
-        auth._sessions_state = None
-        licenses._CODE_FILE = Path(_TMP) / "licenses.json"
-        licenses._AUDIT_FILE = Path(_TMP) / "audit.jsonl"
+        # 每个用例一套自己的文件：以前共用 users.json/auth-secret，
+        #  setUp 里"删掉再建"会和别的模块的会话互相踩，出现偶发假失败
+        tag = "%s.%s" % (type(self).__name__, self._testMethodName)
+        auth.USERS_FILE = Path(_TMP) / ("users-%s.json" % tag)
+        auth.SECRET_FILE = Path(_TMP) / ("secret-%s" % tag)
+        auth.SESSIONS_FILE = Path(_TMP) / ("sessions-%s.json" % tag)
+        auth._forget_sessions_cache()
+        licenses._CODE_FILE = Path(_TMP) / ("licenses-%s.json" % tag)
+        licenses._AUDIT_FILE = Path(_TMP) / ("audit-%s.jsonl" % tag)
         for f in (auth.USERS_FILE, auth.SECRET_FILE, auth.SESSIONS_FILE,
                   licenses._CODE_FILE, licenses._AUDIT_FILE):
             f.unlink(missing_ok=True)
+        # 密钥自己先写好：不留"谁先去创建这个文件"的窗口（生产侧已改成独占创建，
+        # 测试这边再固定一份，偶发变量就彻底没了）
+        auth.SECRET_FILE.write_bytes(b"pytest-secret-" + tag.encode("utf-8").ljust(18, b"0")[:18])
+        self.addCleanup(lambda: [f.unlink(missing_ok=True) for f in
+                                 Path(_TMP).glob("*" + tag + "*")])
         self._ws = server.WORKSPACES
         server.WORKSPACES = self.ws
         self._meta = server.BUNDLES_META
@@ -70,6 +78,16 @@ class _Base(unittest.TestCase):
         auth.create_user(CUST, CUST_PW)
         auth.create_user(BOSS, BOSS_PW, role="admin")
         self.client = TestClient(server.app, base_url="http://legal.test")
+
+    def as_user(self, email, pw):
+        """带某个人身份的一次性客户端（不共用 cookie jar，避免跨请求互相污染）。"""
+        tok = _login(email, pw)
+        self.assertEqual(auth.session_status(tok), "ok",
+                         "刚签的通行证自己就不认：查 session_status 的分支")
+        c = TestClient(server.app, base_url="http://legal.test",
+                       cookies={server.SESSION_COOKIE: tok})
+        c._tok = tok
+        return c
 
     def tearDown(self):
         server.WORKSPACES = self._ws
@@ -145,10 +163,9 @@ class DeleteAccountTest(_Base):
 
     def test_deletes_everything_the_policy_promises(self):
         seeded = self._seed(CUST)
+        cust = self.as_user(CUST, CUST_PW)
         sess = _login(CUST, CUST_PW)
-        r = self.client.post("/api/auth/delete-account",
-                             json={"confirm": True, "password": CUST_PW},
-                             cookies={server.SESSION_COOKIE: sess})
+        r = cust.post("/api/auth/delete-account", json={"confirm": True, "password": CUST_PW})
         self.assertEqual(r.status_code, 200, r.text)
         body = r.json()
         self.assertIn("cust-bundle", body["deleted"]["bundles"])
@@ -166,9 +183,9 @@ class DeleteAccountTest(_Base):
     def test_license_records_survive_but_lose_the_email(self):
         """财务要能对账 → 卡密记录留着；但不能再指向这个人。"""
         self._seed(CUST)
-        self.client.post("/api/auth/delete-account",
-                         json={"confirm": True, "password": CUST_PW},
-                         cookies={server.SESSION_COOKIE: _login(CUST, CUST_PW)})
+        r = self.as_user(CUST, CUST_PW).post(
+            "/api/auth/delete-account", json={"confirm": True, "password": CUST_PW})
+        self.assertEqual(r.status_code, 200, r.text)   # 不先确认删成功，后面的断言都是空话
         raw = licenses._CODE_FILE.read_text(encoding="utf-8")
         self.assertNotIn(CUST, raw, "注销后卡密表里还能搜到这个邮箱")
         self.assertIn("erased-", raw, "核销记录整个没了：财务对不上账")
@@ -181,9 +198,9 @@ class DeleteAccountTest(_Base):
         ob.mkdir(exist_ok=True)
         (ob / "content.json").write_text("{}", encoding="utf-8")
         server._bundles_meta_save({**server._bundles_meta(), "other-bundle": {"owner": other}})
-        self.client.post("/api/auth/delete-account",
-                         json={"confirm": True, "password": CUST_PW},
-                         cookies={server.SESSION_COOKIE: _login(CUST, CUST_PW)})
+        r = self.as_user(CUST, CUST_PW).post(
+            "/api/auth/delete-account", json={"confirm": True, "password": CUST_PW})
+        self.assertEqual(r.status_code, 200, r.text)
         self.assertTrue(ob.is_dir(), "别人的素材包被带走了")
         self.assertTrue(auth.user_exists(other), "别人的账号被删了")
         self.assertFalse(keep["bundle"].exists())
@@ -195,24 +212,21 @@ class SessionRevocationTest(_Base):
         phone = auth.make_session(CUST, auth.SESSION_TTL_LONG, device="手机")
         rows = auth.list_sessions(CUST)
         self.assertEqual(len(rows), 2, "两台设备应该各一条记录")
-        sid = rows[-1]["sid"]                      # 最后活跃的是刚签的那张，取另一张
-        target = [r["sid"] for r in rows if r["sid"] != sid][0]
-        r = self.client.post("/api/auth/session/revoke", json={"sid": target},
-                             cookies={server.SESSION_COOKIE: laptop if target != _sid_of(laptop)
-                                       else phone})
+        target = _sid_of(laptop)                   # 要踢的就是笔记本这张，不靠排序猜
+        r = self.as_user(CUST, CUST_PW).post("/api/auth/session/revoke", json={"sid": target})
         self.assertEqual(r.status_code, 200, r.text)
-        kept = phone if target == _sid_of(laptop) else laptop
-        gone = laptop if target == _sid_of(laptop) else phone
+        kept, gone = phone, laptop
         self.assertIsNotNone(auth.read_session(kept), "另一台被误伤了")
         self.assertIsNone(auth.read_session(gone), "被踢的那台还有效")
 
     def test_cannot_revoke_another_accounts_session(self):
         victim = _login(CUST, CUST_PW)
-        sid = auth.list_sessions(CUST)[0]["sid"]
-        r = self.client.post("/api/auth/session/revoke", json={"sid": sid},
-                             cookies={server.SESSION_COOKIE: _login(BOSS, BOSS_PW)})
+        sid = _sid_of(victim)
+        r = self.as_user(BOSS, BOSS_PW).post("/api/auth/session/revoke", json={"sid": sid})
         self.assertEqual(r.status_code, 404, "别人的 sid 不该被认出来")
-        self.assertIsNotNone(auth.read_session(victim), "别人的会话被踢掉了")
+        self.assertIn(sid, [r["sid"] for r in auth.list_sessions(CUST)],
+                      "别人的会话被踢掉了：归属校验没起作用")
+        self.assertTrue(auth.revoke_session(CUST, sid), "自己的 sid 反而踢不掉")
 
     def test_password_change_kills_all_sessions(self):
         a, b = _login(CUST, CUST_PW), auth.make_session(CUST, auth.SESSION_TTL_LONG, device="平板")
@@ -239,13 +253,11 @@ class SessionRevocationTest(_Base):
 
 class LicenseAuditTest(_Base):
     def test_issue_is_logged_with_operator(self):
-        boss = _login(BOSS, BOSS_PW)
-        r = self.client.post("/api/admin/licenses/gen",
-                             json={"tier": "premium", "count": 3, "note": "直播间 9/21"},
-                             cookies={server.SESSION_COOKIE: boss})
+        boss_client = self.as_user(BOSS, BOSS_PW)
+        r = boss_client.post("/api/admin/licenses/gen",
+                             json={"tier": "premium", "count": 3, "note": "直播间 9/21"})
         self.assertEqual(r.status_code, 200, r.text)
-        rows = self.client.get("/api/admin/licenses/audit",
-                               cookies={server.SESSION_COOKIE: boss}).json()["rows"]
+        rows = boss_client.get("/api/admin/licenses/audit").json()["rows"]
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["operator"], BOSS)
         self.assertEqual(rows[0]["count"], 3)
@@ -255,18 +267,18 @@ class LicenseAuditTest(_Base):
             self.assertNotIn(c, joined, "整码不该进流水：流水泄露也不能直接兑换")
 
     def test_audit_is_append_only_across_batches(self):
-        boss = _login(BOSS, BOSS_PW)
+        boss_client = self.as_user(BOSS, BOSS_PW)
         for _ in range(2):
-            self.client.post("/api/admin/licenses/gen",
-                             json={"tier": "basic", "count": 1},
-                             cookies={server.SESSION_COOKIE: boss})
+            rr = boss_client.post("/api/admin/licenses/gen", json={"tier": "basic", "count": 1})
+            self.assertEqual(rr.status_code, 200, rr.text)
         lines = [x for x in licenses._AUDIT_FILE.read_text(encoding="utf-8").splitlines() if x]
         self.assertEqual(len(lines), 2, "两批只留了一行 = 前一批的账被抹了")
 
     def test_non_admin_cannot_read_the_trail(self):
-        r = self.client.get("/api/admin/licenses/audit",
-                            cookies={server.SESSION_COOKIE: _login(CUST, CUST_PW)})
-        self.assertEqual(r.status_code, 403)
+        cust = self.as_user(CUST, CUST_PW)
+        self.assertEqual(cust.get("/api/me").status_code, 200,
+                         "登录状态不认：" + auth.session_status(cust._tok))
+        self.assertEqual(cust.get("/api/admin/licenses/audit").status_code, 403)
 
 
 def _sid_of(token: str) -> str:

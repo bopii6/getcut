@@ -57,4 +57,4 @@ jobs:
 
       - name: 跑
         working-directory: videogen
-        run: python -m unittest discover -s tests -t tests -v
+        run: bash tools/run_backend.sh
