@@ -1,14 +1,15 @@
-"""_browser_safe_video 自测：造坏素材 → 清洗 → 验规格。跑完自己删目录。"""
+"""_browser_safe_video 自测：造坏素材 → 清洗 → 验规格。产物落临时目录，不脏仓库。"""
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from videogen.server import _browser_safe_video  # noqa: E402
 
-TMP = Path(__file__).resolve().parent / "browsersafe-selftest"
-TMP.mkdir(exist_ok=True)
+TMP = Path(tempfile.mkdtemp(prefix="browsersafe-selftest-"))
 
 
 def probe(p):
@@ -103,4 +104,5 @@ gone = _browser_safe_video(str(TMP / "不存在.mp4"), TMP / "cache")
 check("探测失败退回原路径不拦渲染", gone == str(TMP / "不存在.mp4"), Path(gone).name)
 
 print("\n" + ("全部通过" if not fails else f"失败 {len(fails)} 项: {fails}"))
+shutil.rmtree(TMP, ignore_errors=True)
 sys.exit(1 if fails else 0)
