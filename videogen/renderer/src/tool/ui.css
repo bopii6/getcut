@@ -177,6 +177,10 @@ a { color: inherit; text-decoration: none }
 .g-meta { display: flex; gap: 16px; margin-top: 14px; font-size: 13px; color: var(--ink-2);
   font-family: var(--mono); flex-wrap: wrap }
 .g-keep { font-size: 12.5px; color: var(--ink-3); margin-top: 12px; line-height: 1.7 }
+/* 单子被别的页面占着：这是要人动手的卡点，不能只写 console */
+.g-warn { margin-top: 12px; padding: 11px 13px; border-radius: 9px; font-size: 13px;
+  line-height: 1.75; color: var(--ink); background: var(--sunken);
+  border: 1px solid var(--line2); border-left: 2px solid var(--acc) }
 .stage.mini { height: min(38vh, 380px) }
 .foldbox { width: 100%; flex: none; background: var(--surface); border: 1px solid var(--line);
   border-radius: 12px; padding: 13px 18px 15px }

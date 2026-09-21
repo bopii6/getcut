@@ -157,6 +157,7 @@ const App: React.FC = () => {
   const [prevKey, setPrevKey] = React.useState('');
   const [resumeJob, setResumeJob] = React.useState('');
   const [showScript, setShowScript] = React.useState(false);
+  const [stalled, setStalled] = React.useState(false);
   const [lib, setLib] = React.useState<Project[] | null>(null);
   const [libMsg, setLibMsg] = React.useState('');
   const playerRef = React.useRef<PlayerRef>(null);
@@ -303,6 +304,7 @@ const App: React.FC = () => {
   // ---- 成片台轮询：领任务（本页提交的或别的页提交的都走这里） ----
   React.useEffect(() => {
     let alive = true;
+    let fails = 0;
     (async () => {
       for (;;) {
         if (!alive) return;
@@ -326,34 +328,51 @@ const App: React.FC = () => {
           }
           setPack(p);
           packRef.current = p;
+          setStalled(false);
           autoRef.current = resuming
             || (!!jobIdRef.current && jobIdRef.current === data.job);
           setPhase(autoRef.current ? 'prepping' : 'ready');
           setPrewarmDone(0);
           let done = 0;
-          for (const f of p.files) {
-            const url = `/agent-media/${p.job}/${f.path}`;
-            let ok = false;
-            for (let a = 0; a < 2 && !ok; a++) {
-              try {
-                ok = (await fetch(url, {cache: 'force-cache'})).ok;
-              } catch (_) {
-                ok = false;
+          // 预取期也要报心跳：云端靠「多久没说话」判断成片台还活着。
+          // 不报的话，一条 3Mbps 的慢线拉几十兆素材就能被误判成失联。
+          const beat = setInterval(() => {
+            void report(0, `缓存素材 ${done}/${p.files.length}`);
+          }, 5000);
+          try {
+            for (const f of p.files) {
+              const url = `/agent-media/${p.job}/${f.path}`;
+              let ok = false;
+              for (let a = 0; a < 2 && !ok; a++) {
+                try {
+                  ok = (await fetch(url, {cache: 'force-cache'})).ok;
+                } catch (_) {
+                  ok = false;
+                }
+                if (!ok) await new Promise((res) => setTimeout(res, 800));
               }
-              if (!ok) await new Promise((res) => setTimeout(res, 800));
+              if (!ok) throw new Error(`素材加载失败：${f.path}`);
+              done += 1;
+              setPrewarmDone(done);
             }
-            if (!ok) throw new Error(`素材加载失败：${f.path}`);
-            done += 1;
-            setPrewarmDone(done);
+            await document.fonts.ready.catch(() => {});
+          } finally {
+            clearInterval(beat);
           }
-          await document.fonts.ready.catch(() => {});
           if (!alive) return;
+          setErr('');
           if (autoRef.current) startRender();
           else setPhase('ready');
           return;
         } catch (e) {
           if (!alive) return;
+          fails += 1;
           console.error('GetCut 准备失败', e);
+          // 连续失败要说给人听：只写 console 的话，客户看到的就是一直转圈
+          if (fails >= 2) {
+            setErr(`素材反复拉不下来：${String((e as Error).message || e).slice(0, 60)}`
+              + ' · 已重试 ' + fails + ' 次，还在试');
+          }
           if (packRef.current) {
             await report(0, '浏览器端准备失败，退回队列', true).catch(() => {});
             packRef.current = null;
@@ -430,6 +449,7 @@ const App: React.FC = () => {
     setPhase('prepping');
     t0Ref.current = Date.now();
     setElapsed(0);
+    setStalled(false);
     setPrepPct(0);
     setPrepStage('queued');
     setPrepMsg('云端备料中…');
@@ -467,6 +487,11 @@ const App: React.FC = () => {
           setPrepMsg(String(j.detail || stage));
           setPrepStage(stage);
           setPrepPct(Number(j.progress ?? 0));
+          // 这一单被别的页面（含自己另开的标签页）领走了：本页领不到，
+          // 只能等云端「多久没心跳」判定收回 —— 不告诉人就是一直转圈
+          setStalled(!packRef.current && stage === 'render'
+            && /已领取/.test(String(j.detail || ''))
+            && Date.now() - t0Ref.current > 60_000);
           if (packRef.current && packRef.current.job === jid) return;  // 已领单，交给渲染线
         }
       };
@@ -986,12 +1011,25 @@ const App: React.FC = () => {
                 </div>
                 <div className="g-meta">
                   <span>已用 {mmss}</span>
-                  <span>{leftSec >= 20 ? `还需约 ${mm(leftSec)}` : '正在起步'}</span>
-                  <span>整条预计 {estMin} 分钟</span>
+                  {!stalled && leftSec >= 20 ? <span>还需约 {mm(leftSec)}</span> : null}
+                  {!stalled ? <span>整条预计 {estMin} 分钟</span> : null}
                 </div>
-                <div className="g-keep">
-                  可以刷新这一页：任务会自动接回来重跑。关掉浏览器或断网，云端要等 10 分钟才回收这一单。
-                </div>
+                {stalled ? (
+                  <div className="g-warn">
+                    这一单被另一个成片台页面占着 —— 你可能开了两个标签页，或旧标签页刚被关掉。
+                    关掉另一个页面；不然等约 4 分钟云端会自己收回，收回后这一页立刻接着跑。
+                    <div>
+                      <button className="btn ln sm" style={{marginTop: 10}}
+                              onClick={() => { setStalled(false); void submit(); }}>
+                        不等了，重开一条
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="g-keep">
+                    可以刷新这一页：任务会自动接回来重跑。关掉浏览器或断网，云端要等约 4 分钟才回收这一单。
+                  </div>
+                )}
               </article>
               {pack ? (
                 <div className="stage mini">
