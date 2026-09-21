@@ -25,6 +25,21 @@ cp -a code/videogen/*.py "$BK/videogen/"
 cp -a code/server_static/index.html "$BK/server_static/" 2>/dev/null || true
 echo "[deploy] 旧代码已备份 -> $BK"
 
+# 记下"这次上线的到底是哪一版"：生产是宿主绑挂代码、镜像是几天前建的，
+# 只有代码目录旁这份 BUILD_INFO.json 能说清在跑的是哪个 commit（容器里读得到，
+# 因为 /opt/videogen/code/videogen 就是挂进 /app/videogen 的那一份）。
+if git -C code rev-parse --short HEAD >/dev/null 2>&1; then
+  SHA="$(git -C code rev-parse --short HEAD)"
+  BRANCH="$(git -C code rev-parse --abbrev-ref HEAD)"
+  BUILT="$(git -C code log -1 --format=%cI)"
+  if [ -n "$(git -C code status --porcelain)" ]; then DIRTY=true; else DIRTY=false; fi
+  printf '{"sha":"%s","branch":"%s","built":"%s","dirty":%s,"deployed_at":"%s"}\n' \
+    "$SHA" "$BRANCH" "$BUILT" "$DIRTY" "$(date -Is)" > code/videogen/BUILD_INFO.json
+  echo "[deploy] 上线版本 $SHA ($BRANCH) 未提交改动=$DIRTY"
+else
+  echo "[deploy] ⚠️ code/ 不是 git 仓库，写不出 BUILD_INFO —— 以后只能靠镜像标签猜版本"
+fi
+
 # 重建容器（先停旧的再改名，避免端口占用）
 docker stop videogen >/dev/null
 docker rm -f videogen-old >/dev/null 2>&1 || true
@@ -43,12 +58,25 @@ docker run -d --name videogen --restart unless-stopped --network host \
   -v /opt/videogen/renderer-media:/app/renderer/public/media \
   videogen:latest >/dev/null
 
-docker exec videogen pip install -q "websockets>=14" "cos-python-sdk-v5>=1.9.3" >/dev/null 2>&1 || true
+# 依赖：这一行以前是 `pip install -q "websockets>=14" "cos-python-sdk-v5>=1.9.3" || true` ——
+# 不钉版本（每次部署都可能悄悄换版）、装失败还被吞掉，等于"重建即漂移"每天都在发生。
+# 新规则：镜像里已经能 import 的就**不动**（不悄悄升级也不悄悄降级）；缺了才按 requirements.lock
+# 装上；装不上就停下，别让服务带着缺依赖起来。线上真实版本看 /api/version。
+install_if_missing() {          # $1=import 名  $2=钉死的 pip 规格（要和 requirements.lock 一起改）
+  if docker exec videogen python -c "import $1" >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "[deploy] 镜像里缺 $2，按锁定表装上"
+  docker exec videogen pip install --no-input -q "$2"
+}
+install_if_missing websockets "websockets==16.1.1"
+install_if_missing qcloud_cos "cos-python-sdk-v5==1.9.44"
 
 for i in $(seq 1 20); do
   sleep 2
   if curl -fsS --max-time 4 http://127.0.0.1:8600/healthz 2>/dev/null | grep -q '"ok":true'; then
     echo "[deploy] 服务正常（新容器已就绪，旧容器保留为 videogen-old 可回滚）"
+    docker exec videogen python -c "from videogen import version; print('[deploy] 容器自报:', version.info())" || true
     exit 0
   fi
 done

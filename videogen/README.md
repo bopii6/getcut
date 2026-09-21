@@ -144,6 +144,37 @@ bash deploy.sh          # 自动生成 .env 与访问令牌，拉取或构建镜
 - `renderer/src` 与 `videogen/` 都是**挂载进容器**的：改模板/改 Python 只需传文件 +
   `docker restart videogen`，不用重建镜像。
 
+## 客户 IP 与限流（改反向代理拓扑前必读）
+
+发验证码、登录、公开试玩、素材直投四处都按 IP 限流。`_client_ip` 只在**直连来源本身是代理段**
+（回环、10.、172.16-31.、192.168.、fe80::）时才认 `X-Forwarded-For`，否则一律用直连地址 ——
+XFF 第一段是客户端自己写的，无条件信就等于"换一行 header 换一张新脸"。
+生产现状（Caddy 与容器同机）落在可信段里，行为不变。
+若哪天把反代挪到**另一台公网机器**上，必须给容器加 `VIDEOGEN_TRUST_PROXY_HEADERS=1`，
+不然所有客户会被挤进同一个 IP 桶、一起被限死。
+
+## 出事怎么办：备份与恢复
+
+状态备份脚本 `tools/backup_state.sh` 跑在**宿主机**上（cron 每天 04:30 一次），把账号表 / 卡密表 /
+登记表 / 任务表 / 试玩与用量 / 品牌套装目录打包到 `/opt/videogen/backups/`，滚动保留 **90 天**，
+包 600、目录 700，**打完当场就 `tar tzf` 校验**（解不开的备份不算备份）。
+容器只以**只读**方式挂那个目录：应用发现状态文件读坏了会自己回包里取；取不到就抛
+`StoreUnrecoverable` 拒绝写入 —— 宁可这一单 500，也不许"把坏文件当空库"（那等于重开注册 + 首注册用户变管理员）。
+
+四条命令（都在宿主机敲，`BASE=/opt/videogen`）：
+
+| 要做什么 | 命令 |
+|---|---|
+| 看有哪些备份包 | `tools/backup_state.sh list` |
+| 校验最新包能解开、里面有哪些文件 | `tools/backup_state.sh verify` |
+| 从包里取回一个文件（默认落到 `/tmp/restore-<时间戳>`） | `tools/backup_state.sh restore state/.videogen-users.json` |
+| 手工打一个新包 | `tools/backup_state.sh` |
+
+`restore` **只把文件取到 /tmp**，你确认内容无误后再自己放回 `$BASE/...` 并重启容器 —— 刻意不做自动覆盖，
+免得把"误判的坏"写成真的坏。生产密钥三件套在 `state/`（本机开发仍落 `data/`），文件名先跑 `verify` 看清单再取。
+
+还欠两件（评估文档第 3 节）：备份与正本**同盘**（防误删不防盘坏，云盘快照未开）、以及没做过"空机起服"级别的恢复演练。
+
 ## 流水线（与 Niwo 8 阶段对齐）
 
 | 阶段 | 模块 | 说明 |
@@ -158,10 +189,31 @@ bash deploy.sh          # 自动生成 .env 与访问令牌，拉取或构建镜
 
 ## 开发约定
 
-- 前端测试：`NODE_PATH=tests/.deps/node_modules node tests/frontend.test.cjs`（19 条）。
+- 前端出片契约测试（离线 29 条，不起服务器也不开浏览器）：
+  `NODE_PATH=tests/.deps/node_modules node --test tests/frontend.test.cjs`。
   改确认页控件要同步改测试与 `tests/frontend-harness.cjs` 的 mock。
+  "某控件已下线"这类断言走 `assertAbsent(...)`，别把 DOM 节点交给 `assert.equal(x, null)` ——
+  失败时 Node 会 inspect 整棵 LinkeDOM 树，实测一次吃掉 63GB 内存再 OOM 崩进程，真原因被盖住。
+- 后端闸门（184 条，全离线：鉴权边界 / 状态文件 / 卡密与档位 / 分镜节奏与素材包解析 / 成片台两端协议字段 / 剪映分轨草稿 / 依赖锁定策略 / 版本链路 / 试玩额度 / 路径边界普查；
+  只开发环境要 `pip install httpx`）：`python -m unittest discover -s tests -t tests`。
+  三条门禁一起跑（后端 + ruff + 前端，只读不装包）：`bash tools/selfcheck.sh`；单跑一条用 `--only=frontend`；
+  想确认这脚本不是在自我安慰就跑 `--fail-demo`，或临时加一条会红的测试看它报不报红。
+  改 `/media`、`/api/*` 的鉴权或归属、卡密兑换规则、Plan 落盘字段与节奏分块时先看它红不红。
+  ⚠️ 这些测试都靠"临时目录 + 显式改指 `auth.USERS_FILE` 等 import 期常量"隔离，
+  新增用例请在 `setUp`/`setUpModule` 里自己钉死路径，别只设环境变量（会被别的模块先 import 掉）。
+- 静态检查（只闸真缺陷：未定义名 / 无用导入 / 语法错 / `zip` 静默截断等常见陷阱；排版类不开）：
+  `python -m ruff check .`，规则就在本目录 `ruff.toml`，本地与 CI 同一份。
+- 上面三套（前端契约 / 后端闸门 / 静态检查）在 push / PR 上由 `.github/workflows/tests.yml` 把关（镜像构建是另一条 docker.yml）。
 - 模板验收脚本：`_tools/_verify/tpl_drives_llm.py`（模板语汇命中率）、
   `_tools/_verify/tpl_vocab.py`（各模板的语汇约束是否生效）。
+- 依赖是**锁死的**：`requirements.txt`（9 个直接依赖，全 `==`）+ `requirements.lock`（36 条传递依赖）。
+  镜像与 CI 都装 `requirements.lock`。升级 = 改版本号 → 在虚拟环境里 `pip install -r requirements.lock`
+  → 本地跑绿 104 条后端测试 → 再提交；别把 `==` 改回 `>=`（`tests/test_deps.py` 会红）。
+  ⚠️ `cos-python-sdk-v5` 只发 sdist，构建时不能给 pip 加 `--only-binary=:all:`。
+- 线上是哪一版：登录以后 `GET /api/version` —— 报 commit、分支、构建/部署时间、**有没有未提交改动**，
+  以及运行时**真装着的** fastapi/starlette/websockets/pillow 版本。三个来源按优先级：
+  镜像构建参数 `GIT_SHA` → 部署脚本落在 `code/videogen/BUILD_INFO.json` → 就地问 git → 都没有报 `unknown`。
+  ⚠️ `tools/deploy_new.sh` 里钉的 `websockets==` / `cos-python-sdk-v5==` 必须与 `requirements.lock` 一致（有测试盯着）。
 - 素材授权逐条记在 `assets/sfx/library.json`、`assets/music/library.json`、
   各素材包的 `manifest.json` 里；**不要把音效/音乐当素材转售**。
 

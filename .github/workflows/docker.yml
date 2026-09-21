@@ -34,6 +34,9 @@ jobs:
           context: videogen
           file: videogen/Dockerfile
           push: true
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            GIT_BRANCH=${{ github.ref_name }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/videogen:latest
             ghcr.io/${{ github.repository_owner }}/videogen:${{ github.sha }}
