@@ -618,6 +618,18 @@ def brand_logo_delete(request: Request):
     return {"ok": True}
 
 
+@app.on_event("startup")
+def _purge_legacy_recordings() -> None:
+    """老客户手上遗留的原始录音（`brand/sample.mp3`）开机清一次。
+
+    这轮把留存策略定成"客户的录音用完即删、服务器上不留档"，但改了写入路径只挡住
+    新用户 —— 之前存下来的那份还在 /state 里，而且每天还跟着进备份。
+    """
+    n = brand_kit.purge_recordings()
+    if n:
+        print("startup: purged %d legacy customer recording(s)" % n)
+
+
 # ---------- 我的声音（声音复刻，高级档） ----------
 
 @app.get("/api/voice-clone")
@@ -631,7 +643,7 @@ def voice_clone_get(request: Request):
             "clone": c, "has_voice": bool(c)}
 
 
-def _clone_worker(raw: bytes, prefix: str, base: str) -> tuple[str, bytes]:
+def _clone_worker(raw: bytes, prefix: str, base: str) -> str:
     """阻塞全程（ffmpeg 转码 + 等百炼下载/登记）。必须在工作者线程里跑：
     事件循环若被占死，百炼来 /vc-src/ 取录音时本站无法应答 → 死锁，
     百炼侧报 download audio failed（2026-09-19 用户实录踩过）。"""
@@ -643,6 +655,7 @@ def _clone_worker(raw: bytes, prefix: str, base: str) -> tuple[str, bytes]:
         mp3 = Path(td) / "sample.mp3"
         vc.convert_audio(src, mp3)   # CloneError 由调用方翻译成 400/502
         voice_id = vc.enroll(mp3, prefix, base)
+        # 临时目录一退，客户的原始录音就没了：服务器上不留档（见 brand.set_clone）
         # 预热试听缓存：否则用户第一次点试听要现合成（数秒），
         # 超出浏览器"点击后 5 秒内可自动播放"窗口会被拦（实测踩过）
         try:
@@ -651,12 +664,15 @@ def _clone_worker(raw: bytes, prefix: str, base: str) -> tuple[str, bytes]:
                 tts_mod.synthesize_preview(voice_id, pf, "嗨，这是你的专属声音，来听听效果。")
         except Exception:  # noqa: BLE001 - 预热失败不影响登记，试听会走现场合成
             pass
-        return voice_id, mp3.read_bytes()
+        return voice_id
 
 
 @app.post("/api/voice-clone")
 async def voice_clone_create(request: Request, file: UploadFile = None):
-    """上传录音（webm/ogg/m4a/mp3）→ ffmpeg 转码 → 百炼声音复刻 → 存 voice_id。"""
+    """上传录音（webm/ogg/m4a/mp3）→ ffmpeg 转码 → 百炼声音复刻 → 存 voice_id。
+
+    原始录音只在内存与临时目录里待一小会儿，登记完就随临时目录消失。
+    """
     email = _session_email(request)
     if not auth.tier_at_least(email, "premium"):
         return JSONResponse({"error": "声音克隆是高级版功能", "tier_required": "premium"},
@@ -672,12 +688,12 @@ async def voice_clone_create(request: Request, file: UploadFile = None):
     host = request.headers.get("host") or request.url.netloc
     base = config.PUBLIC_BASE_URL or f"{proto}://{host}"
     try:
-        voice_id, mp3_bytes = await asyncio.to_thread(
+        voice_id = await asyncio.to_thread(
             _clone_worker, raw, f"getcut-{brand_kit._key(email)}", base)
     except voice_clone.CloneError as e:
         code = 400 if "录音转换失败" in str(e) or "ffmpeg" in str(e) else 502
         return JSONResponse({"error": str(e)}, status_code=code)
-    brand_kit.set_clone(email, voice_id, mp3_bytes)
+    brand_kit.set_clone(email, voice_id)
     return {"ok": True, "voice_id": voice_id}
 
 

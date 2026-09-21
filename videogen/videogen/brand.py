@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import io
-import json
 import re
 import time
 from pathlib import Path
@@ -108,8 +107,9 @@ def set_logo(email: str, data: bytes) -> dict:
         from PIL import Image
         img = Image.open(io.BytesIO(data))
         img.load()
-    except Exception:  # noqa: BLE001
-        raise ValueError("只认 PNG / JPG / WebP 图片")
+    except Exception as exc:  # noqa: BLE001
+        # 给用户看的是那句人话，但真实原因要留在异常链里，否则服务器日志查不到
+        raise ValueError("只认 PNG / JPG / WebP 图片") from exc
     accent = _extract_accent(img)
     img = img.convert("RGBA")
     if img.width > 600:
@@ -172,13 +172,32 @@ def clone_info(email: str) -> dict | None:
     return c if isinstance(c, dict) and c.get("voice_id") else None
 
 
-def set_clone(email: str, voice_id: str, sample: bytes) -> dict:
-    _dir(email).mkdir(parents=True, exist_ok=True)
-    (_dir(email) / "sample.mp3").write_bytes(sample)
+def set_clone(email: str, voice_id: str) -> dict:
+    """只记 voice_id（百炼那边的引用），**不存客户的原始录音**。
+
+    以前这里会把转码后的录音写成 `sample.mp3` 留下，而全仓没有任何一处读它 ——
+    纯留存等于纯风险（它还在每日备份里）。声音复刻要复听效果用试听样音就够，
+    那已经不是客户的原声录音。
+    """
     data = load(email) or {}
     data["clone"] = {"voice_id": voice_id, "created": time.strftime("%Y-%m-%d %H:%M")}
     safestore.write_json(_json_path(email), data)
+    (_dir(email) / "sample.mp3").unlink(missing_ok=True)      # 老客户手上这份顺手清掉
     return data["clone"]
+
+
+def purge_recordings() -> int:
+    """把所有历史遗留的客户原始录音删干净，返回删了几个（升级后跑一次即可）。"""
+    n = 0
+    if DIR.is_dir():
+        for p in DIR.glob("*/sample.mp3"):
+            try:
+                p.unlink()
+                n += 1
+            except OSError:
+                pass
+    return n
+
 
 
 def clear_clone(email: str) -> str | None:
