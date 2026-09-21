@@ -28,6 +28,7 @@ from .schemas import JobCancelled
 # 正常渲染时进度每隔几秒就来，10 分钟静默必然是成片台没了）
 _STALL_SECONDS = 600
 _MAX_RECLAIMS = 2            # 收回 2 次还失联就按失败处理（第三次不再重试）
+_MAX_VOLUNTARY = 10          # 成片台自己交还（刷新页面）另算：正常操作，不烧失联额度
 _WAIT_PATIENCE = 24 * 3600   # 待领取最长等 24 小时（成片台可能就是没开机）
 
 # 分轨图层的文件名是成片台报上来的，只认这三种写法（挡住一切路径拼接花样）
@@ -128,12 +129,16 @@ def file_path(job_id: str, rel: str) -> Path | None:
 
 
 def progress(job_id: str, device: str, pct: int, detail: str | None,
-             failed: bool = False, requeue: bool = False) -> dict:
+             failed: bool = False, requeue: bool = False,
+             voluntary: bool = False) -> dict:
     """成片台上报进度；返回里带 cancel 让它知道该收手了。
     failed=True 是成片台主动报错（Remotion 退出码非 0 等）：任务立刻判失败，
     别让云端傻等失联超时才发现。
     requeue=True 是成片台中途撤了（页面切走/用户放弃）：立即收回重新排队，
-    相当于失联收回的主动版。"""
+    相当于失联收回的主动版。
+    voluntary=True 是页面自己交还（刷新、关页前那一下 keepalive）：用户点刷新
+    是正常操作，不该烧掉那 2 次失联额度，所以另记一笔、上限放宽到 10 次。
+    """
     with _CV:
         j = _JOBS.get(_jid(job_id))
         if not j or j["device"] != device:
@@ -145,10 +150,17 @@ def progress(job_id: str, device: str, pct: int, detail: str | None,
             _CV.notify_all()
             return {"cancel": True}
         if requeue:
-            j["reclaims"] += 1
-            if j["reclaims"] > _MAX_RECLAIMS:
+            if voluntary:
+                j["volunteers"] = int(j.get("volunteers") or 0) + 1
+                over = j["volunteers"] > _MAX_VOLUNTARY
+                why = "成片台反复交还任务，已终止。请重新打开成片台页面"
+            else:
+                j["reclaims"] += 1
+                over = j["reclaims"] > _MAX_RECLAIMS
+                why = "成片台反复中途退出，任务已终止。请重新打开成片台页面"
+            if over:
                 j["status"] = "error"
-                j["error"] = "成片台反复中途退出，任务已终止。请重新打开成片台页面"
+                j["error"] = why
                 _CV.notify_all()
                 return {"cancel": True}
             j.update(status="waiting", device=None, pct=0,

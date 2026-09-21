@@ -147,6 +147,42 @@ a { color: inherit; text-decoration: none }
 .rd-body p { margin-bottom: 14px; text-indent: 2em }
 .togo { margin-top: 10px; font-size: 12.5px; color: var(--ink-3) }
 
+/* ── 生成台 ──
+   等待期是这条流程的高光段：一屏只说「此刻在做什么」，四段轨道逐个打勾，
+   口播文案折起来（要看随时展开），不再和状态抢同一屏的字。 */
+.genwrap { display: flex; flex-direction: column; align-items: center; gap: 14px;
+  width: 100%; max-width: 760px; max-height: 100%; overflow-y: auto; padding: 4px 4px 18px }
+.gen { width: 100%; flex: none; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 20px 26px 18px; box-shadow: var(--sh-pop) }
+.g-top { display: flex; align-items: baseline; justify-content: space-between; gap: 14px }
+.g-kicker { font-size: 12px; font-weight: 800; letter-spacing: .16em; color: var(--ink-3) }
+.g-pct { font-size: 30px; font-weight: 900; color: var(--acc); line-height: 1;
+  font-variant-numeric: tabular-nums }
+.g-act { font-size: 40px; font-weight: 800; line-height: 1.35; margin-top: 8px; color: var(--ink) }
+.g-detail { font-size: 14px; color: var(--ink-2); margin-top: 2px; line-height: 1.7 }
+.g-bar { height: 12px; border-radius: 7px; background: var(--surface2); overflow: hidden;
+  margin-top: 18px }
+.g-bar > i { display: block; height: 100%; border-radius: 7px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--acc) 45%, var(--surface2)), var(--acc));
+  transition: width .5s var(--ease) }
+.rail { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap }
+.rl { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-3);
+  padding: 5px 11px 5px 6px; border-radius: 999px; border: 1px solid var(--line) }
+.rl b { width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; background: var(--surface2); color: var(--ink-3) }
+.rl.on { color: var(--ink); border-color: var(--acc) }
+.rl.on b { background: var(--acc); color: var(--acc-ink) }
+.rl.ok { color: var(--ok) }
+.rl.ok b { background: var(--ok-soft); color: var(--ok) }
+.g-meta { display: flex; gap: 16px; margin-top: 14px; font-size: 13px; color: var(--ink-2);
+  font-family: var(--mono); flex-wrap: wrap }
+.g-keep { font-size: 12.5px; color: var(--ink-3); margin-top: 12px; line-height: 1.7 }
+.stage.mini { height: min(38vh, 380px) }
+.foldbox { width: 100%; flex: none; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 13px 18px 15px }
+.foldb { all: unset; cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--acc) }
+.foldb:hover { text-decoration: underline }
+
 /* 作品库清单 */
 .liblist { display: flex; flex-direction: column; gap: 2px; max-height: 58vh; overflow-y: auto }
 .librow { display: flex; align-items: center; gap: 12px; padding: 11px 8px;
@@ -199,6 +235,8 @@ a { color: inherit; text-decoration: none }
 }
 .btn.ln:hover { border-color: var(--acc); color: var(--acc) }
 .btn.sm { padding: 8px 13px; font-size: 13px; border-radius: 7px; width: auto }
+/* 正在试听：按钮本身就是那个「还在响」的记号，再点一下就停 */
+.btn.ln.busy { border-color: var(--acc); color: var(--acc); background: var(--acc-soft) }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px }
 .field > .lb { font-size: 12.5px; color: var(--ink-3); letter-spacing: .06em }
@@ -249,8 +287,8 @@ a { color: inherit; text-decoration: none }
   transition: width .45s var(--ease);
 }
 .pline { display: flex; align-items: baseline; gap: 10px; margin-top: 9px; flex-wrap: wrap }
-.pline .st { font-size: 13px; color: var(--ink-2) }
-.pline .pc { margin-left: auto; font-size: 15px; font-weight: 800; color: var(--acc);
+.pline .st { font-size: 14px; font-weight: 600; color: var(--ink-2) }
+.pline .pc { margin-left: auto; font-size: 17px; font-weight: 800; color: var(--acc);
   font-variant-numeric: tabular-nums; white-space: nowrap }
 
 /* ── 预览台 ── */

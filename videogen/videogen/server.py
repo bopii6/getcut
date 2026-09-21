@@ -2115,7 +2115,8 @@ def agent_job_progress(job_id: str, body: dict, request: Request, device: str = 
     return agenthub.progress(job_id, _agent_device(request, device),
                              int(body.get("pct") or 0), body.get("detail"),
                              failed=body.get("status") == "error",
-                             requeue=body.get("requeue") is True)
+                             requeue=body.get("requeue") is True,
+                             voluntary=body.get("voluntary") is True)
 
 
 @app.post("/api/agent/job/{job_id}/visual")

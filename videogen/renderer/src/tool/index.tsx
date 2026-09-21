@@ -16,6 +16,8 @@ const DEVICE = qs.get('device') || '网页成片台';
 // 开发自查用：?frames=240 只渲前 240 帧（不改变正式行为）
 const FRAMES_LIMIT = Math.max(0, parseInt(qs.get('frames') || '0', 10) || 0);
 const THEME_KEY = 'vg-theme';
+// 刷新前这一单在飞什么：回来先把它认回来，别让人以为整条丢了
+const RESUME_KEY = 'vg-resume';
 const NL = /\r?\n/;   // 口播文案按段切开
 // 配色主题：名字与工作台的 data-theme 同一套，两页之间切换互相认得
 const THEMES = [
@@ -151,9 +153,14 @@ const App: React.FC = () => {
   const [theme, setTheme] = React.useState(() => localStorage.getItem(THEME_KEY) || 'ziyu');
   const [hot, setHot] = React.useState(false);
   const [elapsed, setElapsed] = React.useState(0);
+  const [prepStage, setPrepStage] = React.useState('');
+  const [prevKey, setPrevKey] = React.useState('');
+  const [resumeJob, setResumeJob] = React.useState('');
+  const [showScript, setShowScript] = React.useState(false);
   const [lib, setLib] = React.useState<Project[] | null>(null);
   const [libMsg, setLibMsg] = React.useState('');
   const playerRef = React.useRef<PlayerRef>(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
   const packRef = React.useRef<JobPack | null>(null);
   const jobIdRef = React.useRef('');
@@ -179,6 +186,59 @@ const App: React.FC = () => {
     const iv = setInterval(() => setElapsed(Math.round((Date.now() - t0Ref.current) / 1000)), 1000);
     return () => clearInterval(iv);
   }, [phase]);
+
+  // 试听是「点一下听一段」，不是「挂在那儿等我关」：进入下一步就该自己停
+  const stopPreview = React.useCallback(() => {
+    const a = audioRef.current;
+    audioRef.current = null;
+    setPrevKey('');
+    if (a) {
+      a.pause();
+      a.src = '';
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (phase !== 'config') stopPreview();
+  }, [phase, stopPreview]);
+
+  // 刷新/关页时把在飞的单主动交还给队列：不等云端 10 分钟失联判定，
+  // 回来这一页就能立刻重新领上（素材已在 HTTP 缓存里，几乎秒进下一步）
+  React.useEffect(() => {
+    const inFlight = () => {
+      const cur = packRef.current;
+      const p = phaseRef.current;
+      if (!cur || p === 'done' || p === 'error') return null;
+      return cur.job;
+    };
+    const leave = () => {
+      const job = inFlight();
+      if (!job) return;
+      fetch(`/api/agent/job/${job}/progress?device=${encodeURIComponent(DEVICE)}`, {
+        method: 'POST',
+        keepalive: true,
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({pct: 0, detail: '页面刷新，先交还任务',
+                              requeue: true, voluntary: true}),
+      }).catch(() => {});
+    };
+    addEventListener('pagehide', leave);
+    return () => removeEventListener('pagehide', leave);
+  }, []);
+
+  // 这一单是我上一条留下的：写进 sessionStorage，回来才有话可说
+  React.useEffect(() => {
+    const job = pack?.job || jobId;
+    const live = job && (phase === 'prepping' || phase === 'ready' || phase === 'rendering');
+    if (live) sessionStorage.setItem(RESUME_KEY, String(job));
+    else if (phase === 'done' || phase === 'drop') sessionStorage.removeItem(RESUME_KEY);
+  }, [phase, jobId, pack]);
+
+  // 刷新回来：上一条已交还队列，正在重新领（素材在 HTTP 缓存里，几乎秒过缓存段）
+  React.useEffect(() => {
+    const job = sessionStorage.getItem(RESUME_KEY);
+    if (job) setResumeJob(job);
+  }, []);
 
   const say = (m: string) => {
     setToast(m);
@@ -256,9 +316,18 @@ const App: React.FC = () => {
             `/agent-media/${data.job}`;
           const p: JobPack = {job: data.job, props: data.props, files: data.files || []};
           if (!alive) return;
+          // 刷新前那条是这一页自己交还的：领回来就直接接着跑，不再要用户点一次
+          const resuming = sessionStorage.getItem(RESUME_KEY) === data.job;
+          if (resuming) {
+            sessionStorage.removeItem(RESUME_KEY);
+            setResumeJob('');
+            t0Ref.current = Date.now();
+            say('已接回刚才那一条，接着生成');
+          }
           setPack(p);
           packRef.current = p;
-          autoRef.current = !!jobIdRef.current && jobIdRef.current === data.job;
+          autoRef.current = resuming
+            || (!!jobIdRef.current && jobIdRef.current === data.job);
           setPhase(autoRef.current ? 'prepping' : 'ready');
           setPrewarmDone(0);
           let done = 0;
@@ -360,7 +429,10 @@ const App: React.FC = () => {
     setErr('');
     setPhase('prepping');
     t0Ref.current = Date.now();
-    setPrepMsg('已提交，云端正在写稿配音…');
+    setElapsed(0);
+    setPrepPct(0);
+    setPrepStage('queued');
+    setPrepMsg('云端备料中…');
     try {
       const r = await api('/api/build', {method: 'POST',
         headers: {'content-type': 'application/json'},
@@ -393,6 +465,7 @@ const App: React.FC = () => {
           }
           if (stage === 'done' || stage === 'cancelled') return;
           setPrepMsg(String(j.detail || stage));
+          setPrepStage(stage);
           setPrepPct(Number(j.progress ?? 0));
           if (packRef.current && packRef.current.job === jid) return;  // 已领单，交给渲染线
         }
@@ -545,6 +618,11 @@ const App: React.FC = () => {
     setErr('');
     t0Ref.current = 0;
     setElapsed(0);
+    setPrepPct(0);
+    setPrepStage('');
+    setShowScript(false);
+    setResumeJob('');
+    stopPreview();
     setPhase('drop');
   };
 
@@ -558,9 +636,17 @@ const App: React.FC = () => {
     }).catch((e) => { setLib(null); setLibMsg(String((e as Error).message || e)); });
   };
 
-  const playPreview = (url: string) => {
+  const playPreview = (key: string, url: string) => {
+    if (prevKey === key) { stopPreview(); return; }   // 再点一次就是停
+    stopPreview();                                    // 换一条：先把上一条掐了，别叠着放
     const a = new Audio(url);
-    void a.play().catch(() => setErr('浏览器拦了自动播放，再点一次试试'));
+    audioRef.current = a;
+    setPrevKey(key);
+    a.onended = () => { if (audioRef.current === a) stopPreview(); };
+    void a.play().catch(() => {
+      stopPreview();
+      setErr('浏览器拦了自动播放，再点一次试试');
+    });
   };
 
   // 导入剪映：装了小助手的机器一键直达；没装就回落成下载草稿包
@@ -606,8 +692,8 @@ const App: React.FC = () => {
   const title = bundle?.title || pack?.props.headline?.lines?.[0]?.text || '';
   const fileName = `${(title || 'getcut').replace(/[\\/:*?"<>|\[\]]/g, '')}-${(pack?.job || jobId).slice(-6)}.mp4`;
   const nChars = (bundle?.script || '').length;
-  const estMin = Math.max(1, Math.round((durS || 60) / 60 * 2));
-  const mmss = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
+  const mm = (s: number) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.round(Math.max(0, s)) % 60).padStart(2, '0')}`;
+  const mmss = mm(elapsed);
   const codecOk = typeof (window as unknown as {VideoEncoder?: unknown}).VideoEncoder !== 'undefined';
 
   // 每一步对应流程线上的位置：号小于当前=已完成，等于=进行中
@@ -621,18 +707,54 @@ const App: React.FC = () => {
     return n < cur ? 'done' : n === cur ? 'active' : 'todo';
   };
 
-  // 从「点生成」到「交回」一条进度条走到底：备料 2~15 → 缓存素材 15~20 → 本机 20~97 → 交回 97~100
-  const bar = phase === 'prepping' && !pack ? Math.min(15, 2 + prepPct * 0.13)
-    : pack && !finalUrl && phase !== 'rendering' && phase !== 'uploading' && phase !== 'done'
-      ? 15 + (prewarmDone / Math.max(1, pack.files.length)) * 5
-    : phase === 'rendering' ? 20 + pct * 0.75
-    : phase === 'uploading' ? 97 : phase === 'done' ? 100 : 0;
+  // 一条进度条走到底，按各段真实墙钟分格子：备料是最慢的一段，不能再只给它 5 个点
+  // （旧算法把服务器 3~42 的备料进度压成 2~7.4%，四分钟只挪 1 格，看着就像骗人）
+  const SEG = {prep: 38, cache: 8, render: 49, hand: 5};
+  const PREP_TOP = 42;      // 云端备料在服务器 8 段进度里走到 ~42 就交单
+  const gen = phase === 'prepping' || phase === 'ready' || phase === 'rendering'
+    || phase === 'uploading';
+  const bar = phase === 'done' ? 100
+    : phase === 'uploading' ? 100 - SEG.hand
+    : phase === 'rendering' ? SEG.prep + SEG.cache + (pct / 100) * SEG.render
+    : pack ? SEG.prep + (prewarmDone / Math.max(1, pack.files.length)) * SEG.cache
+    : phase === 'prepping' ? Math.min(SEG.prep, (prepPct / PREP_TOP) * SEG.prep)
+    : 0;
+
+  // 一个动作一个词：这一屏最大的字只说「此刻在干什么」
+  const ACT: Record<string, string> = {
+    queued: '排队等号', tts: '合成配音', plan: '排分镜', props: '设计画面',
+    prepped: '打包交给你', render: '等你这台电脑开工',
+  };
+  const act = phase === 'done' ? '已完成'
+    : phase === 'rendering' ? '本机生成画面'
+    : phase === 'uploading' ? '交回云端'
+    : phase === 'ready' ? '等你这台电脑开工'
+    : pack ? '缓存素材'
+    : ACT[prepStage] || '云端备料';
+
+  // 四段轨道：每段走完打一个勾，等的过程要看得见在推进
+  const RAIL = ['云端备料', '缓存素材', '本机生成', '交回云端'];
+  const genIdx = phase === 'done' ? 4 : phase === 'uploading' ? 3
+    : phase === 'rendering' ? 2 : pack ? 1 : 0;
+  // 副行不重复大标题：大标题说「此刻」，副行说「接下来」
+  const rest = RAIL.slice(genIdx + 1);
+  const gdetail = phase === 'rendering'
+    ? `画面已出 ${Math.round(pct * durS / 100)} / ${Math.round(durS)} 秒`
+    : rest.length ? `接下来：${rest.join(' → ')}` : '最后一步，交完就能取片';
+
+  const cacheMB = pack ? pack.files.reduce((s, f) => s + f.size, 0) / 1048576 : 0;
+  // 整条流程的预估：备料约 2 分半 + 缓存按 ~500KB/s + 本机约两倍片长
+  const estSec = 150 + Math.max(6, cacheMB * 2) + Math.max(45, (durS || 60) * 2);
+  const estMin = Math.max(3, Math.round(estSec / 60));
+  // 跑起来之后以实测为准：已用时间按当前比例外推，越跑越准
+  const leftSec = bar >= 6 && bar < 100 ? (elapsed * (100 - bar)) / bar : 0;
+
   const line = phase === 'error' ? ''
-    : phase === 'prepping' && !pack ? `云端准备 · ${prepMsg.replace(/渲染/g, '生成')}`
     : phase === 'uploading' ? '交回云端…'
     : phase === 'done' ? ''
     : pack && phase !== 'rendering' ? `缓存素材 ${prewarmDone}/${pack.files.length}`
-    : `本机生成中 · 已出 ${Math.round(pct * durS / 100)} / ${Math.round(durS)} 秒 · 已用 ${mmss}`;
+    : phase === 'prepping' ? prepMsg.replace(/渲染/g, '生成')
+    : `已出 ${Math.round(pct * durS / 100)} / ${Math.round(durS)} 秒 · 已用 ${mmss}`;
 
   const fileInput = React.useRef<HTMLInputElement>(null);
   const pick = () => fileInput.current?.click();
@@ -722,7 +844,7 @@ const App: React.FC = () => {
                   <div className="lb">配音</div>
                   <div className="row">
                     <select className="sel" value={cfg.voice}
-                            onChange={(e) => setCfg({...cfg, voice: e.target.value})}>
+                            onChange={(e) => { stopPreview(); setCfg({...cfg, voice: e.target.value}); }}>
                       {groupVoices(voices).map(([g, vs]) => (
                         <optgroup key={g} label={g}>
                           {vs.map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
@@ -730,20 +852,26 @@ const App: React.FC = () => {
                       ))}
                       {!voices.length ? <option value="">默认音色</option> : null}
                     </select>
-                    <button className="btn ln sm"
-                            onClick={() => cfg.voice && playPreview(`/api/voice-preview?voice=${encodeURIComponent(cfg.voice)}`)}>试听</button>
+                    <button className={`btn ln sm${prevKey === 'voice' ? ' busy' : ''}`}
+                            onClick={() => cfg.voice && playPreview('voice',
+                              `/api/voice-preview?voice=${encodeURIComponent(cfg.voice)}`)}>
+                      {prevKey === 'voice' ? '停止试听' : '试听'}
+                    </button>
                   </div>
                 </div>
                 <div className="field">
                   <div className="lb">背景音乐</div>
                   <div className="row">
                     <select className="sel" value={cfg.bgm}
-                            onChange={(e) => setCfg({...cfg, bgm: e.target.value})}>
+                            onChange={(e) => { stopPreview(); setCfg({...cfg, bgm: e.target.value}); }}>
                       <option value="">不用背景音乐</option>
                       {music.map((m) => <option key={m.file} value={m.file}>{m.name}{m.mood ? ` · ${m.mood}` : ''}</option>)}
                     </select>
-                    <button className="btn ln sm"
-                            onClick={() => cfg.bgm && playPreview(`/api/bgm/${encodeURIComponent(cfg.bgm.split('/').pop() as string)}`)}>试听</button>
+                    <button className={`btn ln sm${prevKey === 'bgm' ? ' busy' : ''}`}
+                            onClick={() => cfg.bgm && playPreview('bgm',
+                              `/api/bgm/${encodeURIComponent(cfg.bgm.split('/').pop() as string)}`)}>
+                      {prevKey === 'bgm' ? '停止试听' : '试听'}
+                    </button>
                   </div>
                 </div>
                 <div className="toggles">
@@ -824,6 +952,11 @@ const App: React.FC = () => {
           </div>
 
           {err ? <div className="err">出错：{err}</div> : null}
+          {resumeJob && !pack && phase === 'drop' ? (
+            <div className="note" style={{color: 'var(--acc)'}}>
+              刚才那一条（{resumeJob.slice(-6)}）已交还队列，正在重新领回来——不用重拖素材包。
+            </div>
+          ) : null}
           {phase === 'drop' && !bundle ? (
             <div className="note">需要新版 Chrome 或 Edge（出片靠这台电脑自己算）。5 年以上的旧机器会慢一些。</div>
           ) : null}
@@ -833,21 +966,82 @@ const App: React.FC = () => {
         <div className="pane right" onDrop={bundle ? undefined : onDrop}
              onDragOver={bundle ? undefined : onDragOver}
              onDragLeave={bundle ? undefined : () => setHot(false)}>
-          {finalUrl || pack ? (
+          {gen && !finalUrl ? (
+            /* 生成期这一屏就是「正在做什么」：动作词最大，进度不断档，口播文案折起来仍可细看 */
+            <div className="genwrap">
+              <article className="gen">
+                <div className="g-top">
+                  <span className="g-kicker">第 3 步 · 共 4 步</span>
+                  <span className="g-pct">{Math.round(bar)}%</span>
+                </div>
+                <div className="g-act">{act}</div>
+                <div className="g-detail">{gdetail}</div>
+                <div className="g-bar"><i style={{width: `${bar}%`}} /></div>
+                <div className="rail">
+                  {RAIL.map((t, i) => (
+                    <span key={t} className={`rl${i < genIdx ? ' ok' : i === genIdx ? ' on' : ''}`}>
+                      <b>{i < genIdx ? '✓' : i + 1}</b>{t}
+                    </span>
+                  ))}
+                </div>
+                <div className="g-meta">
+                  <span>已用 {mmss}</span>
+                  <span>{leftSec >= 20 ? `还需约 ${mm(leftSec)}` : '正在起步'}</span>
+                  <span>整条预计 {estMin} 分钟</span>
+                </div>
+                <div className="g-keep">
+                  可以刷新这一页：任务会自动接回来重跑。关掉浏览器或断网，云端要等 10 分钟才回收这一单。
+                </div>
+              </article>
+              {pack ? (
+                <div className="stage mini">
+                  {phase === 'rendering' ? (
+                    /* 生成期卸载 Player：同一时刻只保留 web-renderer 那一份合成 */
+                    <div className="void">
+                      <div className="bars3"><i /><i /><i /><i /><i /></div>
+                      <div className="sm">画面已出 {Math.round(pct * durS / 100)} / {Math.round(durS)} 秒</div>
+                    </div>
+                  ) : (
+                    <Player
+                      ref={playerRef}
+                      component={NiwoVideo as React.FC<Record<string, unknown>>}
+                      inputProps={(pack as JobPack).props as unknown as Record<string, unknown>}
+                      durationInFrames={(pack as JobPack).props.durationInFrames}
+                      fps={30}
+                      compositionWidth={1080}
+                      compositionHeight={1920}
+                      style={{width: '100%', height: '100%'}}
+                      autoplay
+                      loop
+                      muted
+                      showControls={false}
+                      acknowledgeRemotionLicense
+                    />
+                  )}
+                  {phase !== 'rendering' ? (
+                    <div className="cap">实时预览（静音） · 成片带配音与音乐</div>
+                  ) : null}
+                </div>
+              ) : null}
+              {bundle ? (
+                <div className="foldbox">
+                  <button className="foldb" onClick={() => setShowScript(!showScript)}>
+                    {showScript ? '收起口播文案'
+                      : `口播文案 ${nChars} 字 · 约 ${bundle.estSeconds} 秒 —— 展开核对`}
+                  </button>
+                  {showScript ? (
+                    <div className="rd-body">
+                      {(bundle.script || '').split(NL).filter(Boolean).map((para, i) => <p key={i}>{para}</p>)}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : finalUrl || pack ? (
             <div className="stagewrap">
               <div className="stage">
                 {finalUrl ? (
                   <video src={finalUrl} controls autoPlay />
-                ) : phase === 'rendering' ? (
-                  /* 生成期卸载 Player：同一时刻只保留 web-renderer 那一份合成 */
-                  <div className="void">
-                    <div className="bars3"><i /><i /><i /><i /><i /></div>
-                    <div className="pct">{Math.round(bar)}%</div>
-                    <div className="sm">
-                      本机生成中 · 已用 {mmss}
-                      <br />画面已出 {Math.round(pct * durS / 100)} / {Math.round(durS)} 秒，请保持本页打开
-                    </div>
-                  </div>
                 ) : (
                   <Player
                     ref={playerRef}
@@ -865,7 +1059,7 @@ const App: React.FC = () => {
                     acknowledgeRemotionLicense
                   />
                 )}
-                {pack && !finalUrl && phase !== 'rendering' ? (
+                {pack && !finalUrl ? (
                   <div className="cap">实时预览（静音） · 成片带配音与音乐</div>
                 ) : null}
               </div>
@@ -882,9 +1076,6 @@ const App: React.FC = () => {
               </div>
               <h2 className="rd-title">{title}</h2>
               {(bundle.hookLines?.[0]?.text) ? <div className="rd-hook">{bundle.hookLines?.[0]?.text}</div> : null}
-              {phase === 'prepping' ? (
-                <div className="rd-strip"><span className="rd-dot" />{prepMsg} · 已用 {mmss}</div>
-              ) : null}
               <div className="rd-body">
                 {(bundle.script || '').split(NL).filter(Boolean).map((para, i) => <p key={i}>{para}</p>)}
               </div>
