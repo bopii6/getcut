@@ -1,3 +1,8 @@
+# 行尾统一：本仓 Windows 上开发、Linux 上部署，.sh 混进 CRLF 会在服务器上炸
+# （34c9ad0 出过一次）。仓库内一律存 LF，检出也保持 LF；只有 .bat 要 CRLF。
+* text=auto eol=lf
+*.bat text eol=crlf
+
 # 成片台构建产物：压缩过的整包 js，不做行尾转换、不按行 diff
 videogen/server_static/poc/*.js -text
 videogen/server_static/poc/*.map -text
