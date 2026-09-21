@@ -39,6 +39,6 @@ typing-extensions==4.16.0
 typing-inspection==0.4.4
 urllib3==2.8.0
 uvicorn==0.53.0
-websockets==16.1.1
+websockets==17.1
 xmltodict==1.0.4
 yarl==1.25.1

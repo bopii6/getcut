@@ -75,7 +75,7 @@ install_if_missing() {          # $1=import 名  $2=钉死的 pip 规格（要�
   echo "[deploy] 镜像里缺 $2，按锁定表装上"
   docker exec videogen pip install --no-input -q "$2"
 }
-install_if_missing websockets "websockets==16.1.1"
+install_if_missing websockets "websockets==17.1"
 install_if_missing qcloud_cos "cos-python-sdk-v5==1.9.44"
 
 for i in $(seq 1 20); do
