@@ -92,12 +92,23 @@ $SSH "$HOST" "mkdir -p $BK && cp -a $BASE/code $BK/code && cp -a $BASE/.env $BK/
 push_dir() {  # push_dir <目录> [keep|clean]：本机没有 rsync，用 tar 管道；clean=顺带清掉线上多余文件
   local d="$1" mode="${2:-keep}" tag
   tag=$(printf '%s' "$d" | tr '/' '_')
-  # 只送"大小不一样或线上没有"的文件：整目录 16MB 一次推过去，这条链路会掐断（今晚实测）
-  $SSH "$HOST" "cd $BASE/code/$d && find . -type f -printf '%P %s
-' | sort" > "/tmp/rs-$tag.txt" 2>/dev/null || : > "/tmp/rs-$tag.txt"
-  (cd "$SRC/$d" && find . -type f -printf '%P %s
-' | sort) > "/tmp/ls-$tag.txt"
-  join -a1 -e MISSING -o 0,1.2,2.2 "/tmp/ls-$tag.txt" "/tmp/rs-$tag.txt"     | awk '{if ($2 != $3) print $1}' > "/tmp/up-$tag.txt"
+  # 比内容哈希，不能只比字节数：换色值（#7d7691 → #8c85a3）长度一样，
+  # 只比大小会被判成"没变"而漏传，线上会静默留着旧产物（2026-09-21 真踩过）。
+  # 远端命令用 printf 经 stdin 交给 sh；路径拼错过一次（漏了 code/）会让清单为空，
+  # 所以取不到清单时一律整包发送 —— 宁可多传，不能漏传。
+  printf 'cd "%s/code/%s" && find . -type f | sort | xargs -r md5sum\n' "$BASE" "$d" \
+    | $SSH "$HOST" sh 2>/dev/null \
+    | while read -r h p; do printf '%s %s\n' "${p#./}" "$h"; done | sort > "/tmp/rs-$tag.txt"
+  # Windows 的 md5sum 默认二进制模式，分隔符是 "*"（路径会被读成 *./auth.py）→ 显式文本模式
+  { cd "$SRC/$d" && find . -type f | sort | xargs -r md5sum -t; } \
+    | while read -r h p; do printf '%s %s\n' "${p#./}" "$h"; done | sort > "/tmp/ls-$tag.txt"
+  if [ -s "/tmp/rs-$tag.txt" ]; then
+    join -a1 -e MISSING -o 0,1.2,2.2 "/tmp/ls-$tag.txt" "/tmp/rs-$tag.txt" \
+      | awk '{if ($2 != $3) print $1}' > "/tmp/up-$tag.txt"
+  else
+    echo "  [$d] 取不到线上清单，整包发送"
+    cut -d' ' -f1 "/tmp/ls-$tag.txt" > "/tmp/up-$tag.txt"
+  fi
   n=$(wc -l < "/tmp/up-$tag.txt")
   if [ "$n" -eq 0 ]; then echo "  $d 已经一致，不传"; return 0; fi
   echo "  传 $d（$n 个文件有变化）"
@@ -119,10 +130,15 @@ push_dir() {  # push_dir <目录> [keep|clean]：本机没有 rsync，用 tar �
 
 # videogen 只按 .py 清（死模块那一类）；server_static 只传不删 ——
 # 那底下是被前端直接引用的字体与样片，仓库一旦滞后，删除动作就是在删客户看得见的东西。
-push_dir videogen clean || { echo "[deploy] 传 videogen 失败"; exit 1; }
-push_dir server_static keep || { echo "[deploy] 传 server_static 失败"; exit 1; }
-for d in renderer/src assets samples; do     # 体积大、可能含运行时内容：只前进不删除
-  [ -d "$SRC/$d" ] && push_dir "$d" keep
+# 想只发一部分：VIDEOGEN_DIRS="server_static renderer/src" bash tools/deploy_to_prod.sh
+# （线上偶尔会有别的会话 scp 过、还没提交的文件，整包对齐会把它们退回提交版，
+#   那种时候先只发自己动过的那几个目录，其余留到确认过再对齐）
+for d in ${VIDEOGEN_DIRS:-videogen server_static renderer/src assets samples}; do
+  case " videogen server_static " in
+    *" $d "*) keep=clean ;;
+    *) keep=keep ;;
+  esac
+  push_dir "$d" "$keep" || { echo "[deploy] 传 $d 失败"; exit 1; }
 done
 
 printf '{"sha":"%s","branch":"%s","built":"%s","source":"deploy_to_prod.sh","dirty":false}\n' \
