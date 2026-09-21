@@ -55,7 +55,7 @@ def t1_atomic_read_never_sees_half(tmp: Path) -> str:
 
     th = threading.Thread(target=reader, daemon=True)
     th.start()
-    for r in range(25):
+    for _r in range(25):
         try:
             safestore.write_json(f, {"big": [{"x": i, "pad": "y" * 40} for i in range(400)]},
                                  indent=None)
@@ -120,14 +120,14 @@ def t4_refuse_empty_overwrite(tmp: Path) -> str:
         try:
             safestore.read_json(f, default={"codes": []},
                                 shape=lambda d: isinstance(d.get("codes"), list))
-        except safestore.StoreUnrecoverable:
+        except safestore.StoreUnrecoverable as exc:
             still = [p for p in f.parent.glob(".videogen-licenses.json.bad-*")]
             if not still:
-                raise AssertionError("抛错但没留现场")
+                raise AssertionError("抛错但没留现场") from exc
             if still[0].read_text(encoding="utf-8") != raw:
-                raise AssertionError("现场内容被改过")
+                raise AssertionError("现场内容被改过") from exc
             if f.exists():
-                raise AssertionError("原位不该被空库覆盖")
+                raise AssertionError("原位不该被空库覆盖") from exc
             return "无备份时抛 StoreUnrecoverable，坏原件留现场、没被空库覆盖"
         raise AssertionError("本该抛错却返回了空库")
     finally:

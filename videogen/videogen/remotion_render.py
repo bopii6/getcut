@@ -5,8 +5,6 @@ renderer/src/tool），由它渲帧、编码、混音出带声 mp4。本模块�
 素材清单——服务器上不装 Node，也不跑 Chrome。
 """
 from __future__ import annotations
-import json
-import os
 import re
 import shutil
 import time

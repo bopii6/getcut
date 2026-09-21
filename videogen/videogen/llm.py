@@ -99,7 +99,7 @@ def refine_copy(script: str, cards: list[dict], provider: str = "deepseek") -> d
         },
     }
     last_err = None
-    for attempt in range(2):
+    for _attempt in range(2):
         try:
             text = _chat(conf, json.dumps(payload, ensure_ascii=False))
             return _parse_json(text)
@@ -251,7 +251,7 @@ def design_shots(script: str, sentences: list[dict], assets: list[dict],
             "有舞台动作的镜头再加一个 stage 字段；设计卡只保留自己类型需要的字段，"
             "不要输出无关字段，更不要出现'仅xx'这类占位文字")
     last_err = None
-    for attempt in range(2):
+    for _attempt in range(2):
         try:
             text = _chat(conf, json.dumps(payload, ensure_ascii=False))
             data = _parse_json(text)
@@ -319,7 +319,7 @@ def design_chapters(script: str, units: list[dict], assets: list[dict],
                     }},
     }
     last_err = None
-    for attempt in range(2):
+    for _attempt in range(2):
         try:
             text = _chat(conf, json.dumps(payload, ensure_ascii=False))
             data = _parse_json(text)

@@ -272,7 +272,7 @@ def _estimate_events(spoken: str, mp3: Path) -> list[dict]:
     span = max(dur_ms - lead - tail, total_w * 200) if dur_ms else total_w * 300
     per_w = span / total_w
     events, at, buf, buf_w, buf_t = [], lead, "", 0.0, 0.0
-    for ch, w in zip(spoken, weights):
+    for ch, w in zip(spoken, weights, strict=True):
         buf, buf_w, buf_t = buf + ch, buf_w + w, buf_t + w * per_w
         if len(buf) >= 5 or buf_t > 700:
             events.append({"text": buf, "offset_ms": at, "duration_ms": buf_w * per_w})
@@ -321,7 +321,7 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
     if use_dash:
         speech_rate = round(1.0 + rate_delta(rate), 3)
         last_err = None
-        for attempt, want_words in enumerate((True, False, False)):
+        for _attempt, want_words in enumerate((True, False, False)):
             try:
                 words = asyncio.run(_dashscope_synth(
                     spoken, entry.get("pv") or "", speech_rate, mp3, want_words))

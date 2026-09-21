@@ -10,7 +10,6 @@ import json
 import shutil
 import threading
 import time
-import uuid
 from pathlib import Path
 
 from . import brand as brand_kit
@@ -132,7 +131,6 @@ def invalidate(project_id: str) -> None:
 
 def run_preview(project_id: str, body: dict) -> None:
     """后台预演：TTS → 分镜规划 → props 落盘（不渲染成片）。"""
-    from . import cli
     with _LOCK:
         PREVIEW_TASKS[project_id] = {"state": "running", "progress": 0, "detail": "正在合成配音"}
 

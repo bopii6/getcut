@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from PIL import Image, ImageChops
+from PIL import Image
 
 from .llm import vision_check as llm_vision
 # 素材窗矩形（原 overlays.py 常量，PIL 合成器退役后唯此一处还在用）
@@ -33,6 +33,8 @@ def _frame_at(video: Path, t: float, tmp: Path) -> Path | None:
     r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", f"{t:.2f}",
                         "-i", str(video), "-frames:v", "1", str(out)],
                        capture_output=True)
+    if r.returncode:
+        return None
     return out if out.is_file() and out.stat().st_size else None
 
 
@@ -87,7 +89,7 @@ def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
             warnings.append(f"首条字幕出现较晚 ({plan.clauses[0].start_ms:.0f}ms)")
         if plan.clauses[-1].end_ms < plan.duration_ms - 2000:
             warnings.append("末条字幕结束过早")
-        for a, b in zip(plan.clauses, plan.clauses[1:]):
+        for a, b in zip(plan.clauses, plan.clauses[1:], strict=False):
             if b.start_ms < a.start_ms - 0.1:
                 errors.append(f"字幕时间轴倒挂: {a.text!r} -> {b.text!r}")
                 break

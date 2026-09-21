@@ -225,7 +225,7 @@ def mix_audio(tts_mp3: Path, duration_s: float, work: Path, bgm: Path | None = N
         inputs += ["-stream_loop", "-1", "-i", str(bgm.resolve())]
         chains.append(f"[{n}:a]highpass=f=45,acompressor=threshold=0.22:ratio=5:attack=4:release=60,"
                       f"volume=0.2,aresample=44100,afade=t=out:st={fade_start:.2f}:d=3[bg]")
-        mix_ins += f"[bg]"
+        mix_ins += "[bg]"
         n += 1
         links += 1
     # 同一个音效被触发多次时只解码一次、用 asplit 分流到各自的延迟链：

@@ -18,9 +18,7 @@ Agent 全流程（不再开浏览器、不再碰网站 UI）：
 """
 from __future__ import annotations
 
-import json
 import os
-import sys
 import time
 from pathlib import Path
 
@@ -71,8 +69,8 @@ def _api(method: str, path: str, **kw) -> dict:
     r = _session().request(method, BASE + path, timeout=kw.pop("timeout", 180), **kw)
     try:
         d = r.json()
-    except ValueError:
-        raise RuntimeError(f"{path} HTTP {r.status_code}（非 JSON 响应）")
+    except ValueError as exc:
+        raise RuntimeError(f"{path} HTTP {r.status_code}（非 JSON 响应）") from exc
     if r.status_code >= 400:
         raise RuntimeError(f"{path} HTTP {r.status_code}: {d.get('error') or d}")
     return d
@@ -176,8 +174,8 @@ def download_video(job_id: str, dest_path: str) -> dict:
 def _unwrap(r: requests.Response, path: str) -> dict:
     try:
         d = r.json()
-    except ValueError:
-        raise RuntimeError(f"{path} HTTP {r.status_code}（非 JSON 响应）")
+    except ValueError as exc:
+        raise RuntimeError(f"{path} HTTP {r.status_code}（非 JSON 响应）") from exc
     if r.status_code >= 400:
         raise RuntimeError(f"{path} HTTP {r.status_code}: {d.get('error') or d}")
     return d

@@ -19,11 +19,10 @@ from pathlib import Path
 from . import brand as brand_kit
 from . import compose, llm, remotion_render, tts, verify
 from .config import DEFAULT_TEMPLATE, TEMPLATE_ALIAS, TEMPLATES
-from .config import OUTPUTS
 from .planner import (align_timeline, build_plan, build_plan_clone, build_plan_llm,
                       build_plan_macro, clause_units, split_clauses, sentence_spans,
                       unit_spans, plan_to_dict, plan_from_dict)
-from .schemas import Content, Manifest, HIGHLIGHT, JobCancelled
+from .schemas import Content, Manifest, JobCancelled
 
 WORK = Path(__file__).resolve().parent.parent / "work"
 
