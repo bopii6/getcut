@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import json
 import random
 import re
 import secrets
@@ -53,6 +52,54 @@ def ip_can_send(ip: str) -> bool:
 
 def ip_record_send(ip: str) -> None:
     _ip_sends.setdefault(ip, []).append(time.time())
+
+
+# ---------- 登录防爆破 ----------
+# 登录接口以前只有一句 time.sleep(0.6)「拖慢」——那挡不住挂着连接一直试的人：
+# 客户 40~50 岁、弱口令概率高，而登录门后面是别人的选题稿、卡密和后台。
+# 对比一下就知道这是漏的：兑换卡密那条有"连错 5 次歇 60 秒"，登录反而没有。
+# 两条一起算：按 (账号, IP) 挡针对性爆破，按 IP 总量挡"换邮箱撞库"。
+# 内存记账、重启清零：宁可重启后多放行一次，也不把真客户永久锁在门外。
+LOGIN_FAIL_LIMIT = 5          # 同一账号 + 同一 IP：连错 5 次就歇
+LOGIN_IP_LIMIT = 30           # 同一 IP（换着邮箱猛试）：15 分钟内最多错 30 次
+LOGIN_FAIL_WINDOW = 900       # 15 分钟
+_login_fail: dict[str, list[float]] = {}
+
+
+def _recent(stamps: list[float] | None, now: float) -> list[float]:
+    return [t for t in (stamps or []) if now - t < LOGIN_FAIL_WINDOW]
+
+
+def login_can_try(ip: str, email: str) -> tuple[bool, int]:
+    """这一次还让不让试。返回 (放行?, 还要等多少秒)。
+
+    两个维度撞上的提示语一模一样 —— 不告诉对方"是这个账号被护住了"还是
+    "你这台机器被计数了"，那等于替人探路。
+    """
+    now = time.time()
+    key = f"{_norm_email(email)}|{ip}"
+    pair = _recent(_login_fail.get(key), now)
+    # 只数这台机器自己的失败（键是 "邮箱|IP"），不然别人撞库会把真客户一起锁在门外
+    from_this_ip = [t for k, stamps in _login_fail.items()
+                    if k.endswith("|" + ip) for t in _recent(stamps, now)]
+    _login_fail[key] = pair
+    if len(pair) >= LOGIN_FAIL_LIMIT or len(from_this_ip) >= LOGIN_IP_LIMIT:
+        oldest = min(pair) if pair else now
+        return False, max(1, int(LOGIN_FAIL_WINDOW - (now - oldest)))
+    return True, 0
+
+
+def login_blocked_left(seconds: int) -> str:
+    mins = max(1, round(seconds / 60))
+    return f"试错次数太多了，先等 {mins} 分钟再登录；想不起来就走「忘记密码」"
+
+
+def login_failed(ip: str, email: str) -> None:
+    _login_fail.setdefault(f"{_norm_email(email)}|{ip}", []).append(time.time())
+
+
+def login_succeeded(ip: str, email: str) -> None:
+    _login_fail.pop(f"{_norm_email(email)}|{ip}", None)
 
 
 def _norm_email(email: str) -> str:

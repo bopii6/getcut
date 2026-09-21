@@ -12,12 +12,13 @@ import hashlib
 import hmac as _hmac
 import html
 import io
+import ipaddress
 import json
 import math
 import os
 import shutil
-import queue
 import re
+import stat
 import subprocess
 import threading
 import time
@@ -26,10 +27,10 @@ import zipfile
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, File, Request, Response, UploadFile
+from fastapi import FastAPI, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
-from . import agenthub, auth, config, cos_store, licenses, preview, safestore, voice_clone
+from . import agenthub, auth, config, cos_store, licenses, preview, safestore, version, voice_clone
 from . import brand as brand_kit
 from . import tts as tts_mod
 from .schemas import Content, Manifest, JobCancelled
@@ -139,9 +140,37 @@ def _sweep_try_files(keep: int = 20) -> None:
         pass
 
 
+# 限流与额度都按 IP 记，所以"IP 从哪来"必须先说清楚：
+# XFF 的第一段是**客户端自己写上来**的，直接信就等于"谁都能换一张新脸"。
+# 只有直连来源本身就是可信代理时，XFF 才是可信的 —— 生产的接法是 Caddy 与容器
+# 同机（peer 127.0.0.1），这时 XFF 第一段是真客户 IP。
+# 仓库 docker-compose 曾把 8600 直接映射到公网，那种接法下 peer 就是公网 IP，
+# 一律不认 XFF。（peer 不是 IP 的只有测试桩，那种情况下照旧认，便于模拟多客户。）
+# 哪些"直连来源"可以替我们说话（即它是反代，XFF 第一段才是真客户 IP）。
+# 不图省事用 ipaddress.is_private：那把 TEST-NET、192.0.2/24 这类文档段也算"内网"，
+# 拿 203.0.113.7 当客户 IP 的测试就会假绿。这里只列真会出现代理的段。
+_PROXY_NETS = tuple(ipaddress.ip_network(n) for n in
+                    ("127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+                     "169.254.0.0/16", "::1/128", "fe80::/10"))
+
+
+def _peer_is_proxy(peer: str) -> bool:
+    if os.environ.get("VIDEOGEN_TRUST_PROXY_HEADERS") == "1":
+        return True
+    try:
+        ip = ipaddress.ip_address(peer)
+    except ValueError:
+        return True          # 不是 IP 形状：测试桩/嵌入调用，退回可信
+    return any(ip.version == net.version and ip in net for net in _PROXY_NETS)
+
+
 def _client_ip(request: Request) -> str:
-    fwd = request.headers.get("x-forwarded-for") or ""
-    return (fwd.split(",")[0].strip() or (request.client.host if request.client else "") or "?")
+    peer = (request.client.host if request.client else "") or ""
+    if _peer_is_proxy(peer):
+        fwd = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+        if fwd:
+            return fwd
+    return peer or "?"
 
 
 @app.get("/api/try/topics")
@@ -206,7 +235,7 @@ def try_render(request: Request, body: dict = None):
 
     cookie = request.cookies.get("vg_try") or ""
     ip = _client_ip(request)
-    ok, why = try_topics.guard(WORKSPACES, ip, cookie)
+    ok, why, issued = try_topics.guard(WORKSPACES, ip, cookie)
     if not ok:
         return JSONResponse({"error": why, "limited": True}, status_code=429)
 
@@ -223,8 +252,7 @@ def try_render(request: Request, body: dict = None):
                             "watermark": True, "useLlm": True, "sfx": True, "sfxMode": "all"}
         _PREP_WAIT.append(job_id)
         _PREP_CV.notify()
-    issued = cookie or uuid.uuid4().hex
-    try_topics.remember_cookie(WORKSPACES, issued)   # 发出去的 cookie 立刻记账，下次来就拦得住
+    # 记账已在 guard 里做完（判定与写账本同一把锁，别拆成两步）
     resp = JSONResponse({"job": job_id, "topic": t["id"], "template": fmt})
     resp.set_cookie("vg_try", issued, max_age=180 * 24 * 3600, httponly=True, samesite="lax")
     return resp
@@ -440,7 +468,10 @@ def _agent_job_ok(job_id: str, request: Request):
     ident = _agent_identity(request)
     if ident is None:
         return JSONResponse({"error": "成片台未登录"}, status_code=401)
-    if ident in ("__admin__", "__open__"):
+    if ident in ("__admin__", "__open__") or auth.is_admin(ident):
+        # 管理员本来就能看到全站任务与归属（_is_adminish），放行不算多给能力；
+        # 客户单卡住时站长得能替他把这一步做完。以前只认全局令牌那条，
+        # 管理员自己的会话会被当成"别人"挡在 403，和上面这句注释说的不是一回事。
         return None
     with _LOCK:
         j = JOBS.get(str(job_id))
@@ -489,14 +520,25 @@ USAGE_FILE = Path(config.USAGE_FILE)
 
 
 def _usage_load() -> dict:
-    if USAGE_FILE.is_file():
-        try:
-            data = json.loads(USAGE_FILE.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return data
-        except Exception:  # noqa: BLE001 - 账本坏了当没记，别把出片挂掉
-            pass
-    return {}
+    """用量账本。
+
+    以前是 `json.loads` + `except: pass` —— 账本一旦写坏就"当谁都没用过"，
+    等于给所有免费档当场重发额度，和第 8 节刚修掉的"坏文件当空库"是同一个病。
+    现在走 safestore：救不回来就抛 StoreUnrecoverable，宁可这一单失败也不白送额度。
+    """
+    data = safestore.read_json(USAGE_FILE, default={}, shape=lambda d: isinstance(d, dict))
+    return data if isinstance(data, dict) else {}
+
+
+def _usage_today(email: str) -> int:
+    """今天已经记了几条（只读，不动账本）。"""
+    return int(((_usage_load().get(email) or {}).get(time.strftime("%Y-%m-%d")) or 0))
+
+
+def _free_quota_check(email: str) -> tuple[bool, int]:
+    """免费档还能不能出这一条 + 今天已用几条。判额度只读，记账留给放行之后。"""
+    used = _usage_today(email)
+    return used < config.FREE_DAILY_BUILDS, used
 
 
 def _usage_bump(email: str) -> int:
@@ -673,11 +715,84 @@ def brand_logo_get(request: Request):
     return FileResponse(p, media_type="image/png")
 
 
+def _malformed_path(request: Request) -> bool:
+    """路径里带 NUL（%00 解码而来）就不是路径了。
+
+    pathlib 遇到嵌入空字节直接抛 ValueError，而带文件名参数的接口全是公开的
+    （/poc/ /fonts/ /templates/ /api/bgm/ /try/）：匿名访客一个请求就能在服务端
+    打出整段 traceback。在门口拦一次，胜过在五个取文件的接口各写一遍。
+    """
+    if "\x00" in request.url.path:
+        return True
+    raw = request.scope.get("raw_path") or b""
+    return isinstance(raw, bytes) and b"%00" in raw.lower()
+
+
 @app.middleware("http")
 async def _auth_gate(request: Request, call_next):
+    if _malformed_path(request):
+        return JSONResponse({"error": "not found"}, status_code=400)
     if not _is_public(request.url.path) and not _request_authed(request):
         return JSONResponse({"error": "未登录"}, status_code=401)
     return await call_next(request)
+
+
+# ---------- 响应头：缓存策略 + 基础安全头 ----------
+# 治三件事：
+#  1. 回访重拉 —— 以前一个 Cache-Control 都没设，浏览器每次进工作台都要把那份大 HTML
+#     整页重下一遍，而这台服务器出网只有 3Mbps。HTML 走「必须回源校验 + 弱 ETag」，
+#     内容没变就 304（见 _page）；稳定资源给短 max-age。
+#  2. 隐私 —— 凡是带客户数据的路径（素材、任务、成片、账号）一律 no-store：
+#     共享缓存（公司代理 / CDN / 别人机器上的浏览器磁盘）留下别人的口播稿和成片不可接受。
+#     默认值就是 no-store，新加路由忘了分类也不会把客户数据放进缓存。
+#  3. 基础安全头 —— nosniff 防 MIME 嗅探；防点击劫持必须用 SAMEORIGIN / frame-ancestors 'self'，
+#     **不能写 DENY**：工作台首页本身就是用 iframe 打开 /poc/ 成片台的（index.html:1153），
+#     写 DENY 等于把自己那条正路挡死。
+
+_NO_STORE_PREFIXES = ("/api", "/media", "/agent-media", "/outputs", "/try/", "/vc-src/")
+# /studio 与 /i/ 只是同一份 SPA 外壳（客户数据都走 /api，已 no-store），
+# 它们要的是「必须回源校验 + ETag」：内容没变回 304，省的是整页 764KB。
+_LONG_CACHE_PREFIXES = ("/fonts/",)              # 文件名稳定、体积大
+_SHORT_CACHE_SUFFIXES = (".js", ".css", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico",
+                         ".woff2", ".mp3", ".mp4", ".wav")   # 产物名不带内容哈希，只给 1 小时
+
+
+def _cache_control(path: str) -> str:
+    if path.startswith(_NO_STORE_PREFIXES):
+        return "no-store"
+    if path.startswith(_LONG_CACHE_PREFIXES):
+        return "public, max-age=604800"          # 7 天
+    if path.endswith(_SHORT_CACHE_SUFFIXES):
+        return "public, max-age=3600"            # 1 小时：改名不及时也不会长期看到旧页
+    return "no-cache"                            # HTML 与没分类的：必须回源校验
+
+
+@app.middleware("http")
+async def _response_headers(request: Request, call_next):
+    response = await call_next(request)
+    h = response.headers
+    h.setdefault("x-content-type-options", "nosniff")
+    h.setdefault("x-frame-options", "SAMEORIGIN")
+    h.setdefault("content-security-policy", "frame-ancestors 'self'")
+    h.setdefault("referrer-policy", "same-origin")
+    if request.headers.get("x-forwarded-proto") == "https":
+        # 只在确实走了 https 的那次响应上承诺，免得 http 环境下给出无效头
+        h.setdefault("strict-transport-security", "max-age=15552000")
+    h["cache-control"] = ("no-store" if response.status_code >= 400
+                          else _cache_control(request.url.path))
+    return response
+
+
+def _etag_of(body: str) -> str:
+    return 'W/"%s"' % hashlib.sha1(body.encode("utf-8")).hexdigest()[:20]
+
+
+def _page(request: Request, body: str) -> Response:
+    """大 HTML 一律走这里：配弱 ETag，命中就回 304，浏览器少下一整页。"""
+    tag = _etag_of(body)
+    if any(t.strip() == tag for t in (request.headers.get("if-none-match") or "").split(",")):
+        return Response(status_code=304, headers={"etag": tag, "cache-control": "no-cache"})
+    return HTMLResponse(body, headers={"etag": tag, "cache-control": "no-cache"})
 
 
 def _set_session_cookie(response: Response, request: Request, email: str,
@@ -759,9 +874,16 @@ def auth_reset(body: dict, request: Request, response: Response):
 @app.post("/api/auth/login")
 def auth_login(body: dict, request: Request, response: Response):
     email = body.get("email", "")
+    ip = _client_ip(request)
+    allowed, left = auth.login_can_try(ip, email)
+    if not allowed:
+        # 只回 429，不再跑哈希：挡在门外就没必要替对方做 PBKDF2（那正是他要的开销）
+        return JSONResponse({"error": auth.login_blocked_left(left)}, status_code=429)
     if not auth.verify_login(email, body.get("password", "")):
+        auth.login_failed(ip, email)
         time.sleep(0.6)   # 拖慢暴力尝试
         return JSONResponse({"error": "邮箱或密码不对"}, status_code=401)
+    auth.login_succeeded(ip, email)
     email = email.strip().lower()
     _set_session_cookie(response, request, email, bool(body.get("remember", True)))
     return {"email": email}
@@ -1090,26 +1212,26 @@ def _find_bundles() -> list[dict]:
 
 
 @app.get("/", response_class=HTMLResponse)
-def index() -> str:
+def index(request: Request) -> Response:
     """首页就是成片台本体：拖包 → 生成 → 取片一屏走完，不必先进工作台找入口。
     静态资源仍在 /poc/ 下，靠 <base> 让页面里的相对路径照旧解析。"""
-    html = _poc_html()
-    if isinstance(html, JSONResponse):
-        return html
-    return html.replace("<head>", '<head><base href="/poc/">', 1)
+    page = _poc_html()
+    if isinstance(page, JSONResponse):
+        return page
+    return _page(request, page.replace("<head>", '<head><base href="/poc/">', 1))
 
 
 @app.get("/studio", response_class=HTMLResponse)
 @app.get("/studio/", response_class=HTMLResponse)
-def studio() -> str:
+def studio(request: Request) -> Response:
     """工作台：作品库与历史项目。主路径已在成片台，这里退成后台。"""
-    return _inject_browser_export((STATIC / "index.html").read_text(encoding="utf-8"))
+    return _page(request, _inject_browser_export((STATIC / "index.html").read_text(encoding="utf-8")))
 
 
 @app.get("/i/{code}", response_class=HTMLResponse)
-def intake_page(code: str):
+def intake_page(code: str, request: Request) -> Response:
     """Agent 直投短链：与 / 同一份 SPA，前端按路径进入「素材包已送达」落地页。"""
-    return _inject_browser_export((STATIC / "index.html").read_text(encoding="utf-8"))
+    return _page(request, _inject_browser_export((STATIC / "index.html").read_text(encoding="utf-8")))
 
 
 # 成片台悬浮组件：有任务在等成片台时，任务页右下角浮出按钮，
@@ -1214,8 +1336,32 @@ def templates():
 
 @app.get("/healthz")
 def healthz():
-    """云平台健康检查（不落盘、不触发扫描副作用）。"""
-    return {"ok": True, "jobs": len(JOBS), "version": "1.0"}
+    """云平台健康检查（不落盘、不触发扫描副作用）。
+
+    这里**不再报版本号**：以前硬编码 `"version": "1.0"`，说了等于没说；
+    真版本在 `/api/version`（要登录），不把精确版本暴露给匿名探针。
+    """
+    return {"ok": True, "jobs": len(JOBS)}
+
+
+@app.get("/api/version")
+def api_version():
+    """线上到底是哪一版：commit + 构建时间 + 关键依赖的实际版本。
+
+    故意留在鉴权后面（不进 _PUBLIC_PATHS）：匿名访问者不该拿到精确版本信息，
+    而问这个问题的站长/排障本来就登录着；外部只需要 /healthz 那个存活信号。
+    读的是**运行时真实装着的**版本，不是 requirements 里写的期望值 ——
+    生产是宿主绑挂代码 + 部署时还会 pip 装包，只有问运行时才算数。
+    """
+    from importlib import metadata as md
+    deps = {}
+    for name in ("fastapi", "starlette", "pydantic", "pillow", "websockets",
+                 "cos-python-sdk-v5", "edge-tts", "requests", "python-multipart"):
+        try:
+            deps[name] = md.version(name)
+        except Exception:  # noqa: BLE001 - 装没装都要说实话
+            deps[name] = "未安装"
+    return {**version.info(), "deps": deps}
 
 
 def _bundle_meta(bundle: str | None) -> dict:
@@ -1533,7 +1679,6 @@ def jianying_assistant_installer():
 def jianying_draft_zip(pid: str, rid: str, request: Request):
     """把指定成片打包成剪映专业版草稿 zip（分镜切段 + 可编辑字幕[关字幕渲染时]）。"""
     import tempfile
-    import zipfile
     from pathlib import Path as _P
     from urllib.parse import quote
     from . import jianying_draft as jyd
@@ -1627,13 +1772,24 @@ def mount_bundle(pid: str, body: dict, request: Request):
 
 
 def _safe_extract(zf: zipfile.ZipFile, dest: Path) -> None:
-    """防 Zip Slip / zip 炸弹：逐条校验成员路径落在 dest 内，且总量受控。"""
+    """防 Zip Slip / zip 炸弹 / 符号链接逃逸：逐条校验成员路径落在 dest 内，且总量受控。
+
+    光校验名字挡不住符号链接：`link` 与 `link/evil.txt` 两条名字各自都在 dest 内，
+    解压器却会先建软链再把文件"穿过"它写到外面 —— 上传口对免费注册用户开着，
+    而 /app/videogen 是从宿主机挂进来的，等于任意登录用户可写服务器代码。
+    所以成员类型也要限：只收普通文件与目录。
+    """
     dest = dest.resolve()
     total = 0
     for member in zf.infolist():
         total += member.file_size
         if total > MAX_EXTRACT_BYTES:
             raise ValueError("解压后体积超限")
+        mode = member.external_attr >> 16
+        # 只看"类型位"：0o600/0o644 这类只带权限不带类型的写法很常见（Python 自己
+        # writestr 就是 0o600），当成普通文件；带类型位又不是普通文件/目录的才拒。
+        if stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR):
+            raise ValueError(f"不支持的文件类型: {member.filename}")
         target = (dest / member.filename).resolve()
         if target != dest and dest not in target.parents:
             raise ValueError(f"非法路径: {member.filename}")
@@ -1924,13 +2080,17 @@ def start_build(body: dict, request: Request):
     if email and not auth.is_admin(email) and auth.user_tier(email) == "free":
         body = dict(body)
         body["watermark"] = True
-        used = _usage_bump(email)
-        if used > config.FREE_DAILY_BUILDS:
+        allowed, used = _free_quota_check(email)
+        if not allowed:
+            # 被挡的这一次**不记账**：以前是先 _usage_bump 再判超限，
+            # 于是被拒的尝试也一直往账本上加数，「我的」里会出现「已用 7 / 2 条」
             return JSONResponse(
-                {"error": f"今天的免费额度（每天 {config.FREE_DAILY_BUILDS} 条）用完了。"
+                {"error": f"今天的免费额度（每天 {config.FREE_DAILY_BUILDS} 条）用完了，"
+                          f"已用 {used} 条。"
                           f"¥{config.PRICES['premium']} 永久买断，不限量去水印——点右上角「升级」看看",
                  "limited": True},
                 status_code=429)
+        _usage_bump(email)
     if email:
         body = dict(body)
         body["brand"] = _brand_for(email)   # 高级档品牌套件，服务端自动带上（默认配置固化）

@@ -1,15 +1,18 @@
 """试玩：落地页让**未登录**的新访客试做一条十几秒的样片。
 
-防滥用是这个模块的第一要务（公开接口 = 谁都能调）：
+防滥用是这个模块的第一要务（公开接口 = 谁都能调，而且每次调用真的花 LLM/TTS 钱）：
 
-- **只接受这里列出的选题 id**，素材包路径由这里给出——绝不接受任何用户传入的路径/文件；
-- 每个浏览器 cookie 一次、每个 IP 一天两次（容忍家里多设备）；
+- **只接受这里列出的选题 id**，素材包路径由这里给出 —— 绝不接受任何用户传入的路径/文件；
+- 每个浏览器一次、每个 IP 一天两次（容忍家里多设备）；IP 由调用方给，
+  它信不信得过见 `server._client_ip`（XFF 不能由客户端随意编，否则额度等于没有）；
 - 出片固定 15 秒以内、降到 720×1280、带 GetCut 水印；
-- 限流记录写在 `WORKSPACES/.videogen-try.json`（跟用户库同一个持久卷）。
+- 限流记录写在 `WORKSPACES/.videogen-try.json`（跟用户库同一个持久卷），
+  **键数有上限**：这是公开接口，不设上限就等于让人家用一个脚本撑爆我们的状态文件。
 """
 from __future__ import annotations
 
-import json
+import os
+import threading
 import time
 from pathlib import Path
 
@@ -26,9 +29,13 @@ TOPICS: list[dict] = [
      "subtitle": "14 秒 · 数字多、有冲突", "bundle": "try-f35", "template": "data"},
 ]
 
-COOKIE_LIMIT = 1          # 每个浏览器一次
+COOKIE_LIMIT = 1          # 每个浏览器一次（清掉 cookie 就换不了额度，兜底靠 IP 上限）
 IP_LIMIT = 2              # 每个 IP 每天两次
 WINDOW_S = 24 * 3600
+COOKIE_TTL_S = 30 * 24 * 3600     # 一条浏览器记录留 30 天
+MAX_KEYS = 5000                   # 账本每个表的键数上限（约 1MB 封顶）
+
+_LOCK = threading.Lock()          # 账本是读-改-写：不锁就能并发双花额度
 
 
 def topic(tid: str) -> dict | None:
@@ -43,24 +50,7 @@ def bundle_dir(t: dict) -> Path:
     return d
 
 
-def remember_cookie(workspaces: Path, cookie: str) -> None:
-    """把发给浏览器的 cookie 记进限流账本。
-
-    第一次请求没有 cookie，我们发一个新的；如果不记账，同一个浏览器第二次来
-    就拦不住（只靠 IP 的话还能再蹭一次）。
-    """
-    if not cookie:
-        return
-    path = _store_path(workspaces)
-    data = _load(path)
-    data["cookies"][cookie] = time.time()
-    try:
-        safestore.write_json(path, data, indent=None)
-    except Exception:  # noqa: BLE001
-        pass
-
-
-# ---------- 限流 ----------
+# ---------- 限流账本 ----------
 def _store_path(workspaces: Path) -> Path:
     return Path(workspaces) / ".videogen-try.json"
 
@@ -70,24 +60,47 @@ def _load(path: Path) -> dict:
     return {"cookies": d.get("cookies") or {}, "ips": d.get("ips") or {}}
 
 
-def guard(workspaces: Path, ip: str, cookie: str) -> tuple[bool, str]:
-    """能不能再试一次。通过就立刻记账（先扣后跑，避免并发绕限流）。"""
+def _newest(items: dict, keep: int) -> dict:
+    """只留时间戳最新的 keep 个键。值是时间戳（cookies）或时间戳列表（ips）。"""
+    if len(items) <= keep:
+        return items
+
+    def stamp(k):
+        v = items[k]
+        if isinstance(v, list):
+            return max(v) if v else 0
+        return v if isinstance(v, (int, float)) else 0
+
+    return {k: items[k] for k in sorted(items, key=stamp, reverse=True)[:keep]}
+
+
+def guard(workspaces: Path, ip: str, cookie: str) -> tuple[bool, str, str]:
+    """能不能再试一次。返回 (放行?, 给用户看的话, 本次要记住的浏览器标识)。
+
+    判定与记账在同一把锁里一次做完：先判后记、或者判完再写第二遍，都能被并发钻空子
+    （两个请求各自都看到"今天还没用过"，于是一次烧掉两份额度）。
+    """
     path = _store_path(workspaces)
-    data = _load(path)
-    now = time.time()
-    if cookie and cookie in data["cookies"]:
-        return False, "这个浏览器已经试做过了"
-    times = [t for t in (data["ips"].get(ip) or []) if now - t < WINDOW_S]
-    if len(times) >= IP_LIMIT:
-        return False, "今天从这个网络试做的次数用完了"
-    if cookie:
-        data["cookies"][cookie] = now
-    times.append(now)
-    data["ips"][ip] = times[-8:]
-    # 顺手清掉过期的 cookie 记录，文件不会越滚越大
-    data["cookies"] = {k: v for k, v in data["cookies"].items() if now - v < 30 * 24 * 3600}
-    try:
-        safestore.write_json(path, data, indent=None)
-    except Exception:  # noqa: BLE001
-        pass
-    return True, ""
+    with _LOCK:
+        data = _load(path)
+        now = time.time()
+        if cookie and cookie in data["cookies"]:
+            return False, "这个浏览器已经试做过了", ""
+        times = [t for t in (data["ips"].get(ip) or []) if now - t < WINDOW_S]
+        if len(times) >= IP_LIMIT:
+            return False, "今天从这个网络试做的次数用完了", ""
+        issued = cookie or ("%012x" % int.from_bytes(os.urandom(6), "big"))
+        data["cookies"][issued] = now
+        data["ips"][ip] = (times + [now])[-IP_LIMIT * 4:]
+        data["cookies"] = _newest(_prune(data["cookies"], now), MAX_KEYS)
+        data["ips"] = _newest({k: v for k, v in data["ips"].items()
+                               if any(now - t < WINDOW_S for t in v)}, MAX_KEYS)
+        try:
+            safestore.write_json(path, data, indent=None)
+        except Exception:  # noqa: BLE001
+            pass
+    return True, "", issued
+
+
+def _prune(records: dict, now: float) -> dict:
+    return {k: v for k, v in records.items() if now - v < COOKIE_TTL_S}
