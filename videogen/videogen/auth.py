@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import os
 import threading
 import random
 import re
@@ -390,7 +391,15 @@ def _secret() -> bytes:
         return SECRET_FILE.read_bytes().strip()
     SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
     sec = secrets.token_bytes(32)
-    SECRET_FILE.write_bytes(sec)
+    try:
+        # 必须独占创建：以前是"is_file 判断 + 直接写"，后台工作线程与请求线程
+        # 同时冷启动时会各生成一份、互相覆盖 —— 签出来的票另一边验不过（bad_sig），
+        # 表现就是偶发掉线。O_CREAT|O_EXCL 让输的一方退回读赢家的文件。
+        fd = os.open(str(SECRET_FILE), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        return SECRET_FILE.read_bytes().strip()
+    with os.fdopen(fd, "wb") as f:
+        f.write(sec)
     try:
         SECRET_FILE.chmod(0o600)
     except OSError:
@@ -415,6 +424,27 @@ def make_session(email: str, ttl: int = SESSION_TTL_SHORT,
     sig = hmac.new(_secret(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
     _record_session(sid, email, device, ip, exp)
     return f"{payload}|{sig}"
+
+
+def session_status(token: str) -> str:
+    """为什么这张票不认了 —— 排障与测试都要它，别只回一个 None 让人猜。"""
+    parts = (token or "").split("|")
+    if len(parts) != 5:
+        return "bad_format"
+    email, exp, gen, sid, sig = parts
+    if not exp.isdigit():
+        return "bad_exp"
+    expect = hmac.new(_secret(), f"{email}|{exp}|{gen}|{sid}".encode("utf-8"),
+                      hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expect):
+        return "bad_sig"
+    if int(exp) < time.time():
+        return "expired"
+    if sid in _revoked_set():
+        return "revoked"
+    if str(gen) != str(_pw_gen(email)):
+        return "gen_mismatch"
+    return "ok"
 
 
 def read_session(token: str) -> str | None:
@@ -469,6 +499,11 @@ _MAX_SESSION_RECORDS = 500
 _MAX_REVOKED = 1000
 _sessions_lock = threading.Lock()
 _sessions_state: dict | None = None
+# 吊销表常驻内存：read_session 在每个请求的热路径上（_auth_gate、_agent_identity、
+# /api/agent/poll…），那里做一次磁盘读既拖慢每个请求，又会因为文件正被别的请求改写
+# 而出现偶发误判 —— 2026-09-21 那批"偶发红"就是这么来的。
+# 冷启动从文件读一次；之后只有吊销动作写盘，读永远走内存。
+_revoked_mem: dict | None = None
 
 
 def _sessions_load() -> dict:
@@ -533,8 +568,26 @@ def _touch_session(sid: str) -> None:
 
 
 def _revoked_set() -> set:
-    with _sessions_lock:
-        return set(_sessions_load().get("revoked") or {})
+    global _revoked_mem
+    if _revoked_mem is None:
+        with _sessions_lock:
+            _revoked_mem = dict(_sessions_load().get("revoked") or {})
+    return set(_revoked_mem)
+
+
+def _forget_sessions_cache() -> None:
+    """测试与"换了状态文件路径"时清缓存用（生产不需要调）。"""
+    global _sessions_state, _revoked_mem
+    _sessions_state = None
+    _revoked_mem = None
+
+
+def _remember_revoked(sid: str, exp: int) -> None:
+    """写盘之外同步更新内存表（调用方已持锁）。"""
+    global _revoked_mem
+    if _revoked_mem is None:
+        _revoked_mem = dict(_sessions_load().get("revoked") or {})
+    _revoked_mem[sid] = exp
 
 
 def _pw_gen(email: str) -> int:
@@ -569,8 +622,10 @@ def revoke_session(email: str, sid: str) -> bool:
                     if r.get("sid") == sid and r.get("email") == email), None)
         if rec is None:
             return False
-        state["revoked"][sid] = int(rec.get("exp") or (time.time() + SESSION_TTL_LONG))
+        exp = int(rec.get("exp") or (time.time() + SESSION_TTL_LONG))
+        state["revoked"][sid] = exp
         state["records"] = [r for r in state["records"] if r.get("sid") != sid]
+        _remember_revoked(sid, exp)
         _prune(state, time.time())
         _sessions_save(state)
     return True
@@ -583,7 +638,9 @@ def revoke_all_sessions(email: str) -> int:
         state = _sessions_load()
         mine = [r for r in state["records"] if r.get("email") == email]
         for r in mine:
-            state["revoked"][r["sid"]] = int(r.get("exp") or (time.time() + 3600))
+            exp = int(r.get("exp") or (time.time() + 3600))
+            state["revoked"][r["sid"]] = exp
+            _remember_revoked(r["sid"], exp)
         state["records"] = [r for r in state["records"] if r.get("email") != email]
         _prune(state, time.time())
         _sessions_save(state)
