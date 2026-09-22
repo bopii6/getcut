@@ -82,6 +82,37 @@ def _drift_stats(clause_starts_ms: list[float], pause_ends_s: list[float],
     return pairs[len(pairs) // 2], len(pairs)
 
 
+def _worst_drift(sentence_starts_ms: list[float], pause_ends_s: list[float],
+                 tol_s: float = 0.9) -> tuple[float | None, int]:
+    """按顺序配对的句首里，偏差最大的那一个（毫秒，正=字幕滞后语音）。
+
+    为什么不能只看中位数（2026-09-22 第二宗漂移）：中位数会被大片正确的句子
+    稀释掉。事故那条片子中位只有 -96ms、闸门静默放行，实际有 5 条字幕整整错
+    2.6~6.2 秒。这里只喂"句子结尾之后的第一句"——按稿件它们的开头必须紧跟在
+    某个停顿后面，配不上或差得多就是真错位。
+
+    容差取 0.9 秒（比中位闸紧）：句首与停顿的正常残余偏差在 0.2 秒量级，
+    设太松会把"另一处停顿"配进来，报出假警报。不足 6 个配对返回 (None, n)，
+    停顿少的片子宁可不报。"""
+    pairs: list[float] = []
+    used_until = -1
+    for cs in sorted(sentence_starts_ms):
+        t = cs / 1000.0
+        best_j, best_d = -1, tol_s
+        for j, pe in enumerate(pause_ends_s):
+            if j <= used_until:
+                continue
+            d = abs(pe - t)
+            if d <= best_d:
+                best_j, best_d = j, d
+        if best_j >= 0:
+            pairs.append((t - pause_ends_s[best_j]) * 1000.0)
+            used_until = best_j
+    if len(pairs) < 6:
+        return None, len(pairs)
+    return max(pairs, key=abs), len(pairs)
+
+
 def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
            summaries: dict | None = None, bundle: Path | None = None,
            progress=None) -> dict:
@@ -170,6 +201,19 @@ def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
             elif abs(median) >= 300:
                 warnings.append(
                     f"字幕与配音有漂移倾向：中位偏差 {median:+.0f}ms（{n} 个句锚点）")
+        # 局部错位：中位数看不见"某几句整体错了几秒"（2026-09-22 事故：中位
+        # -96ms 放行，实际有一段字幕错 6 秒）。只看句子开头的子句——按稿件
+        # 它们的开头必须紧跟在某个停顿之后。
+        sent_starts = [c.start_ms for i, c in enumerate(plan.clauses)
+                       if i > 0 and c.sent_index != plan.clauses[i - 1].sent_index]
+        worst, wn = _worst_drift(sent_starts, pauses)
+        if worst is not None:
+            if abs(worst) >= 1200:
+                errors.append(
+                    f"字幕局部错位：有句首与配音停顿差 {abs(worst):.0f}ms（{wn} 处句锚点）")
+            elif abs(worst) >= 500:
+                warnings.append(
+                    f"字幕局部错位倾向：最大偏差 {abs(worst):.0f}ms（{wn} 处句锚点）")
 
     # 2.5 vision check (parity: niwo checking_visuals uses a vision model)
     if vision and summaries and bundle:

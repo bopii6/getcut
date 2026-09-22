@@ -139,6 +139,28 @@ class ReconcileTest(unittest.TestCase):
     def test_empty_stream_falls_back_to_none(self):
         self.assertIsNone(_reconcile_words(SCRIPT, [], 5000))
 
+    def test_degenerate_token_does_not_poison_times(self):
+        """畸形帧（多字却零时长）与走查脱轨都不能污染时间轴。
+
+        2026-09-22 实测：服务端发过一帧 21 个字、时长 0、时刻整体错 4 秒；旧的
+        顺序走查认了它，后面轮次里的正确时间戳被"先到先得"挡住，那一段字幕错 4 秒。
+        换成 difflib 对位之后：正确值来自重复出现的其它轮次，畸形帧说不算就不算。
+        """
+        occ = [(c, i * 200.0) for i, c in enumerate(SCRIPT)]
+        good = _snapshots(occ, dur=180.0)
+        mid = len(SCRIPT) // 2
+        # 一帧塞 20 个字、时长 0、时刻偏 4000ms —— 拦在中间
+        bad = {"text": SCRIPT[mid:mid + 20], "begin_time": occ[mid][1] + 4000.0,
+               "end_time": occ[mid][1] + 4000.0}
+        raw = good[:mid] + [bad] + good[mid:]
+        r = _reconcile_words(SCRIPT, raw, len(SCRIPT) * 200.0 + 1000)
+        self.assertIsNotNone(r)
+        text = _evtext(r)
+        self.assertEqual(text, PUNCT.sub("", SCRIPT))
+        self.assertTrue(_monotonic(r))
+        worst = max(abs(e["offset_ms"] - tm) for e, (_c, tm) in zip(r, occ, strict=True))
+        self.assertLessEqual(worst, 400)
+
     def test_real_stream_from_incident_replays_exact(self):
         """2026-09-22 线上事故的原始流样本（10585 帧截前 6000）重放：373 字逐字对齐。"""
         sample = Path(__file__).parent / "data" / "tts_replay_anthropic_ipo.json"

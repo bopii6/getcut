@@ -143,6 +143,9 @@ export type NiwoProps = {
   channelName?: string;
   shots: Shot[];
   clauses: Clause[];
+  /** 整句字幕（一条最多两行，Python 侧已折好行）；缺省时退回按子句切。
+   *  字段名用 captions 而不是 subtitles：后者在流程页配置里是"要不要字幕"的开关。 */
+  captions?: SubtitleUnit[];
   /**
    * 分轨草稿导出模式：card=只出卡片/包装层（文字转剪映文本轨），base=只出底板层。
    * 供剪映草稿分层合成。
@@ -1042,10 +1045,49 @@ const Footer: React.FC<{sources: string[]; disclaimer: string}> = ({sources, dis
   );
 };
 
-export const buildSubtitleChunks = (clauses: Clause[]) => {
-  // long clauses are split into <=12-char chunk cards, timing proportional
-  // to character count (matches the reference: short constant-size cards)
-  const chunks: {text: string; startMs: number; endMs: number}[] = [];
+export type SubtitleUnit = {text: string; lines?: string[]; startMs: number; endMs: number};
+
+/** 视觉宽度：汉字 1.0、标点 0.55、ASCII 0.4。
+ *  必须与 Python 侧 planner._vis 同一把尺子——否则含英文的行会被按"字符数"
+ *  误判成超宽而缩字号，全片字号就不一致了（2026-09-22 用户要求"大小一致"）。 */
+const VIS_PUNCT = "，。、：；！？…—·（）()《》“”‘’-";
+export const visWidth = (s: string) => {
+  // 系数与 Python 侧 planner._vis 一致（实测：汉字 1.00、标点 0.50、英文 0.51~0.59，
+  // 英文取 0.62 保守），两边不同口径会让含英文的行被误缩字号
+  let w = 0;
+  for (const ch of s) w += VIS_PUNCT.includes(ch) ? 0.55 : /[ -]/.test(ch) ? 0.62 : 1.0;
+  return w;
+};
+
+/** 字号是全片固定的：Python 侧已保证每行不超宽，这里只是最后一道保险
+ *  （真出现超宽行才缩，正常情况永远返回 base，字号因此保持一致）。 */
+export const fitCaptionSize = (lines: string[], base: number, avail: number) => {
+  const longest = Math.max(1, ...lines.map(visWidth));
+  return Math.min(base, Math.max(26, Math.floor((avail * 0.97) / longest)));
+};
+
+export const SubtitleLines: React.FC<{lines: string[]; size: number; avail: number}> =
+  ({lines, size, avail}) => (
+    <>
+      {lines.map((l, i) => (
+        <div key={i} style={{fontSize: fitCaptionSize(lines, size, avail), lineHeight: 1.3}}>{l}</div>
+      ))}
+    </>
+  );
+
+export const buildSubtitleChunks = (clauses: Clause[], subtitles?: SubtitleUnit[]) => {
+  // 整句字幕（2026-09-22 起）：字幕的正确单位是句子——子句是按标点切的（逗号
+  // 也算边界），直接当字幕会切出"不是一句话"的碎片。Python 侧已经按句子切好、
+  // 并在逗号处折好行；没有 subtitles 时退回旧行为（≤12 字硬切小卡），老素材包照常渲。
+  if (subtitles && subtitles.length) {
+    return subtitles.map((s) => ({
+      text: s.text,
+      lines: s.lines && s.lines.length ? s.lines : [s.text],
+      startMs: s.startMs,
+      endMs: s.endMs,
+    }));
+  }
+  const chunks: {text: string; lines: string[]; startMs: number; endMs: number}[] = [];
   for (const c of clauses) {
     const n = c.text.length;
     const parts = Math.max(1, Math.ceil(n / 12));
@@ -1059,8 +1101,10 @@ export const buildSubtitleChunks = (clauses: Clause[]) => {
         while (e < n && /[A-Za-z0-9]/.test(c.text[e])) e += 1;
         if (e - at <= 16) end = e;
       }
+      const piece = c.text.slice(at, end);
       chunks.push({
-        text: c.text.slice(at, end),
+        text: piece,
+        lines: [piece],
         startMs: c.startMs + ((c.endMs - c.startMs) * at) / n,
         endMs: c.startMs + ((c.endMs - c.startMs) * end) / n,
       });
@@ -1070,30 +1114,36 @@ export const buildSubtitleChunks = (clauses: Clause[]) => {
   return chunks;
 };
 
-const Subtitles: React.FC<{clauses: Clause[]; holes?: [number, number][]}> = ({clauses, holes}) => {
+const Subtitles: React.FC<{clauses: Clause[]; captions?: SubtitleUnit[]; holes?: [number, number][]}> = ({clauses, captions, holes}) => {
   const frame = useCurrentFrame();
   const fps = useVideoConfig().fps;
   const t = (frame / fps) * 1000;
-  const chunks = buildSubtitleChunks(clauses);
+  const chunks = buildSubtitleChunks(clauses, captions);
   const active = chunks.find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
-  // 编舞时刻（内容驱动开场/金句卡/数字卡）画面自带大字：字幕再压上来会撞成两层白字，让路
-  if (holes?.some(([a, b]) => active.startMs >= a - 200 && active.endMs <= b + 200)) return null;
+  // 编舞时刻（内容驱动开场/金句卡/数字卡）画面自带大字：字幕让路，别撞成两层白字。
+  // 判据必须用"当前时刻"——字幕改成整句之后会横跨卡片时间窗，用"整条都在窗内"
+  // 的包含判据会漏掉，字幕就压到卡片大字上了（2026-09-22 实测）。
+  if (holes?.some(([a, b]) => t >= a && t < b)) return null;
+  const S = T.geo.subtitle;
+  // 贴"面板底沿"定位（原来按 top 定：两行就往下长，长出面板下沿压到纸卡上）。
+  // 可用宽度也按面板算——按整幅 1080 算的话长行会横着捅出面板（出血）。
+  const avail = Number(S.maxWidth) || 1080 - 2 * (S.side ?? 60);
   return (
     <div
       style={{
         position: 'absolute',
-        left: T.geo.subtitle.side ?? 60,
-        right: T.geo.subtitle.side ?? 60,
-        top: T.geo.subtitle.top,
+        left: S.side ?? 60,
+        right: S.side ?? 60,
+        bottom: Number(S.bottom) || 480,
         textAlign: 'center',
         ...heavy,
-        fontSize: T.geo.subtitle.size,
+        fontSize: S.size,
         color: T.white,
         textShadow: '0 2px 10px rgba(0,0,0,0.45)',
       }}
     >
-      {active.text}
+      <SubtitleLines lines={active.lines} size={S.size} avail={avail} />
     </div>
   );
 };
@@ -1163,17 +1213,17 @@ const PortraitHeadline: React.FC<{lines: {text: string; highlight?: string}[]}> 
   );
 };
 
-const PortraitSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
+const PortraitSubtitles: React.FC<{clauses: Clause[]; captions?: SubtitleUnit[]}> = ({clauses, captions}) => {
   const frame = useCurrentFrame();
   const fps = useVideoConfig().fps;
   const t = (frame / fps) * 1000;
-  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  const active = buildSubtitleChunks(clauses, captions).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   return (
     <div style={{position: 'absolute', left: T.geo.subtitle.side ?? 80, right: T.geo.subtitle.side ?? 80,
       bottom: T.geo.subtitle.bottom, textAlign: 'center',
       ...heavy, fontSize: T.geo.subtitle.size, color: T.white, textShadow: '0 3px 16px rgba(0,0,0,0.75)'}}>
-      {active.text}
+      <SubtitleLines lines={active.lines} size={T.geo.subtitle.size} avail={1080 - 2 * (T.geo.subtitle.side ?? 60)} />
     </div>
   );
 };
@@ -1282,7 +1332,7 @@ const PortraitVideo: React.FC<NiwoProps> = (props) => (
       <PortraitShot key={i} shot={shot} index={i} />
     ))}
     {isCard() ? null : <PortraitHeadline lines={props.headline.lines} />}
-    {props.showSubtitles !== false ? <PortraitSubtitles clauses={props.clauses} /> : null}
+    {props.showSubtitles !== false ? <PortraitSubtitles clauses={props.clauses} captions={props.captions} /> : null}
     {isCard() ? null : <PortraitFooter sources={props.sources} disclaimer={props.disclaimer} />}
   </AbsoluteFill>
 );
@@ -1558,7 +1608,7 @@ const EditorialVideo: React.FC<{props: NiwoProps}> = ({props}) => (
     {isBase() ? null : props.shots.map((shot, i) => (
       <ShotView key={i} shot={shot} index={i} />
     ))}
-    {props.showSubtitles !== false ? <Subtitles clauses={props.clauses} holes={props.subtitleHoles} /> : null}
+    {props.showSubtitles !== false ? <Subtitles clauses={props.clauses} captions={props.captions} holes={props.subtitleHoles} /> : null}
     {isCard() ? null : <Footer sources={props.sources} disclaimer={props.disclaimer} />}
   </AbsoluteFill>
 );
@@ -1572,7 +1622,7 @@ const LowerVideo: React.FC<{props: NiwoProps}> = (props) => (
       <LowerShot key={i} shot={shot} index={i} />
     ))}
     {isCard() ? null : <LowerBar lines={props.headline.lines} />}
-    {props.showSubtitles !== false ? <LowerSubtitles clauses={props.clauses} /> : null}
+    {props.showSubtitles !== false ? <LowerSubtitles clauses={props.clauses} captions={props.captions} /> : null}
     {isCard() ? null : <Footer sources={props.sources} disclaimer={props.disclaimer} />}
   </AbsoluteFill>
 );
@@ -1662,11 +1712,11 @@ const LowerBar: React.FC<{lines: {text: string; highlight?: string}[]}> = ({line
   );
 };
 
-const LowerSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
+const LowerSubtitles: React.FC<{clauses: Clause[]; captions?: SubtitleUnit[]}> = ({clauses, captions}) => {
   const frame = useCurrentFrame();
   const fps = useVideoConfig().fps;
   const t = (frame / fps) * 1000;
-  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  const active = buildSubtitleChunks(clauses, captions).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   return (
     <div style={{position: 'absolute', left: T.geo.subtitle.side ?? 70, right: T.geo.subtitle.side ?? 70,
@@ -1682,7 +1732,7 @@ const LowerSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
           lineHeight: 1.3,
         }}
       >
-        {active.text}
+        <SubtitleLines lines={active.lines} size={T.geo.subtitle.size} avail={1080 - 2 * (T.geo.subtitle.side ?? 60)} />
       </span>
     </div>
   );
@@ -1821,17 +1871,19 @@ const PosterHeadline: React.FC<{lines: {text: string; highlight?: string}[]}> = 
   );
 };
 
-const PosterSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
+const PosterSubtitles: React.FC<{clauses: Clause[]; captions?: SubtitleUnit[]}> = ({clauses, captions}) => {
   const frame = useCurrentFrame();
   const fps = useVideoConfig().fps;
   const t = (frame / fps) * 1000;
-  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  const active = buildSubtitleChunks(clauses, captions).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   const S = T.geo.subtitle;
   return (
     <div style={{position: 'absolute', left: 0, right: 0, bottom: S.bottom, background: T.barBg ?? 'rgba(10,10,12,0.86)',
       borderTop: `5px solid ${T.accent}`, padding: '22px 90px 26px 90px'}}>
-      <span style={{...heavy, fontSize: S.size, color: T.white, lineHeight: 1.25}}>{active.text}</span>
+      <span style={{...heavy, fontSize: S.size, color: T.white, lineHeight: 1.25}}>
+        <SubtitleLines lines={active.lines} size={S.size} avail={1080 - 180} />
+      </span>
     </div>
   );
 };
@@ -1878,7 +1930,7 @@ const PosterVideo: React.FC<NiwoProps> = (props) => (
       <PosterShot key={i} shot={shot} index={i} />
     ))}
     {isCard() ? null : <PosterHeadline lines={props.headline.lines} />}
-    {props.showSubtitles !== false ? <PosterSubtitles clauses={props.clauses} /> : null}
+    {props.showSubtitles !== false ? <PosterSubtitles clauses={props.clauses} captions={props.captions} /> : null}
     {isCard() ? null : <PosterFooter sources={props.sources} disclaimer={props.disclaimer} />}
   </AbsoluteFill>
 );
@@ -2072,24 +2124,24 @@ const DataVideo: React.FC<NiwoProps> = (props) => {
       {/* 进度轨每镜一个状态，要跟着卡片层走（base 只有一张静止帧，放进去会定格） */}
       {isBase() ? null : <DataProgress shots={props.shots} />}
       {isCard() ? null : <DataHeader lines={props.headline.lines} />}
-      {props.showSubtitles !== false ? <DataSubtitles clauses={props.clauses} /> : null}
+      {props.showSubtitles !== false ? <DataSubtitles clauses={props.clauses} captions={props.captions} /> : null}
       {isCard() ? null : <Footer sources={props.sources} disclaimer={props.disclaimer} />}
     </AbsoluteFill>
   );
 };
 
-const DataSubtitles: React.FC<{clauses: Clause[]}> = ({clauses}) => {
+const DataSubtitles: React.FC<{clauses: Clause[]; captions?: SubtitleUnit[]}> = ({clauses, captions}) => {
   const frame = useCurrentFrame();
   const fps = useVideoConfig().fps;
   const t = (frame / fps) * 1000;
-  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  const active = buildSubtitleChunks(clauses, captions).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   const S = T.geo.subtitle;
   return (
     <div style={{position: 'absolute', left: S.side ?? 80, right: S.side ?? 80, bottom: S.bottom, textAlign: 'center'}}>
       <span style={{...heavy, fontSize: S.size, color: T.white, background: T.barSubBg ?? 'rgba(6,12,20,0.80)',
         borderLeft: `6px solid ${T.accent}`, padding: '10px 26px 14px 26px', lineHeight: 1.3}}>
-        {active.text}
+        <SubtitleLines lines={active.lines} size={T.geo.subtitle.size} avail={1080 - 2 * (T.geo.subtitle.side ?? 60)} />
       </span>
     </div>
   );

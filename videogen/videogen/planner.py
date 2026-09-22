@@ -224,6 +224,233 @@ def split_clauses(content: Content) -> list[tuple[int, str]]:
     return out
 
 
+# 字幕排版上限：一行放得下的汉字数，一条字幕最多几行。
+# 不按"每 12 个字硬切一条卡"来切（那样一行往往不是一句话，看着就是断的）。
+SUB_LINE_MAX = 13          # 与 editorial 面板宽度 / 固定字号对齐：793px ÷ 56px ≈ 14.2
+SUB_LINES_MAX = 2
+_MIN_LINE_VIS = 4.0        # 折行后任一行太短（如"现在，"）就认为分得太悬殊，改用中间折
+_MAX_LINE_RATIO = 3.0      # 两行最多差这么多倍
+_LINE_SEP = "，、"
+# 断句/断子句用的标点（= SENT_SPLIT ∪ CLAUSE_SPLIT），_boundary_seps 用它逐字对齐
+_SEP_RE = re.compile(r"[。！？；，、：]")
+
+
+def _boundary_seps(script: str) -> list[str]:
+    """逐字对齐：第 i 个"实字"后面紧跟的标点（，、。…，没有就是空串）。
+
+    只把 _SEP_RE 里的标点当分隔符、别的字符（含空格）都算字——必须与
+    split_clauses 的切分口径完全一致，否则下标会错位。"""
+    out: list[str] = []
+    pending = ""
+    for ch in script:
+        if _SEP_RE.match(ch):
+            pending += ch
+            continue
+        if out:
+            out[-1] = pending        # 攒着的标点算在上一个字头上
+        pending = ""
+        out.append("")
+    return out
+
+
+# 版面宽度用"视觉宽"（单位 = 字号）来量。系数是拿真字体（思源黑体 Heavy）
+# 在 56px 下量出来的：汉字 1.00、标点 0.50、英文 0.51~0.59（大写更宽）——
+# 英文按 0.62 保守取，宁可行短一点，也不能让渲染器再缩字号（那会破坏全片字号一致）。
+_W_VIS = {"cjk": 1.0, "punct": 0.55, "ascii": 0.62}
+
+
+def _vis(s: str) -> float:
+    total = 0.0
+    for ch in s:
+        if _SEP_RE.match(ch) or ch in "·（）()\"\"''《》—…-":
+            total += _W_VIS["punct"]
+        elif ch.isascii():
+            total += _W_VIS["ascii"]
+        else:
+            total += _W_VIS["cjk"]
+    return total
+
+
+# "不可切开"的字：拉丁词/数字，外加中文数字——"五点一五万亿""二零一九年"被
+# 从中间劈开是最扎眼的断裂（2026-09-22 实测"五点|一五万亿美元"）。
+_WORD_CHAR = re.compile(r"[A-Za-z0-9零一二三四五六七八九十百千万亿点年月日岁人次个位条家口]")
+
+# 中文排版的"禁则"（只作用于字中间折行）：行首不能是这些字，行尾不能是这些字
+_NO_START = "，。、：；！？）》」』…·的了地得"
+_NO_END = "（《「『·最很太更挺"
+
+
+def _safe_break(text: str, mid: int, limit: int) -> int:
+    """在一个长片段里找折行点：尽量靠中间，两边都不超 limit，不切开英文词/数字。"""
+    lo = max(1, len(text) - limit)
+    hi = min(limit, len(text) - 1)
+    if lo > hi:
+        return max(1, min(mid, len(text) - 1))
+    best, best_gap = mid, None
+    for k in range(lo, hi + 1):
+        if k < len(text) and _WORD_CHAR.match(text[k - 1]) and _WORD_CHAR.match(text[k]):
+            continue
+        if text[k] in _NO_START or text[k - 1] in _NO_END:
+            continue
+        gap = abs(k - mid)
+        if best_gap is None or gap < best_gap:
+            best, best_gap = k, gap
+    return best
+
+
+def _wrap_segments(segs: list[str], per_line: int, max_lines: int,
+                   slack: float = 0.0) -> list[str] | None:
+    """把若干"天然片段"（= 子句，逗号本来就断在这里）排成不超过 max_lines 行。
+
+    只在片段边界折行，绝不在一个片段中间硬断；两行第一行短、第二行长。
+    字号是全片固定的（用户要求"大小一致"），所以行宽必须严格守住 per_line——
+    超了不是缩字号，而是多切一条字幕（slack 默认 0）。排不下返回 None。"""
+    if not segs:
+        return None
+    text = "".join(segs)
+    if _vis(text) <= per_line:
+        return [text]
+    if max_lines < 2:
+        return None
+    limit = per_line + slack
+    # 用户要的观感（2026-09-22）：两行时**第一行短、第二行长**，像阶梯那样。
+    # 所以候选里优先 first<=second，并在其中取"第一行尽量长"的那个（最接近均衡
+    # 但不会反超第二行）；一个都没有才退回最均衡的切法。
+    cands: list[tuple[float, float, int]] = []
+    for k in range(1, len(segs)):
+        first = _vis("".join(segs[:k]))
+        second = _vis("".join(segs[k:]))
+        if min(first, second) < _MIN_LINE_VIS:
+            continue
+        if max(first, second) / max(min(first, second), 1e-6) > _MAX_LINE_RATIO:
+            continue
+        if first <= limit and second <= limit:
+            cands.append((first, second, k))
+    best: tuple[float, int] | None = None
+    if cands:
+        short = [c for c in cands if c[0] <= c[1]]
+        pick = max(short, key=lambda c: c[0]) if short else min(cands, key=lambda c: abs(c[0] - c[1]))
+        best = (abs(pick[0] - pick[1]), pick[2])
+    if best is None:
+        # 整条就是一个长片段（子句内部没有逗号）：退到字中间折，躲开英文词/数字。
+        # 折完每行可能比 per_line 宽——交给渲染器按最长行缩字号，总好过让浏览器
+        # 自己拦腰折（那才是"断裂"）。
+        if len(text) < 2:
+            return [text]
+        k = _safe_break(text, len(text) // 2, int(limit))
+        return [text[:k].rstrip(), text[k:].lstrip()]
+    k = best[1]
+    return ["".join(segs[:k]).rstrip(), "".join(segs[k:]).lstrip()]
+
+
+def _balanced_cut(segs: list[str]) -> int:
+    """在子句边界上找最均衡的一刀（两边的视觉宽尽量相等）。"""
+    total = sum(_vis(s) for s in segs)
+    best, best_gap = 1, None
+    for k in range(1, len(segs)):
+        first = sum(_vis(s) for s in segs[:k])
+        gap = abs(first - (total - first))
+        if best_gap is None or gap < best_gap:
+            best, best_gap = k, gap
+    return best
+
+
+def _chunk_by_budget(segs: list[str], budget: float) -> list[list[str]]:
+    """按"一条字幕最多两行"的容量把子句装桶，桶边界只落在子句（逗号）上。
+
+    贪心装：装不下就换下一桶。单条子句自身超预算时独占一桶（再靠折行 + 缩字号兜）。
+    为什么不是"均分成两半"（上一版就是这么写的，错）：40~50 字的句子对半砍出来
+    一份仍有 20~25 字，两行放不下 → 退化成一整行 → 浏览器自己拦腰折，看着就是
+    裂的（2026-09-22 英王那条实测）。"""
+    out: list[list[str]] = []
+    cur: list[str] = []
+    cur_w = 0.0
+    for s in segs:
+        w = _vis(s)
+        if cur and cur_w + w > budget:
+            out.append(cur)
+            cur, cur_w = [], 0.0
+        cur.append(s)
+        cur_w += w
+    if cur:
+        out.append(cur)
+    return out
+
+
+def subtitle_units(script: str, clauses: list[Clause],
+                   per_line: int = SUB_LINE_MAX,
+                   max_lines: int = SUB_LINES_MAX) -> list[dict]:
+    """把子句合成"字幕单位"：**一条字幕 = 一个整句**（最多两行）。
+
+    为什么不能直接拿子句当字幕（2026-09-22 用户反馈）：子句是按标点切的，逗号、
+    顿号都算边界，于是"它募了八百五十七亿美元，市值一万七千七百亿。"被切成两条，
+    一条里往往不是一句完整的话，看着就是断的。字幕的正确单位是**句子**（。！？；），
+    逗号只该用来折行。
+
+    两条硬规矩：
+    - 并句之后逗号/顿号要留着，否则"芯片电力数据中心""现在Anthropic"读起来是病句；
+    - 只在子句（= 逗号）边界折行，宁可单行超一点点，也不把词从中间劈开。
+    一句太长（两行也放不下）才在逗号处均分成两条，拆出来的每条仍是完整语义块。
+    返回 [{text, lines, start_ms, end_ms}]，时间取自覆盖到的子句。
+    """
+    seps = _boundary_seps(script)
+    pos = 0
+    texted: list[tuple[int, str, Clause]] = []
+    for c in clauses:
+        n = len(c.text)
+        sep = seps[min(pos + n - 1, len(seps) - 1)] if seps else ""
+        pos += n
+        texted.append((c.sent_index, c.text + sep, c))
+    groups: list[list[tuple[int, str, Clause]]] = []
+    for item in texted:
+        if groups and groups[-1][0][0] == item[0]:
+            groups[-1].append(item)
+        else:
+            groups.append([item])
+    out: list[dict] = []
+    for g in groups:
+        # 句末标点丢掉（句内的逗号留着）
+        useg = [t for _si, t, _c in g[:-1]] + [g[-1][2].text]
+        buckets = _chunk_by_budget(useg, per_line * max_lines) if len(g) > 1 else [useg]
+        chunks: list[list[tuple[int, str, Clause]]] = []
+        at = 0
+        for b in buckets:
+            chunks.append(g[at:at + len(b)])
+            at += len(b)
+        # 装桶后仍有两行排不下的（桶里有个超长子句）：**再切一条字幕**，
+        # 而不是把词从中间硬切。字号是全片固定的，多切一条比缩字号/切词都好。
+        for _ in range(6):
+            refined: list[list[tuple[int, str, Clause]]] = []
+            again = False
+            for part in chunks:
+                psegs = [t for _si, t, _c in part[:-1]] + [part[-1][2].text]
+                lines = _wrap_segments(psegs, per_line, max_lines)
+                too_wide = lines is not None and max(_vis(x) for x in lines) > per_line + 0.05
+                if len(part) > 1 and (lines is None or too_wide):
+                    k = _balanced_cut(psegs)
+                    refined.extend([part[:k], part[k:]])
+                    again = True
+                else:
+                    refined.append(part)
+            chunks = refined
+            if not again:
+                break
+        for part in chunks:
+            if not part:
+                continue
+            psegs = ([t for _si, t, _c in part[:-1]] + [part[-1][2].text])
+            lines = _wrap_segments(psegs, per_line, max_lines)
+            if lines is None:
+                lines = ["".join(psegs)]
+            body = "".join(
+                ([t for _si, t, _c in part[:-1]] + [part[-1][2].text]))
+            out.append({"text": body, "lines": lines,
+                        "start_ms": part[0][2].start_ms, "end_ms": part[-1][2].end_ms})
+    for i in range(len(out) - 1):              # 首尾相接，中间不留空档
+        out[i]["end_ms"] = out[i + 1]["start_ms"]
+    return out
+
+
 def align_timeline(clauses: list[tuple[int, str]], events: list[dict]) -> list[Clause]:
     """Map clause char ranges onto TTS word-boundary offsets.
 

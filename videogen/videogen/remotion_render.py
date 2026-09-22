@@ -10,7 +10,7 @@ import shutil
 import time
 from pathlib import Path
 
-from .planner import Plan
+from .planner import Plan, subtitle_units
 from .schemas import Content
 
 RENDERER = Path(__file__).resolve().parent.parent / "renderer"
@@ -241,6 +241,11 @@ def build_props(bundle: Path, plan: Plan, content: Content,
         "shots": shots,
         "clauses": [{"text": c.text, "startMs": round(c.start_ms), "endMs": round(c.end_ms)}
                     for c in plan.clauses],
+        # 字幕单位 = 整句（一条最多两行，逗号处折行）。子句那份只留给分镜/剪辑用：
+        # 子句是按标点切的（逗号也算边界），直接当字幕会切出"不是一句话"的碎片。
+        "captions": [{"text": u["text"], "lines": u["lines"],
+                       "startMs": round(u["start_ms"]), "endMs": round(u["end_ms"])}
+                      for u in subtitle_units(content.script, plan.clauses)],
         # 编舞镜头（开场/金句/数字卡）时间窗：这些窗里的字幕不出（画面自带大字）
         "subtitleHoles": [[a, b] for a, b in sub_holes],
     }

@@ -17,7 +17,7 @@ from . import brand as brand_kit
 from . import config, llm, remotion_render, tts
 from .config import DEFAULT_TEMPLATE, TEMPLATE_ALIAS, TEMPLATES
 from .planner import (align_timeline, build_plan, build_plan_llm, clause_units,
-                      split_clauses, sentence_spans, unit_spans)
+                      sentence_spans, split_clauses, unit_spans)
 from .schemas import Content, Manifest
 
 log = logging.getLogger(__name__)

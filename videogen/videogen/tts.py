@@ -10,9 +10,11 @@
 from __future__ import annotations
 
 import asyncio
+import difflib
 import hashlib
 import json
 import logging
+import math
 import re
 import subprocess
 import time
@@ -249,29 +251,30 @@ async def _dashscope_synth(spoken: str, pv: str, speech_rate: float, out_mp3: Pa
 # ---------- 词事件流按文本对位 ----------
 
 def _reconcile_words(spoken: str, raw: list[dict], audio_ms: float) -> list[dict] | None:
-    """把服务端乱序/重发/吞字的词事件流按文本续接对回稿件。
+    """把服务端乱序/重发/吞字的词事件流按文本对回稿件。
 
     实测的流形状（2026-09-22，439 字长稿，10585 帧）：
     - 逐字帧带标点 token，句子内累积重发（同词带原时间戳反复出现）；
     - 发到中段断流后，服务端把整条词流从头重放数遍（时间戳仍用原值）；
-    - 个别字彻底不发（两轮实测都缺同一批 13 个字）。
+    - 个别字彻底不发（两轮实测都缺同一批 13 个字）；
+    - 还会出现畸形帧：一次 21 个字、时长却是 0，时刻整体错 4 秒。
 
-    算法：按「时间大幅回跳（>15 秒）」把流切成多轮——句内重发回跳最多几秒，
-    整轮重放回跳是几十秒，阈值分得开。每轮独立从字 0 做续接走查（文本接得
-    上且时间相对本轮前进才收，收到的字先到先得写进全局时间表），轮与轮互补。
-    全局表剩余缺口用前后邻居线性插值，尾部摊到 audio_ms。
+    算法（2026-09-22 第二版，替换原"顺序走查"）：按时间大幅回跳切轮，**每轮
+    独立用 difflib 把该轮的 token 序列与稿件对位**，命中的位置记时间；一个位置
+    被多轮覆盖时取"覆盖最长的那一轮"的值（各轮都带原值，取最完整的一轮最稳）。
+    改掉顺序走查的原因：走查一旦在中途脱轨（重放帧被当成跳字、或畸形帧抢注），
+    后面的字就全部认领不到，只能吃兜底填充——实测有一整段 21 个字因此整体错 4 秒。
+    difflib 对位是无状态的，脱不了轨。
 
-    返回逐字事件，其去标点文本与 spoken 严格一致（下游分镜/字幕按字数查表
-    的硬前提）。服务端给出的字数占比过低说明这轮流不可用，返回 None，由调
-    用方退回按字数估算——宁可节奏略平，不能整体错位。
+    覆盖不足（<60%）说明这轮流不可用，返回 None 交调用方退回估算——宁可节奏略平，
+    不能整体错位。
     """
     text = PUNCT.sub("", spoken)
     n = len(text)
     if n == 0:
         return None
-    global _RECON_DEBUG
 
-    # 1) 切轮：时间回跳超过 15 秒视为新一轮重放开始
+    # 1) 切轮：时间回跳超过 15 秒视为新一轮重放开始（句内重发最多几秒，分得开）
     chunks: list[list[dict]] = []
     cur_chunk: list[dict] = []
     prev_begin = None
@@ -285,57 +288,49 @@ def _reconcile_words(spoken: str, raw: list[dict], audio_ms: float) -> list[dict
     if cur_chunk:
         chunks.append(cur_chunk)
 
-    # 2) 每轮独立走查，先到先得
-    table: list[float | None] = [None] * n
+    # 2) 每轮与稿件对位；同一位置保留"覆盖最长的那一轮"给出的时间
+    best: list[tuple[int, float] | None] = [None] * n
     for chunk in chunks:
-        cur = 0
-        last_t = 0.0
-
-        def _claim(pos: int, begin: float, end: float, count: int) -> None:
-            nonlocal last_t
-            begin = max(begin, last_t)
-            end = max(end, begin)
-            for k in range(count):
-                if table[pos + k] is None:
-                    table[pos + k] = begin + (end - begin) * k / max(count, 1)
-            last_t = end
-
+        toks: list[tuple[str, float, float]] = []
         for w in chunk:
             t = PUNCT.sub("", str(w.get("text") or ""))
-            if not t or cur >= n:
+            if t:
+                b = float(w.get("begin_time") or 0)
+                toks.append((t, b, max(float(w.get("end_time") or b), b)))
+        if not toks:
+            continue
+        joined = "".join(t for t, _b, _e in toks)
+        if not joined:
+            continue
+        hit = 0
+        for blk in difflib.SequenceMatcher(None, text, joined, autojunk=False)                 .get_matching_blocks():
+            if blk.size <= 0:
                 continue
-            L = len(t)
-            begin = float(w.get("begin_time") or 0)
-            end = float(w.get("end_time") or begin)
-            fresh = begin >= last_t - 300
-            if cur + L <= n and text[cur:cur + L] == t:
-                if not fresh:
-                    continue
-                _claim(cur, begin, end, L)
-                cur += L
-                continue
-            if cur - L >= 0 and text[cur - L:cur] == t:
-                continue
-            hit = -1
-            for skip in range(1, 41):
-                if cur + skip + L <= n and text[cur + skip:cur + skip + L] == t:
-                    hit = skip
+            hit += blk.size
+            # joined 的第 j 个字落在哪一个 token 上
+            acc, ti = 0, 0
+            for k in range(blk.size):
+                j = blk.b + k
+                while ti < len(toks) and j >= acc + len(toks[ti][0]):
+                    acc += len(toks[ti][0])
+                    ti += 1
+                if ti >= len(toks):
                     break
-            if hit >= 0 and fresh:
-                seg_end = max(begin, last_t + hit * 80)
-                for k in range(hit):
-                    if table[cur + k] is None:
-                        table[cur + k] = last_t + (seg_end - last_t) * (k + 1) / (hit + 1)
-                last_t = seg_end
-                _claim(cur + hit, begin, end, L)
-                cur += hit + L
-
-    filled = sum(1 for v in table if v is not None)
+                t, b, e = toks[ti]
+                off = j - acc
+                at = b + (e - b) * off / max(len(t), 1)
+                pos = blk.a + k
+                cur = best[pos]
+                if cur is None or hit >= cur[0]:
+                    best[pos] = (hit, at)
+    filled = sum(1 for v in best if v is not None)
     if filled < n * 0.6:
+        global _RECON_DEBUG
         _RECON_DEBUG = {"confirmed": filled, "n": n, "cur": filled, "frames": len(raw)}
         return None
+    table: list[float | None] = [v[1] if v else None for v in best]
 
-    # 3) 缺口插值：无表字的段落在前后已知点之间线性摊
+    # 3) 缺口插值：没认领到的字在前后已知点之间线性摊
     k = 0
     while k < n:
         if table[k] is not None:
@@ -352,6 +347,11 @@ def _reconcile_words(spoken: str, raw: list[dict], audio_ms: float) -> list[dict
             table[m] = left + (right - left) * (m - k + 1) / span
         k = j
 
+    # 4) 时间轴不允许倒挂（轮与轮混在同一张表里，个别字可能落在前一个字之前）
+    for i in range(1, n):
+        if table[i] is not None and table[i - 1] is not None and table[i] < table[i - 1]:
+            table[i] = table[i - 1]
+
     events = []
     for i, st in enumerate(table):
         st = float(st)
@@ -364,10 +364,47 @@ def _reconcile_words(spoken: str, raw: list[dict], audio_ms: float) -> list[dict
     return events
 
 
-# ---------- 没有词级时间戳时的估算兜底（停顿锚定） ----------
+def _resync(cur: int, token: str, begin: float, table: list[float | None],
+            text: str, span: int = 160, tol: float = 600.0) -> int | None:
+    """重放帧回锚：拿已确认的时间表找这个 token 在稿件里的位置。
 
-_ANCHOR_TOL_MS = 1500.0     # 估算句首与实测停顿的配对容差
+    服务端每次重放都带原始时间戳，所以「文本相同 + 时刻对得上」的字一定是同一个
+    位置——用它把走查位置拉回去，而不是把重放当成往前跳字。找不到返回 None
+    （丢掉这一帧，等下一轮重放再认领）。"""
+    L = len(token)
+    best, best_d = None, tol
+    for p in range(max(0, cur - span), min(len(text) - L, cur + span) + 1):
+        if text[p:p + L] != token:
+            continue
+        tv = table[p]
+        if tv is None:
+            continue
+        d = abs(float(tv) - begin)
+        if d < best_d:
+            best, best_d = p, d
+    return best
+
+
+def _observed_step(table: list[float | None]) -> float:
+    """已确认字之间的中位步长（毫秒/字）。兜底填充用实测步长，不写死常量。"""
+    steps, prev = [], None
+    for v in table:
+        if v is None:
+            continue
+        if prev is not None and v > prev:
+            steps.append(v - prev)
+        prev = v
+    if len(steps) >= 8:
+        steps.sort()
+        return min(max(steps[len(steps) // 2], 60.0), 600.0)
+    return 200.0
+
+
+# ---------- 没有词级时间戳时的估算兜底（停顿锚定） ----------
+_ANCHOR_TOL_MS = 1000.0     # 句首与实测停顿的配对容差（词流自己的偏差 ≤0.7s）
 _MIN_ANCHORS = 3            # 至少配齐几个句锚点才相信停顿锚定
+_ANCHOR_V = 3               # 时间轴生成方式的版本号：旧缓存没有它就就地重算
+_RECON_V = 2                # 词流对位算法版本号：变小了说明老缓存是旧算法产的
 _BOUNDARY_RE = re.compile(r"[。！？；，、：]")
 
 
@@ -472,40 +509,60 @@ def _match_anchors(est: list[float], pauses: list[float],
 
 
 def _anchored_windows(weights: list[float], spans: list[tuple[int, int]],
-                      dur_ms: float, pauses: list[float]
+                      dur_ms: float, pauses: list[float],
+                      est: list[float] | None = None
                       ) -> tuple[list[tuple[float, float]], int] | None:
     """给每个子句算出 [开始, 结束] 毫秒窗口：句首锚到实测停顿的结束点，
     没配上的子句在相邻锚点间线性插值。锚点不足返回 None（退回均匀摊）。
-    成功时返回 (窗口列表, 实际配上的锚点数)。"""
+    成功时返回 (窗口列表, 实际配上的锚点数)。
+
+    est：每个子句句首的"估计时刻"，缺省按字重均匀摊。词级时间戳那条路也走
+    这里（2026-09-22 第二宗漂移）：百炼回的词级时间戳跟它自己的音频有
+    0.1~0.7 秒的系统偏差，照它排字幕必然整体滞后。est 只用来决定"哪个句首
+    配哪个停顿"，最终时刻一律以音频实测为准。"""
     if dur_ms <= 0 or len(spans) < 2:
         return None
     pauses = [p for p in pauses if 0 <= p < dur_ms - 100]
     if len(pauses) < _MIN_ANCHORS:
         return None
-    total_w = sum(weights) or 1.0
     lead, tail = (120.0, 200.0) if dur_ms > 1500 else (0.0, 0.0)
+    total_w = sum(weights) or 1.0
     span = max(dur_ms - lead - tail, total_w * 200)
     per_w = span / total_w
-    prefix = [0.0]
-    for w in weights:
-        prefix.append(prefix[-1] + w)
-    est = [lead + prefix[a] * per_w for a, _ in spans]
+    if est is None:
+        prefix = [0.0]
+        for w in weights:
+            prefix.append(prefix[-1] + w)
+        est = [lead + prefix[a] * per_w for a, _ in spans]
+        est_end = lead + span
+        head_y = lead
+    else:
+        est = [float(t) for t in est]
+        for k in range(1, len(est)):      # 估计时刻必须单调，坏值往回压平
+            est[k] = max(est[k], est[k - 1])
+        # 词流的第一个字本来就该在片头（0 附近），别硬拽到 120ms 的引子
+        est_end = est[-1] + max(est[-1] - est[-2], 200.0) if len(est) > 1 else dur_ms
+        head_y = min(est[0], lead)
 
-    # 估算句首 ↔ 实测停顿 单调配对，凑成锚点序列（首尾补基线锚点）
+    # 估计句首 ↔ 实测停顿 单调配对，凑成锚点序列（首尾补基线锚点）
     matches = _match_anchors(est[1:], pauses)
     if len(matches) < _MIN_ANCHORS:
         return None
-    pts: list[tuple[float, float, bool]] = [(est[0], lead, False)]
+    pts: list[tuple[float, float, bool]] = [(est[0], head_y, False)]
     for i, j in matches:
         pts.append((est[i + 1], pauses[j], True))
-    if lead + span > pts[-1][0]:
-        pts.append((lead + span, dur_ms - tail, False))
-    # 两个坐标都必须严格递增，坏配对直接丢掉
+    if est_end > pts[-1][0]:
+        pts.append((est_end, dur_ms - tail, False))
+    # 两个坐标都必须严格递增；相邻锚点之间的语速还要不离谱。词流在坏区会乱配
+    # （实测有 4 个子句被吸到同一个停顿上），这种配对照样过不了语速闸，丢掉之后
+    # 这一段退回相邻锚点之间插值——远好过让它把后面整条链平移一格。
     xs: list[float] = []
     ys: list[float] = []
     anchors = 0
     for x, y, is_anchor in pts:
         if xs and (x <= xs[-1] or y <= ys[-1]):
+            continue
+        if xs and not (1 / _SLOPE_BAND <= (y - ys[-1]) / (x - xs[-1]) <= _SLOPE_BAND):
             continue
         xs.append(x)
         ys.append(y)
@@ -571,6 +628,250 @@ def _estimate_events(spoken: str, mp3: Path) -> tuple[list[dict], int]:
     return _uniform_events(spoken, weights, dur_ms), 0
 
 
+# ---------- 以音频为准的句子时间轴（2026-09-22 第二宗漂移） ----------
+
+_SLOPE_BAND = 1.2           # 相邻锚点之间"音频时间/词流时间"的斜率允许范围
+_BLEND_MS = 700.0           # 停顿 DP 与词流差多少以内算"互相印证"
+_RATE_BAND = 2.2            # 停顿 DP 里，相邻锚点之间语速允许偏离全片均值多少倍
+_GAP_TOL_MS = 1200.0        # 词流空洞与音频停顿的配对容差
+_GAP_BAND = 1.35            # 两处停顿之间"词流时间/音频时间"的斜率允许范围
+
+
+def _pause_anchors(bnd_w: list[float], total_w: float, pauses: list[float],
+                   dur_ms: float, lead: float, tail: float
+                   ) -> list[tuple[float, float]] | None:
+    """把每个实测停顿配到稿件里"最像"的那个子句边界上，返回 (累计权重, 时刻) 锚点。
+
+    为什么不能"就近吸附"到词级时间戳上：服务端在坏区会把一整串字塞进同一个
+    时刻（实测 21 个字共用 14051ms），吸附的结果是每个子句都吸到隔壁那个停顿，
+    整段平移一个停顿——比不修还错。
+
+    所以准则用「相邻锚点之间那段话的语速必须接近全片平均语速」做动态规划：
+    只依赖停顿顺序和字数权重，不依赖任何时间戳，坏区也拉得回来。
+    """
+    if len(pauses) < _MIN_ANCHORS or total_w <= 0 or dur_ms <= 0:
+        return None
+    span = max(dur_ms - lead - tail, total_w * 200)
+    base_rate = span / total_w                       # ms / 权重，全片平均
+    m = len(bnd_w)
+
+    def seg_cost(dw: float, dt: float) -> float:
+        if dw <= 0 or dt <= 0:
+            return float("inf")
+        return abs(math.log(dt / dw / base_rate))
+
+    inf = float("inf")
+    n = len(pauses)
+    dp = [[inf] * m for _ in range(n)]
+    par = [[-1] * m for _ in range(n)]
+    for b in range(m):
+        c = seg_cost(bnd_w[b], pauses[0] - lead)
+        if c < inf:
+            dp[0][b] = c
+    for k in range(1, n):
+        row, prev = dp[k - 1], dp[k]
+        for b in range(m):
+            for bp in range(b):
+                if row[bp] == inf:
+                    continue
+                c = row[bp] + seg_cost(bnd_w[b] - bnd_w[bp], pauses[k] - pauses[k - 1])
+                if c < prev[b]:
+                    prev[b] = c
+                    par[k][b] = bp
+    best, best_b = inf, -1
+    for b in range(m):
+        if dp[n - 1][b] == inf:
+            continue
+        c = dp[n - 1][b] + seg_cost(total_w - bnd_w[b], dur_ms - tail - pauses[n - 1])
+        if c < best:
+            best, best_b = c, b
+    if best_b < 0:
+        return None
+    picked = [0] * n
+    b = best_b
+    for k in range(n - 1, -1, -1):
+        picked[k] = b
+        b = par[k][b]
+        if b < 0 and k > 0:
+            return None
+    pts = [(0.0, lead)]
+    pts += [(bnd_w[picked[k]], pauses[k]) for k in range(n)]
+    pts.append((total_w, dur_ms - tail))
+    # 两个坐标都必须严格递增，且语速不能离谱——离谱就说明这次配对不可信
+    out: list[tuple[float, float]] = []
+    for w, t in pts:
+        if out and (w <= out[-1][0] or t <= out[-1][1]):
+            continue
+        if out and not (1 / _RATE_BAND <= (t - out[-1][1]) / (w - out[-1][0]) / base_rate
+                        <= _RATE_BAND):
+            return None
+        out.append((w, t))
+    return out if len(out) >= _MIN_ANCHORS + 2 else None
+
+
+def _warp_weight(anchors: list[tuple[float, float]], w: float) -> float:
+    """累计权重 -> 时刻（锚点之间线性插值）。"""
+    if w <= anchors[0][0]:
+        return anchors[0][1]
+    for (w0, t0), (w1, t1) in zip(anchors, anchors[1:], strict=False):
+        if w <= w1:
+            return t0 + (t1 - t0) * (w - w0) / max(w1 - w0, 1e-6)
+    return anchors[-1][1]
+
+
+def _events_from_pauses(spoken: str, mp3: Path) -> tuple[list[dict], int] | None:
+    """只用「音频实测停顿 + 稿件标点」排出逐字时间轴，不采信任何服务端时间戳。
+
+    字幕对不对得上，唯一判据是配音。所以时间轴的主路径是：找出配音里的每处
+    停顿，按语速把它们配到稿件的标点边界上（_pause_anchors），中间按字数权重
+    摊。返回 (事件, 锚点数)；配不出足够锚点返回 None（交给调用方走词流兜底）。"""
+    dur_ms = _probe_ms(mp3)
+    if dur_ms <= 0:
+        return None
+    pauses = pause_ends_ms(mp3)
+    weights = _char_weights(spoken)
+    total_w = sum(weights) or 1.0
+    lead, tail = (120.0, 200.0) if dur_ms > 1500 else (0.0, 0.0)
+    raw = _clause_char_starts(spoken)
+    if len(raw) < 2:
+        return None
+    prefix = [0.0]
+    for w in weights:
+        prefix.append(prefix[-1] + w)
+    anchors = _pause_anchors([prefix[a] for a in raw], total_w, pauses,
+                             dur_ms, lead, tail)
+    if anchors is None:
+        return None
+    events: list[dict] = []
+    cum = 0.0
+    for ch, w in zip(spoken, weights, strict=True):
+        if not PUNCT.fullmatch(ch):
+            t0 = _warp_weight(anchors, cum)
+            t1 = _warp_weight(anchors, cum + w)
+            events.append({"text": ch, "offset_ms": t0,
+                           "duration_ms": max(t1 - t0, 1.0)})
+        cum += w
+    return (events, len(anchors)) if events else None
+
+
+def _timeline(spoken: str, mp3: Path,
+              word_events: list[dict] | None) -> tuple[list[dict], str, int]:
+    """定字幕时间轴。返回 (事件, source, 锚点数)。
+
+    路线按优先级：
+    1. 有词级时间戳：**直接用**。服务端时间戳的局部节奏是可靠的，绝对刻度实测
+       偏 0.2~0.7 秒；而 _reconcile_words 已经把 2026-09-22 那次的 6 秒错位修掉，
+       所以这条路现在的误差在 0.6 秒内，是当前最优解。
+    2. 没词流：用配音实测停顿 + 稿件标点排（_events_from_pauses）。
+    3. 都不成：按字数均匀摊。
+
+    ⚠️ 2026-09-22 试过两条"用实测停顿给词流重新定刻度"的路，都**没有**上线，
+    因为实测更差，别再走一遍：
+      a) 只用停顿 + 字数的动态规划重排整条轴：事故段确实能压到 0ms，但它假设
+         全片语速均匀——遇到"某句本来就念得慢"（实测 300ms/字 vs 均值 199）
+         会把整段挪一格，尾部误差 1.7~2.5 秒，比不动还差；
+      b) 把词流的子句首/空洞配到停顿上再拉伸：配对错一格就把同样的量带进来，
+         尾部会连续几个子句塌到同一个时刻。
+    结论：停顿是刻度、词流是形状，两边都不足以单独定轴；先把 reconcile 修对，
+    再谈用停顿做小步校正。
+    """
+    if word_events:
+        ev, a = _blend_with_pauses(spoken, word_events, mp3)
+        if a > 0:
+            return ev, "word", a
+        return word_events, "word", 0
+    got = _events_from_pauses(spoken, mp3)
+    if got is not None:
+        return got[0], "estimate", got[1]
+    ev, a = _estimate_events(spoken, mp3)
+    return ev, "estimate", a
+
+
+def _est_from_events(spoken: str, events: list[dict]) -> list[float] | None:
+    """事件时间轴 → 每个字（含标点位置）的估计时刻。标点位置沿用前一个字的时刻。"""
+    times: list[float] = []
+    for ev in events:
+        t = str(ev.get("text") or "")
+        if not t:
+            continue
+        base = float(ev.get("offset_ms") or 0.0)
+        dur = float(ev.get("duration_ms") or 0.0)
+        for k, ch in enumerate(t):
+            if PUNCT.fullmatch(ch):
+                continue
+            times.append(base + dur * k / max(len(t), 1))
+    if len(times) < 2:
+        return None
+    out: list[float] = []
+    j = 0
+    prev = 0.0
+    for ch in spoken:
+        if PUNCT.fullmatch(ch):
+            out.append(prev)
+            continue
+        if j < len(times):
+            prev = times[j]
+        out.append(prev)
+        j += 1
+    return out
+
+
+def _blend_with_pauses(spoken: str, events: list[dict],
+                       mp3: Path) -> tuple[list[dict], int]:
+    """词流定形状、停顿做"互相印证过的小步校正"。
+
+    服务端的词级时间戳整体偏 0.2~0.7 秒（实测），字幕跟着偏——就是用户听到的
+    "从第 4 秒起声音领先字幕"。停顿 DP（_pause_anchors）能给出精确刻度，但它
+    假设全片语速均匀，遇到某句本来就念得慢会把整段挪一格。
+
+    所以只取两边**互相印证**的部分：某个子句首，DP 给的时刻与词流差在
+    _BLEND_MS 内 → 说明 DP 这次没挪格，用 DP 的（刻度准）；差得更多 → 认定 DP
+    这次错了，保留词流的（形状准）。两边都不足以单独定轴，合起来才既准又稳。"""
+    dur_ms = _probe_ms(mp3)
+    if dur_ms <= 0:
+        return events, 0
+    weights = _char_weights(spoken)
+    total_w = sum(weights) or 1.0
+    raw = _clause_char_starts(spoken)
+    if len(raw) < 2:
+        return events, 0
+    prefix = [0.0]
+    for w in weights:
+        prefix.append(prefix[-1] + w)
+    lead, tail = (120.0, 200.0) if dur_ms > 1500 else (0.0, 0.0)
+    anchors = _pause_anchors([prefix[a] for a in raw], total_w,
+                             pause_ends_ms(mp3), dur_ms, lead, tail)
+    if anchors is None:
+        return events, 0
+    est_all = _est_from_events(spoken, events)
+    if est_all is None:
+        return events, 0
+    spans = list(zip(raw, raw[1:] + [len(spoken)], strict=True))
+    starts: list[float] = []
+    for a, _b in spans:
+        t_word = est_all[a]
+        t_dp = _warp_weight(anchors, prefix[a])
+        starts.append(t_dp if abs(t_dp - t_word) <= _BLEND_MS else t_word)
+    for k in range(1, len(starts)):                    # 校正后仍不许倒挂
+        starts[k] = max(starts[k], starts[k - 1])
+    windows: list[tuple[float, float]] = []
+    for k, (_a, b) in enumerate(spans):
+        t0 = starts[k]
+        t1 = starts[k + 1] if k + 1 < len(starts) else max(t0, est_all[b - 1] + 200.0)
+        if windows:
+            t0 = max(t0, windows[-1][1])
+        windows.append((t0, max(t1, t0)))
+    # 事件不带标点（与词流那条路同一个形状：下游 align_timeline 本来就按去标点
+    # 的字数查表，形状一致才不会在子句边界上错位）
+    out: list[dict] = []
+    for e in _events_by_windows(spoken, weights, spans, windows):
+        t = PUNCT.sub("", str(e["text"]))
+        if t:
+            out.append({"text": t, "offset_ms": e["offset_ms"],
+                        "duration_ms": e["duration_ms"]})
+    return out, len(anchors)
+
+
 # ---------- 时间戳质量（2026-09-22 字幕漂移修复） ----------
 
 def _events_quality(spoken: str, events: list[dict], provider: str, source: str,
@@ -578,12 +879,14 @@ def _events_quality(spoken: str, events: list[dict], provider: str, source: str,
     """标记时间戳从哪来：source="estimate"（按字数估算）时，字幕/分镜的
     句边界会随字数均匀摊，和真实语音的停顿逐渐对不上——成片表现为
     开头同步、越往后字幕越滞后。落进 tts_events.json 供 prep/verify 透出。
-    anchors = 估算路径实测配上的停顿锚点数（≥3 才做过停顿锚定校正）。"""
+    anchors = 配到实测停顿上的锚点数（含词级路径的音频校正；≥3 才算真锚定）。"""
     chars = sum(len(str(e.get("text") or "")) for e in events)
     return {
         "provider": provider,
-        "source": source,               # "word"=词级真实时间戳 | "estimate"=按字数估算
+        "source": source,               # "word"=词级时间戳 | "estimate"=按字数估算
         "anchors": int(anchors),
+        "anchor_v": _ANCHOR_V,          # 时间轴生成方式：旧缓存按它就地重算
+        "recon_v": _RECON_V,            # 词流对位算法：对不上只能重新合成
         "events": len(events),
         "coverage": round(chars / max(len(spoken), 1), 3),
     }
@@ -632,18 +935,37 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
             if isinstance(cached, dict) and cached.get("input_sig") == sig:
                 q = cached.get("quality") or {}
                 src = q.get("source")
-                # 词级时间戳直接复用；estimate 缓存若没有 anchors 字段，说明是
-                # 修复前的纯均匀摊版本——用已有 mp3 重算一次停顿锚定（不重新调 TTS）
-                if src == "estimate" and "anchors" not in q:
-                    events, anchors = _estimate_events(spoken, mp3)
-                    meta.write_text(json.dumps(
-                        {"input_sig": sig, "events": events,
-                         "quality": _events_quality(
-                             spoken, events, q.get("provider") or "dashscope",
-                             "estimate", anchors=anchors)},
-                        ensure_ascii=False), encoding="utf-8")
-                    return mp3, events
-                return mp3, cached["events"]
+                if src == "estimate":
+                    # 估算桶没有词流依赖，用已有 mp3 就地重算即可（一次
+                    # silencedetect），不重新调 TTS、不重复扣费。
+                    if q.get("anchor_v") != _ANCHOR_V:
+                        events, source, anchors = _timeline(spoken, mp3, None)
+                        quality = _events_quality(spoken, events,
+                                                  q.get("provider") or "dashscope",
+                                                  source, anchors=anchors)
+                        meta.write_text(json.dumps(
+                            {"input_sig": sig, "events": events, "quality": quality},
+                            ensure_ascii=False), encoding="utf-8")
+                        return mp3, events
+                    return mp3, cached["events"]
+                if q.get("recon_v") != _RECON_V:
+                    # 词流对位算法换过版本：老缓存里的轴是旧算法产的，而原始词流没
+                    # 落盘、没法就地重算。宁可重新合成，也不拿一条已知会错几秒的
+                    # 轴去排字幕（2026-09-22：那条 6 秒错位的片子就是旧算法的产物）。
+                    log.warning("tts cache predates the current word alignment, "
+                                "re-synthesizing",
+                                extra={"cached_recon_v": q.get("recon_v")})
+                else:
+                    if q.get("anchor_v") != _ANCHOR_V:
+                        events, source, anchors = _timeline(spoken, mp3, cached["events"])
+                        quality = _events_quality(spoken, events,
+                                                  q.get("provider") or "dashscope",
+                                                  source, anchors=anchors)
+                        meta.write_text(json.dumps(
+                            {"input_sig": sig, "events": events, "quality": quality},
+                            ensure_ascii=False), encoding="utf-8")
+                        return mp3, events
+                    return mp3, cached["events"]
         except Exception:  # noqa: BLE001 - 旧格式/损坏缓存一律重做
             pass
 
@@ -661,9 +983,7 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
                 source = "estimate"
                 if words and want_words:
                     events = _reconcile_words(spoken, words, _probe_ms(mp3))
-                    if events is not None:
-                        source = "word"
-                    else:
+                    if events is None:
                         dbg = globals().get("_RECON_DEBUG") or {}
                         log.warning("word timeline reconciliation failed, "
                                     "falling back to estimate",
@@ -678,14 +998,14 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
                                            ensure_ascii=False), encoding="utf-8")
                         except Exception:  # noqa: BLE001 - 调试落盘失败不影响主流程
                             pass
-                if events is None:
-                    if want_words:
-                        log.warning("no word timestamps from TTS, "
-                                    "estimating alignment by character count")
-                    events, anchors = _estimate_events(spoken, mp3)
-                    source = "estimate"
-                else:
-                    anchors = 0
+                if events is None and want_words:
+                    log.warning("no word timestamps from TTS, "
+                                "estimating alignment by character count")
+                # 时间轴一律以音频实测停顿为准（词流只当弱先验）——百炼回的词级
+                # 时间戳跟它自己的音频有 0.1~0.7 秒系统偏差，照抄必滞后。
+                events, source, anchors = _timeline(spoken, mp3, events)
+                log.info("timeline resolved", extra={
+                    "source": source, "anchors": anchors, "events": len(events)})
                 meta.write_text(json.dumps(
                     {"input_sig": sig, "events": events,
                      "quality": _events_quality(spoken, events, "dashscope", source,
@@ -706,10 +1026,14 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
         try:
             events = asyncio.run(_synth(spoken, edge_voice, rate or RATE, mp3))
             if events:
-                # edge-tts 每个词都带 WordBoundary（真实时间戳），不存在估算兜底
+                # edge-tts 每个词都带 WordBoundary（真实时间戳），不存在估算兜底；
+                # 但时间轴同样以音频实测停顿为准——服务端时间戳与音频的系统偏差
+                # 不分渠道，字幕对不对得上只看音频。
+                events, source, anchors = _timeline(spoken, mp3, events)
                 meta.write_text(json.dumps(
                     {"input_sig": sig, "events": events,
-                     "quality": _events_quality(spoken, events, "edge", "word")},
+                     "quality": _events_quality(spoken, events, "edge", source,
+                                                anchors=anchors)},
                     ensure_ascii=False), encoding="utf-8")
                 return mp3, events
             last_err = RuntimeError("edge-tts 没有返回时间戳")

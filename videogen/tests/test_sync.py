@@ -29,7 +29,8 @@ from videogen.planner import SENT_SPLIT, PUNCT, align_timeline, split_clauses
 from videogen.schemas import Content
 from videogen.tts import (_anchored_windows, _char_weights, _clause_char_starts,
                           _estimate_events, _events_by_windows, _events_quality,
-                          _uniform_events, read_quality)
+                          _events_from_pauses, _pause_anchors, _timeline,
+                          _uniform_events, _warp_weight, read_quality)
 from videogen.verify import _drift_stats
 
 
@@ -245,5 +246,123 @@ class TtsQualityAnchorsTest(unittest.TestCase):
         self.assertEqual(q0["anchors"], 0)            # 词级时间戳不需要锚点
 
 
+if __name__ == "__main__":
+    unittest.main()
+
+
+class PauseFirstTimelineTest(unittest.TestCase):
+    """时间轴以音频实测停顿为准（2026-09-22 第二宗漂移回归）。
+
+    事故形状：字幕从第 2~3 秒起就比语音晚 0.3~0.7 秒，中段还有一段整整错 6 秒。
+    根因是百炼回的词级时间戳跟它自己的音频对不齐（词流说"司"在 5.76 秒开口，
+    那 0.37 秒音频是静音），照抄词流排字幕必然整体滞后；而"就近吸附到停顿"也不行
+    ——坏区里服务端把 21 个字塞进同一个时刻，吸附会让整段平移一个停顿。
+
+    所以锁四条不变量：
+    1. _pause_anchors：停顿落在哪些标点上，必须按语速配对还原出来；
+    2. 停顿位置与任何标点都对不上（语速离谱）时返回 None，交兜底；
+    3. _events_from_pauses 排出的轴：子句首就落在实测停顿上，且单调不倒挂；
+    4. _timeline 排出的轴**不依赖传入的词级时间戳**——词流坏成什么样都一样。
+    """
+
+    SPOKEN = ("北极熊靠脂肪过冬，冰面才是它的地板。企鹅不飞却会滑行，肚皮就是刹车。"
+              "海獭睡觉手牵手，怕漂走。鲸鱼唱歌传千里，声音能绕过冰川。")
+    RATE = 200.0        # ms / 字重，用来造假音频
+    LEAD = 120.0
+    TAIL = 200.0
+
+    def _model(self):
+        weights = _char_weights(self.SPOKEN)
+        total_w = sum(weights)
+        prefix = [0.0]
+        for w in weights:
+            prefix.append(prefix[-1] + w)
+        raw = _clause_char_starts(self.SPOKEN)
+        bnd = [prefix[a] for a in raw]
+        dur = self.LEAD + total_w * self.RATE + self.TAIL
+        return weights, total_w, raw, bnd, dur
+
+    def _sentence_boundaries(self, raw):
+        """句号/问号后面的子句首 = 按稿件必须有停顿的位置。"""
+        return [k for k, a in enumerate(raw) if a > 0 and self.SPOKEN[a - 1] in "。！？"]
+
+    def test_pause_anchors_recovers_boundaries(self):
+        _w, total_w, raw, bnd, dur = self._model()
+        want = self._sentence_boundaries(raw)
+        self.assertGreaterEqual(len(want), 3)
+        pauses = [self.LEAD + bnd[k] * self.RATE for k in want]
+        anchors = _pause_anchors(bnd, total_w, pauses, dur, self.LEAD, self.TAIL)
+        self.assertIsNotNone(anchors)
+        paired = anchors[1:-1]
+        self.assertEqual(len(paired), len(want))       # 一个停顿配一个边界，不多不少
+        for (w, t), k, p in zip(paired, want, pauses, strict=True):
+            self.assertAlmostEqual(w, bnd[k], places=6)
+            self.assertAlmostEqual(t, p, places=6)
+
+    def test_pause_anchors_rejects_implausible(self):
+        """停顿全挤在片头（谁也对不上）：宁可返回 None，也不硬配出一个轴。"""
+        _w, total_w, _raw, bnd, dur = self._model()
+        pauses = [self.LEAD + 10.0 * k for k in range(1, 7)]
+        self.assertIsNone(_pause_anchors(bnd, total_w, pauses, dur, self.LEAD, self.TAIL))
+
+    def test_events_from_pauses_locks_clause_starts(self):
+        _w, total_w, raw, bnd, dur = self._model()
+        want = self._sentence_boundaries(raw)
+        pauses = {k: self.LEAD + bnd[k] * self.RATE for k in want}
+        with mock.patch("videogen.tts._probe_ms", return_value=dur),                 mock.patch("videogen.tts.pause_ends_ms", return_value=list(pauses.values())):
+            got = _events_from_pauses(self.SPOKEN, Path("nope.mp3"))
+        self.assertIsNotNone(got)
+        events, anchors = got
+        self.assertEqual(anchors, len(pauses) + 2)
+        self.assertEqual("".join(e["text"] for e in events), PUNCT.sub("", self.SPOKEN))
+        # 第 k 个句首字必须正好落在第 k 处停顿上
+        for k, p in zip(want, pauses.values(), strict=True):
+            c = raw[k]                       # 该子句首字在 spoken 里的下标
+            off = sum(1 for ch in self.SPOKEN[:c] if not PUNCT.fullmatch(ch))
+            self.assertAlmostEqual(events[off]["offset_ms"], p, delta=1.0)
+
+    def test_warp_is_monotonic(self):
+        _w, total_w, raw, bnd, dur = self._model()
+        want = self._sentence_boundaries(raw)
+        pauses = [self.LEAD + bnd[k] * self.RATE for k in want]
+        anchors = _pause_anchors(bnd, total_w, pauses, dur, self.LEAD, self.TAIL)
+        times = [_warp_weight(anchors, w) for w in range(0, int(total_w) + 1)]
+        self.assertEqual(times, sorted(times))
+
+    def test_timeline_blends_word_with_pauses(self):
+        """有词流时：停顿只在"与词流互相印证"（差 _BLEND_MS 以内）时才用来定刻度，
+        挪幅有硬上限，防停顿 DP 的"挪一格"把整段带偏；没词流才纯用停顿 DP。"""
+        from videogen.tts import _BLEND_MS
+        _w, total_w, raw, bnd, dur = self._model()
+        want = self._sentence_boundaries(raw)
+        pauses = [self.LEAD + bnd[k] * self.RATE for k in want]
+        chars = PUNCT.sub("", self.SPOKEN)
+        words = [{"text": c, "offset_ms": i * 200.0, "duration_ms": 200.0}
+                 for i, c in enumerate(chars)]
+        with mock.patch("videogen.tts._probe_ms", return_value=dur),                 mock.patch("videogen.tts.pause_ends_ms", return_value=pauses):
+            got, src_w, a_w = _timeline(self.SPOKEN, Path("nope.mp3"), words)
+            est, src_e, a_e = _timeline(self.SPOKEN, Path("nope.mp3"), None)
+        self.assertEqual(src_w, "word")
+        self.assertGreaterEqual(a_w, 3)                  # 停顿确实参与了校正
+        self.assertEqual("".join(e["text"] for e in got), chars)
+        offs = [e["offset_ms"] for e in got]
+        self.assertEqual(offs, sorted(offs))             # 不倒挂
+        # 挪幅有上限：子句首要么落在某处停顿上，要么就是词流原值（不许凭空挪）
+        for e in got:
+            self.assertTrue(
+                any(abs(e["offset_ms"] - p) < 1.5 for p in pauses)
+                or e["offset_ms"] in {w["offset_ms"] for w in words}
+                or abs(e["offset_ms"] - max(
+                    (w["offset_ms"] for w in words
+                     if w["offset_ms"] <= e["offset_ms"]), default=0.0)) <= _BLEND_MS + 1)
+        # 没词流：纯停顿 DP，每一个句首正好落在某处停顿上
+        self.assertEqual(src_e, "estimate")
+        self.assertGreaterEqual(a_e, 3)
+        eoffs = [e["offset_ms"] for e in est]
+        for p in pauses:
+            self.assertTrue(any(abs(o - p) < 1.5 for o in eoffs))
+
+
+# 独立运行：python -m unittest tests.test_sync -v
 if __name__ == "__main__":
     unittest.main()
