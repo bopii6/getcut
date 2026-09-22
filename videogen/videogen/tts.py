@@ -403,6 +403,9 @@ def _observed_step(table: list[float | None]) -> float:
 # ---------- 没有词级时间戳时的估算兜底（停顿锚定） ----------
 _ANCHOR_TOL_MS = 1000.0     # 句首与实测停顿的配对容差（词流自己的偏差 ≤0.7s）
 _MIN_ANCHORS = 3            # 至少配齐几个句锚点才相信停顿锚定
+# 停顿实测的唯一参数。verify 的漂移检查必须读同一个常量：两边看到的不是同一批
+# 停顿的话，质检判"对得上"而时间轴按另一批停顿排，等于没有闸。
+SILENCE_FILTER = "silencedetect=noise=-35dB:d=0.3"
 _ANCHOR_V = 3               # 时间轴生成方式的版本号：旧缓存没有它就就地重算
 _RECON_V = 2                # 词流对位算法版本号：变小了说明老缓存是旧算法产的
 _BOUNDARY_RE = re.compile(r"[。！？；，、：]")
@@ -425,8 +428,9 @@ def pause_ends_ms(audio: Path) -> list[float]:
     try:
         r = subprocess.run(
             ["ffmpeg", "-v", "info", "-i", str(audio),
-             "-af", "silencedetect=noise=-35dB:d=0.3", "-f", "null", "-"],
-            capture_output=True, text=True, timeout=300)
+             "-af", SILENCE_FILTER, "-f", "null", "-"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=300)
     except Exception:  # noqa: BLE001 - ffmpeg 没装/超时都当"测不出停顿"
         return []
     ends: list[float] = []

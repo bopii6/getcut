@@ -40,11 +40,12 @@ def _frame_at(video: Path, t: float, tmp: Path) -> Path | None:
 
 
 def _silence_ends(audio: Path) -> list[float]:
-    """纯人声轨里的"停顿结束点"（单位秒）= 下一段话实际开口的时刻。"""
+    """纯人声轨里的"停顿结束点"（单位秒）= 下一段话实际开口的时刻。
+    参数与 tts.pause_ends_ms 同源，两边看到的是同一批停顿。"""
     r = subprocess.run(
         ["ffmpeg", "-v", "info", "-i", str(audio),
-         "-af", "silencedetect=noise=-35dB:d=0.3", "-f", "null", "-"],
-        capture_output=True, text=True)
+         "-af", tts.SILENCE_FILTER, "-f", "null", "-"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace")
     ends: list[float] = []
     for line in (r.stderr or "").splitlines():
         if "silence_end:" in line:
