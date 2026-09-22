@@ -8,12 +8,15 @@ back to the rule-based copy if the API fails.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 
 import requests
 
 from . import config, templates
+
+log = logging.getLogger(__name__)
 
 
 def _rule_card(line: str) -> str | None:
@@ -105,7 +108,8 @@ def refine_copy(script: str, cards: list[dict], provider: str = "deepseek") -> d
             return _parse_json(text)
         except Exception as e:  # noqa: BLE001 - network/JSON hiccups: retry once
             last_err = e
-    print(f"[llm] copy refinement failed, falling back to rules: {last_err}")
+    # 降级要留痕：静默回落到规则引擎时，"为什么文案比平时平"没人答得上来。
+    log.warning("copy refinement failed, falling back to rules", exc_info=last_err)
     return None
 
 
@@ -260,7 +264,8 @@ def design_shots(script: str, sentences: list[dict], assets: list[dict],
             last_err = ValueError("bad shape")
         except Exception as e:  # noqa: BLE001
             last_err = e
-    print(f"[llm] storyboard planning failed, falling back to rules: {last_err}")
+    log.warning("storyboard planning failed, falling back to rules",
+                exc_info=last_err)
     return None
 
 
@@ -328,7 +333,8 @@ def design_chapters(script: str, units: list[dict], assets: list[dict],
             last_err = ValueError("bad shape")
         except Exception as e:  # noqa: BLE001
             last_err = e
-    print(f"[llm] chapter planning failed, falling back to rules: {last_err}")
+    log.warning("chapter planning failed, falling back to rules",
+                exc_info=last_err)
     return None
 
 
@@ -366,5 +372,5 @@ def vision_check(image_path: Path, question: str, timeout: int = 60) -> dict | N
         text = r.json()["choices"][0]["message"]["content"]
         return _parse_json(text)
     except Exception as e:  # noqa: BLE001
-        print(f"[llm] vision check failed: {e}")
+        log.warning("vision check failed", exc_info=e)
         return None

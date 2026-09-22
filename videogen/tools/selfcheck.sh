@@ -7,7 +7,7 @@
 #
 # 只读脚本：不装包、不连服务器、不写任何状态文件。
 # 三件事一起看才算绿：后端 unittest、ruff 静态检查、前端 node --test。
-# CI（.github/workflows/tests.yml）跑的是同样这三条，本地先过一遍省一次来回。
+# CI（.github/workflows/tests.yml）跑的是同样这四条，本地先过一遍省一次来回。
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -60,7 +60,7 @@ want frontend && run "前端 node --test" env \
   NODE_PATH=tests/.deps/node_modules "$NODE" --test tests/frontend.test.cjs
 
 # 类型检查单独处理：本机没装 typescript 时是「跳过」—— 既不算绿也不算红，
-# 但必须打出来，不然"三条门禁全绿"会悄悄变成"其实没查"。
+# 但必须打出来，不然"四条门禁全绿"会悄悄变成"其实没查"。
 if want ts; then
   tsout="$(bash tools/ts_check.sh 2>&1)"; tsrr=$?
   if [ "$tsrr" -ne 0 ]; then

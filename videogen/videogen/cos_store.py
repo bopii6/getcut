@@ -9,11 +9,14 @@
 """
 from __future__ import annotations
 
+import logging
 import os
 import threading
 import time
 from pathlib import Path
 from urllib.parse import quote
+
+log = logging.getLogger(__name__)
 
 BUCKET = (os.environ.get("VIDEOGEN_COS_BUCKET") or "").strip()
 REGION = (os.environ.get("VIDEOGEN_COS_REGION") or "ap-beijing").strip()
@@ -56,7 +59,7 @@ def upload(local: Path, key: str) -> bool:
                             PartSize=16, MAXThread=3, EnableMD5=False)
         return True
     except Exception as exc:  # noqa: BLE001 - 外存失败不能拖垮出片
-        print("cos upload failed [%s]: %s" % (key, exc))
+        log.error("cos upload failed", extra={"key": key}, exc_info=exc)
         return False
 
 
@@ -72,7 +75,7 @@ def fetch(key: str, local: Path) -> bool:
         cli.download_file(Bucket=BUCKET, Key=key, DestFilePath=str(local))
         return local.is_file()
     except Exception as exc:  # noqa: BLE001
-        print("cos fetch failed [%s]: %s" % (key, exc))
+        log.error("cos fetch failed", extra={"key": key}, exc_info=exc)
         return False
 
 
@@ -98,7 +101,7 @@ def drop(key: str) -> None:
         with _lock:
             _cli().delete_object(Bucket=BUCKET, Key=key)
     except Exception as exc:  # noqa: BLE001
-        print("cos delete failed [%s]: %s" % (key, exc))
+        log.error("cos delete failed", extra={"key": key}, exc_info=exc)
 
 
 def archive(job_id: str, local: Path) -> str | None:
@@ -106,7 +109,8 @@ def archive(job_id: str, local: Path) -> str | None:
     key = key_for(job_id, local.name)
     t0 = time.time()
     if upload(local, key):
-        print("cos archived %s (%.1fMB / %.1fs)" % (key, local.stat().st_size / 1048576,
-                                                    time.time() - t0))
+        log.info("cos archived", extra={"key": key,
+                                        "mb": round(local.stat().st_size / 1048576, 1),
+                                        "sec": round(time.time() - t0, 1)})
         return key
     return None

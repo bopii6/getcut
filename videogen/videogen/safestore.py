@@ -13,12 +13,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import secrets
 import tarfile
 import threading
 import time
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 # 每日备份目录（宿主机 cron 写，容器以只读方式挂进来）。没这个目录时自愈退化为
 # "只留现场不恢复"，原子写与留底照常生效 —— 所以本机开发不需要有备份。
@@ -56,7 +59,9 @@ def atomic_write_text(path: Path, text: str) -> None:
             except OSError as exc:
                 # 目标是 Docker 单文件挂载点时会 EBUSY：换名换不动挂载点。
                 # 这种要改成"挂整个目录"，所以把话说响，别让它躲在 except 里。
-                print("safestore: 原子换名失败 %s → %s: %s" % (tmp.name, path, exc))
+                log.error("safestore atomic rename failed", extra={"tmp": tmp.name,
+                                                                   "path": str(path)},
+                          exc_info=exc)
                 raise
     finally:
         tmp.unlink(missing_ok=True)
@@ -106,7 +111,10 @@ def _snapshot_if_shrinking(path: Path, data, count) -> None:
         keep.write_bytes(path.read_bytes())
     except OSError:
         return
-    print("safestore: %s 记录数 %d→%d，原件已留底 %s" % (path.name, old, new, keep.name))
+    # 这行是"有人在清空名单"的唯一信号：记录数变少 + 原件留底路径，
+    # 出事时靠它判断是逻辑 bug 还是正常编辑。
+    log.warning("safestore snapshot kept", extra={"path": path.name, "old": old,
+                                                  "new": new, "keep": keep.name})
     stale = sorted(path.parent.glob(path.name + ".pre-*"), key=lambda p: p.name)[:-SNAP_KEEP]
     for p in stale:
         try:
@@ -129,7 +137,8 @@ def _heal(path: Path, exc: Exception, shape):
             bad = path.with_name("%s.bad-%s" % (path.name, stamp))
             try:
                 path.replace(bad)
-                print("safestore: %s 已损坏，现场留在 %s" % (path.name, bad.name))
+                log.error("safestore file corrupt, scene kept",
+                          extra={"path": path.name, "bad": bad.name})
             except OSError:
                 bad = None
         got = _from_backup(path.name, shape)
@@ -137,7 +146,7 @@ def _heal(path: Path, exc: Exception, shape):
             raise StoreUnrecoverable(
                 "%s 已损坏且没有可用的每日备份，拒绝以空库覆盖" % path.name) from exc
         atomic_write_text(path, json.dumps(got, ensure_ascii=False, indent=1))
-        print("safestore: %s 已从每日备份恢复" % path.name)
+        log.warning("safestore restored from daily backup", extra={"path": path.name})
         return got
 
 
@@ -161,8 +170,10 @@ def _from_backup(name: str, shape):
                     except Exception:  # noqa: BLE001 - 这个包里这份不行，试下一个
                         continue
                     if shape is None or shape(data):
-                        print("safestore: %s 取自备份包 %s" % (name, pack.name))
+                        log.info("safestore recovered from pack",
+                                 extra={"path": name, "pack": pack.name})
                         return data
         except Exception as exc:  # noqa: BLE001 - 备份包读不动就往前翻
-            print("safestore: 备份包 %s 读取失败: %s" % (pack.name, exc))
+            log.warning("safestore backup pack unreadable",
+                        extra={"pack": pack.name}, exc_info=exc)
     return None

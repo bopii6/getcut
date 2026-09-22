@@ -15,7 +15,10 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import random
+
+log = logging.getLogger(__name__)
 
 _FALLBACK_CODE = "SIGNAL / 01"
 
@@ -165,13 +168,13 @@ def validate_cues(cues: list[dict], where: str = "") -> list[dict]:
     for c in cues:
         vocab = _CUES_VOCAB.get(c.get("el", ""))
         if not vocab:
-            print(f"[choreo]{where} 丢弃未知元素 cue: {c}")
+            log.warning("drop cue: unknown element", extra={"where": where, "cue": c})
             continue
         if c.get("slot") and c["slot"] not in vocab["slots"]:
-            print(f"[choreo]{where} 丢弃越界锚位 cue: {c}")
+            log.warning("drop cue: slot out of vocab", extra={"where": where, "cue": c})
             continue
         if c.get("enter") and c["enter"] not in vocab["enters"]:
-            print(f"[choreo]{where} 丢弃越界动效 cue: {c}")
+            log.warning("drop cue: enter out of vocab", extra={"where": where, "cue": c})
             continue
         ok.append(c)
     return ok

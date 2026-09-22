@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # 渲染工人节点 · 新机器一次性引导（在节点上以 root 运行）
-#   MAIN_IP=152.136.119.62 bash _node_setup.sh
+#   bash _node_setup.sh                          # 主站 IP 取 deploy/hosts.env 的默认值
+#   MAIN_IP=10.0.0.1 bash _node_setup.sh         # 临时指另一台
 # 干的事：装 docker（国内源）→ 建目录 → 防火墙只放行主站 IP 访问 9700（开机自动重放）
 set -euo pipefail
 
-MAIN_IP="${MAIN_IP:-152.136.119.62}"
+# 主站 IP 的唯一真身在 deploy/hosts.env（与部署/回滚脚本同一份，别再往这里填 IP）
+_HOSTS="$(dirname "$0")/deploy/hosts.env"
+. "$_HOSTS" || { echo "找不到 $_HOSTS —— 主站 IP 的唯一真身在 deploy/hosts.env" >&2; exit 1; }
+MAIN_IP="${MAIN_IP:-$VIDEOGEN_MAIN_IP}"
 log() { printf '\033[36m[node]\033[0m %s\n' "$*" >&2; }
 die() { printf '\033[31m[node] 失败：%s\033[0m\n' "$*" >&2; exit 1; }
 

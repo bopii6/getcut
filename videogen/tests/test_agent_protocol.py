@@ -20,6 +20,18 @@ from pathlib import Path
 from videogen import server
 
 RENDERER_DIR = Path(__file__).resolve().parent.parent / "renderer" / "src" / "tool"
+API_DIR = Path(__file__).resolve().parent.parent / "videogen" / "api"
+
+
+def server_source() -> str:
+    """服务端源码 = server.py + 按域拆出去的 videogen/api/*.py。
+
+    路由和"读哪个头"那段已经不在 server.py 里了。只 `inspect.getsource(server)`
+    的话，下面两条按**源码文本**比对的契约会变成"永远找不到"的假红 ——
+    功能好好的，测试却说服务端不读 x-agent-final 了。
+    """
+    return "\n".join([inspect.getsource(server)]
+                     + [p.read_text(encoding="utf-8") for p in sorted(API_DIR.glob("*.py"))])
 AGENT_PATHS = ("/api/agent", "/agent-media/")
 HEADER_OBJ_RE = re.compile(r"headers\s*:\s*\{([^}]*)\}", re.S)
 HEADER_KEY_RE = re.compile(r"['\"]([A-Za-z0-9_-]+)['\"]\s*:")
@@ -38,10 +50,33 @@ def _same(a: list[str], b: list[str]) -> bool:
     return len(a) == len(b) and all(x == y or x == "*" or y == "*" for x, y in zip(a, b, strict=True))
 
 
+def _iter_routes():
+    """服务端全部路由，钻进 include_router 的包装层。
+
+    `app.include_router(...)` 不再把路由摊平进 `app.routes`，而是包一层
+    `_IncludedRouter`（它没有 .path，下面那句 startswith 会把它整层过滤掉 ——
+    结果是 82 条接口一条都枚举不到，契约比对全盘"没匹配上"，而**请求其实正常**：
+    功能没坏，坏的只是枚举）。
+    """
+    stack = list(server.app.routes)
+    while stack:
+        r = stack.pop(0)
+        if getattr(r, "path", None):
+            yield r
+            continue
+        inner = getattr(r, "routes", None)
+        if inner is None:
+            inner = getattr(getattr(r, "original_router", None), "routes", None)
+        if inner is None:
+            yield r                      # 既不是路由也没有子路由：原样交出去，别吞
+        else:
+            stack.extend(inner)
+
+
 def server_routes() -> dict[str, tuple[set[str], set[str]]]:
     """path → (服务端会读的 query 键, 会读的 header 键)。"""
     out = {}
-    for r in server.app.routes:
+    for r in _iter_routes():
         path = getattr(r, "path", "")
         if not path.startswith(AGENT_PATHS):
             continue
@@ -124,7 +159,7 @@ class AgentProtocolContractTest(unittest.TestCase):
         browser_says = [raw for _, _, _, raw in self.calls
                         if "final=1" in raw or "x-agent-final" in raw]
         self.assertTrue(browser_says, "浏览器端不再声明 final 能力，服务端那条分支就是死代码")
-        src = inspect.getsource(server)
+        src = server_source()
         self.assertRegex(src, r"""['"]x-agent-final['"]""", "服务端不再读 x-agent-final 头")
         self.assertRegex(src, r"""final['"]?\)?\s*(==\s*['"]1['"]|=\s*['"]?1)""",
                          "服务端 final 的哨兵值不再是 1，要同步改浏览器端")

@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 
 def _run(cmd: list[str], cwd: Path) -> None:
@@ -78,7 +81,8 @@ def sfx_bank() -> dict[str, list[Path]]:
         try:
             bank.setdefault(cat, []).append(_normalized(src, cache))
         except Exception as exc:  # noqa: BLE001 - 单条音效坏了不该毁整片
-            print(f"[sfx] {src.name} 归一化失败，跳过：{exc}")
+            log.warning("sfx normalize failed, skipped",
+                        extra={"file": src.name}, exc_info=exc)
     return bank or _synth_sfx()
 
 

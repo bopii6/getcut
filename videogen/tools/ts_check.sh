@@ -18,7 +18,8 @@ TSC=node_modules/typescript/bin/tsc
 MAX="${VIDEOGEN_TS_MAX_ERRORS:-0}"
 if [ ! -f "$TSC" ]; then
   echo "SKIP：renderer/ 里没装 typescript —— 跑 npm i -D typescript@5.9.3 之后再试"
-  echo "注意：SKIP 不等于通过。CI 的 node_modules 很小，这一条只在本地跑。"
+  echo "注意：SKIP 不等于通过。CI 里这一条必须真跑（tests.yml 先 npm ci 再调本脚本，"
+  echo "      并把 SKIP 当失败）；本地没装时会看到跳过，别把它当成查过了。"
   exit 0
 fi
 out="$(node "$TSC" --noEmit -p tsconfig.json 2>&1)"

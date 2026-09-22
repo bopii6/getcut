@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 import os
 import threading
 import random
@@ -22,6 +23,8 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 from . import config, safestore
+
+log = logging.getLogger(__name__)
 
 PBKDF2_ITERS = 200_000
 SESSION_TTL_SHORT = 7 * 24 * 3600     # 不勾"记住我"：7 天
@@ -526,7 +529,9 @@ def _sessions_save(state: dict) -> None:
         SESSIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
         safestore.write_json(SESSIONS_FILE, state, indent=None)
     except OSError as e:
-        print("sessions save failed: %s" % e)
+        # 会话表写不进去意味着：吊销不生效、下次读到旧表。必须留痕并带栈，
+        # 光打一行 str(e) 查不出是磁盘满还是路径没挂。
+        log.error("sessions save failed", extra={"file": str(SESSIONS_FILE)}, exc_info=e)
 
 
 def _prune(state: dict, now: float) -> None:

@@ -40,7 +40,7 @@ from starlette.requests import Request  # noqa: E402
 from starlette.responses import FileResponse, JSONResponse  # noqa: E402
 from starlette.testclient import TestClient  # noqa: E402
 
-from videogen import agenthub, auth, server  # noqa: E402
+from videogen import agenthub, auth, ctx, server  # noqa: E402
 
 ADMIN = "boundary-admin@example.invalid"
 ADMIN_PASSWORD = "Yt7-nQz3WkRs9Lb4Xp2M"
@@ -117,12 +117,20 @@ class BoundaryFixture(unittest.TestCase):
                                  cookies={server.SESSION_COOKIE: self.session})
 
     def tearDown(self):
-        for name, value in self._saved.items():
-            setattr(server, name, value)
+        for name, (home, value) in self._saved.items():
+            setattr(home, name, value)
 
     def patch(self, name: str, value) -> None:
-        self._saved.setdefault(name, getattr(server, name))
-        setattr(server, name, value)
+        """把根目录指到临时目录。
+
+        落到符号**真正的家**上：ROOT / STATIC / WORKSPACES / OUTPUTS /
+        BROWSERPOC_DIR 已经搬进 ctx（server 和 api 都得读同一个值），只往
+        server.__dict__ 里塞的话 handler 读到的还是原值 —— 测试会假绿，
+        而「越界挡没挡住」恰恰是最不能假绿的那类。
+        """
+        home = ctx if hasattr(ctx, name) else server
+        self._saved.setdefault(name, (home, getattr(home, name)))
+        setattr(home, name, value)
 
     def apply_roots(self) -> None:
         raise NotImplementedError

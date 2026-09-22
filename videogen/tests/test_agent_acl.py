@@ -31,7 +31,7 @@ os.environ.update({
 
 from starlette.testclient import TestClient  # noqa: E402
 
-from videogen import auth, server  # noqa: E402
+from videogen import ctx, auth, server  # noqa: E402
 
 OWNER = "owner@example.invalid"          # 任务的正主
 INTRUDER = "intruder@example.invalid"    # 另一个正常登录用户，不是管理员
@@ -60,7 +60,7 @@ class AgentJobAclTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(server.app, base_url="http://acl.test")
         self._jobs = dict(server.JOBS)
-        self._reg = server._reg
+        self._reg = ctx._reg
         server.JOBS.clear()
         server.JOBS["job-mine"] = {"owner": OWNER, "project_id": "p1", "stage": "queued"}
         server.JOBS["job-try"] = {"owner": OWNER, "try": True, "project_id": "p2", "stage": "queued"}
@@ -70,7 +70,7 @@ class AgentJobAclTest(unittest.TestCase):
     def tearDown(self):
         server.JOBS.clear()
         server.JOBS.update(self._jobs)
-        server._reg = self._reg
+        ctx._reg = self._reg
 
     def hit(self, method, path, session, token=False):
         kw = {"headers": {"x-agent-token": session}} if token else {"cookies": {server.SESSION_COOKIE: session}}
@@ -122,7 +122,7 @@ class AgentJobAclTest(unittest.TestCase):
     # ---------- 老任务没记 owner：退回项目归属 ----------
     def test_legacy_job_falls_back_to_project_owner(self):
         server.JOBS["job-legacy"] = {"project_id": "p9", "stage": "queued"}
-        server._reg = lambda: {"projects": [{"project_id": "p9", "owner": OWNER}], "bundles": []}
+        ctx._reg = lambda: {"projects": [{"project_id": "p9", "owner": OWNER}], "bundles": []}
         for method, template in GUARDED:
             with self.subTest(endpoint=template.format("job-legacy")):
                 blocked = self.hit(method, template.format("job-legacy"), self.other)

@@ -22,8 +22,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 _US = 1000  # 毫秒 -> 微秒
 TMPL_DIR = Path(__file__).resolve().parent
@@ -650,7 +653,7 @@ def prepare_draft(video: Path, manifest: dict, progress=None) -> Path | None:
                                        layers_dir=layers)
         return plan_dir
     except Exception as exc:  # noqa: BLE001 - 备草稿失败不该影响成片与下载
-        print(f"draft prepare skipped: {exc}")
+        log.warning("draft prepare skipped", exc_info=exc)
         return None
 
 
@@ -712,7 +715,7 @@ def build_zip(manifest: dict, final_mp4: Path, voice_mp3: Path | None,
                 manifest, plan_dir, progress=progress,
                 layers_dir=draft_build.layers_dir_for(final_mp4))
         except Exception as exc:  # noqa: BLE001 - 分轨失败不阻塞，退回整条草稿
-            print(f"multitrack draft skipped: {exc}")
+            log.warning("multitrack draft skipped", exc_info=exc)
             plan = None
 
     with tempfile.TemporaryDirectory() as td:

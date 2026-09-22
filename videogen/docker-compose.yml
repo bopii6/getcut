@@ -7,7 +7,18 @@ services:
     container_name: videogen
     restart: unless-stopped
     ports:
-      - "8600:8600"
+      # 只绑回环：这台机上 Caddy 在同一进程外做反代（reverse_proxy 127.0.0.1:8600），
+      # 应用端口没有理由对外开。绑 0.0.0.0 等于在公网多开一个没过反代的入口 ——
+      # 没有 TLS、没有 Caddy 的限流与转发头，绕过它就能直接打到应用。
+      - "127.0.0.1:8600:8600"
+    # 日志轮转：应用把日志写 stdout（logx），归 docker 管。不加这段时 json-file
+    # 驱动无限增长 —— 长期跑的机器上 docker.json.log 会长到几十 GB 把系统盘吃满，
+    # 而且"日志盘满"的表现是整个容器起不来，不是"日志没了"，很难第一时间联想到。
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     env_file:
       - .env
     environment:

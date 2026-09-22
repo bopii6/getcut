@@ -33,7 +33,7 @@ os.environ.update({
 
 from starlette.testclient import TestClient  # noqa: E402
 
-from videogen import auth, config, legal, licenses, server  # noqa: E402
+from videogen import ctx, auth, config, legal, licenses, server  # noqa: E402
 
 BOSS = "legal-boss@example.invalid"
 BOSS_PW = "Kp7-3mQzRt8wLd2V"
@@ -67,14 +67,14 @@ class _Base(unittest.TestCase):
         auth.SECRET_FILE.write_bytes(b"pytest-secret-" + tag.encode("utf-8").ljust(18, b"0")[:18])
         self.addCleanup(lambda: [f.unlink(missing_ok=True) for f in
                                  Path(_TMP).glob("*" + tag + "*")])
-        self._ws = server.WORKSPACES
-        server.WORKSPACES = self.ws
-        self._meta = server.BUNDLES_META
-        server.BUNDLES_META = self.ws / "bundles.json"
+        self._ws = ctx.WORKSPACES
+        ctx.WORKSPACES = self.ws
+        self._meta = ctx.BUNDLES_META
+        ctx.BUNDLES_META = self.ws / "bundles.json"
         # 成片目录也指到临时区：测试不许往仓库 outputs/ 里写 mp4
-        self._outputs = server.OUTPUTS
-        server.OUTPUTS = self.ws / "outputs"
-        server.OUTPUTS.mkdir(exist_ok=True)
+        self._outputs = ctx.OUTPUTS
+        ctx.OUTPUTS = self.ws / "outputs"
+        ctx.OUTPUTS.mkdir(exist_ok=True)
         auth.create_user(CUST, CUST_PW)
         auth.create_user(BOSS, BOSS_PW, role="admin")
         self.client = TestClient(server.app, base_url="http://legal.test")
@@ -90,9 +90,9 @@ class _Base(unittest.TestCase):
         return c
 
     def tearDown(self):
-        server.WORKSPACES = self._ws
-        server.BUNDLES_META = self._meta
-        server.OUTPUTS = self._outputs
+        ctx.WORKSPACES = self._ws
+        ctx.BUNDLES_META = self._meta
+        ctx.OUTPUTS = self._outputs
 
 
 class LegalPagesTest(_Base):
@@ -131,11 +131,11 @@ class DeleteAccountTest(_Base):
         (bundle / "content.json").write_text('{"title":"t","script":"s"}', encoding="utf-8")
         (bundle / "images" / "a.jpg").write_text("x", encoding="utf-8")
         server._bundles_meta_save({**server._bundles_meta(), "cust-bundle": {"owner": email}})
-        reg = server._reg()
+        reg = ctx._reg()
         reg["projects"].append({"project_id": "p-1", "owner": email, "bundle": "cust-bundle",
                                 "title": "客户的项目"})
         server._reg_save(reg)
-        out = server.OUTPUTS
+        out = ctx.OUTPUTS
         vid = out / "cust-job.mp4"
         vid.write_text("mp4", encoding="utf-8")
         with server._LOCK:
@@ -174,7 +174,7 @@ class DeleteAccountTest(_Base):
         self.assertFalse(seeded["bundle"].exists(), "素材包目录还在盘上")
         self.assertFalse(seeded["video"].exists(), "成片文件还在盘上")
         self.assertFalse(auth.user_exists(CUST), "账号还在")
-        self.assertEqual([p for p in server._reg()["projects"] if p.get("owner") == CUST], [])
+        self.assertEqual([p for p in ctx._reg()["projects"] if p.get("owner") == CUST], [])
         with server._LOCK:
             self.assertNotIn("cust-job", server.JOBS)
         self.assertNotIn(CUST, server._usage_load(), "用量账本里还留着这个人的邮箱")

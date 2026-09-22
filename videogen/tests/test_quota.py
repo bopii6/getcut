@@ -32,7 +32,7 @@ os.environ.update({
     "EMAIL_SMTP_HOST": "",
 })
 
-from videogen import config, safestore, server  # noqa: E402
+from videogen import ctx, config, safestore, server  # noqa: E402
 
 CUSTOMER = "quota@example.invalid"
 TODAY = time.strftime("%Y-%m-%d")
@@ -45,12 +45,12 @@ def day(offset_days: int) -> str:
 class QuotaLedgerTest(unittest.TestCase):
     def setUp(self):
         self.dir = Path(tempfile.mkdtemp(prefix="videogen-quota-case-"))
-        self._saved = (server.USAGE_FILE, server.config.FREE_DAILY_BUILDS)
-        server.USAGE_FILE = self.dir / "usage.json"
+        self._saved = (ctx.USAGE_FILE, server.config.FREE_DAILY_BUILDS)
+        ctx.USAGE_FILE = self.dir / "usage.json"
         server.config.FREE_DAILY_BUILDS = 2
 
     def tearDown(self):
-        server.USAGE_FILE, server.config.FREE_DAILY_BUILDS = self._saved
+        ctx.USAGE_FILE, server.config.FREE_DAILY_BUILDS = self._saved
 
     def test_empty_ledger_allows_and_reports_zero(self):
         allowed, used = server._free_quota_check(CUSTOMER)
@@ -73,25 +73,25 @@ class QuotaLedgerTest(unittest.TestCase):
             self.assertFalse(server._free_quota_check(CUSTOMER)[0])
         self.assertEqual(server._usage_today(CUSTOMER), 2, "被挡的尝试又记进账本了")
         # 账本文件本身也没被改写（判额度不许落盘）
-        self.assertEqual(json.loads(server.USAGE_FILE.read_text(encoding="utf-8"))[CUSTOMER][TODAY], 2)
+        self.assertEqual(json.loads(ctx.USAGE_FILE.read_text(encoding="utf-8"))[CUSTOMER][TODAY], 2)
 
     def test_yesterday_does_not_count_against_today(self):
-        server.USAGE_FILE.write_text(json.dumps({CUSTOMER: {day(1): 9}}), encoding="utf-8")
+        ctx.USAGE_FILE.write_text(json.dumps({CUSTOMER: {day(1): 9}}), encoding="utf-8")
         allowed, used = server._free_quota_check(CUSTOMER)
         self.assertTrue(allowed)
         self.assertEqual(used, 0)
 
     def test_ledger_only_keeps_three_days(self):
-        server.USAGE_FILE.write_text(json.dumps({CUSTOMER: {day(5): 3, day(2): 1, TODAY: 1}}),
+        ctx.USAGE_FILE.write_text(json.dumps({CUSTOMER: {day(5): 3, day(2): 1, TODAY: 1}}),
                                     encoding="utf-8")
         server._usage_bump(CUSTOMER)
-        kept = json.loads(server.USAGE_FILE.read_text(encoding="utf-8"))[CUSTOMER]
+        kept = json.loads(ctx.USAGE_FILE.read_text(encoding="utf-8"))[CUSTOMER]
         self.assertNotIn(day(5), kept, "5 天前的旧记录没裁掉，账本会一直长大")
         self.assertIn(day(2), kept)
 
     def test_corrupt_ledger_is_not_treated_as_nobody_used_it(self):
         server._usage_bump(CUSTOMER)
-        server.USAGE_FILE.write_text('{"quota@":', encoding="utf-8")     # 半截 JSON
+        ctx.USAGE_FILE.write_text('{"quota@":', encoding="utf-8")     # 半截 JSON
         with self.assertRaises(safestore.StoreUnrecoverable):
             server._usage_load()
 

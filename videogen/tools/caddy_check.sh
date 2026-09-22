@@ -10,7 +10,9 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-HOST="${VIDEOGEN_DEPLOY_HOST:-root@152.136.119.62}"
+# 地址的唯一真身在 deploy/hosts.env（部署/回滚/比对三处共用，别再往这里填 IP）
+. deploy/hosts.env || { echo "找不到 deploy/hosts.env —— 地址的唯一真身在那儿" >&2; exit 1; }
+HOST="${VIDEOGEN_DEPLOY_HOST}"
 KEY="${VIDEOGEN_DEPLOY_KEY:-$HOME/.ssh/videogen_ecs}"
 SSH="ssh -i $KEY -o BatchMode=yes"
 REMOTE=/etc/caddy/Caddyfile

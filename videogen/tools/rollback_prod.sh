@@ -9,7 +9,10 @@
 #   bash tools/rollback_prod.sh 0deed07         # 回到那个提交
 set -uo pipefail
 
-HOST="${VIDEOGEN_DEPLOY_HOST:-root@152.136.119.62}"
+# 地址的唯一真身在 deploy/hosts.env（部署/回滚/比对三处共用，别再往这里填 IP）
+_HOSTS="$(dirname "$0")/../deploy/hosts.env"
+. "$_HOSTS" || { echo "找不到 $_HOSTS —— 地址的唯一真身在 deploy/hosts.env" >&2; exit 1; }
+HOST="${VIDEOGEN_DEPLOY_HOST}"
 KEY="${VIDEOGEN_DEPLOY_KEY:-$HOME/.ssh/videogen_ecs}"
 SHA="${1:-}"
 SSH="ssh -i $KEY -o BatchMode=yes"

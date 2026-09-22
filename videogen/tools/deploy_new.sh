@@ -20,6 +20,10 @@ EMAIL_FROM=
 VIDEOGEN_ADMIN_EMAILS=
 # 开放模式（免登录本机自用）：生产留空。
 VIDEOGEN_OPEN_MODE=
+# 结构化日志级别（JSON 一行一条进 stdout，docker 按 --log-opt 轮转）。
+# 留空 = INFO，够覆盖访问日志；要追一次请求就拿响应头的 x-request-id 过滤：
+#   docker logs videogen | jq 'select(.rid=="<rid>")'
+VIDEOGEN_LOG_LEVEL=
 E2
   echo "[deploy] 已生成 .env"
 fi
@@ -51,6 +55,7 @@ docker stop videogen >/dev/null
 docker rm -f videogen-old >/dev/null 2>&1 || true
 docker rename videogen videogen-old
 docker run -d --name videogen --restart unless-stopped --network host \
+  --log-driver json-file --log-opt max-size=20m --log-opt max-file=5 \
   --env-file .env \
   -v /opt/videogen/data:/data \
   -v /opt/videogen/outputs:/app/outputs \

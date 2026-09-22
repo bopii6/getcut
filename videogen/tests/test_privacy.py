@@ -27,7 +27,7 @@ os.environ.update({
     "EMAIL_SMTP_HOST": "",
 })
 
-from videogen import brand, server, voice_clone  # noqa: E402
+from videogen import ctx, brand, server, voice_clone  # noqa: E402
 
 EMAIL = "voice-owner@example.invalid"
 RECording = b"ID3\x03fake-customer-voice-data"
@@ -80,16 +80,16 @@ class RecordingRetentionTest(unittest.TestCase):
             self.assertTrue(Path(mp3).is_file(), "登记时录音得在场，否则百炼取不到")
             return "vc-from-worker"
 
-        real = (voice_clone.convert_audio, voice_clone.enroll, server._preview_file,
+        real = (voice_clone.convert_audio, voice_clone.enroll, ctx._preview_file,
                 server.tts_mod.synthesize_preview)
         voice_clone.convert_audio, voice_clone.enroll = fake_convert, fake_enroll
-        server._preview_file = lambda voice: Path(_TMP) / "no-preview-cache.mp3"
+        ctx._preview_file = lambda voice: Path(_TMP) / "no-preview-cache.mp3"
         server.tts_mod.synthesize_preview = lambda *a, **k: None   # 不碰真配音服务
         try:
             out = server._clone_worker(RECording, "getcut-test", "https://getcut.test")
         finally:
             voice_clone.convert_audio, voice_clone.enroll = real[0], real[1]
-            server._preview_file = real[2]
+            ctx._preview_file = real[2]
             server.tts_mod.synthesize_preview = real[3]
         self.assertEqual(out, "vc-from-worker")
         self.assertFalse(seen["tmp"].exists(), "临时目录没随登记结束一起清掉")

@@ -16,7 +16,11 @@
 #   bash tools/deploy_to_prod.sh --rebuild        # 改了 .env / 加依赖时（重建容器才读 env-file）
 set -uo pipefail
 
-HOST="${VIDEOGEN_DEPLOY_HOST:-root@152.136.119.62}"
+# 生产机地址只在 deploy/hosts.env 里写一份（换机改那一处，四个脚本一起生效）；
+# 未设 VIDEOGEN_DEPLOY_HOST 时取那边的默认值，设了则命令行优先。
+_HOSTS="$(dirname "$0")/../deploy/hosts.env"
+. "$_HOSTS" || { echo "找不到 $_HOSTS —— 地址的唯一真身在 deploy/hosts.env" >&2; exit 1; }
+HOST="${VIDEOGEN_DEPLOY_HOST}"
 KEY="${VIDEOGEN_DEPLOY_KEY:-$HOME/.ssh/videogen_ecs}"
 BASE=/opt/videogen
 SSH="ssh -i $KEY -o BatchMode=yes"

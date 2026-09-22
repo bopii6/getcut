@@ -17,12 +17,15 @@ _MAX_RECLAIMS 次，超过按失败处理——别让用户对着一个永远转
 """
 from __future__ import annotations
 
+import logging
 import re
 import threading
 import time
 from pathlib import Path
 
 from .schemas import JobCancelled
+
+log = logging.getLogger(__name__)
 
 # 被领取后 4 分钟没有任何进度上报 → 判失联收回。成片台在渲染期每 2.5 秒报一次、
 # 缓存素材期每 5 秒报一次心跳，所以 4 分钟静默必然是页面没了（刷新、断网、合盖）。
@@ -110,7 +113,8 @@ def _claim_locked(owners: list, device: str, want_audio: bool = False) -> dict |
             try:
                 on_claim(jid, device)
             except Exception as exc:  # noqa: BLE001 - 回调绝不能卡住领取
-                print(f"agenthub on_claim error: {exc}")
+                log.error("agenthub on_claim error", extra={"job": jid, "device": device},
+                          exc_info=exc)
         payload = {"job": jid, "props": j["props"], "files": dict(j["files"])}
         if want_audio and j.get("audio"):
             payload["props"] = {**j["props"], "audio": j["audio"][0]}

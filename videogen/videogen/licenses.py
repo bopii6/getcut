@@ -15,11 +15,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import secrets
 import time
 from pathlib import Path
 
 from . import auth, config, safestore
+
+log = logging.getLogger(__name__)
 
 # 手抄友好的字符表：没有 0/O/1/I/S/5（S/5 也容易混，干脆都不要）
 _ALPHABET = "2346789ABCDEFGHJKMNPQRTUVWXYZ"
@@ -182,7 +185,9 @@ def log_issue(operator: str, tier: str, codes: list[str], note: str = "") -> Non
         with _AUDIT_FILE.open("a", encoding="utf-8") as f:
             f.write(json.dumps(line, ensure_ascii=False) + chr(10))
     except OSError as e:
-        print("license audit write failed: %s" % e)
+        # 审计流水写不进去 = 兑换记录缺一行，事后对不上账。必须带栈留痕。
+        log.error("license audit write failed", extra={"file": str(_AUDIT_FILE)},
+                  exc_info=e)
 
 
 def list_audit(limit: int = 200) -> list[dict]:

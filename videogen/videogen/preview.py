@@ -7,6 +7,7 @@ props.json，跳过 TTS 与 LLM，保证预览与成片一致。
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 import threading
 import time
@@ -18,6 +19,8 @@ from .config import DEFAULT_TEMPLATE, TEMPLATE_ALIAS, TEMPLATES
 from .planner import (align_timeline, build_plan, build_plan_llm, clause_units,
                       split_clauses, sentence_spans, unit_spans)
 from .schemas import Content, Manifest
+
+log = logging.getLogger(__name__)
 
 WORK = config.WORK / "_preview"
 PREVIEW_TASKS: dict[str, dict] = {}      # project_id -> task state
@@ -253,7 +256,8 @@ def run_preview(project_id: str, body: dict) -> None:
             t = PREVIEW_TASKS.get(project_id)
             if t:
                 t.update(state="failed", error=str(e)[-500:])
-        print(f"preview failed: {e}")
+        # 只打 str(e) 的话，前端那句 error 恰恰是最没信息量的一行——真因在这里。
+        log.error("preview failed", extra={"project": project_id}, exc_info=e)
 
 
 def build_preview_payload(project_id: str, body: dict) -> dict:

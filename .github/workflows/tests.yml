@@ -28,6 +28,25 @@ jobs:
           NODE_PATH: ${{ github.workspace }}/videogen/tests/.deps/node_modules
         run: node --test tests/frontend.test.cjs
 
+      - name: 前端类型检查（tsc --noEmit，0 错误为基线）
+        working-directory: videogen
+        # CI 必须**真跑**：ts_check.sh 在没装 typescript 时会打印 SKIP 并 exit 0，
+        # 那一步在 CI 里就是纯装饰 —— 一行绿字、一次类型都没查。所以先 npm ci，
+        # 再把 SKIP 本身当失败：跳过不算通过（本地那条测试钉的是脚本文本，
+        # CI 这层钉的是"这一轮到底查没查"）。
+        run: |
+          (cd renderer && npm ci --no-audit --no-fund)
+          out="$(bash tools/ts_check.sh 2>&1)"; rc=$?
+          printf '%s\n' "$out"
+          [ "$rc" -eq 0 ] || exit "$rc"
+          case "$out" in
+            *SKIP*) echo "::error::tsc 在 CI 里被跳过了（npm ci 没装上 typescript）"; exit 1 ;;
+          esac
+          case "$out" in
+            *"tsc --noEmit"*) : ;;
+            *) echo "::error::ts_check.sh 没给出结论，这一轮等于没查"; exit 1 ;;
+          esac
+
   backend-gate:
     name: 后端闸门（鉴权边界 / 状态文件 / 卡密 / 分镜节奏 / 剪映草稿）+ 静态检查
     runs-on: ubuntu-latest
