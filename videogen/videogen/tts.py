@@ -406,7 +406,7 @@ _MIN_ANCHORS = 3            # 至少配齐几个句锚点才相信停顿锚定
 # 停顿实测的唯一参数。verify 的漂移检查必须读同一个常量：两边看到的不是同一批
 # 停顿的话，质检判"对得上"而时间轴按另一批停顿排，等于没有闸。
 SILENCE_FILTER = "silencedetect=noise=-35dB:d=0.3"
-_ANCHOR_V = 4               # 时间轴生成方式的版本号：旧缓存没有它就就地重算
+_ANCHOR_V = 5               # 时间轴生成方式的版本号：旧缓存没有它就就地重算
 _RECON_V = 2                # 词流对位算法版本号：变小了说明老缓存是旧算法产的
 _BOUNDARY_RE = re.compile(r"[。！？；，、：]")
 
@@ -1069,7 +1069,47 @@ def _asr_char_times(spoken: str, mp3: Path) -> list[float] | None:
     for k in range(len(times)):
         if times[k] is None:
             times[k] = head
-    return [float(t) for t in times]
+    return _shift_by_onsets(spoken, [float(t) for t in times], pause_ends_ms(mp3))
+
+
+def _shift_by_onsets(spoken: str, times: list[float], pauses: list[float]) -> list[float]:
+    """把整条轴平移到"句首正好落在真实开口时刻"。
+
+    识别服务报的字头比声音物理起振早 0.2~0.3 秒（它把前导也算进字头了）。直接
+    拿它定轴，成片表现就是字幕先蹦出来、声音还没到。这里拿配音实测的停顿结束点
+    当基准，把这一个整体提前量现算出来扣掉——不是拍脑袋填的常数。"""
+    if not pauses or len(times) < 2:
+        return times
+    pts: list[float] = []
+    j = 0
+    for h in _sentence_head_indices(spoken):
+        if h >= len(times):
+            break
+        t = times[h] / 1000.0
+        while j < len(pauses) and pauses[j] / 1000.0 < t - 1.5:
+            j += 1
+        if j < len(pauses) and abs(pauses[j] / 1000.0 - t) <= 1.5:
+            pts.append(t - pauses[j] / 1000.0)
+            j += 1
+    if len(pts) < 5:                      # 基准点太少就别动，宁可不校也别校错
+        return times
+    pts.sort()
+    off = pts[len(pts) // 2] * 1000.0
+    return [max(t - off, 0.0) for t in times]
+
+
+def _sentence_head_indices(spoken: str) -> list[int]:
+    """句子开头的字符下标。只用句读（。！？；），不把逗号当句首——逗号处往往
+    根本没有停顿，拿它去配停顿会成片错配，把整条轴拽偏。"""
+    out = [0]
+    for i, ch in enumerate(spoken):
+        if ch in "。！？；" and i + 1 < len(spoken):
+            k = i + 1
+            while k < len(spoken) and (spoken[k].isspace() or spoken[k] in "。！？；，、："):
+                k += 1
+            if k < len(spoken):
+                out.append(k)
+    return out
 
 
 def _events_from_char_times(spoken: str, times: list[float]) -> list[dict]:
