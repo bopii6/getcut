@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import re
 import subprocess
 import time
@@ -22,6 +23,8 @@ import edge_tts
 
 from . import config
 from .planner import PUNCT
+
+log = logging.getLogger(__name__)
 
 VOICE = "xiaoxia"          # 默认音色 = 目录里的 id（不再是 edge 原生名）
 RATE = "+10%"
@@ -361,7 +364,12 @@ def _reconcile_words(spoken: str, raw: list[dict], audio_ms: float) -> list[dict
     return events
 
 
-# ---------- 没有词级时间戳时的估算兜底 ----------
+# ---------- 没有词级时间戳时的估算兜底（停顿锚定） ----------
+
+_ANCHOR_TOL_MS = 1500.0     # 估算句首与实测停顿的配对容差
+_MIN_ANCHORS = 3            # 至少配齐几个句锚点才相信停顿锚定
+_BOUNDARY_RE = re.compile(r"[。！？；，、：]")
+
 
 def _probe_ms(mp3: Path) -> float:
     try:
@@ -374,9 +382,28 @@ def _probe_ms(mp3: Path) -> float:
         return 0.0
 
 
-def _estimate_events(spoken: str, mp3: Path) -> list[dict]:
-    """把音频总长按字符权重摊到每个字上。对齐器会剥标点，标点只当停顿权重。"""
-    dur_ms = _probe_ms(mp3)
+def pause_ends_ms(audio: Path) -> list[float]:
+    """ffmpeg silencedetect 实测的"停顿结束点"（毫秒）= 下一段话实际开口的时刻。
+    与 verify 的漂移检查共用同一套参数，保证两边看到的是同一批停顿。"""
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-v", "info", "-i", str(audio),
+             "-af", "silencedetect=noise=-35dB:d=0.3", "-f", "null", "-"],
+            capture_output=True, text=True, timeout=300)
+    except Exception:  # noqa: BLE001 - ffmpeg 没装/超时都当"测不出停顿"
+        return []
+    ends: list[float] = []
+    for line in (r.stderr or "").splitlines():
+        if "silence_end:" in line:
+            try:
+                ends.append(float(line.split("silence_end:")[1].split("|")[0].strip()) * 1000.0)
+            except ValueError:
+                continue
+    return ends
+
+
+def _char_weights(spoken: str) -> list[float]:
+    """逐字权重：汉字 1.0、ASCII 0.4、标点/空白 0.55（与原估算一致）。"""
     weights = []
     for ch in spoken:
         if re.match(r"[。！？；，、：…—\s]", ch):
@@ -385,6 +412,29 @@ def _estimate_events(spoken: str, mp3: Path) -> list[dict]:
             weights.append(0.4)
         else:
             weights.append(1.0)
+    return weights
+
+
+def _clause_char_starts(spoken: str) -> list[int]:
+    """每个子句首字在 spoken 里的下标，切分口径与 planner.split_clauses 一致
+    （句读和逗号都算边界；连写标点/空白构成的空子句不产生新起点）。"""
+    starts = [0]
+    i, n = 0, len(spoken)
+    while i < n:
+        if not _BOUNDARY_RE.match(spoken[i]):
+            i += 1
+            continue
+        j = i + 1
+        while j < n and (spoken[j].isspace() or _BOUNDARY_RE.match(spoken[j])):
+            j += 1
+        if j < n and j > starts[-1]:
+            starts.append(j)
+        i = j if j > i else i + 1
+    return starts
+
+
+def _uniform_events(spoken: str, weights: list[float], dur_ms: float) -> list[dict]:
+    """旧的均匀摊估算：整段音频按字重平铺。停顿锚定失败时的回退路径。"""
     total_w = sum(weights) or 1.0
     lead, tail = (120.0, 200.0) if dur_ms > 1500 else (0.0, 0.0)
     span = max(dur_ms - lead - tail, total_w * 200) if dur_ms else total_w * 300
@@ -399,6 +449,154 @@ def _estimate_events(spoken: str, mp3: Path) -> list[dict]:
     if buf:
         events.append({"text": buf, "offset_ms": at, "duration_ms": buf_w * per_w})
     return events
+
+
+def _match_anchors(est: list[float], pauses: list[float],
+                   tol: float = _ANCHOR_TOL_MS) -> list[tuple[int, int]]:
+    """把估算句首和实测停顿按时间顺序配对（每个停顿最多用一次）。
+    返回 [(句下标, 停顿下标), ...]。"""
+    pairs: list[tuple[int, int]] = []
+    used = -1
+    for i, t in enumerate(est):
+        best_j, best_d = -1, tol
+        for j, p in enumerate(pauses):
+            if j <= used:
+                continue
+            d = abs(p - t)
+            if d <= best_d:
+                best_j, best_d = j, d
+        if best_j >= 0:
+            pairs.append((i, best_j))
+            used = best_j
+    return pairs
+
+
+def _anchored_windows(weights: list[float], spans: list[tuple[int, int]],
+                      dur_ms: float, pauses: list[float]
+                      ) -> tuple[list[tuple[float, float]], int] | None:
+    """给每个子句算出 [开始, 结束] 毫秒窗口：句首锚到实测停顿的结束点，
+    没配上的子句在相邻锚点间线性插值。锚点不足返回 None（退回均匀摊）。
+    成功时返回 (窗口列表, 实际配上的锚点数)。"""
+    if dur_ms <= 0 or len(spans) < 2:
+        return None
+    pauses = [p for p in pauses if 0 <= p < dur_ms - 100]
+    if len(pauses) < _MIN_ANCHORS:
+        return None
+    total_w = sum(weights) or 1.0
+    lead, tail = (120.0, 200.0) if dur_ms > 1500 else (0.0, 0.0)
+    span = max(dur_ms - lead - tail, total_w * 200)
+    per_w = span / total_w
+    prefix = [0.0]
+    for w in weights:
+        prefix.append(prefix[-1] + w)
+    est = [lead + prefix[a] * per_w for a, _ in spans]
+
+    # 估算句首 ↔ 实测停顿 单调配对，凑成锚点序列（首尾补基线锚点）
+    matches = _match_anchors(est[1:], pauses)
+    if len(matches) < _MIN_ANCHORS:
+        return None
+    pts: list[tuple[float, float, bool]] = [(est[0], lead, False)]
+    for i, j in matches:
+        pts.append((est[i + 1], pauses[j], True))
+    if lead + span > pts[-1][0]:
+        pts.append((lead + span, dur_ms - tail, False))
+    # 两个坐标都必须严格递增，坏配对直接丢掉
+    xs: list[float] = []
+    ys: list[float] = []
+    anchors = 0
+    for x, y, is_anchor in pts:
+        if xs and (x <= xs[-1] or y <= ys[-1]):
+            continue
+        xs.append(x)
+        ys.append(y)
+        anchors += 1 if is_anchor else 0
+    if anchors < _MIN_ANCHORS:
+        return None
+
+    def warp(t: float) -> float:
+        if t <= xs[0]:
+            return ys[0]
+        if t >= xs[-1]:
+            return ys[-1]
+        k = 1
+        while k < len(xs) - 1 and xs[k] < t:
+            k += 1
+        x0, x1, y0, y1 = xs[k - 1], xs[k], ys[k - 1], ys[k]
+        return y0 + (y1 - y0) * (t - x0) / (x1 - x0)
+
+    windows: list[tuple[float, float]] = []
+    for k, e in enumerate(est):
+        t0 = warp(e)
+        t1 = warp(est[k + 1]) if k + 1 < len(est) else (dur_ms - tail)
+        if windows:
+            t0 = max(t0, windows[-1][1])
+            t1 = max(t1, t0)
+        windows.append((t0, t1))
+    return windows, anchors
+
+
+def _events_by_windows(spoken: str, weights: list[float],
+                       spans: list[tuple[int, int]],
+                       windows: list[tuple[float, float]]) -> list[dict]:
+    """按子句窗口出事件：窗口内按字重摊时长，≥5 字或 >700ms 切块，
+    子句边界必定落在事件边界上——字幕查到的句首时刻因此就是窗口起点本身。"""
+    events: list[dict] = []
+    for (a, b), (t0, t1) in zip(spans, windows, strict=True):
+        seg_w = sum(weights[a:b]) or 1.0
+        per = (t1 - t0) / seg_w
+        at, buf, buf_w, buf_t = t0, "", 0.0, 0.0
+        for ch, w in zip(spoken[a:b], weights[a:b], strict=True):
+            buf, buf_w, buf_t = buf + ch, buf_w + w, buf_t + w * per
+            if len(buf) >= 5 or buf_t > 700:
+                events.append({"text": buf, "offset_ms": at, "duration_ms": buf_w * per})
+                at += buf_w * per
+                buf, buf_w, buf_t = "", 0.0, 0.0
+        if buf:
+            events.append({"text": buf, "offset_ms": at, "duration_ms": buf_w * per})
+    return events
+
+
+def _estimate_events(spoken: str, mp3: Path) -> tuple[list[dict], int]:
+    """停顿锚定的估算兜底：先用 silencedetect 实测配音里的停顿结束点，
+    把估算句首配到实测停顿上，让每个子句窗口的起点等于真实开口时刻；
+    配不齐（锚点 <3 个）就退回原来的均匀摊。返回 (事件列表, 锚点数)。"""
+    dur_ms = _probe_ms(mp3)
+    weights = _char_weights(spoken)
+    raw = _clause_char_starts(spoken)
+    spans = list(zip(raw, raw[1:] + [len(spoken)], strict=True)) if len(raw) > 1 else []
+    got = _anchored_windows(weights, spans, dur_ms, pause_ends_ms(mp3)) if spans else None
+    if got is not None:
+        windows, anchors = got
+        return _events_by_windows(spoken, weights, spans, windows), anchors
+    return _uniform_events(spoken, weights, dur_ms), 0
+
+
+# ---------- 时间戳质量（2026-09-22 字幕漂移修复） ----------
+
+def _events_quality(spoken: str, events: list[dict], provider: str, source: str,
+                    anchors: int = 0) -> dict:
+    """标记时间戳从哪来：source="estimate"（按字数估算）时，字幕/分镜的
+    句边界会随字数均匀摊，和真实语音的停顿逐渐对不上——成片表现为
+    开头同步、越往后字幕越滞后。落进 tts_events.json 供 prep/verify 透出。
+    anchors = 估算路径实测配上的停顿锚点数（≥3 才做过停顿锚定校正）。"""
+    chars = sum(len(str(e.get("text") or "")) for e in events)
+    return {
+        "provider": provider,
+        "source": source,               # "word"=词级真实时间戳 | "estimate"=按字数估算
+        "anchors": int(anchors),
+        "events": len(events),
+        "coverage": round(chars / max(len(spoken), 1), 3),
+    }
+
+
+def read_quality(out_dir: Path) -> dict | None:
+    """读取配音时间戳的质量标记（旧缓存没有该字段时返回 None=未知）。"""
+    try:
+        meta = json.loads((Path(out_dir) / "tts_events.json").read_text(encoding="utf-8"))
+        q = meta.get("quality")
+        return q if isinstance(q, dict) else None
+    except Exception:  # noqa: BLE001 - 缺文件/坏 JSON 一律当"未知"，不挡主流程
+        return None
 
 
 # ---------- 对外入口 ----------
@@ -432,6 +630,19 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
         try:
             cached = json.loads(meta.read_text(encoding="utf-8"))
             if isinstance(cached, dict) and cached.get("input_sig") == sig:
+                q = cached.get("quality") or {}
+                src = q.get("source")
+                # 词级时间戳直接复用；estimate 缓存若没有 anchors 字段，说明是
+                # 修复前的纯均匀摊版本——用已有 mp3 重算一次停顿锚定（不重新调 TTS）
+                if src == "estimate" and "anchors" not in q:
+                    events, anchors = _estimate_events(spoken, mp3)
+                    meta.write_text(json.dumps(
+                        {"input_sig": sig, "events": events,
+                         "quality": _events_quality(
+                             spoken, events, q.get("provider") or "dashscope",
+                             "estimate", anchors=anchors)},
+                        ensure_ascii=False), encoding="utf-8")
+                    return mp3, events
                 return mp3, cached["events"]
         except Exception:  # noqa: BLE001 - 旧格式/损坏缓存一律重做
             pass
@@ -447,13 +658,19 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
                 # 中途连接被掐），直接降级会把偶发变成永久性的估算配音。第三次才
                 # 放弃时间戳：个别音色确实不支持这个参数，会稳定 task-failed。
                 events = None
+                source = "estimate"
                 if words and want_words:
                     events = _reconcile_words(spoken, words, _probe_ms(mp3))
-                    if events is None:
+                    if events is not None:
+                        source = "word"
+                    else:
                         dbg = globals().get("_RECON_DEBUG") or {}
-                        print(f"[tts] 词事件流对位失败（{len(words)} 帧）："
-                              f"确认 {dbg.get('confirmed')}/{dbg.get('n')} 字，"
-                              f"走到第 {dbg.get('cur')} 字，退回估算对齐", flush=True)
+                        log.warning("word timeline reconciliation failed, "
+                                    "falling back to estimate",
+                                    extra={"frames": len(words),
+                                           "confirmed": dbg.get("confirmed"),
+                                           "total": dbg.get("n"),
+                                           "reached": dbg.get("cur")})
                         try:
                             (Path(out_dir) / "raw_debug.json").write_text(
                                 json.dumps({"frames": len(words),
@@ -463,10 +680,17 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
                             pass
                 if events is None:
                     if want_words:
-                        print("[tts] 未拿到词级时间戳，退回按字数估算对齐", flush=True)
-                    events = _estimate_events(spoken, mp3)
-                meta.write_text(json.dumps({"input_sig": sig, "events": events},
-                                           ensure_ascii=False), encoding="utf-8")
+                        log.warning("no word timestamps from TTS, "
+                                    "estimating alignment by character count")
+                    events, anchors = _estimate_events(spoken, mp3)
+                    source = "estimate"
+                else:
+                    anchors = 0
+                meta.write_text(json.dumps(
+                    {"input_sig": sig, "events": events,
+                     "quality": _events_quality(spoken, events, "dashscope", source,
+                                                anchors=anchors)},
+                    ensure_ascii=False), encoding="utf-8")
                 return mp3, events
             except Exception as e:  # noqa: BLE001 - 网络抖动重试；渠道真挂了就明说，不悄悄降级成微软音
                 last_err = e
@@ -482,8 +706,11 @@ def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
         try:
             events = asyncio.run(_synth(spoken, edge_voice, rate or RATE, mp3))
             if events:
-                meta.write_text(json.dumps({"input_sig": sig, "events": events},
-                                           ensure_ascii=False), encoding="utf-8")
+                # edge-tts 每个词都带 WordBoundary（真实时间戳），不存在估算兜底
+                meta.write_text(json.dumps(
+                    {"input_sig": sig, "events": events,
+                     "quality": _events_quality(spoken, events, "edge", "word")},
+                    ensure_ascii=False), encoding="utf-8")
                 return mp3, events
             last_err = RuntimeError("edge-tts 没有返回时间戳")
         except Exception as e:  # noqa: BLE001 - 偶发网络/令牌故障，退避重试

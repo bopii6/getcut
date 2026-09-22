@@ -1,12 +1,15 @@
 """Stage 2+3: shot planning and clause-level timeline from TTS word boundaries."""
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import templates
 from .schemas import Content, Manifest
+
+log = logging.getLogger(__name__)
 
 SENT_SPLIT = re.compile(r"[。！？；]")
 CLAUSE_SPLIT = re.compile(r"[，、：]")
@@ -238,9 +241,12 @@ def align_timeline(clauses: list[tuple[int, str]], events: list[dict]) -> list[C
 
     result: list[Clause] = []
     consumed = 0
+    # 缺键（events 比稿件短，比如 TTS 吞字）时沿用上一个已知时间继续排，
+    # 不能回落到 0.0——那会让后半段子句全部塌回片头，字幕时间轴倒挂
+    last_t = 0.0
     for sent_i, text in clauses:
         spoken_n = len(PUNCT.sub("", text))
-        start = pos2t.get(consumed, 0.0)
+        start = pos2t.get(consumed, last_t)
         end = pos2t.get(consumed + spoken_n - 1, start + 800)
         # clause end extends to the start of the next spoken char
         nxt = pos2t.get(consumed + spoken_n)
@@ -248,6 +254,7 @@ def align_timeline(clauses: list[tuple[int, str]], events: list[dict]) -> list[C
             end = nxt
         result.append(Clause(text=text, sent_index=sent_i, start_ms=start, end_ms=end))
         consumed += spoken_n
+        last_t = end
     if result:
         result[-1].end_ms = max(result[-1].end_ms, spoken_positions[-1][1] + 600 if spoken_positions else 0)
     return result
@@ -874,7 +881,7 @@ def build_plan_macro(content: Content, clauses, units: list[dict],
             if aligned:
                 chapters_raw = aligned
             else:
-                print("[macro] 章节覆盖不合法，改用兜底分章")
+                log.warning("macro chapters misaligned, using fallback chapters")
     if not chapters_raw:
         chapters_raw = _macro_fallback_chapters(units, content.script)
 

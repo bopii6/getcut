@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import shutil
 import subprocess
 import threading
@@ -23,6 +24,8 @@ from .planner import (align_timeline, build_plan, build_plan_clone, build_plan_l
                       build_plan_macro, clause_units, split_clauses, sentence_spans,
                       unit_spans, plan_to_dict, plan_from_dict)
 from .schemas import Content, Manifest, JobCancelled
+
+log = logging.getLogger(__name__)
 
 WORK = Path(__file__).resolve().parent.parent / "work"
 
@@ -280,6 +283,8 @@ def build_prep(bundle_dir: Path, work_dir: Path | None = None,
         # duration_ms = 真正用于混音/封装的时长（预演复用时可能与 plan 里的不同）
         "duration_ms": duration_s * 1000.0,
         "voice": str(mp3) if mp3 else None,
+        # 时间戳质量：source=estimate 表示按字数估算，字幕/分镜会逐渐漂移（verify 会报）
+        "tts_quality": tts.read_quality(tts_dir),
         "llm_used": bool(llm_used),
         "title_card": {"label": title_label, "keyword": title_kw},
         "quote_card": {"label": q_label, "quote": q_text},
@@ -449,14 +454,24 @@ def build_render(bundle_dir: Path, out_mp4: Path, work_dir: Path | None = None,
                                for c in plan.clauses],
                       sfx=sfx_rows,
                       props=str(props_keep) if props_keep else None)
-    except Exception as exc:  # 清单失败不影响成片
-        print(f"draft manifest skipped: {exc}")
+    except Exception as exc:  # noqa: BLE001 - 清单失败不影响成片
+        log.warning("draft manifest skipped", exc_info=exc)
 
     line = (f"renderer: {renderer} | director: {'llm' if prep.get('llm_used') else 'rules'} | "
             f"shots: {len(plan.shots)} | clauses: {len(plan.clauses)} | "
             f"duration: {duration_s:.1f}s -> {out_mp4}")
     if defer_verify:
-        print(line)
+        # 服务端走的就是这条（server 调 build_render 时 defer_verify=True），
+        # 所以"这单渲完了"这行必须进日志：裸 print 没级别、没 rid，出事后
+        # 对不上是哪一单、哪一分钟。下面 defer_verify=False 那条是命令行，
+        # 输出给人看，保留 print。
+        log.info("render done", extra={"renderer": renderer,
+                                       "director": "llm" if prep.get("llm_used") else "rules",
+                                       "shots": len(plan.shots),
+                                       "clauses": len(plan.clauses),
+                                       "duration_s": round(duration_s, 1),
+                                       "out": str(out_mp4),
+                                       "job": job_id})
         return out_mp4
 
     summaries = {a.file: a.summary for a in manifest.assets}

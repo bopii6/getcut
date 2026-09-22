@@ -13,6 +13,7 @@ from pathlib import Path
 from PIL import Image
 
 from .llm import vision_check as llm_vision
+from . import tts
 # 素材窗矩形（原 overlays.py 常量，PIL 合成器退役后唯此一处还在用）
 MEDIA = (151, 667, 929, 1107)
 from .planner import Plan
@@ -36,6 +37,49 @@ def _frame_at(video: Path, t: float, tmp: Path) -> Path | None:
     if r.returncode:
         return None
     return out if out.is_file() and out.stat().st_size else None
+
+
+def _silence_ends(audio: Path) -> list[float]:
+    """纯人声轨里的"停顿结束点"（单位秒）= 下一段话实际开口的时刻。"""
+    r = subprocess.run(
+        ["ffmpeg", "-v", "info", "-i", str(audio),
+         "-af", "silencedetect=noise=-35dB:d=0.3", "-f", "null", "-"],
+        capture_output=True, text=True)
+    ends: list[float] = []
+    for line in (r.stderr or "").splitlines():
+        if "silence_end:" in line:
+            try:
+                ends.append(float(line.split("silence_end:")[1].split("|")[0].strip()))
+            except ValueError:
+                continue
+    return ends
+
+
+def _drift_stats(clause_starts_ms: list[float], pause_ends_s: list[float],
+                 tol_s: float = 1.0) -> tuple[float | None, int]:
+    """字幕开始时刻 vs 语音实际开口时刻的漂移（毫秒，正=字幕滞后语音）。
+
+    单调配对：每条字幕（跳过首条，前面没有停顿）在 ±tol_s 内找"最近的
+    停顿结束点"，且配对顺序不得倒退。不足 5 个有效配对返回 (None, n)——
+    停顿太少时宁可不报，也不报假数。"""
+    pairs: list[float] = []
+    used_until = -1
+    for cs in sorted(clause_starts_ms)[1:]:
+        t = cs / 1000.0
+        best_j, best_d = -1, tol_s
+        for j, pe in enumerate(pause_ends_s):
+            if j <= used_until:
+                continue
+            d = abs(pe - t)
+            if d <= best_d:
+                best_j, best_d = j, d
+        if best_j >= 0:
+            pairs.append((t - pause_ends_s[best_j]) * 1000.0)
+            used_until = best_j
+    if len(pairs) < 5:
+        return None, len(pairs)
+    pairs.sort()
+    return pairs[len(pairs) // 2], len(pairs)
 
 
 def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
@@ -93,6 +137,39 @@ def verify(video: Path, plan: Plan, work: Path, vision: bool = False,
             if b.start_ms < a.start_ms - 0.1:
                 errors.append(f"字幕时间轴倒挂: {a.text!r} -> {b.text!r}")
                 break
+
+    # 2.4 subtitle-vs-voice alignment（2026-09-22：此前质检不查对齐，
+    # 估算时间戳造成的累积漂移直接漏到成片——开头同步、越往后字幕越滞后）
+    prep_path = work / "prep.json"
+    voice_path: Path | None = None
+    tts_quality: dict | None = None
+    try:
+        prep = json.loads(prep_path.read_text(encoding="utf-8"))
+        if prep.get("voice"):
+            voice_path = Path(prep["voice"])
+        q = prep.get("tts_quality")
+        tts_quality = q if isinstance(q, dict) else None
+    except Exception:  # noqa: BLE001 - 缺 prep 不挡其余质检
+        pass
+    if tts_quality is None and voice_path is not None:
+        tts_quality = tts.read_quality(voice_path.parent)
+    if tts_quality and tts_quality.get("source") == "estimate" \
+            and int(tts_quality.get("anchors") or 0) < 3:
+        warnings.append(
+            f"配音时间戳来自按字数估算，且停顿锚点不足（渠道 {tts_quality.get('provider', '?')}），"
+            f"字幕可能与语音逐渐漂移")
+    if voice_path is not None and voice_path.is_file() and len(plan.clauses) >= 6:
+        report(70, "正在核对字幕与配音的对齐")
+        pauses = _silence_ends(voice_path)
+        starts = [c.start_ms for c in plan.clauses]
+        median, n = _drift_stats(starts, pauses)
+        if median is not None:
+            if abs(median) >= 800:
+                errors.append(
+                    f"字幕与配音明显不同步：中位偏差 {median:+.0f}ms（{n} 个句锚点）")
+            elif abs(median) >= 300:
+                warnings.append(
+                    f"字幕与配音有漂移倾向：中位偏差 {median:+.0f}ms（{n} 个句锚点）")
 
     # 2.5 vision check (parity: niwo checking_visuals uses a vision model)
     if vision and summaries and bundle:
