@@ -406,7 +406,7 @@ _MIN_ANCHORS = 3            # 至少配齐几个句锚点才相信停顿锚定
 # 停顿实测的唯一参数。verify 的漂移检查必须读同一个常量：两边看到的不是同一批
 # 停顿的话，质检判"对得上"而时间轴按另一批停顿排，等于没有闸。
 SILENCE_FILTER = "silencedetect=noise=-35dB:d=0.3"
-_ANCHOR_V = 3               # 时间轴生成方式的版本号：旧缓存没有它就就地重算
+_ANCHOR_V = 4               # 时间轴生成方式的版本号：旧缓存没有它就就地重算
 _RECON_V = 2                # 词流对位算法版本号：变小了说明老缓存是旧算法产的
 _BOUNDARY_RE = re.compile(r"[。！？；，、：]")
 
@@ -763,10 +763,12 @@ def _timeline(spoken: str, mp3: Path,
     """定字幕时间轴。返回 (事件, source, 锚点数)。
 
     路线按优先级：
-    1. 有词级时间戳：**直接用**。服务端时间戳的局部节奏是可靠的，绝对刻度实测
-       偏 0.2~0.7 秒；而 _reconcile_words 已经把 2026-09-22 那次的 6 秒错位修掉，
-       所以这条路现在的误差在 0.6 秒内，是当前最优解。
-    2. 没词流：用配音实测停顿 + 稿件标点排（_events_from_pauses）。
+    0. **自己听配音**拿逐字真实发声时刻（_asr_char_times）。这是 2026-09-22
+       第三宗漂移的正解：配音渠道自报的词级时间戳是句内匀速编的（同一句每个
+       字都是 201.666ms），真人却句内赶着说、停顿留句尾，照自报的排必然整体
+       晚半秒。拿能量起振当硬尺量：自报轴句首平均晚 +0.57s，听出来的轴 +0.04s。
+    1. 听不出来（没密钥/识别挂了/命中率 <0.75）：用词级时间戳 + 停顿小步校正。
+    2. 连词流也没有：用配音实测停顿 + 稿件标点排（_events_from_pauses）。
     3. 都不成：按字数均匀摊。
 
     ⚠️ 2026-09-22 试过两条"用实测停顿给词流重新定刻度"的路，都**没有**上线，
@@ -776,9 +778,15 @@ def _timeline(spoken: str, mp3: Path,
          会把整段挪一格，尾部误差 1.7~2.5 秒，比不动还差；
       b) 把词流的子句首/空洞配到停顿上再拉伸：配对错一格就把同样的量带进来，
          尾部会连续几个子句塌到同一个时刻。
-    结论：停顿是刻度、词流是形状，两边都不足以单独定轴；先把 reconcile 修对，
-    再谈用停顿做小步校正。
+      c) 先把词流整体平移到停顿刻度上再判"是否互相印证"：听着对，实测 0.31→
+         1.20 秒、58/58 全偏早——那个"不印证"本来就是 DP 挪格的表现，平移等于
+         把判据作废。三条共同的教训：**停顿只能当刻度，不能当形状**。
     """
+    at = _asr_char_times(spoken, mp3)
+    if at is not None:
+        ev = _events_from_char_times(spoken, at)
+        if ev:
+            return ev, "asr", len(pause_ends_ms(mp3))
     if word_events:
         ev, a = _blend_with_pauses(spoken, word_events, mp3)
         if a > 0:
@@ -874,6 +882,208 @@ def _blend_with_pauses(spoken: str, events: list[dict],
             out.append({"text": t, "offset_ms": e["offset_ms"],
                         "duration_ms": e["duration_ms"]})
     return out, len(anchors)
+
+
+# ---------- 独立声学时间轴（2026-09-22 第三宗漂移：字幕整体晚半秒） ----------
+
+_ASR_MODEL = "paraformer-realtime-v2"
+_ASR_MIN_HIT = 0.75           # 逐字对位命中率低于此就不采信，退回词流那条路
+
+
+def _asr_key(ch: str) -> str:
+    """稿件字与识别字的公共比较键：汉字原样，数字（中文或阿拉伯）一律 #，
+    拉丁字母一律 L。不这么归一，稿件"一千八百三十"对识别"1830"永远配不上。"""
+    if re.match(r"[一-鿿]", ch):
+        return ch
+    if re.match(r"[0-9零一二两三四五六七八九十百千万亿]", ch):
+        return "#"
+    if re.match(r"[A-Za-z]", ch):
+        return "L"
+    return ""
+
+
+def _dp_align(src: str, ref: str) -> list[int]:
+    """全局对齐：src 每个字符对到 ref 的下标（-1=没对上）。
+
+    不能用 str.find 逐个找：某一句没命中时游标不前进，后面每一句都会命中到
+    **更晚的那一次重复**，一处错就整条链全错（实测把真值算成 0 秒）。"""
+    n, m = len(src), len(ref)
+    if not n or not m:
+        return [-1] * n
+    gap = 1.5
+    prev = [float(j) for j in range(m + 1)]
+    back: list[bytes] = []
+    for i in range(1, n + 1):
+        cur = [i * gap] + [0.0] * m
+        row = bytearray(m + 1)
+        row[0] = 1
+        si = src[i - 1]
+        for j in range(1, m + 1):
+            c1 = prev[j] + gap
+            c2 = cur[j - 1] + gap
+            c3 = prev[j - 1] + (0.0 if si == ref[j - 1] else 1.0)
+            best, k = c3, 3
+            if c1 < best:
+                best, k = c1, 1
+            if c2 < best:
+                best, k = c2, 2
+            cur[j], row[j] = best, k
+        back.append(bytes(row))
+        prev = cur
+    out = [-1] * n
+    i, j = n, m
+    while i > 0:
+        k = back[i - 1][j]
+        if k == 3:
+            out[i - 1] = j - 1
+            i, j = i - 1, j - 1
+        elif k == 1:
+            i -= 1
+        else:
+            j -= 1
+    return out
+
+
+async def _asr_listen(mp3: Path) -> list[tuple[str, float, float]]:
+    """让 paraformer 独立听一遍配音，返回逐字 (字, 起, 止) 毫秒。"""
+    import websockets
+    wav = mp3.with_suffix(".asr.wav")
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(mp3),
+                    "-ar", "16000", "-ac", "1", str(wav)], check=True, timeout=300)
+    try:
+        data = wav.read_bytes()
+    finally:
+        wav.unlink(missing_ok=True)
+    url = "wss://dashscope.aliyuncs.com/api-ws/v1/inference/"
+    tid = uuid.uuid4().hex
+    params = {"model": _ASR_MODEL, "format": "pcm", "sample_rate": 16000,
+              "language_hints": ["zh"], "disfluency_removal_enabled": False,
+              "punctuation_prediction_enabled": True, "word_timestamp_enabled": True}
+
+    def msg(action):
+        return json.dumps({"header": {"action": action, "task_id": tid, "streaming": "duplex"},
+                           "payload": {"task_group": "audio", "task": "asr",
+                                       "function": "recognition", "model": _ASR_MODEL,
+                                       "parameters": params, "input": {}}})
+    headers = {"Authorization": f"bearer {config.DASHSCOPE_API_KEY}",
+               "user-agent": "GetCut/1.0"}
+    live: dict = {}
+    done: list[dict] = []
+    async with websockets.connect(url, additional_headers=headers,
+                                  max_size=None, open_timeout=20) as ws:
+        await ws.send(msg("run-task"))
+        while True:
+            raw = await asyncio.wait_for(ws.recv(), timeout=30)
+            if isinstance(raw, bytes):
+                continue
+            ev = json.loads(raw)
+            e = (ev.get("header") or {}).get("event")
+            if e == "task-started":
+                break
+            if e == "task-failed":
+                raise RuntimeError(json.dumps(ev, ensure_ascii=False)[:300])
+        for i in range(0, len(data), 6400):
+            await ws.send(data[i:i + 6400])
+        await ws.send(msg("finish-task"))
+        while True:
+            raw = await asyncio.wait_for(ws.recv(), timeout=180)
+            if isinstance(raw, bytes):
+                continue
+            ev = json.loads(raw)
+            e = (ev.get("header") or {}).get("event")
+            if e == "result-generated":
+                s = (((ev.get("payload") or {}).get("output") or {}).get("sentence")) or {}
+                if not s:
+                    continue
+                rec = {"begin": s.get("begin_time"), "flag": s.get("sentence_end"),
+                       "words": [(w.get("text") or "", w.get("begin_time") or 0,
+                                  w.get("end_time") or 0) for w in (s.get("words") or [])]}
+                if s.get("begin_time") in live and rec["flag"] is not True:
+                    continue
+                live[s.get("begin_time")] = rec
+                if rec["flag"]:
+                    done.append(rec)
+                    live.pop(s.get("begin_time"), None)
+            elif e == "task-finished":
+                break
+            elif e == "task-failed":
+                raise RuntimeError(json.dumps(ev, ensure_ascii=False)[:300])
+    out: list[tuple[str, float, float]] = []
+    for rec in sorted(done + list(live.values()), key=lambda r: r["begin"] or 0):
+        for t, b, e in rec["words"]:
+            ks = [c for c in ("".join(_asr_key(ch) for ch in t)) if c]
+            for k, ch in enumerate(ks):
+                out.append((ch, b + (e - b) * k / max(len(ks), 1),
+                            b + (e - b) * (k + 1) / max(len(ks), 1)))
+    return out
+
+
+def _asr_char_times(spoken: str, mp3: Path) -> list[float] | None:
+    """每个稿件字的**真实发声时刻**（毫秒）。听不出来或命中率不够返回 None。
+
+    为什么要多花这一次识别：配音渠道自报的词级时间戳是句内匀速编出来的
+    （实测同一句每个字都是 201.666ms，一字不差），而真人是句内赶着说、
+    把停顿留在句尾，所以照自报的排，字幕必然整体偏晚——实测晚 0.57 秒。"""
+    side = mp3.with_suffix(".asr.json")
+    try:
+        if side.is_file():
+            words = [tuple(x) for x in json.loads(side.read_text(encoding="utf-8"))]
+        else:
+            if not config.DASHSCOPE_API_KEY:
+                return None
+            words = asyncio.run(_asr_listen(mp3))
+            if not words:
+                return None
+            side.write_text(json.dumps(words), encoding="utf-8")
+    except Exception as e:  # noqa: BLE001 - 听不了就用词流那条路，绝不能让配音挂掉
+        logging.warning("asr timeline unavailable: %s", e)
+        return None
+    if not words:
+        return None
+    ref = "".join(c for c, _b, _e in words)
+    keys = [_asr_key(ch) for ch in spoken]
+    src_idx = [i for i, k in enumerate(keys) if k]
+    part = _dp_align("".join(keys[i] for i in src_idx), ref)
+    if not src_idx or sum(1 for p in part if p >= 0) / len(src_idx) < _ASR_MIN_HIT:
+        return None
+    times: list[float | None] = [None] * len(spoken)
+    for k, j in enumerate(part):
+        if j >= 0:
+            times[src_idx[k]] = words[j][1]
+    # 没听出来的字（识别吞字/听错）在两侧已知的时刻之间线性补，不硬摊
+    prev_i = None
+    for i, t in enumerate(times):
+        if t is None:
+            continue
+        if prev_i is not None and i - prev_i > 1:
+            span = times[i] - times[prev_i]
+            for k in range(prev_i + 1, i):
+                times[k] = times[prev_i] + span * (k - prev_i) / (i - prev_i)
+        prev_i = i
+    if prev_i is not None:
+        for k in range(prev_i + 1, len(times)):
+            times[k] = times[prev_i]
+    head = next((t for t in times if t is not None), None)
+    if head is None:
+        return None
+    for k in range(len(times)):
+        if times[k] is None:
+            times[k] = head
+    return [float(t) for t in times]
+
+
+def _events_from_char_times(spoken: str, times: list[float]) -> list[dict]:
+    """逐字时刻 → 事件流。不带标点，与词流那条路同一个形状，
+    下游 planner.align_timeline 本来就按去标点的字数查表。"""
+    out: list[dict] = []
+    for i, ch in enumerate(spoken):
+        if PUNCT.fullmatch(ch):
+            continue
+        nxt = next((j for j in range(i + 1, len(spoken))
+                    if not PUNCT.fullmatch(spoken[j])), None)
+        dur = max(times[nxt] - times[i], 1.0) if nxt is not None else 200.0
+        out.append({"text": ch, "offset_ms": times[i], "duration_ms": dur})
+    return out
 
 
 # ---------- 时间戳质量（2026-09-22 字幕漂移修复） ----------

@@ -46,8 +46,8 @@ from videogen import tts                                          # noqa: E402
 from videogen.planner import align_timeline, split_clauses        # noqa: E402
 from videogen.schemas import Content                              # noqa: E402
 
-GATE_MEAN_S = 0.55
-GATE_P90_S = 1.10
+GATE_SIGNED_S = 0.30        # 句首对能量起振的系统偏移上限（正=字幕晚）
+GATE_P90_S = 1.60           # 同一批硬点的 p90 散度上限
 
 _CJK = re.compile(r"[一-鿿]")
 _NUMC = re.compile(r"[0-9零一二两三四五六七八九十百千万亿]")
@@ -276,24 +276,35 @@ def measure(bundle: Path, verbose: bool = True) -> dict:
     late = sum(1 for x in v if x > 0)
     early = n - late
     gaps = sorted((b - a) / 1000.0 for a, b in zip(pauses, pauses[1:], strict=False))
+
+    # 门禁只看硬尺（能量起振）。ASR 那条只能算参考：一旦时间轴也改用 ASR 生成，
+    # "拿 ASR 量 ASR 轴"就永远满分，门禁当场作废——所以判好坏的必须是第三个来源。
+    e_signed = [t[1] - t[2] for t in triples]
+    e_abs = sorted(abs(x) for x in e_signed)
+    e_mean = sum(e_signed) / len(e_signed) if e_signed else 0.0
+    e_p90 = e_abs[min(int(len(e_abs) * 0.9), len(e_abs) - 1)] if e_abs else 0.0
+    ok = (len(e_abs) >= 5 and abs(e_mean) <= GATE_SIGNED_S and e_p90 <= GATE_P90_S)
     w("")
-    w("mean|d|=%.2fs  p50=%.2fs  p90=%.2fs  max=%.2fs" % (
+    w("【门禁·硬尺】句首对能量起振 %d 点：系统偏移=%+.2fs (<=±%.2f)  p90=%.2fs (<=%.2f) -> %s" % (
+        len(e_abs), e_mean, GATE_SIGNED_S, e_p90, GATE_P90_S, "PASS" if ok else "FAIL"))
+    w("")
+    w("参考·ASR 尺：mean|d|=%.2fs p50=%.2fs p90=%.2fs max=%.2fs" % (
         mean_abs, av[n // 2], p90, av[-1]))
-    w(">0.5s: %d/%d   >1.0s: %d   带符号均值=%+.2fs   晚=%d 早=%d" % (
+    w("参考·ASR 尺：>0.5s: %d/%d  >1.0s: %d  带符号均值=%+.2fs  晚=%d 早=%d" % (
         sum(1 for x in v if abs(x) > 0.5), n, sum(1 for x in v if abs(x) > 1.0),
         signed, late, early))
-    w("相邻停顿: 中位 %.1fs 最长 %.1fs（最长那段没有锚点，全靠摊）" % (
+    w("轴来源   : %s" % (tts.__dict__.get("_ASR_MODEL", "?")))
+    w("相邻停顿 : 中位 %.1fs 最长 %.1fs（最长那段没有锚点，全靠摊）" % (
         gaps[len(gaps) // 2] if gaps else 0, gaps[-1] if gaps else 0))
-    w("门禁   : mean|d|<=%.2f 且 p90<=%.2f -> %s" % (
-        GATE_MEAN_S, GATE_P90_S, "PASS" if mean_abs <= GATE_MEAN_S and p90 <= GATE_P90_S else "FAIL"))
     if verbose:
         w("")
         w("逐子句（正=字幕晚于声音）")
         for d in deltas:
             w("  [%2d] %8.2f %8.2f %+7.2f  %s" % (
                 d["i"], d["plan_s"], d["real_s"], d["delta_s"], d["text"][:24]))
-    ok = mean_abs <= GATE_MEAN_S and p90 <= GATE_P90_S
-    return {"ok": ok, "mean_abs_s": round(mean_abs, 3), "p50_s": round(av[n // 2], 3),
+    return {"ok": ok, "gate_signed_s": round(e_mean, 3), "gate_p90_s": round(e_p90, 3),
+            "gate_points": len(e_abs),
+            "mean_abs_s": round(mean_abs, 3), "p50_s": round(av[n // 2], 3),
             "p90_s": round(p90, 3), "max_s": round(av[-1], 3), "signed_s": round(signed, 3),
             "late": late, "early": early, "n": n, "clauses": len(clauses),
             "anchors": len(pauses), "coverage": round(ev_chars / max(len(spoken), 1), 3),
