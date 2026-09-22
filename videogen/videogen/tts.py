@@ -1,11 +1,23 @@
-"""Stage 3: 配音合成（词级时间戳 + 多音字替换）。
+"""Stage 3: 配音合成（分句合成 + 实测摆放，2026-09-22 第四代）。
 
-渠道两档：
-- dashscope（阿里百炼 CosyVoice，质量最好）：配了 DASHSCOPE_API_KEY 就走它，
-  WebSocket 协议，部分音色回字级时间戳；没回时间戳就按音频总长估算。
+时间轴的正确来源只有一个：音频本身。前三天的事故链证明，任何服务端"自报"的
+词级时间戳都不能采信——CosyVoice 的是句内匀速编造的（每字恒定 201.666ms），
+paraformer 听写出来的同样句内匀速编造（66s 音频只切 2 个句段）。所以这一代
+不再"合成完再重建时间轴"，而是让时间轴在物理拼接时自动精确：
+
+  1. 稿子按句切开（_sentence_head_indices），逐句合成（并发、失败只重试该句）；
+  2. 每段转 wav 后 ffprobe 实测时长——文件时长是物理事实，没人能编；
+  3. 按实测时长 + 句间隔把各段物理拼接成整条配音，句 k 的字幕起点 =
+     前面所有段实测时长之和，构造上即真值；
+  4. 句内逗号子句用该段自己的 silencedetect 停顿吸附（段短，错也错不远）。
+
+渠道两档（对时间轴无影响，只是音色不同）：
+- dashscope（阿里百炼 CosyVoice，质量最好）：配了 DASHSCOPE_API_KEY 就走它。
 - edge-tts（微软，免费兜底）：没配百炼密钥时用它，老项目里的 edge 音色 id 也认。
 
 音色目录内置在 DEFAULT_VOICES，assets/voices.json 存在时整体覆盖（改清单不用改代码）。
+旧的时间轴重建机器（词流对位 / 停顿 DP / ASR 自听）保留在文件后半部分：
+测试还指着它们，也留作尸检证据，但 synthesize 不再调用。
 """
 from __future__ import annotations
 
@@ -17,7 +29,6 @@ import logging
 import math
 import re
 import subprocess
-import time
 import uuid
 from pathlib import Path
 
@@ -1156,6 +1167,213 @@ def read_quality(out_dir: Path) -> dict | None:
         return None
 
 
+# ---------- 分句合成 + 实测摆放（2026-09-22 第四代：construct, don't reconstruct） ----------
+
+SENTENCE_GAP_MS = 400        # 句间停顿（风格参数：资讯紧凑可降到 250，总长随之变短）
+_SPLICE_V = 1                # 分句方案版本号：进缓存签名，旧时间轴缓存自动全部失效
+_CLIP_CONCURRENCY = 4        # 逐句并发（百炼账号有并发上限，别拉满）
+_CLIP_MAX_CHARS = 280        # 超长句保护：按逗号细切，子段之间无缝拼接
+_SNAP_TOL_MS = 500.0         # 句内子句边界吸附该段实测停顿的容差
+_SNAP_BAND = (0.4, 3.0)      # 锚点间"每权重耗时"允许偏离本段均值的倍数区间
+
+
+def _split_long(seg: str) -> list[str]:
+    """超长句按标点细切成 ≤_CLIP_MAX_CHARS 的子段（之间不留间隔）。"""
+    pieces, start = [], 0
+    for m in _BOUNDARY_RE.finditer(seg):
+        if m.end() - start >= _CLIP_MAX_CHARS:
+            pieces.append(seg[start:m.end()])
+            start = m.end()
+    pieces.append(seg[start:])
+    return [p for p in pieces if p.strip()] or [seg]
+
+
+def _clip_plan(spoken: str) -> list[tuple[str, int]]:
+    """把稿子切成合成片段，返回 [(片段文本, 片段后间隔ms)]。
+    句（。！？；）是天然切点；一句超过上限再按逗号细切（子段间 gap=0，
+    拼起来仍是连续一句话，字幕不受影响）。"""
+    heads = _sentence_head_indices(spoken) + [len(spoken)]
+    plan: list[tuple[str, int]] = []
+    for a, b in zip(heads, heads[1:], strict=False):
+        seg = spoken[a:b]
+        if not seg.strip():
+            continue
+        if len(seg) <= _CLIP_MAX_CHARS:
+            plan.append((seg, SENTENCE_GAP_MS))
+        else:
+            pieces = _split_long(seg)
+            plan.extend((p, 0 if k < len(pieces) - 1 else SENTENCE_GAP_MS)
+                        for k, p in enumerate(pieces))
+    return plan
+
+
+async def _synth_clips(specs: list[tuple[str, int]], entry: dict, use_dash: bool,
+                       rate: str, work: Path) -> list[Path]:
+    """逐句合成（并发 _CLIP_CONCURRENCY，单句重试 3 次带退避）。
+    一句失败只影响一句——这正是分句合成的另一半好处。"""
+    sem = asyncio.Semaphore(_CLIP_CONCURRENCY)
+    pv = entry.get("pv") or ""
+    speech_rate = round(1.0 + rate_delta(rate), 3)
+    edge_voice = entry.get("edge") or entry.get("id") or VOICE
+
+    async def one(i: int, text: str) -> Path:
+        out = work / f"clip_{i:03d}.mp3"
+        async with sem:
+            for attempt in range(3):
+                try:
+                    if out.exists():
+                        out.unlink()
+                    if use_dash:
+                        await _dashscope_synth(text, pv, speech_rate, out, False)
+                    else:
+                        await _synth(text, edge_voice, rate or RATE, out)
+                    if out.stat().st_size > 500:
+                        return out
+                    raise RuntimeError("合成返回空音频")
+                except Exception:
+                    if attempt == 2:
+                        raise
+                    await asyncio.sleep(1.5 * (attempt + 1))
+        return out
+
+    return list(await asyncio.gather(*[one(i, t) for i, (t, _g) in enumerate(specs)]))
+
+
+def _to_wav(mp3: Path) -> Path:
+    """mp3 → 22050 单声道 wav。时长/停顿一律在 wav 上量：mp3 帧有编码器
+    延迟和填充，拿它对时刻会把每段带进 ~0.1s 的系统误差。"""
+    wav = mp3.with_suffix(".wav")
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(mp3),
+                    "-ar", "22050", "-ac", "1", str(wav)], check=True, timeout=120)
+    return wav
+
+
+def _splice(wavs: list[Path], gaps: list[int], out_mp3: Path, work: Path) -> None:
+    """按实测时长把各段物理拼接（wav 无缝 concat，最后一次性编码）。"""
+    gap_files: dict[int, Path] = {}
+    lines: list[str] = []
+    for i, wav in enumerate(wavs):
+        lines.append(f"file '{wav.resolve().as_posix()}'")
+        g = gaps[i]
+        if g > 0 and i < len(wavs) - 1:
+            gp = gap_files.get(g)
+            if gp is None:
+                gp = work / f"gap_{g}.wav"
+                subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+                                "-i", f"anullsrc=r=22050:cl=mono:d={g / 1000:.3f}",
+                                "-c:a", "pcm_s16le", str(gp)], check=True, timeout=60)
+                gap_files[g] = gp
+            lines.append(f"file '{gp.resolve().as_posix()}'")
+    lst = work / "concat.txt"
+    lst.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0",
+                    "-i", str(lst), "-c:a", "libmp3lame", "-q:a", "2", str(out_mp3)],
+                   check=True, timeout=600)
+
+
+def _clip_char_marks(text: str, wav: Path, dur_ms: float
+                     ) -> tuple[list[tuple[str, float]], int]:
+    """片段内每个非标点字符的相对时刻（ms）。
+
+    均匀摊定形，句内子句边界（，、：后）吸附该段自己的实测停顿——段只有
+    几秒，停顿和标点错也错不远，这正是整段音频上做不到的。"""
+    weights = _char_weights(text)
+    total_w = sum(weights) or 1.0
+    prefix = [0.0]
+    for w in weights:
+        prefix.append(prefix[-1] + w)
+    base = dur_ms / total_w
+    anchors = [(0.0, 0.0), (total_w, dur_ms)]
+    pauses = [p for p in pause_ends_ms(wav) if 80.0 < p < dur_ms - 80.0]
+    used: list[float] = []
+    for i in range(1, len(text)):
+        if text[i - 1] not in "，、：":
+            continue
+        est = prefix[i] * dur_ms / total_w
+        cand = [p for p in pauses
+                if abs(p - est) <= _SNAP_TOL_MS and all(abs(p - u) > 60.0 for u in used)]
+        if not cand:
+            continue
+        p = min(cand, key=lambda q: abs(q - est))
+        used.append(p)
+        anchors.append((prefix[i], p))
+    anchors.sort()
+    # 锚点间的语速不许离谱（离谱=吸附错了位置），丢掉肇事的内点重查
+    while len(anchors) > 2:
+        bad = None
+        for k in range(1, len(anchors) - 1):
+            (w0, t0), (w1, t1) = anchors[k - 1], anchors[k]
+            slope = (t1 - t0) / max(w1 - w0, 1e-6)
+            if not (base * _SNAP_BAND[0] <= slope <= base * _SNAP_BAND[1]):
+                bad = k
+                break
+        if bad is None:
+            break
+        anchors.pop(bad)
+    marks = [(ch, _warp_weight(anchors, prefix[j]))
+             for j, ch in enumerate(text) if not PUNCT.fullmatch(ch)]
+    return marks, len(anchors)
+
+
+_SILENCE_FILTER_LEAD = "silencedetect=noise=-35dB:d=0.08"
+
+
+def _lead_ms(wav: Path) -> float:
+    """片段文件开头那段静音的时长（ms）。字幕要锚的是真实开口，不是文件头。
+    只认"从 0 就开始"的静音（silence_start ≤ 0.05s），中途的停顿不当引子。"""
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-v", "info", "-i", str(wav),
+             "-af", _SILENCE_FILTER_LEAD, "-f", "null", "-"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=120)
+    except Exception:  # noqa: BLE001 - 测不出就当 0，宁早勿晚的量级也只有几十毫秒
+        return 0.0
+    start = None
+    for line in (r.stderr or "").splitlines():
+        if "silence_start:" in line:
+            try:
+                start = float(line.split("silence_start:")[1].split("|")[0].strip())
+            except ValueError:
+                return 0.0
+        elif "silence_end:" in line and start is not None:
+            try:
+                end = float(line.split("silence_end:")[1].split("|")[0].strip())
+            except ValueError:
+                return 0.0
+            return end * 1000.0 if start <= 0.05 else 0.0
+    return 0.0
+
+
+def _splice_selfcheck(spoken: str, events: list[dict], mp3: Path) -> dict:
+    """自检：构造的句首时刻 vs 成片配音能量实测的开口时刻（都换算成秒）。
+    这是新方案唯一的"信不信"问题——理论上应≈0，量出来大就是拼接出了错。
+    配对窗口收紧到 0.25s：句内逗号停顿离句首常常只有零点几秒，窗口宽了
+    会把上一句的逗号开口配进来，报出假错。"""
+    heads = set(_sentence_head_indices(spoken))
+    starts: list[float] = []
+    idx = 0
+    for j, ch in enumerate(spoken):
+        if PUNCT.fullmatch(ch):
+            continue
+        if j in heads and idx < len(events):
+            starts.append(float(events[idx]["offset_ms"]))
+        idx += 1
+    pauses = [p / 1000.0 for p in pause_ends_ms(mp3)]      # pause_ends_ms 返回毫秒！
+    pairs: list[float] = []
+    j = 0
+    for s in starts[1:]:
+        t = s / 1000.0
+        while j < len(pauses) and pauses[j] < t - 0.25:
+            j += 1
+        if j < len(pauses) and abs(pauses[j] - t) <= 0.25:
+            pairs.append(t - pauses[j])
+            j += 1
+    return {"pairs": len(pairs), "expected": max(len(starts) - 1, 0),
+            "signed_mean_s": round(sum(pairs) / len(pairs), 3) if pairs else 0.0,
+            "worst_s": round(max((abs(x) for x in pairs), default=0.0), 3)}
+
+
 # ---------- 对外入口 ----------
 
 def synthesize_preview(voice: str, out_mp3: Path, text: str) -> str:
@@ -1170,134 +1388,89 @@ def synthesize_preview(voice: str, out_mp3: Path, text: str) -> str:
 
 def synthesize(script: str, pronunciations: dict[str, str], out_dir: Path,
                voice: str = VOICE, rate: str = RATE) -> tuple[Path, list[dict]]:
-    """Synthesize the narration; word events align with the ORIGINAL script
-    (homophone substitution is same-length, so boundaries still line up)."""
+    """合成配音，返回 (整条 mp3, 逐字事件)。
+
+    事件与稿件同构（多音字替换等长，去标点后逐字对齐），下游
+    planner.align_timeline 照旧按字数查表。时间轴来源见模块头注释：
+    分句合成 + 实测摆放，不采信任何服务端时间戳。"""
     out_dir.mkdir(parents=True, exist_ok=True)
     mp3 = out_dir / "tts.mp3"
     meta = out_dir / "tts_events.json"
     spoken = apply_pronunciations(script, pronunciations)
     entry = resolve_voice(voice)
     use_dash = entry.get("provider") == "dashscope" and dashscope_ready()
-    # 缓存签名：脚本/多音字/渠道/音色/语速任一变化都会失效，避免复用过期配音
+    # 缓存签名：脚本/多音字/渠道/音色/语速/句间隔/方案版本任一变化都失效
     sig = hashlib.sha1("\x00".join([
-        spoken, json.dumps(pronunciations, ensure_ascii=False),
+        "splice", str(_SPLICE_V), str(SENTENCE_GAP_MS), spoken,
+        json.dumps(pronunciations, ensure_ascii=False),
         "dash" if use_dash else "edge", str(entry.get("pv") or entry.get("edge")),
         rate or RATE]).encode("utf-8")).hexdigest()
     if mp3.exists() and meta.exists():
         try:
             cached = json.loads(meta.read_text(encoding="utf-8"))
             if isinstance(cached, dict) and cached.get("input_sig") == sig:
-                q = cached.get("quality") or {}
-                src = q.get("source")
-                if src == "estimate":
-                    # 估算桶没有词流依赖，用已有 mp3 就地重算即可（一次
-                    # silencedetect），不重新调 TTS、不重复扣费。
-                    if q.get("anchor_v") != _ANCHOR_V:
-                        events, source, anchors = _timeline(spoken, mp3, None)
-                        quality = _events_quality(spoken, events,
-                                                  q.get("provider") or "dashscope",
-                                                  source, anchors=anchors)
-                        meta.write_text(json.dumps(
-                            {"input_sig": sig, "events": events, "quality": quality},
-                            ensure_ascii=False), encoding="utf-8")
-                        return mp3, events
-                    return mp3, cached["events"]
-                if q.get("recon_v") != _RECON_V:
-                    # 词流对位算法换过版本：老缓存里的轴是旧算法产的，而原始词流没
-                    # 落盘、没法就地重算。宁可重新合成，也不拿一条已知会错几秒的
-                    # 轴去排字幕（2026-09-22：那条 6 秒错位的片子就是旧算法的产物）。
-                    log.warning("tts cache predates the current word alignment, "
-                                "re-synthesizing",
-                                extra={"cached_recon_v": q.get("recon_v")})
-                else:
-                    if q.get("anchor_v") != _ANCHOR_V:
-                        events, source, anchors = _timeline(spoken, mp3, cached["events"])
-                        quality = _events_quality(spoken, events,
-                                                  q.get("provider") or "dashscope",
-                                                  source, anchors=anchors)
-                        meta.write_text(json.dumps(
-                            {"input_sig": sig, "events": events, "quality": quality},
-                            ensure_ascii=False), encoding="utf-8")
-                        return mp3, events
-                    return mp3, cached["events"]
+                return mp3, cached["events"]
         except Exception:  # noqa: BLE001 - 旧格式/损坏缓存一律重做
             pass
 
-    if use_dash:
-        speech_rate = round(1.0 + rate_delta(rate), 3)
-        last_err = None
-        for _attempt, want_words in enumerate((True, True, False)):
-            try:
-                words = asyncio.run(_dashscope_synth(
-                    spoken, entry.get("pv") or "", speech_rate, mp3, want_words))
-                # 前两次都要字级时间戳：一次失败可能只是网络/服务端偶发（比如合成
-                # 中途连接被掐），直接降级会把偶发变成永久性的估算配音。第三次才
-                # 放弃时间戳：个别音色确实不支持这个参数，会稳定 task-failed。
-                events = None
-                source = "estimate"
-                if words and want_words:
-                    events = _reconcile_words(spoken, words, _probe_ms(mp3))
-                    if events is None:
-                        dbg = globals().get("_RECON_DEBUG") or {}
-                        log.warning("word timeline reconciliation failed, "
-                                    "falling back to estimate",
-                                    extra={"frames": len(words),
-                                           "confirmed": dbg.get("confirmed"),
-                                           "total": dbg.get("n"),
-                                           "reached": dbg.get("cur")})
-                        try:
-                            (Path(out_dir) / "raw_debug.json").write_text(
-                                json.dumps({"frames": len(words),
-                                            "sample": words[:6000]},
-                                           ensure_ascii=False), encoding="utf-8")
-                        except Exception:  # noqa: BLE001 - 调试落盘失败不影响主流程
-                            pass
-                if events is None and want_words:
-                    log.warning("no word timestamps from TTS, "
-                                "estimating alignment by character count")
-                # 时间轴一律以音频实测停顿为准（词流只当弱先验）——百炼回的词级
-                # 时间戳跟它自己的音频有 0.1~0.7 秒系统偏差，照抄必滞后。
-                events, source, anchors = _timeline(spoken, mp3, events)
-                log.info("timeline resolved", extra={
-                    "source": source, "anchors": anchors, "events": len(events)})
-                meta.write_text(json.dumps(
-                    {"input_sig": sig, "events": events,
-                     "quality": _events_quality(spoken, events, "dashscope", source,
-                                                anchors=anchors)},
-                    ensure_ascii=False), encoding="utf-8")
-                return mp3, events
-            except Exception as e:  # noqa: BLE001 - 网络抖动重试；渠道真挂了就明说，不悄悄降级成微软音
-                last_err = e
-        raise RuntimeError(f"配音服务暂时不可用（百炼 CosyVoice：{last_err}）")
+    specs = _clip_plan(spoken)
+    if not specs:
+        raise RuntimeError("稿件没有可合成的内容")
+    work = out_dir / "clips"
+    work.mkdir(parents=True, exist_ok=True)
+    try:
+        clips = asyncio.run(_synth_clips(specs, entry, use_dash, rate, work))
+    except Exception as e:  # noqa: BLE001 - 渠道真挂了就明说，不悄悄降级成微软音
+        channel = "百炼 CosyVoice" if use_dash else "微软 edge-tts"
+        raise RuntimeError(f"配音服务暂时不可用（{channel}：{e}）") from e
 
-    edge_voice = entry.get("edge") or voice or VOICE
-    if mp3.exists():
-        mp3.unlink()
-    # edge-tts 的 NoAudioReceived 是阵发性的（微软令牌/接口偶发抽风，几分钟一阵），
-    # 重试必须带退避间隔硬扛过去，否则三连发全撞在同一个坑里
-    last_err: Exception | None = None
-    for attempt in range(3):
-        try:
-            events = asyncio.run(_synth(spoken, edge_voice, rate or RATE, mp3))
-            if events:
-                # edge-tts 每个词都带 WordBoundary（真实时间戳），不存在估算兜底；
-                # 但时间轴同样以音频实测停顿为准——服务端时间戳与音频的系统偏差
-                # 不分渠道，字幕对不对得上只看音频。
-                events, source, anchors = _timeline(spoken, mp3, events)
-                meta.write_text(json.dumps(
-                    {"input_sig": sig, "events": events,
-                     "quality": _events_quality(spoken, events, "edge", source,
-                                                anchors=anchors)},
-                    ensure_ascii=False), encoding="utf-8")
-                return mp3, events
-            last_err = RuntimeError("edge-tts 没有返回时间戳")
-        except Exception as e:  # noqa: BLE001 - 偶发网络/令牌故障，退避重试
-            last_err = e
-        if attempt < 2:
-            time.sleep(3 * (attempt + 1))
-    raise RuntimeError(
-        f"配音渠道暂时不可用（微软 edge-tts：{last_err}）。"
-        f"这是偶发故障，通常半分钟后重提任务即可")
+    wavs = [_to_wav(c) for c in clips]
+    durs = [_probe_ms(w) for w in wavs]
+    if min(durs, default=0.0) <= 0.0:
+        raise RuntimeError("配音片段时长测量失败（ffprobe），拒绝构造时间轴")
+    _splice(wavs, [g for _t, g in specs], mp3, work)
+
+    # 字幕时刻：句 k 起点 = 前面所有段实测时长 + 句间隔之和（构造上即真值）。
+    # 每段再扣掉自己文件开头的静音（_lead_ms），让句首锚在真实开口而不是文件头；
+    # 段内字符按 _clip_char_marks（均匀定形 + 段内停顿吸附）。
+    events: list[dict] = []
+    marks: list[tuple[str, float]] = []
+    at = 0.0
+    anchors = 0
+    for (text, gap), wav, d in zip(specs, wavs, durs, strict=True):
+        ms, n = _clip_char_marks(text, wav, d)
+        anchors += n
+        lead = _lead_ms(wav)
+        marks.extend((ch, at + lead + t) for ch, t in ms)
+        at += d + gap
+    total = at - (specs[-1][1] if specs else 0.0)
+    prev_t = -1.0
+    for k, (ch, t) in enumerate(marks):
+        t = max(t, prev_t)                       # 任何情况下不允许倒挂
+        prev_t = t
+        nxt = marks[k + 1][1] if k + 1 < len(marks) else min(total, t + 300.0)
+        events.append({"text": ch, "offset_ms": t, "duration_ms": max(nxt - t, 1.0)})
+
+    chk = _splice_selfcheck(spoken, events, mp3)
+    if chk["expected"] > 0 and chk["pairs"] == 0:
+        raise RuntimeError(
+            f"配音时间轴自检失败：{chk['expected']} 个句首都配不上实测开口，"
+            f"拼接或测量环节有错，拒绝出片")
+    if chk["worst_s"] > 0.25:
+        raise RuntimeError(
+            f"配音时间轴自检失败：句首与实测开口最大偏差 {chk['worst_s']}s，拒绝出片")
+    quality = {"provider": "dashscope" if use_dash else "edge", "source": "splice",
+               "anchors": anchors, "anchor_v": _SPLICE_V,
+               "events": len(events),
+               "coverage": round(sum(len(e["text"]) for e in events)
+                                 / max(len(spoken), 1), 3),
+               "selfcheck": chk}
+    meta.write_text(json.dumps(
+        {"input_sig": sig, "events": events, "quality": quality},
+        ensure_ascii=False), encoding="utf-8")
+    log.info("timeline resolved", extra={"source": "splice", "clips": len(specs),
+                                         "events": len(events), "selfcheck": chk})
+    return mp3, events
 
 
 if __name__ == "__main__":
