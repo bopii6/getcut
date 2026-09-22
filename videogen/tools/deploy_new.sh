@@ -31,7 +31,9 @@ fi
 # 代码备份
 BK="backup/code-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BK/videogen" "$BK/server_static"
-cp -a code/videogen/*.py "$BK/videogen/"
+# 整包备（含 api/ 子目录、ctx.py、BUILD_INFO）：此前是 `*.py` 平铺着拷，server 按域
+# 拆进 api/ 之后这份备份会漏掉全部 82 条路由 —— 拿它回滚等于回滚出一个起不来的服务。
+cp -a code/videogen/. "$BK/videogen/"
 cp -a code/server_static/index.html "$BK/server_static/" 2>/dev/null || true
 echo "[deploy] 旧代码已备份 -> $BK"
 
