@@ -3,6 +3,7 @@
 #
 #   bash tools/selfcheck.sh            # 全部
 #   bash tools/selfcheck.sh --only=frontend
+#   bash tools/selfcheck.sh --only=frontend,ts     # 逗号可拼多条（部署脚本按改动面选时用）
 #   bash tools/selfcheck.sh --fail-demo  # 故意让它红一次，确认这脚本不是在自我安慰
 #
 # 只读脚本：不装包、不连服务器、不写任何状态文件。
@@ -19,11 +20,23 @@ for arg in "$@"; do
   case "$arg" in
     --only=*) ONLY="${arg#--only=}" ;;
     --fail-demo) FAIL_DEMO=1 ;;
-    *) echo "不认识的参数：$arg（可用 --only=backend|ruff|frontend，--fail-demo）" >&2; exit 2 ;;
+    *) echo "不认识的参数：$arg（可用 --only=backend,ruff,frontend,ts 与 --fail-demo）" >&2; exit 2 ;;
   esac
 done
 
-want() { [ -z "$ONLY" ] || [ "$ONLY" = "$1" ]; }
+# 名单写错（比如 --only=frontned）会让 want() 一条都不匹配 —— 那"门禁全绿"其实一条没跑，
+# 所以这里当场拒绝，不往下走。
+if [ -n "$ONLY" ]; then
+  IFS=',' read -r -a _want <<< "$ONLY"
+  for g in "${_want[@]}"; do
+    case "$g" in
+      backend|ruff|frontend|ts) ;;
+      *) echo "--only 不认得「$g」（可用：backend / ruff / frontend / ts，逗号拼）" >&2; exit 2 ;;
+    esac
+  done
+fi
+
+want() { [ -z "$ONLY" ] || printf '%s' ",${ONLY}," | grep -q ",$1,"; }
 
 PASS=0; FAIL=0; SKIP=0; ROWS=""
 
@@ -78,4 +91,10 @@ fi
 echo "门禁结果：$PASS 绿 / $FAIL 红${SKIP:+ / $SKIP 跳过}$ROWS"
 [ "$FAIL" -eq 0 ] || {
   echo "有红的就别往下走：先修到全绿再提交/部署。"; exit 1; }
-echo "全绿。想核线上是哪一版：GET /api/version（要登录），服务器上 docker exec videogen cat /app/videogen/BUILD_INFO.json"
+if [ -n "$ONLY" ]; then
+  _miss=""
+  for g in backend ruff frontend ts; do want "$g" || _miss="$_miss $g"; done
+  echo "子集全绿（跑了 $ONLY；没跑${_miss}）—— 没跑的那几条不等于绿。"
+else
+  echo "全绿。想核线上是哪一版：GET /api/version（要登录），服务器上 docker exec videogen cat /app/videogen/BUILD_INFO.json"
+fi

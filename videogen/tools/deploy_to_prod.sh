@@ -11,8 +11,8 @@
 #   · 版本戳写进 BUILD_INFO.json（容器里没有 .git，不写就只能手填、或者查不到）。
 #
 # 用法：
-#   bash tools/deploy_to_prod.sh --check          # 只报告线上与 HEAD 的差异，不改任何东西
-#   bash tools/deploy_to_prod.sh                  # 校验 bundle + 增量同步 + 重启 + 探活
+#   bash tools/deploy_to_prod.sh --check          # 只报告线上与 HEAD 差哪些文件（不打包、不跑门禁、零改动）
+#   bash tools/deploy_to_prod.sh                  # 按改动面跑门禁 + 校验 bundle + 增量同步 + 重启 + 探活
 #   bash tools/deploy_to_prod.sh --rebuild        # 改了 .env / 加依赖时（重建容器才读 env-file）
 set -uo pipefail
 
@@ -40,12 +40,40 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 TITLE=$(git log -1 --pretty=%s | cut -c1-70)
 echo "[deploy] 要上线的版本：$BRANCH @ $SHA 「$TITLE」"
 
-# 闸门不过就别上线（这条是整轮评审的意义所在）
-if [ "$MODE" = deploy ]; then
-  if ! bash tools/selfcheck.sh >/tmp/selfcheck.log 2>&1; then
-    echo "[deploy] 门禁没过，先别上线"; tail -8 /tmp/selfcheck.log; exit 1
+# 闸门不过就别上线（这条是整轮评审的意义所在）。
+# 跑哪几条闸门按"这次真的动了什么"选：只改成片台时，后端 21 个测试模块与 ruff
+# 一行 Python 都碰不到，全跑一遍只是把部署拖长两三分钟。判不准时 gate_scope 一律往
+# "多跑"那侧倒（认不出的路径 = 全套），所以这里宁可多跑不可漏跑。
+RS=$($SSH "$HOST" "cat $BASE/code/videogen/BUILD_INFO.json 2>/dev/null" \
+      | grep -o '"sha":"[^"]*"' | head -1 | cut -d'"' -f4)
+RANGE=""
+if [ -n "$RS" ] && git merge-base --is-ancestor "$RS" HEAD 2>/dev/null; then
+  RANGE="$RS..HEAD"
+  echo "[deploy] 线上在跑 $RS"
+else
+  [ -n "$RS" ] && echo "[deploy] 线上那版 $RS 不在当前分支上（或被改写过）"
+  echo "[deploy] 认不出线上是哪一版 → 按最后一条提交算"
+fi
+if [ -n "$RANGE" ]; then
+  CHANGED=$(git diff --name-only "$RANGE")
+else
+  CHANGED=$(git diff-tree --no-commit-id --name-only -r "$SHA")
+fi
+if [ -n "$RANGE" ] && [ -z "$CHANGED" ]; then
+  GATES=none; WHY='跳过 · 线上已经是这一版，没有要送的文件'
+else
+  PLAN=$(printf '%s\n' "$CHANGED" | bash tools/gate_scope.sh)
+  GATES=$(printf '%s\n' "$PLAN" | head -1)
+  WHY=$(printf '%s\n' "$PLAN" | tail -1)
+fi
+echo "[deploy] 门禁计划：$WHY"
+if [ "$MODE" = deploy ] && [ "$GATES" != none ]; then
+  if ! bash tools/selfcheck.sh --only="$GATES" >/tmp/selfcheck.log 2>&1; then
+    echo "[deploy] 门禁（$GATES）没过，先别上线"; tail -8 /tmp/selfcheck.log; exit 1
   fi
-  echo "[deploy] 门禁全绿"
+  echo "[deploy] 门禁绿了（$GATES）"
+elif [ "$MODE" = deploy ]; then
+  echo "[deploy] 没有门禁管得着的东西，跳过门禁（bundle 漂移校验照做）"
 fi
 
 STAGE=$(mktemp -d 2>/dev/null || echo /tmp/vg-stage-$$)
@@ -61,13 +89,20 @@ echo "[deploy] 文本已归一为 LF"
 
 # 成片台浏览器实际加载的是 server_static/poc/bundle.js，不是 renderer/src/*.tsx。
 # 先在本机重建并比对，避免源码已经提交但线上仍跑旧 bundle。
-if ! bash tools/build_frontend.sh; then
-  rm -rf "$STAGE"
-  exit 1
+# --check 不打这个包：它承诺"什么都不改"，却要付整条链路里最贵那一步（约 1.5 分钟），
+# 而且正式部署时还会再判一次 —— 漂移真发生了照样拦。
+if [ "$MODE" = deploy ]; then
+  if ! bash tools/build_frontend.sh; then
+    rm -rf "$STAGE"
+    exit 1
+  fi
+else
+  echo "[deploy] --check 不重建 bundle：这一趟不判「源码与产物漂移」，正式部署时判并拦"
 fi
 
-# 只处理本次提交涉及的目录。videogen 每次都发（代码目录很小且要清死模块），
-# 资源目录只有提交真的改到时才参与远端扫描，避免每次部署都给几十 MB 音频做 MD5。
+# 只处理这次真的改了的目录（判据与上面选闸门用的是同一份清单）。
+# videogen 每次都发（代码目录很小且要清死模块），资源目录只有改到时才参与远端扫描，
+# 避免每次部署都给几十 MB 音频做 MD5。
 if [ -n "${VIDEOGEN_DIRS:-}" ]; then
   DEPLOY_DIRS="$VIDEOGEN_DIRS"
 else
@@ -79,7 +114,16 @@ else
       videogen/assets/*|assets/*)              DEPLOY_DIRS="$DEPLOY_DIRS assets" ;;
       videogen/samples/*|samples/*)            DEPLOY_DIRS="$DEPLOY_DIRS samples" ;;
     esac
-  done < <(git diff-tree --no-commit-id --name-only -r "$SHA")
+  done <<< "$CHANGED"
+fi
+
+if [ "$MODE" = check ] && [ -z "${VIDEOGEN_DIRS:-}" ]; then
+  # --check 是拿来回答"线上到底是不是这一版"的：只扫这次改过的目录，就看不见
+  # 别人 scp 上去却没提交的文件 —— 而那正是它该抓的东西。两处代码目录一律扫。
+  # 资源目录（assets/samples 几十 MB）不追加：它们只传不删，误报代价远大于扫一遍。
+  for d in renderer/src server_static; do
+    case " $DEPLOY_DIRS " in *" $d "*) ;; *) DEPLOY_DIRS="$DEPLOY_DIRS $d" ;; esac
+  done
 fi
 
 # 这些文件不是线上运行时输入：它们会制造无意义的漂移和哈希开销。

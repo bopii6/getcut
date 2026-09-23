@@ -9,6 +9,8 @@
 """
 from __future__ import annotations
 
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -84,6 +86,24 @@ class DeployScriptTest(unittest.TestCase):
         self.assertIn("*.bak*", self.s)
         self.assertIn("git diff-tree", self.s)
 
+    def test_gate_is_scoped_to_what_actually_ships(self):
+        """只改成片台时不必重跑后端 21 个测试模块；判不准的那一侧一律多跑。"""
+        self.assertIn("gate_scope.sh", self.s, "门禁又退回无条件全套了")
+        self.assertIn("BUILD_INFO.json", self.s,
+                      "不读线上版本戳就不知道这次要送哪些文件，闸门也就没法按改动面选")
+        self.assertIn("merge-base", self.s, "线上那版不在本分支上时必须退回全套")
+
+    def test_check_mode_does_not_pay_for_a_bundle_build(self):
+        """--check 承诺零改动，却要为整包 webpack 付一分半 —— 只准部署模式打这个包。"""
+        self.assertIn('if [ "$MODE" = deploy ]; then\n  if ! bash tools/build_frontend.sh', self.s,
+                      "--check 又在打 bundle 了")
+        self.assertIn("不判「源码与产物漂移」", self.s, "跳过校验必须说出来，不能悄悄跳过")
+
+    def test_check_still_scans_both_code_dirs(self):
+        """--check 只扫"这次改过的目录"，就看不见别人 scp 上去却没提交的文件 ——
+        而那正是它该抓的东西，所以两处代码目录一律扫。"""
+        self.assertIn('for d in renderer/src server_static; do', self.s)
+
 
 class SelfCheckScriptTest(unittest.TestCase):
     def test_all_three_gates_are_present_and_it_can_fail(self):
@@ -98,6 +118,58 @@ class SelfCheckScriptTest(unittest.TestCase):
         s = read("tools/run_backend.sh")
         self.assertIn("for f in tests/test_*.py", s)
         self.assertIn('python -m unittest "$m"', s)
+
+    def test_it_takes_a_gate_list_and_refuses_a_typo(self):
+        """--only 写错名字会让"一条都没跑"看起来像"全绿"，所以名单必须当场验。"""
+        s = read("tools/selfcheck.sh")
+        self.assertIn("--only=frontend,ts", s, "逗号拼多条门禁的用法没了")
+        self.assertIn('不认得「$g」', s)
+        self.assertIn("没跑的那几条不等于绿", s, "子集跑完要自报没跑哪些，不然会被当成全套")
+
+
+class GateScopeTest(unittest.TestCase):
+    """选闸门这件事本身要真跑着测：选错闸门的后果是"少查了东西"，
+    而 grep 脚本内容是看不出来少查了什么的。"""
+
+    def plan(self, *paths: str) -> str:
+        bash = shutil.which("bash")
+        if not bash:
+            self.skipTest("没有 bash，跑不了这个脚本")
+        # 字节进出：Windows 上 text=True 会把 \n 翻成 \r\n，脚本收到的就不是这些路径了
+        data = "".join(p + "\n" for p in paths).encode("utf-8")
+        r = subprocess.run([bash, str(ROOT / "tools" / "gate_scope.sh")],
+                           input=data, capture_output=True, cwd=ROOT)
+        self.assertEqual(r.returncode, 0, r.stderr.decode("utf-8", "replace"))
+        return r.stdout.decode("utf-8", "replace").splitlines()[0]
+
+    def test_crlf_manifest_is_still_understood(self):
+        """清单会从 Windows 侧管道进来：带着 \\r 就会被判成"认不出来"，白跑全套。"""
+        self.assertEqual(self.plan("videogen/renderer/src/tool/ui.css\r"), "frontend,ts")
+
+    def test_compositor_only_skips_the_backend(self):
+        self.assertEqual(
+            self.plan("videogen/renderer/src/tool/ui.css", "videogen/server_static/poc/bundle.js"),
+            "frontend,ts")
+
+    def test_python_only_skips_the_frontend(self):
+        self.assertEqual(self.plan("videogen/videogen/server.py"), "backend,ruff")
+
+    def test_both_sides_run_everything(self):
+        self.assertEqual(self.plan("videogen/renderer/src/a.tsx", "videogen/videogen/auth.py"),
+                         "backend,ruff,frontend,ts")
+
+    def test_ops_and_ci_files_run_everything(self):
+        """部署脚本 / CI / 线上配置自己不在任何一条门禁覆盖里 —— 动它们就全套。"""
+        for p in ("videogen/tools/deploy_to_prod.sh", ".github/workflows/tests.yml",
+                  "videogen/deploy/Caddyfile"):
+            self.assertEqual(self.plan(p), "backend,ruff,frontend,ts", p)
+
+    def test_docs_and_assets_run_nothing(self):
+        self.assertEqual(self.plan("videogen/README.md", "design-mockups/a.png"), "none")
+
+    def test_missing_manifest_falls_back_to_full(self):
+        """拿不到清单（认不出线上是哪一版）必须等于全套，不许当成"没改动"而跳过。"""
+        self.assertEqual(self.plan(), "backend,ruff,frontend,ts")
 
 
 class BackupScriptTest(unittest.TestCase):

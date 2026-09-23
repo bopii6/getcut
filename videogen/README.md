@@ -166,7 +166,14 @@ git add renderer/src server_static/poc/bundle.js
 git commit -m "fix(成片台): ..."
 ```
 
-正式部署脚本会再次构建校验；源码与 bundle 不一致会直接停止，不会把旧前端静默发布。部署默认只扫描本次提交涉及的目录，并跳过 `__pycache__`、`.pyc`、source map 与 `.bak` 备份文件，避免无关文件拖慢远端 MD5。
+正式部署脚本会再次构建校验；源码与 bundle 不一致会直接停止，不会把旧前端静默发布。
+
+跑哪几条门禁按"这次真的送了什么"选（`tools/gate_scope.sh` 决定，起点是线上自己的版本戳 `BUILD_INFO.json`）：
+只改成片台 → 只跑前端测试 + 类型检查（约 6 秒，后端 21 个测试模块一行 Python 都碰不到）；
+只动 Python → 后端 + ruff；动了 `tools/`、`deploy/`、`.github/` 或认不出线上是哪一版 → 全套；
+只送文档与素材 → 跳过门禁。判不准一律往多跑那侧倒。部署默认只扫描这次要送的文件涉及的目录，
+并跳过 `__pycache__`、`.pyc`、source map 与 `.bak` 备份文件，避免无关文件拖慢远端 MD5；
+`--check` 不重建 bundle（省一分半），但会把"这一趟没判漂移"说出来，正式部署时照样拦。
 
 ```bash
 cd videogen
@@ -231,10 +238,12 @@ XFF 第一段是客户端自己写的，无条件信就等于"换一行 header �
   改确认页控件要同步改测试与 `tests/frontend-harness.cjs` 的 mock。
   "某控件已下线"这类断言走 `assertAbsent(...)`，别把 DOM 节点交给 `assert.equal(x, null)` ——
   失败时 Node 会 inspect 整棵 LinkeDOM 树，实测一次吃掉 63GB 内存再 OOM 崩进程，真原因被盖住。
-- 后端闸门（184 条，全离线：鉴权边界 / 状态文件 / 卡密与档位 / 分镜节奏与素材包解析 / 成片台两端协议字段 / 剪映分轨草稿 / 依赖锁定策略 / 版本链路 / 试玩额度 / 路径边界普查；
+- 后端闸门（298 条，全离线：鉴权边界 / 状态文件 / 卡密与档位 / 分镜节奏与素材包解析 / 成片台两端协议字段 / 剪映分轨草稿 / 依赖锁定策略 / 版本链路 / 试玩额度 / 路径边界普查；
   只开发环境要 `pip install httpx`）：`bash tools/run_backend.sh`（每个模块独立进程：这些用例都会改 import 期全局常量，
   同一进程混跑会偶发假红 —— 2026-09-21 查「偶发红」查到的根因就在这）。
-  三条门禁一起跑（后端 + ruff + 前端，只读不装包）：`bash tools/selfcheck.sh`；单跑一条用 `--only=frontend`；
+  四条门禁一起跑（后端 + ruff + 前端 + 类型检查，只读不装包）：`bash tools/selfcheck.sh`；
+  单跑一条或几条用 `--only=frontend` / `--only=frontend,ts`（部署脚本就是靠这个按改动面选闸门，名单写错会当场拒，
+  免得"一条都没跑"被当成全绿）；
   想确认这脚本不是在自我安慰就跑 `--fail-demo`，或临时加一条会红的测试看它报不报红。
   改 `/media`、`/api/*` 的鉴权或归属、卡密兑换规则、Plan 落盘字段与节奏分块时先看它红不红。
   ⚠️ 这些测试都靠"临时目录 + 显式改指 `auth.USERS_FILE` 等 import 期常量"隔离，
