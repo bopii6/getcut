@@ -15,13 +15,6 @@ export interface AuthSt { smtp: boolean; dev_email: boolean; token_auth: boolean
 export type SheetName = '' | 'auth' | 'pricing' | 'settings' | 'contact' | 'brand';
 
 
-/** 菜单里那行「你现在这档有什么」——与权益页同一口径，别两处各说一套 */
-const benefitNote = (tier: string) => {
-  if (tier === 'premium') return '无水印出片不限量 + 品牌套装（自有 Logo/文字水印）+ 我的声音克隆 + 剪映草稿导出 + 优先出片。永久有效。';
-  if (tier === 'basic') return '出片不限量、无 GetCut 水印，六套模板与音色任选，永久有效。想解锁品牌套件和剪映精剪，升高级版。';
-  return '每天有免费出片额度，成片带 GetCut 水印。兑换卡密或升级后立即去水印。';
-};
-
 /* ───────────────────────── 登录 / 注册 / 重设密码 ───────────────────────── */
 
 const AuthSheet: React.FC<{
@@ -624,6 +617,11 @@ export const Account: React.FC<{
     all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9, width: '100%',
     padding: '9px 12px', borderRadius: 8, fontSize: 13.5, color: C.ink, boxSizing: 'border-box',
   };
+  // 菜单图标列：固定宽 + 同字号，字符再花文字也不歪（用户反馈：💬 大图标把文字顶歪了）
+  const mi: React.CSSProperties = {
+    fontStyle: 'normal', width: 20, textAlign: 'center', fontSize: 12.5,
+    flex: 'none', lineHeight: 1,
+  };
   const tier = me?.tier || 'free';
   // 本机开放模式（这台服务器一个账号都没建）：不摆账号入口，别给自用人添噪
   if (!me && !authst.locked && !authst.token_auth && !sheet) return null;
@@ -682,12 +680,9 @@ export const Account: React.FC<{
                 <b>已用 {me.builds_today || 0} / {me.free_daily_builds} 条</b>
               </div>
             ) : null}
-            <div style={{fontSize: 12, color: C.soft, lineHeight: 1.7, marginTop: 8}}>
-              {benefitNote(tier)}
-            </div>
           </div>
           <button style={item} onClick={() => { setMenu(false); setSheet(tier === 'premium' ? 'brand' : 'pricing'); }}>
-            <i style={{fontStyle: 'normal', color: tier === 'premium' ? C.accent : C.soft}}>
+            <i style={{...mi, color: tier === 'premium' ? C.accent : C.soft}}>
               {tier === 'premium' ? '◈' : '🔒'}
             </i>品牌套装
             <i style={{fontStyle: 'normal', marginLeft: 'auto', fontSize: 12, color: C.soft}}>
@@ -695,21 +690,21 @@ export const Account: React.FC<{
             </i>
           </button>
           <button style={item} onClick={() => { setMenu(false); setSheet('settings'); }}>
-            <i style={{fontStyle: 'normal'}}>⚙</i>账号设置
+            <i style={mi}>⚙</i>账号设置
             <i style={{fontStyle: 'normal', marginLeft: 'auto', fontSize: 12, color: C.soft}}>
               昵称 · 头像 · 密码
             </i>
           </button>
           <button style={item} onClick={() => { setMenu(false); setSheet('pricing'); }}>
-            <i style={{fontStyle: 'normal', color: C.accent}}>
+            <i style={{...mi, color: C.accent}}>
               {tier === 'premium' ? '◆' : '⚡'}
             </i>{tier === 'premium' ? '我的权益' : '升级 / 兑换卡密'}
           </button>
           <button style={item} onClick={() => { setMenu(false); setSheet('contact'); }}>
-            <i style={{fontStyle: 'normal'}}>💬</i>联系创始人
+            <i style={mi}>✉︎</i>联系创始人
           </button>
           <button style={{...item, color: C.err}} onClick={() => void signOut()}>
-            <i style={{fontStyle: 'normal'}}>⎋</i>退出登录
+            <i style={mi}>⎋</i>退出登录
           </button>
         </div>
       ) : null}

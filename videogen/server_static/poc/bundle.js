@@ -11612,11 +11612,6 @@ const BrandSheet = ({ onClose, toast, onBrandChanged }) => {
 
 
 
-const benefitNote = (tier) => {
-  if (tier === "premium") return "\u65E0\u6C34\u5370\u51FA\u7247\u4E0D\u9650\u91CF + \u54C1\u724C\u5957\u88C5\uFF08\u81EA\u6709 Logo/\u6587\u5B57\u6C34\u5370\uFF09+ \u6211\u7684\u58F0\u97F3\u514B\u9686 + \u526A\u6620\u8349\u7A3F\u5BFC\u51FA + \u4F18\u5148\u51FA\u7247\u3002\u6C38\u4E45\u6709\u6548\u3002";
-  if (tier === "basic") return "\u51FA\u7247\u4E0D\u9650\u91CF\u3001\u65E0 GetCut \u6C34\u5370\uFF0C\u516D\u5957\u6A21\u677F\u4E0E\u97F3\u8272\u4EFB\u9009\uFF0C\u6C38\u4E45\u6709\u6548\u3002\u60F3\u89E3\u9501\u54C1\u724C\u5957\u4EF6\u548C\u526A\u6620\u7CBE\u526A\uFF0C\u5347\u9AD8\u7EA7\u7248\u3002";
-  return "\u6BCF\u5929\u6709\u514D\u8D39\u51FA\u7247\u989D\u5EA6\uFF0C\u6210\u7247\u5E26 GetCut \u6C34\u5370\u3002\u5151\u6362\u5361\u5BC6\u6216\u5347\u7EA7\u540E\u7ACB\u5373\u53BB\u6C34\u5370\u3002";
-};
 const AuthSheet = ({ authst, mode0, note, onClose, onSignedIn }) => {
   const [mode, setMode] = react.useState(mode0);
   const [msg, setMsg] = react.useState({ t: "", k: "err" });
@@ -12438,6 +12433,14 @@ const Account = ({ me, authst, sheet, setSheet, refresh, onMe, onSignedIn, authN
     color: C.ink,
     boxSizing: "border-box"
   };
+  const mi = {
+    fontStyle: "normal",
+    width: 20,
+    textAlign: "center",
+    fontSize: 12.5,
+    flex: "none",
+    lineHeight: 1
+  };
   const tier = (me == null ? void 0 : me.tier) || "free";
   if (!me && !authst.locked && !authst.token_auth && !sheet) return null;
   return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
@@ -12551,14 +12554,13 @@ const Account = ({ me, authst, sheet, setSheet, refresh, onMe, onSignedIn, authN
             me.free_daily_builds,
             " \u6761"
           ] })
-        ] }) : null,
-        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 12, color: C.soft, lineHeight: 1.7, marginTop: 8 }, children: benefitNote(tier) })
+        ] }) : null
       ] }),
       /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { style: item, onClick: () => {
         setMenu(false);
         setSheet(tier === "premium" ? "brand" : "pricing");
       }, children: [
-        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal", color: tier === "premium" ? C.accent : C.soft }, children: tier === "premium" ? "\u25C8" : "\u{1F512}" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { ...mi, color: tier === "premium" ? C.accent : C.soft }, children: tier === "premium" ? "\u25C8" : "\u{1F512}" }),
         "\u54C1\u724C\u5957\u88C5",
         /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal", marginLeft: "auto", fontSize: 12, color: C.soft }, children: tier === "premium" ? "Logo \xB7 \u58F0\u97F3 \xB7 \u6C34\u5370" : "\u9AD8\u7EA7\u7248" })
       ] }),
@@ -12566,7 +12568,7 @@ const Account = ({ me, authst, sheet, setSheet, refresh, onMe, onSignedIn, authN
         setMenu(false);
         setSheet("settings");
       }, children: [
-        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal" }, children: "\u2699" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: mi, children: "\u2699" }),
         "\u8D26\u53F7\u8BBE\u7F6E",
         /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal", marginLeft: "auto", fontSize: 12, color: C.soft }, children: "\u6635\u79F0 \xB7 \u5934\u50CF \xB7 \u5BC6\u7801" })
       ] }),
@@ -12574,18 +12576,18 @@ const Account = ({ me, authst, sheet, setSheet, refresh, onMe, onSignedIn, authN
         setMenu(false);
         setSheet("pricing");
       }, children: [
-        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal", color: C.accent }, children: tier === "premium" ? "\u25C6" : "\u26A1" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { ...mi, color: C.accent }, children: tier === "premium" ? "\u25C6" : "\u26A1" }),
         tier === "premium" ? "\u6211\u7684\u6743\u76CA" : "\u5347\u7EA7 / \u5151\u6362\u5361\u5BC6"
       ] }),
       /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { style: item, onClick: () => {
         setMenu(false);
         setSheet("contact");
       }, children: [
-        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal" }, children: "\u{1F4AC}" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: mi, children: "\u2709\uFE0E" }),
         "\u8054\u7CFB\u521B\u59CB\u4EBA"
       ] }),
       /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { style: { ...item, color: C.err }, onClick: () => void signOut(), children: [
-        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal" }, children: "\u238B" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: mi, children: "\u238B" }),
         "\u9000\u51FA\u767B\u5F55"
       ] })
     ] }) : null,
