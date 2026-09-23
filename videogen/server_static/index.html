@@ -5513,7 +5513,7 @@ async function importDraft(rid) {
   const old = a.innerHTML;
   const release = () => { const b = $("jyBtn"); if (!b) return; b.dataset.busy = ""; b.disabled = false; b.innerHTML = old; };
   a.dataset.busy = "1"; a.disabled = true;
-  a.innerHTML = `<span class="spin"></span>正在准备草稿…`;
+  a.innerHTML = `<span class="spin"></span>正在准备剪映草稿…`;
   try {
     const res = await api(`/api/projects/${pid}/renders/${rid}/jianying-import`, {method: "POST"});
     if (res && res.installed) {
@@ -5592,11 +5592,35 @@ function openJyAssist(rid) {
 }
 function closeJyAssist(){ const d = $("jyAssist"); if (d){ d.close(); d.remove(); } }
 
-/* 下载导入包（不想装助手的退路）：带转圈，避免点链接干等 */
+/* 下载导入包（不想装助手的退路）：先提示服务端打包，再显示真实下载进度 */
 async function downloadDraft(pid, rid) {
+  toast("正在打包剪映草稿…首次导出会整理分镜素材，页面没有卡住");
   const res = await fetch(qs(`/api/projects/${pid}/renders/${rid}/jianying-draft`));
   if (!res.ok) throw new Error("打包失败");
-  const blob = await res.blob();
+  const total = Number(res.headers.get("Content-Length") || 0);
+  let blob;
+  if (!res.body) {
+    blob = await res.blob();
+  } else {
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    let lastPct = -1;
+    for (;;) {
+      const part = await reader.read();
+      if (part.done) break;
+      if (!part.value) continue;
+      chunks.push(part.value);
+      received += part.value.byteLength;
+      const pct = total > 0 ? Math.min(99, Math.round(received / total * 100)) : -1;
+      if (pct !== lastPct) {
+        lastPct = pct;
+        toast(pct >= 0 ? `正在下载剪映草稿… ${pct}%`
+          : `正在下载剪映草稿… ${(received / 1024 / 1024).toFixed(1)} MB`);
+      }
+    }
+    blob = new Blob(chunks, {type: res.headers.get("Content-Type") || "application/zip"});
+  }
   const cd = res.headers.get("Content-Disposition") || "";
   const m = /filename\*=UTF-8''([^;]+)/.exec(cd);
   const name = m ? decodeURIComponent(m[1]) : "jianying-draft.zip";
