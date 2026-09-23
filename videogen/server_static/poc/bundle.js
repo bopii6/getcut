@@ -13378,10 +13378,55 @@ const App = () => {
       setErr("\u6D4F\u89C8\u5668\u62E6\u4E86\u81EA\u52A8\u64AD\u653E\uFF0C\u518D\u70B9\u4E00\u6B21\u8BD5\u8BD5");
     });
   };
+  const downloadDraftPackage = async (url, notify, fallbackName) => {
+    notify("\u6B63\u5728\u6253\u5305\u526A\u6620\u8349\u7A3F\u2026\u9996\u6B21\u5BFC\u51FA\u4F1A\u6574\u7406\u5206\u955C\u7D20\u6750\uFF0C\u9875\u9762\u6CA1\u6709\u5361\u4F4F");
+    const r = await fetch(url);
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(String(d.error || `HTTP ${r.status}`));
+    }
+    const total = Number(r.headers.get("content-length") || 0);
+    if (!r.body) {
+      const blob2 = await r.blob();
+      const href2 = URL.createObjectURL(blob2);
+      const a2 = document.createElement("a");
+      a2.href = href2;
+      a2.download = fallbackName;
+      a2.click();
+      setTimeout(() => URL.revokeObjectURL(href2), 1e3);
+      notify("\u8349\u7A3F\u5305\u5DF2\u4E0B\u8F7D\uFF1A\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D");
+      return;
+    }
+    const reader = r.body.getReader();
+    const chunks = [];
+    let received = 0;
+    let lastPct = -1;
+    for (; ; ) {
+      const part = await reader.read();
+      if (part.done) break;
+      if (part.value) {
+        chunks.push(part.value);
+        received += part.value.byteLength;
+        const pct2 = total > 0 ? Math.min(99, Math.round(received / total * 100)) : -1;
+        if (pct2 !== lastPct) {
+          lastPct = pct2;
+          notify(pct2 >= 0 ? `\u6B63\u5728\u4E0B\u8F7D\u526A\u6620\u8349\u7A3F\u2026 ${pct2}%` : `\u6B63\u5728\u4E0B\u8F7D\u526A\u6620\u8349\u7A3F\u2026 ${(received / 1024 / 1024).toFixed(1)} MB`);
+        }
+      }
+    }
+    const blob = new Blob(chunks, { type: r.headers.get("content-type") || "application/zip" });
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = fallbackName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(href), 1e3);
+    notify("\u8349\u7A3F\u5305\u5DF2\u4E0B\u8F7D\uFF1A\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D");
+  };
   const jianying = async () => {
     if (!projectId || !jobId || jyBusy) return;
     setJyBusy(true);
-    setJy("\u6B63\u5728\u51C6\u5907\u8349\u7A3F\u2026");
+    setJy("\u6B63\u5728\u51C6\u5907\u526A\u6620\u8349\u7A3F\u2026\u9996\u6B21\u4F1A\u6574\u7406\u5206\u955C\u7D20\u6750\uFF0C\u9875\u9762\u6CA1\u6709\u5361\u4F4F");
     try {
       const res = await api(
         `/api/projects/${projectId}/renders/${jobId}/jianying-import`,
@@ -13403,12 +13448,19 @@ const App = () => {
           document.removeEventListener("visibilitychange", off);
           if (!woke) {
             setJy("\u8FD9\u53F0\u7535\u8111\u6CA1\u88C5\u5BFC\u5165\u5C0F\u52A9\u624B\uFF1A\u8349\u7A3F\u5305\u5DF2\u6539\u4E3A\u4E0B\u8F7D\uFF0C\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D\uFF1B\u4E0D\u88C5\u4E5F\u80FD\u7528\u2014\u2014\u526A\u6620\u91CC\u76F4\u63A5\u5BFC\u5165\u90A3\u4E2A MP4\u3002");
-            location.href = `/api/projects/${projectId}/renders/${jobId}/jianying-draft`;
+            void downloadDraftPackage(
+              `/api/projects/${projectId}/renders/${jobId}/jianying-draft`,
+              setJy,
+              `GetCut-\u526A\u6620\u8349\u7A3F-${jobId.slice(-6)}.zip`
+            ).catch((e) => setJy("\u4E0B\u8F7D\u5931\u8D25\uFF1A" + String(e.message || e)));
           }
         }, 2600);
       } else {
-        setJy("\u8349\u7A3F\u5305\u5DF2\u4E0B\u8F7D\uFF1A\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D\uFF08\u53EA\u60F3\u5FEB\u70B9\u526A\u7684\u8BDD\uFF0C\u76F4\u63A5\u628A\u8FD9\u4E2A MP4 \u62D6\u8FDB\u526A\u6620\u5C31\u884C\uFF09");
-        location.href = `/api/projects/${projectId}/renders/${jobId}/jianying-draft`;
+        await downloadDraftPackage(
+          `/api/projects/${projectId}/renders/${jobId}/jianying-draft`,
+          setJy,
+          `GetCut-\u526A\u6620\u8349\u7A3F-${jobId.slice(-6)}.zip`
+        );
       }
     } catch (e) {
       setJy("\u5BFC\u5165\u5931\u8D25\uFF1A" + String(e.message));
@@ -13440,12 +13492,19 @@ const App = () => {
           document.removeEventListener("visibilitychange", off);
           if (!woke) {
             say("\u6CA1\u88C5\u5BFC\u5165\u5C0F\u52A9\u624B\uFF1A\u8349\u7A3F\u5305\u5DF2\u6539\u4E3A\u4E0B\u8F7D\uFF0C\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D");
-            location.href = `/api/projects/${pid}/renders/${rid}/jianying-draft`;
+            void downloadDraftPackage(
+              `/api/projects/${pid}/renders/${rid}/jianying-draft`,
+              say,
+              `GetCut-\u526A\u6620\u8349\u7A3F-${rid.slice(-6)}.zip`
+            ).catch((e) => say("\u4E0B\u8F7D\u5931\u8D25\uFF1A" + String(e.message || e)));
           }
         }, 2600);
       } else {
-        say("\u8349\u7A3F\u5305\u5DF2\u4E0B\u8F7D\uFF1A\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D");
-        location.href = `/api/projects/${pid}/renders/${rid}/jianying-draft`;
+        await downloadDraftPackage(
+          `/api/projects/${pid}/renders/${rid}/jianying-draft`,
+          say,
+          `GetCut-\u526A\u6620\u8349\u7A3F-${rid.slice(-6)}.zip`
+        );
       }
     } catch (e) {
       say("\u5BFC\u5165\u5931\u8D25\uFF1A" + String(e.message));
