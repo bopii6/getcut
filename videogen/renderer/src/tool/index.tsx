@@ -62,6 +62,21 @@ const THEMES = [
   {id: 'zhimu', name: '纸墨'}, {id: 'daiqing', name: '黛青'},
 ];
 
+// 画面样式（模板）：清单以 /api/templates 为准，一句话讲清长相由这里负责。
+// 缩略图与样片是 tools/make_template_previews.py 产的，模板改了要重跑那条命令。
+interface Tpl {id: string; name: string}
+const TPL_HINT: Record<string, string> = {
+  editorial: '纸卡 + 标题带 + 信息卡，信息量最足',
+  news: '深蓝正红 + 底部信息条，适合时政、突发',
+  data: '浅色仪表盘：左边数据右边素材',
+  poster: '黑底荧光黄、一句一屏，冲击力优先',
+  bleed: '素材铺满全屏，沉浸感强',
+  zhigu: '三段式：顶带标题 / 中间舞台动作 / 底带字幕',
+  macro: '深色章节式：大数字与图形块',
+};
+const TPL_IMG = (id: string) => `/templates/tpl-${id}.png`;
+const TPL_SAMPLE = (id: string) => `/templates/sample-${id}.mp4`;
+
 /** 品牌记号：与工作台同一个方印（右下角那一刀就是「Cut」），颜色跟主题走 */
 const Mark: React.FC<{size?: number}> = ({size = 26}) => (
   <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
@@ -190,7 +205,10 @@ const App: React.FC = () => {
   }, [envBusy]);
   const [voices, setVoices] = React.useState<Voice[]>([]);
   const [music, setMusic] = React.useState<{file: string; name: string; mood?: string}[]>([]);
-  const [cfg, setCfg] = React.useState({voice: '', bgm: '', subtitles: true, sfx: true, sources: true});
+  const [tpls, setTpls] = React.useState<Tpl[]>([]);
+  const [tplSample, setTplSample] = React.useState('');
+  const [cfg, setCfg] = React.useState({voice: '', bgm: '', template: '',
+                                        subtitles: true, sfx: true, sources: true});
   const [pack, setPack] = React.useState<JobPack | null>(null);
   const [prewarmDone, setPrewarmDone] = React.useState(0);
   const [pct, setPct] = React.useState(0);
@@ -352,6 +370,15 @@ const App: React.FC = () => {
     api('/api/music').then((d) => {
       const list = (Array.isArray(d) ? d : (d.music as typeof music)) || [];
       setMusic(list);
+    }).catch(() => {});
+    api('/api/templates').then((d) => {
+      const list = (d.templates as Tpl[]) || [];
+      if (!list.length) return;
+      setTpls(list);
+      // 服务端没给默认就取第一套：选中的那套必须真的能出片，别留一个空 format
+      const def = String(d.default || '');
+      setCfg((c) => (c.template ? c
+        : {...c, template: list.some((t) => t.id === def) ? def : list[0].id}));
     }).catch(() => {});
   }, []);
 
@@ -552,6 +579,7 @@ const App: React.FC = () => {
       const r = await api('/api/build', {method: 'POST',
         headers: {'content-type': 'application/json'},
         body: JSON.stringify({project_id: projectId, bundle: bundle.name,
+          format: cfg.template,
           voice: cfg.voice, bgm: cfg.bgm, sfx: cfg.sfx, sfxMode: cfg.sfx ? 'full' : 'off',
           subtitles: cfg.subtitles, sources: cfg.sources,
           watermark: true,   // 右上角水印常开：留空显示「Powered by GetCut」，设了品牌则出品牌水印
@@ -910,6 +938,7 @@ const App: React.FC = () => {
   const title = bundle?.title || pack?.props.headline?.lines?.[0]?.text || '';
   const fileName = `${(title || 'getcut').replace(/[\\/:*?"<>|\[\]]/g, '')}-${(pack?.job || jobId).slice(-6)}.mp4`;
   const nChars = (bundle?.script || '').length;
+  const tplName = tpls.find((t) => t.id === cfg.template)?.name || cfg.template;
   const mm = (s: number) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.round(Math.max(0, s)) % 60).padStart(2, '0')}`;
   const mmss = mm(elapsed);
   const codecOk = typeof (window as unknown as {VideoEncoder?: unknown}).VideoEncoder !== 'undefined';
@@ -1060,6 +1089,30 @@ const App: React.FC = () => {
                   <span>{nImg} 图 / {nVid} 视频</span>
                 </div>
                 <div className="togo">口播文案在右边整屏核对，看完直接点生成</div>
+
+                {/* 画面样式：这套片子最贵的差别，不该藏在二级浮层里 —— 缩略图直接摊开，点哪个用哪个 */}
+                {tpls.length ? (
+                  <div className="field" style={{marginTop: 16}}>
+                    <div className="lb tpl-lb">
+                      <span>画面样式</span>
+                      <button className="btn ln sm" onClick={() => setTplSample(cfg.template)}>看样片</button>
+                    </div>
+                    <div className="tplrow" role="radiogroup" aria-label="画面样式">
+                      {tpls.map((t) => (
+                        <button key={t.id} type="button" role="radio"
+                                aria-checked={cfg.template === t.id} aria-label={t.name}
+                                className={`tplth${cfg.template === t.id ? ' on' : ''}`}
+                                onClick={() => setCfg({...cfg, template: t.id})}>
+                          <img src={TPL_IMG(t.id)} alt="" loading="lazy"
+                               onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                        </button>
+                      ))}
+                    </div>
+                    <div className="tplcap">
+                      <b>{tplName}</b><span>{TPL_HINT[cfg.template] || '这套就是推荐样式'}</span>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="field" style={{marginTop: 16}}>
                   <div className="lb">配音</div>
@@ -1371,6 +1424,17 @@ const App: React.FC = () => {
           <a href="/refund" target="_blank" rel="noopener">退款说明</a>
         </div>
       </footer>
+
+      {tplSample ? (
+        <Sheet title={`「${tplName}」样片`} width={400} onClose={() => setTplSample('')}>
+          <video className="tplvid" controls autoPlay playsInline
+                 poster={TPL_IMG(tplSample)} src={TPL_SAMPLE(tplSample)}
+                 onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          <div className="note" style={{marginTop: 12}}>
+            同一段演示内容在这套样式下出的真片，约 17 秒。样片播不出来？说明这套的样片还没生成。
+          </div>
+        </Sheet>
+      ) : null}
 
       {lib !== null || libMsg ? (
         <Sheet title="作品库" sub="历史项目与成片，直接下载带走" width={620}

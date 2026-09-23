@@ -18,4 +18,9 @@ if ! cmp -s "$BUILT" "$PUBLISHED"; then
   echo "[frontend] 可执行：cp $BUILT $PUBLISHED" >&2
   exit 1
 fi
+# Remotion 打包会把默认蓝三角 favicon 写进产物：整目录拷过一次，地址栏图标就掉回 Remotion 了
+if ! cmp -s renderer/public/favicon.ico server_static/poc/favicon.ico; then
+  echo "[frontend] 成片台图标不是品牌方印：cp renderer/public/favicon.ico server_static/poc/favicon.ico" >&2
+  exit 1
+fi
 echo "[frontend] bundle 校验通过"

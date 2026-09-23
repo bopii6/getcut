@@ -3230,6 +3230,7 @@ const TPL_VIS = {
   poster:   {bg:"#0d0d0f", paper:"#141416", acc:"#ffd400", hint:"黑底荧光黄、一句一屏的超大字，冲击力优先"},
   bleed:    {bg:"#000000", paper:"#111111", acc:"#f0b429", hint:"素材铺满全屏，沉浸感强"},
   zhigu:    {bg:"#0b0e13", paper:"#f4f3ee", acc:"#ffd93d", hint:"三段式：顶带标题 / 中间舞台动作 / 底带字幕"},
+  macro:    {bg:"#04080a", paper:"#081012", acc:"#e8a833", hint:"深色章节式：大数字与图形块，适合宏观、行情"},
   finance:  {bg:"#0b1622", paper:"#12202f", acc:"#2ea8d8", hint:"深蓝终端感 + 网格，适合行情、财报"},
   minimal:  {bg:"#f1f1ef", paper:"#ffffff", acc:"#111111", hint:"纯白极简大字，留白多"},
   retro:    {bg:"#2a231a", paper:"#ece0c9", acc:"#b3542e", hint:"米黄纸 + 颗粒暗角，适合人物、历史"},
@@ -3475,6 +3476,7 @@ async function renderLanding(){
   const SAMPLES = [
     ["poster", "大字报版"], ["editorial", "杂志编辑版"], ["data", "数据面板版"],
     ["news", "新闻播报版"], ["bleed", "全出血沉浸版"], ["zhigu", "智谷三段式"],
+    ["macro", "宏观棱镜"],
   ];
   $("main").innerHTML = `<div class="lp">
     <nav class="lp-nav">
@@ -3511,13 +3513,14 @@ async function renderLanding(){
 
     <section class="lp-sec" id="lp-gallery">
       <h2>成品展示</h2>
-      <p class="lp-secp">同一段文案，六套模板六个样子——都带配音、字幕和音效，点开直接看。</p>
+      <p class="lp-secp">同一段文案，七套模板七个样子——都带配音、字幕和音效，点开直接看。</p>
       <div class="lp-gallery">${SAMPLES.map(([id, name]) => `
         <figure><video controls preload="none" playsinline
           src="/templates/sample-${id}.mp4" poster="/templates/tpl-${id}.png"></video>
           <figcaption><b>${name}</b>${({editorial:"纸卡+媒体窗+信息卡",news:"满屏画面+底部信息条",
             data:"浅色仪表盘·左数据右素材",poster:"黑底荧光黄·一句一屏",
-            bleed:"素材铺满+大标题压画",zhigu:"三段式：标题/舞台动作/字幕"})[id] || ""}</figcaption>
+            bleed:"素材铺满+大标题压画",zhigu:"三段式：标题/舞台动作/字幕",
+            macro:"深色章节式·大数字+图形块"})[id] || ""}</figcaption>
         </figure>`).join("")}</div>
     </section>
 
@@ -3896,7 +3899,7 @@ function closeMeMenu(){
 }
 function meBenefitNote(tier){
   if (tier === "premium") return "无水印出片不限量 + 品牌套装（自有 Logo/文字水印）+ 我的声音克隆 + 剪映草稿导出 + 优先出片。永久有效。";
-  if (tier === "basic") return "出片不限量、无 GetCut 水印，六套模板与音色任选，永久有效。想解锁品牌套件和剪映精剪，升高级版。";
+  if (tier === "basic") return "出片不限量、无 GetCut 水印，七套模板与音色任选，永久有效。想解锁品牌套件和剪映精剪，升高级版。";
   return "每天有免费出片额度，成片带 GetCut 水印。兑换卡密或升级后立即去水印。";
 }
 function toggleMeMenu(){
@@ -4860,7 +4863,7 @@ function openFlowDialog(title, html){
   d.addEventListener("click", e => { if (e.target === d){ const r = d.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeFlowDialog(); } });
   document.body.appendChild(d); d.showModal(); return d;
 }
-/* 点模板 = 直接放这套模板的样片：同一段演示内容在 6 套模板下的真片，
+/* 点模板 = 直接放这套模板的样片：同一段演示内容在 7 套模板下的真片，
    用户看对眼再定（样片由 tools/make_template_previews.py 生成，模板改了重跑那条命令）。 */
 function openTplSample(id, onUse){
   const t = TPLS.find(x => x.id === id) || {id: id, name: id};
