@@ -963,7 +963,7 @@ const App: React.FC = () => {
               {env.hasVE ? '✓ 支持出片' : '✗ 浏览器太旧'}
             </span>
             <span className={env.hw ? 'ei' : 'ei warn'}
-                  title={env.hw ? '硬件加速编码可用，出片快' : '没走到硬件加速：能出片但更慢。Chrome 设置 → 系统 → 打开「使用硬件加速」后重启浏览器'}>
+                  title={env.hw ? '硬件加速编码可用，出片快' : '没走到硬件加速，能出片但更慢。在地址栏输入 chrome://settings/system（Edge 输 edge://settings/system），打开「使用硬件加速」后重启浏览器即可'}>
               {env.hw ? '✓ 硬件加速' : '⚠ 未开硬件加速'}
             </span>
             <span className={(env.cores || 0) >= 8 ? 'ei' : (env.cores || 0) >= 4 ? 'ei warn' : 'ei bad'}
