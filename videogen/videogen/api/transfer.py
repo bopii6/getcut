@@ -183,34 +183,37 @@ async def intake_create(file: UploadFile, request: Request):
     base = config.PUBLIC_BASE_URL or f"{request.url.scheme}://{request.url.netloc}"
     return {"code": code, "url": f"{base}/i/{code}"}
 @router.get("/api/intake/{code}/meta")
-def intake_meta(code: str):
-    """落地页概要：不解包，直接从 zip 里抽 content.json/manifest.json 的关键数字。"""
+def intake_meta(code: str, request: Request):
+    """落地页概要：**只说"有个包在等你"，不说包里写了什么**。
+
+    这条链接是一条取件码，会被转发、会被别人扫到。以前它匿名回标题、口播前
+    400 字、字数与图片视频数 —— 等于 A 把链接发到群里，谁都能读 A 还没发布的选题稿
+    （2026-09-23 隔离定调后查出来的，见 tests/test_intake_privacy.py）。
+    内容一律等**认领之后**由项目页显示：认领要登录，认领后这条就归他账号。
+    """
     if not INTAKE_CODE_RE.match(code):
         return JSONResponse({"error": "链接无效"}, status_code=404)
     zf_path, _ = _intake_paths(code)
     side = _intake_sidecar(code)
+    email = ctx._session_email(request)
+    out = {"logged": bool(email) or ctx._open_mode()}
     if not zf_path.is_file():
         if side.get("claimed") and side.get("project_id"):
-            return {"claimed": True, "projectId": side["project_id"]}
+            pid = side["project_id"]
+            out.update({"claimed": True})
+            # 项目号也只给正主：别人扫到链接不该知道这条落到哪个项目
+            if email or ctx._open_mode():
+                with ctx._LOCK:
+                    p = next((x for x in ctx._reg()["projects"]
+                             if x.get("project_id") == pid), None)
+                if p and p.get("owner") in (None, email):
+                    out["projectId"] = pid
+            return out
         return JSONResponse({"error": "链接已失效（素材包 24 小时内有效）"}, status_code=404)
-    out = {"claimed": False, "file": side.get("file") or "bundle.zip",
-           "created": side.get("created"),
-           "expiresAt": (side.get("created") or 0) + ctx.INTAKE_TTL_SECONDS}
-    try:
-        with zipfile.ZipFile(zf_path) as zf:
-            content = json.loads(zf.read("content.json").decode("utf-8"))
-            script = str(content.get("script") or "")
-            out.update({"title": content.get("title") or out["file"],
-                        "scriptChars": len(script), "scriptPreview": script[:400],
-                        "estSeconds": round(len(script) / 6)})
-            try:
-                assets = json.loads(zf.read("manifest.json").decode("utf-8")).get("assets", [])
-                out["images"] = sum(1 for a in assets if a.get("kind") == "image")
-                out["videos"] = sum(1 for a in assets if a.get("kind") == "video")
-            except Exception:  # noqa: BLE001 - manifest 缺失/损坏只影响计数
-                pass
-    except Exception:  # noqa: BLE001
-        return JSONResponse({"error": "素材包内容读取失败"}, status_code=400)
+    # 连原始文件名都不给：客户常把选题直接写进 zip 名（"美联储加息内幕.zip"），
+    # 那等于把稿子标题念给每一个扫到链接的人听。名字等导入之后在项目页里看。
+    out.update({"claimed": False,
+                "expiresAt": (side.get("created") or 0) + ctx.INTAKE_TTL_SECONDS})
     return out
 @router.post("/api/intake/{code}/claim")
 def intake_claim(code: str, request: Request, body: dict = None):

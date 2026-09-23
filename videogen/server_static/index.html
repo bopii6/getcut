@@ -4604,23 +4604,21 @@ async function renderIntake(){
     const pid = meta.projectId || "";
     $("main").innerHTML = `<div class="view"><div class="auth"><div class="card">
       <h1>这个素材包已经导入过了</h1>
-      <p class="sub">登录导入者的账号，在工作台的项目列表里就能找到它。</p>
-      <button class="btn" id="inGo">${pid ? "打开这个项目" : "去工作台看看"}</button>
+      <p class="sub">用导入时那个账号登录，在成片台的「作品库」里就能找到它。</p>
+      <button class="btn" id="inGo">${pid ? "打开这个项目" : "回首页看看"}</button>
     </div></div></div>`;
     $("inGo").onclick = () => { setHash(pid ? "#/project/" + pid : "#/"); route(true); };
     return;
   }
   $("main").innerHTML = `<div class="view"><div class="auth in-wrap"><div class="card">
     <p class="in-badge">素材包已送达</p>
-    <h1>${esc(meta.title || "未命名素材包")}</h1>
-    <p class="sub">Agent 已把打包好的素材直接投进工作台，不用再手动拖文件。</p>
+    <h1>包先到了一步</h1>
+    <p class="sub">这条链接是取件码。选题、字数和口播文案要等你登录后导入才显示——拿到链接的人不该看见别人还没发的稿子。</p>
     <div class="in-stats">
-      <span>预计成片 <b>约 ${num(meta.estSeconds)} 秒</b></span>
-      <span>口播 <b>${num(meta.scriptChars)} 字</b></span>
-      <span>图片 <b>${num(meta.images)} 张</b></span>
-      <span>视频 <b>${num(meta.videos)} 段</b></span>
+      <span>内容 <b>导入后才显示</b></span>
+      <span>有效期 <b>24 小时</b></span>
+      <span>导入后 <b>归你的账号</b></span>
     </div>
-    ${meta.scriptPreview ? `<div class="in-script">${esc(meta.scriptPreview)}${(meta.scriptChars || 0) > 400 ? "…" : ""}</div>` : ""}
     <button class="btn" id="inGo">确定，导入工作台</button>
     <p class="sub" style="margin:12px 0 0">导入后先过「内容确认」，点「确认内容并开始生成」才正式提交——不会自动开始。链接 24 小时内有效。</p>
     <div class="in-qr" id="inQr"></div>
