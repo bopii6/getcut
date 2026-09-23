@@ -13,6 +13,43 @@ import './ui.css';
 
 const qs = new URLSearchParams(location.search);
 const DEVICE = qs.get('device') || '网页成片台';
+
+// 出片靠这台电脑的浏览器算：审一遍浏览器/硬件/网络，只给三档结论，技术细节收进小字
+type EnvResult = {
+  hasVE: boolean; hw: boolean; cores: number; mem: number; online: boolean; tier: 1 | 2 | 3;
+};
+async function probeEnv(): Promise<EnvResult> {
+  const nav = navigator as Navigator & {hardwareConcurrency?: number; deviceMemory?: number};
+  const hasVE = typeof (window as unknown as {VideoEncoder?: unknown}).VideoEncoder !== 'undefined';
+  let hw = false;
+  if (hasVE) {
+    try {
+      const VE = (window as unknown as {
+        VideoEncoder: {isConfigSupported: (c: Record<string, unknown>) => Promise<{supported?: boolean}>};
+      }).VideoEncoder;
+      // 1080×1920 至少要 H.264 level 4.0——用 42001f（level 3.1，上限 720p）探测会在
+      // 任何显卡上都得到 false 的假警报（2026-09-23 用户实测踩中）
+      const base = {width: 1080, height: 1920, framerate: 30, bitrate: 8_000_000};
+      for (const codec of ['avc1.42002a', 'avc1.4d002a', 'avc1.64002a']) {
+        try {
+          const r = await VE.isConfigSupported(
+            {...base, codec, hardwareAcceleration: 'prefer-hardware'});
+          if (r.supported === true) {
+            hw = true;
+            break;
+          }
+        } catch { /* 单个 profile 探测失败不致命 */ }
+      }
+    } catch { /* 老浏览器没有这个 API */ }
+  }
+  const cores = nav.hardwareConcurrency || 0;
+  const mem = nav.deviceMemory || 0;
+  const online = navigator.onLine;
+  let tier: 1 | 2 | 3 = 3;
+  if (!hasVE || !online) tier = 1;
+  else if (!hw || (cores > 0 && cores < 4) || (mem > 0 && mem < 8)) tier = 2;
+  return {hasVE, hw, cores, mem, online, tier};
+}
 // 开发自查用：?frames=240 只渲前 240 帧（不改变正式行为）
 const FRAMES_LIMIT = Math.max(0, parseInt(qs.get('frames') || '0', 10) || 0);
 const THEME_KEY = 'vg-theme';
@@ -141,49 +178,16 @@ const App: React.FC = () => {
   const [jy, setJy] = React.useState('');
   const [jyBusy, setJyBusy] = React.useState(false);
   const [libJyKey, setLibJyKey] = React.useState('');   // 作品库里正在打包剪映草稿的项目
-  // 本机环境自检：出片靠这台电脑的浏览器算，行不行、慢不慢，进门就亮出来
-  const [env, setEnv] = React.useState<{hasVE: boolean; hw: boolean; cores: number; mem: number; online: boolean} | null>(null);
-  React.useEffect(() => {
-    let dead = false;
-    const probe = async () => {
-      const nav = navigator as Navigator & {hardwareConcurrency?: number; deviceMemory?: number};
-      const hasVE = typeof (window as unknown as {VideoEncoder?: unknown}).VideoEncoder !== 'undefined';
-      let hw = false;
-      if (hasVE) {
-        try {
-          const VE = (window as unknown as {
-            VideoEncoder: {isConfigSupported: (c: Record<string, unknown>) => Promise<{supported?: boolean}>};
-          }).VideoEncoder;
-          // 1080×1920 至少要 H.264 level 4.0——用 42001f（level 3.1，上限 720p）探测
-          // 会在任何显卡上都得到 false 的假警报（2026-09-23 用户实测踩中）
-          const base = {width: 1080, height: 1920, framerate: 30, bitrate: 8_000_000};
-          for (const codec of ['avc1.42002a', 'avc1.4d002a', 'avc1.64002a']) {
-            try {
-              const r = await VE.isConfigSupported(
-                {...base, codec, hardwareAcceleration: 'prefer-hardware'});
-              if (r.supported === true) {
-                hw = true;
-                break;
-              }
-            } catch { /* 单个 profile 探测失败不致命 */ }
-          }
-        } catch { /* 老浏览器没有这个 API */ }
-      }
-      if (!dead) {
-        setEnv({hasVE, hw, cores: nav.hardwareConcurrency || 0,
-                mem: nav.deviceMemory || 0, online: navigator.onLine});
-      }
-    };
-    void probe();
-    const onNet = () => setEnv((e) => (e ? {...e, online: navigator.onLine} : e));
-    window.addEventListener('online', onNet);
-    window.addEventListener('offline', onNet);
-    return () => {
-      dead = true;
-      window.removeEventListener('online', onNet);
-      window.removeEventListener('offline', onNet);
-    };
-  }, []);
+  // 本机环境体检：用户点一下，我们把浏览器/硬件/网络审一遍，只给三档结论，技术细节收进小字
+  const [env, setEnv] = React.useState<EnvResult | null>(null);
+  const [envBusy, setEnvBusy] = React.useState(false);
+  const runEnvCheck = React.useCallback(async () => {
+    if (envBusy) return;
+    setEnvBusy(true);
+    const [r] = await Promise.all([probeEnv(), new Promise((res) => setTimeout(res, 700))]);
+    setEnv(r);
+    setEnvBusy(false);
+  }, [envBusy]);
   const [voices, setVoices] = React.useState<Voice[]>([]);
   const [music, setMusic] = React.useState<{file: string; name: string; mood?: string}[]>([]);
   const [cfg, setCfg] = React.useState({voice: '', bgm: '', subtitles: true, sfx: true, sources: true});
@@ -961,32 +965,36 @@ const App: React.FC = () => {
         <div className="pane left">
           <div className="lede">拖入素材包，一条好片子在你这台电脑上完成——不排队、不限速。</div>
 
-      {/* 本机环境自检：行不行、慢不慢，进门就亮出来，别等用户导完包才发现导不了 */}
-      <div className="envchk">
-        <span className="ect">本机环境</span>
-        {!env ? <span className="ei">检测中…</span> : (
+      {/* 本机环境体检：一个按钮，审完只给三档结论；审了什么收进小字，不占主视线 */}
+      <div className="envcheck">
+        {envBusy ? (
+          <span className="envres">正在检查这台电脑…</span>
+        ) : env === null ? (
+          <button className="envbtn" onClick={() => void runEnvCheck()}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/>
+              <path d="M8.5 12.5l2.5 2.5 4.5-5"/>
+            </svg>
+            检查这台电脑能不能出片
+          </button>
+        ) : env.tier === 3 ? (
           <>
-            <span className={env.hasVE ? 'ei' : 'ei bad'}
-                  title={env.hasVE ? 'WebCodecs 可用，能在这台电脑上出片' : '这个浏览器导不了片：请换新版 Chrome 或 Edge'}>
-              {env.hasVE ? '✓ 支持出片' : '✗ 浏览器太旧'}
-            </span>
-            <span className={env.hw ? 'ei' : 'ei warn'}
-                  title={env.hw ? '硬件加速编码可用，出片快' : '没走到硬件加速，能出片但更慢。在地址栏输入 chrome://settings/system（Edge 输 edge://settings/system），打开「使用硬件加速」后重启浏览器即可'}>
-              {env.hw ? '✓ 硬件加速' : '⚠ 未开硬件加速'}
-            </span>
-            <span className={(env.cores || 0) >= 8 ? 'ei' : (env.cores || 0) >= 4 ? 'ei warn' : 'ei bad'}
-                  title="CPU 核心越多，出片越快">
-              {env.cores ? `${env.cores} 核 CPU${env.cores >= 8 ? '' : env.cores >= 4 ? '（偏慢）' : '（会很慢）'}` : 'CPU 未知'}
-            </span>
-            {env.mem ? (
-              <span className={env.mem >= 8 ? 'ei' : 'ei warn'} title="内存越大越稳">
-                {env.mem} GB 内存{env.mem >= 8 ? '' : '（偏小）'}
-              </span>
-            ) : null}
-            <span className={env.online ? 'ei' : 'ei warn'}
-                  title="上传素材包需要网络；渲染和下载成片不用网">
-              {env.online ? '✓ 网络正常' : '⚠ 已离线'}
-            </span>
+            <span className="envres ok">✓ 这台电脑可以正常出片</span>
+            <button className="envre" onClick={() => void runEnvCheck()}>重新检查</button>
+            <span className="envsub">已检查：浏览器兼容 · 硬件加速（开）· 处理器 {env.cores || '?'} 核{env.mem ? ` · 内存 ${env.mem} GB` : ''} · 网络（在线）</span>
+          </>
+        ) : env.tier === 2 ? (
+          <>
+            <span className="envres slow">⚠ 能出片，但速度会比较慢</span>
+            <button className="envre" onClick={() => void runEnvCheck()}>重新检查</button>
+            <span className="envsub">想要更快：换台配置好点的电脑，或在浏览器设置里打开硬件加速。已检查：浏览器兼容 · 硬件加速（{env.hw ? '开' : '未开'}）· 处理器 {env.cores || '?'} 核{env.mem ? ` · 内存 ${env.mem} GB` : ''} · 网络（{env.online ? '在线' : '离线'}）</span>
+          </>
+        ) : (
+          <>
+            <span className="envres bad">✗ 这台电脑暂时导不了片</span>
+            <button className="envre" onClick={() => void runEnvCheck()}>重新检查</button>
+            <span className="envsub">{!env.hasVE ? '浏览器版本太旧：请换新版 Chrome 或 Edge，再回来导入素材包。' : '网络已断开：恢复网络后再导入素材包。'}已检查：浏览器兼容 · 处理器 {env.cores || '?'} 核 · 网络（{env.online ? '在线' : '离线'}）</span>
           </>
         )}
       </div>

@@ -358,15 +358,27 @@ a { color: inherit; text-decoration: none }
 
 .script { margin-top: 8px }
 
-/* 本机环境自检：一行小徽章。行不行/慢不慢进门就亮，别等用户导完包才发现导不了 */
-.envchk { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 2px }
-.envchk .ect { font-size: 12px; color: var(--ink-3); letter-spacing: .08em; margin-right: 2px }
-.envchk .ei {
-  font-size: 12.5px; padding: 3px 9px; border-radius: 7px;
-  border: 1px solid var(--line); color: var(--ink-2); background: rgba(255, 255, 255, .02);
+/* 本机环境体检：一个按钮，点完只给三档结论；审了什么收进小字 */
+.envcheck { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 2px }
+.envcheck .envbtn {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12.5px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 11px; background: rgba(255, 255, 255, .02);
+  transition: border-color .15s, color .15s;
 }
-.envchk .ei.warn { color: #e8c87a; border-color: rgba(232, 200, 122, .35) }
-.envchk .ei.bad { color: var(--err); border-color: rgba(255, 107, 107, .35) }
+.envcheck .envbtn:hover { color: var(--ink); border-color: var(--acc) }
+.envcheck .envres { font-size: 13.5px; font-weight: 700 }
+.envcheck .envres.ok { color: #7fcb96 }
+.envcheck .envres.slow { color: #e8c87a }
+.envcheck .envres.bad { color: var(--err) }
+.envcheck .envsub {
+  flex-basis: 100%; font-size: 12px; color: var(--ink-3); line-height: 1.65; padding-left: 2px;
+}
+.envcheck .envre {
+  all: unset; cursor: pointer; font-size: 12px; color: var(--ink-3);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.envcheck .envre:hover { color: var(--ink-2) }
 
 /* 就地反馈：底部一条，不打断操作 */
 .toast {
