@@ -12775,6 +12775,7 @@ const App = () => {
   const [prepPct, setPrepPct] = react.useState(0);
   const [jy, setJy] = react.useState("");
   const [jyBusy, setJyBusy] = react.useState(false);
+  const [libJyKey, setLibJyKey] = react.useState("");
   const [voices, setVoices] = react.useState([]);
   const [music, setMusic] = react.useState([]);
   const [cfg, setCfg] = react.useState({ voice: "", bgm: "", subtitles: true, sfx: true, sources: true });
@@ -13373,6 +13374,43 @@ const App = () => {
       setTimeout(() => setJyBusy(false), 3e3);
     }
   };
+  const libJy = async (pid, rid) => {
+    if (libJyKey) return;
+    setLibJyKey(pid);
+    try {
+      const res = await api(
+        `/api/projects/${pid}/renders/${rid}/jianying-import`,
+        { method: "POST" }
+      );
+      if (res.installed) {
+        say("\u5DF2\u5BFC\u5165\u526A\u6620\uFF0C\u6253\u5F00\u526A\u6620\u5C31\u80FD\u770B\u5230");
+      } else if (res.protocol && res.pull) {
+        say("\u6B63\u5728\u5524\u8D77\u5BFC\u5165\u5C0F\u52A9\u624B\u2026\uFF08\u6D4F\u89C8\u5668\u95EE\u300C\u6253\u5F00\u300D\u65F6\u70B9\u5141\u8BB8\uFF09");
+        let woke = false;
+        const off = () => {
+          woke = true;
+        };
+        window.addEventListener("blur", off);
+        document.addEventListener("visibilitychange", off);
+        location.href = `getcut://import?src=${encodeURIComponent(location.origin + String(res.pull))}`;
+        setTimeout(() => {
+          window.removeEventListener("blur", off);
+          document.removeEventListener("visibilitychange", off);
+          if (!woke) {
+            say("\u6CA1\u88C5\u5BFC\u5165\u5C0F\u52A9\u624B\uFF1A\u8349\u7A3F\u5305\u5DF2\u6539\u4E3A\u4E0B\u8F7D\uFF0C\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D");
+            location.href = `/api/projects/${pid}/renders/${rid}/jianying-draft`;
+          }
+        }, 2600);
+      } else {
+        say("\u8349\u7A3F\u5305\u5DF2\u4E0B\u8F7D\uFF1A\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D");
+        location.href = `/api/projects/${pid}/renders/${rid}/jianying-draft`;
+      }
+    } catch (e) {
+      say("\u5BFC\u5165\u5931\u8D25\uFF1A" + String(e.message));
+    } finally {
+      setTimeout(() => setLibJyKey(""), 3e3);
+    }
+  };
   const durS = pack ? pack.props.durationInFrames / 30 : bundle ? bundle.estSeconds : 0;
   const nImg = (bundle == null ? void 0 : bundle.assets) ? bundle.assets.filter((a) => a.kind === "image").length : 0;
   const nVid = (bundle == null ? void 0 : bundle.assets) ? bundle.assets.filter((a) => a.kind === "video").length : 0;
@@ -13939,18 +13977,30 @@ const App = () => {
                   " \u6210\u7247"
                 ] })
               ] }),
-              /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "li-a", children: last ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
-                "a",
-                {
-                  className: "btn ln sm",
-                  href: `/video/${last.id}`,
-                  download: true,
-                  children: "\u4E0B\u6210\u7247"
-                }
-              ) : null })
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-a", children: [
+                last ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  "button",
+                  {
+                    className: "btn ln sm",
+                    style: { minWidth: 84 },
+                    disabled: libJyKey === p.project_id,
+                    onClick: () => void libJy(p.project_id, last.id),
+                    children: libJyKey === p.project_id ? "\u6253\u5305\u8349\u7A3F\u2026" : "\u5BFC\u5165\u526A\u6620"
+                  }
+                ) : null,
+                last ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  "a",
+                  {
+                    className: "btn ln sm",
+                    href: `/video/${last.id}`,
+                    download: true,
+                    children: "\u4E0B\u6210\u7247"
+                  }
+                ) : null
+              ] })
             ] }, p.project_id);
           }) }),
-          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 14 }, children: "\u8981\u9010\u6761\u6539\u5B57\u5E55\u3001\u52A8\u5206\u8F68\uFF1A\u6210\u7247\u53F0\u91CC\u70B9\u300C\u5BFC\u5165\u526A\u6620\uFF08\u5206\u8F68\u8349\u7A3F\uFF09\u300D\uFF0C\u53BB\u526A\u6620\u91CC\u63A5\u7740\u526A\u3002" })
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 14 }, children: "\u5F53\u65F6\u6CA1\u5BFC\u526A\u6620\uFF1F\u5728\u6761\u76EE\u4E0A\u70B9\u300C\u5BFC\u5165\u526A\u6620\u300D\u968F\u65F6\u8865\uFF1B\u5BFC\u5165\u540E\u8981\u9010\u6761\u6539\u5B57\u5E55\u3001\u52A8\u5206\u8F68\uFF0C\u53BB\u526A\u6620\u91CC\u63A5\u7740\u526A\u3002" })
         ]
       }
     ) : null,

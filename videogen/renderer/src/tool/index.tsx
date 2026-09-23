@@ -140,6 +140,7 @@ const App: React.FC = () => {
   const [prepPct, setPrepPct] = React.useState(0);
   const [jy, setJy] = React.useState('');
   const [jyBusy, setJyBusy] = React.useState(false);
+  const [libJyKey, setLibJyKey] = React.useState('');   // 作品库里正在打包剪映草稿的项目
   const [voices, setVoices] = React.useState<Voice[]>([]);
   const [music, setMusic] = React.useState<{file: string; name: string; mood?: string}[]>([]);
   const [cfg, setCfg] = React.useState({voice: '', bgm: '', subtitles: true, sfx: true, sources: true});
@@ -761,6 +762,41 @@ const App: React.FC = () => {
     }
   };
 
+  // 作品库里补一刀：当时没进剪映的成片，随时可以再导入——同一套三路逻辑
+  const libJy = async (pid: string, rid: string) => {
+    if (libJyKey) return;
+    setLibJyKey(pid);
+    try {
+      const res = await api(`/api/projects/${pid}/renders/${rid}/jianying-import`,
+        {method: 'POST'});
+      if (res.installed) {
+        say('已导入剪映，打开剪映就能看到');
+      } else if (res.protocol && res.pull) {
+        say('正在唤起导入小助手…（浏览器问「打开」时点允许）');
+        let woke = false;
+        const off = () => { woke = true; };
+        window.addEventListener('blur', off);
+        document.addEventListener('visibilitychange', off);
+        location.href = `getcut://import?src=${encodeURIComponent(location.origin + String(res.pull))}`;
+        setTimeout(() => {
+          window.removeEventListener('blur', off);
+          document.removeEventListener('visibilitychange', off);
+          if (!woke) {
+            say('没装导入小助手：草稿包已改为下载，解压后双击「一键导入剪映.bat」');
+            location.href = `/api/projects/${pid}/renders/${rid}/jianying-draft`;
+          }
+        }, 2600);
+      } else {
+        say('草稿包已下载：解压后双击「一键导入剪映.bat」');
+        location.href = `/api/projects/${pid}/renders/${rid}/jianying-draft`;
+      }
+    } catch (e) {
+      say('导入失败：' + String((e as Error).message));
+    } finally {
+      setTimeout(() => setLibJyKey(''), 3000);
+    }
+  };
+
   const durS = pack ? pack.props.durationInFrames / 30
     : bundle ? bundle.estSeconds : 0;
   const nImg = bundle?.assets ? bundle.assets.filter((a) => a.kind === 'image').length : 0;
@@ -1219,6 +1255,13 @@ const App: React.FC = () => {
                     <span>{p.created || ''} · {p.assets_count ?? 0} 素材 · {p.renders_count ?? 0} 成片</span>
                   </div>
                   <div className="li-a">
+                    {last ? (
+                      <button className="btn ln sm" style={{minWidth: 84}}
+                              disabled={libJyKey === p.project_id}
+                              onClick={() => void libJy(p.project_id, last.id)}>
+                        {libJyKey === p.project_id ? '打包草稿…' : '导入剪映'}
+                      </button>
+                    ) : null}
                     {last ? <a className="btn ln sm" href={`/video/${last.id}`}
                                download>下成片</a> : null}
                   </div>
@@ -1227,7 +1270,7 @@ const App: React.FC = () => {
             })}
           </div>
           <div className="note" style={{marginTop: 14}}>
-            要逐条改字幕、动分轨：成片台里点「导入剪映（分轨草稿）」，去剪映里接着剪。
+            当时没导剪映？在条目上点「导入剪映」随时补；导入后要逐条改字幕、动分轨，去剪映里接着剪。
           </div>
         </Sheet>
       ) : null}
