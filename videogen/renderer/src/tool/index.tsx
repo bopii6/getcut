@@ -1025,40 +1025,6 @@ const App: React.FC = () => {
         <div className="pane left">
           <div className="lede">拖入素材包，一条好片子在你这台电脑上完成——不排队、不限速。</div>
 
-      {/* 本机环境体检：一个按钮，审完只给三档结论；审了什么收进小字，不占主视线 */}
-      <div className="envcheck">
-        {envBusy ? (
-          <span className="envres">正在检查这台电脑…</span>
-        ) : env === null ? (
-          <button className="envbtn" onClick={() => void runEnvCheck()}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/>
-              <path d="M8.5 12.5l2.5 2.5 4.5-5"/>
-            </svg>
-            检查这台电脑能不能出片
-          </button>
-        ) : env.tier === 3 ? (
-          <>
-            <span className="envres ok">✓ 这台电脑可以正常出片</span>
-            <button className="envre" onClick={() => void runEnvCheck()}>重新检查</button>
-            <span className="envsub">已检查：浏览器兼容 · 硬件加速（开）· 处理器 {env.cores || '?'} 核{env.mem ? ` · 内存 ${env.mem} GB` : ''} · 网络（在线）</span>
-          </>
-        ) : env.tier === 2 ? (
-          <>
-            <span className="envres slow">⚠ 能出片，但速度会比较慢</span>
-            <button className="envre" onClick={() => void runEnvCheck()}>重新检查</button>
-            <span className="envsub">想要更快：换台配置好点的电脑，或在浏览器设置里打开硬件加速。已检查：浏览器兼容 · 硬件加速（{env.hw ? '开' : '未开'}）· 处理器 {env.cores || '?'} 核{env.mem ? ` · 内存 ${env.mem} GB` : ''} · 网络（{env.online ? '在线' : '离线'}）</span>
-          </>
-        ) : (
-          <>
-            <span className="envres bad">✗ 这台电脑暂时导不了片</span>
-            <button className="envre" onClick={() => void runEnvCheck()}>重新检查</button>
-            <span className="envsub">{!env.hasVE ? '浏览器版本太旧：请换新版 Chrome 或 Edge，再回来导入素材包。' : '网络已断开：恢复网络后再导入素材包。'}已检查：浏览器兼容 · 处理器 {env.cores || '?'} 核 · 网络（{env.online ? '在线' : '离线'}）</span>
-          </>
-        )}
-      </div>
-
           <input ref={fileInput} type="file" accept=".zip" style={{display: 'none'}}
                  onChange={(e) => void importZip(e.target.files?.[0])} />
 
@@ -1214,6 +1180,40 @@ const App: React.FC = () => {
               刚才那一条（{resumeJob.slice(-6)}）已交还队列，正在重新领回来——不用重拖素材包。
             </div>
           ) : null}
+
+          {/* 本机环境体检：不在主流程上，压到左栏最底部；一个按钮，审完只给三档结论 */}
+          <div className="envcheck">
+            {envBusy ? (
+              <span className="envres">正在检查这台电脑…</span>
+            ) : env === null ? (
+              <button className="envbtn" onClick={() => void runEnvCheck()}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/>
+                  <path d="M8.5 12.5l2.5 2.5 4.5-5"/>
+                </svg>
+                检查这台电脑能不能出片
+              </button>
+            ) : env.tier === 3 ? (
+              <>
+                <span className="envres ok">✓ 这台电脑可以正常出片</span>
+                <button className="envre" onClick={() => void runEnvCheck()}>重新检查</button>
+                <span className="envsub">已检查：浏览器兼容 · 硬件加速（开）· 处理器 {env.cores || '?'} 核{env.mem ? ` · 内存 ${env.mem} GB` : ''} · 网络（在线）</span>
+              </>
+            ) : env.tier === 2 ? (
+              <>
+                <span className="envres slow">⚠ 能出片，但速度会比较慢</span>
+                <button className="envre" onClick={() => void runEnvCheck()}>重新检查</button>
+                <span className="envsub">想要更快：换台配置好点的电脑，或在浏览器设置里打开硬件加速。已检查：浏览器兼容 · 硬件加速（{env.hw ? '开' : '未开'}）· 处理器 {env.cores || '?'} 核{env.mem ? ` · 内存 ${env.mem} GB` : ''} · 网络（{env.online ? '在线' : '离线'}）</span>
+              </>
+            ) : (
+              <>
+                <span className="envres bad">✗ 这台电脑暂时导不了片</span>
+                <button className="envre" onClick={() => void runEnvCheck()}>重新检查</button>
+                <span className="envsub">{!env.hasVE ? '浏览器版本太旧：请换新版 Chrome 或 Edge，再回来导入素材包。' : '网络已断开：恢复网络后再导入素材包。'}已检查：浏览器兼容 · 处理器 {env.cores || '?'} 核 · 网络（{env.online ? '在线' : '离线'}）</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* 右：预览台 */}

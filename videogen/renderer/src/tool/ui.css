@@ -358,8 +358,9 @@ a { color: inherit; text-decoration: none }
 
 .script { margin-top: 8px }
 
-/* 本机环境体检：一个按钮，点完只给三档结论；审了什么收进小字 */
-.envcheck { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 2px }
+/* 本机环境体检：一个按钮，点完只给三档结论；审了什么收进小字。不在主流程上，压在左栏最底部 */
+.envcheck { display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
+  margin-top: auto; padding-top: 14px; border-top: 1px dashed var(--line) }
 .envcheck .envbtn {
   all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
   font-size: 12.5px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 8px;
