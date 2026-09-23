@@ -163,6 +163,7 @@ interface BundleInfo {
 }
 interface Voice {id: string; label: string; provider?: string}
 interface Project {project_id: string; title?: string; created?: string;
+  bundle?: string;
   assets_count?: number; renders_count?: number; renders?: {id: string; file?: string}[]}
 
 const Step: React.FC<{n: number; title: string; state: 'todo' | 'active' | 'done';
@@ -250,6 +251,11 @@ const App: React.FC = () => {
   const [stalled, setStalled] = React.useState(false);
   const [lib, setLib] = React.useState<Project[] | null>(null);
   const [libMsg, setLibMsg] = React.useState('');
+  // 「素材」面板：电脑寄上来的包（收件箱）+ 一条一次性的收件地址
+  type Inbox = {code: string; ready: boolean; file: string; expiresAt: number; projectId?: string};
+  const [inbox, setInbox] = React.useState<Inbox[] | null>(null);
+  const [inboxMsg, setInboxMsg] = React.useState('');
+  const [ticket, setTicket] = React.useState('');
   const playerRef = React.useRef<PlayerRef>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
@@ -859,6 +865,53 @@ const App: React.FC = () => {
     }).catch((e) => { setLib(null); setLibMsg(String((e as Error).message || e)); });
   };
 
+  // ---- 素材：收件地址（给电脑上的打包工具用）+ 收件箱（手机上挑一条接着做）----
+  // 手机上不做渲染、也不选文件：包由电脑产、由电脑寄上来，这里只挑"哪一条"
+  const resumeProject = async (pid: string, bundleName: string) => {
+    const p = phaseRef.current;
+    if (p === 'prepping' || p === 'rendering' || p === 'uploading') {
+      say('这一条正在生成，先等它跑完');
+      return;
+    }
+    const url = `/api/bundle/${encodeURIComponent(bundleName)}`;
+    const b = await api(url) as unknown as BundleInfo;
+    setProjectId(pid);
+    setBundle(b);
+    setLib(null);
+    setInbox(null);
+    setErr('');
+    setPhase('config');
+  };
+
+  const openInbox = () => {
+    setInboxMsg('正在取收件箱…');
+    setInbox([]);
+    api('/api/intake').then((d) => {
+      setInbox(((d.intakes || []) as Inbox[]) || []);
+      setInboxMsg('');
+    }).catch((e) => { setInbox(null); setInboxMsg(String((e as Error).message || e)); });
+  };
+
+  const newTicket = async () => {
+    setInboxMsg('正在生成收件地址…');
+    try {
+      const d = await api('/api/intake/ticket', {method: 'POST',
+        headers: {'content-type': 'application/json'}, body: '{}'}) as Record<string, unknown>;
+      setTicket(String(d.put_url || ''));
+      setInboxMsg('');
+    } catch (e) { setInboxMsg(String((e as Error).message || e)); }
+  };
+
+  const importCode = async (code: string) => {
+    setInboxMsg('正在导入…');
+    try {
+      const d = await api(`/api/intake/${encodeURIComponent(code)}/claim`, {method: 'POST',
+        headers: {'content-type': 'application/json'}, body: '{}'}) as Record<string, unknown>;
+      setInboxMsg('');
+      await resumeProject(String(d.project_id || ''), String(d.name || ''));
+    } catch (e) { setInboxMsg(String((e as Error).message || e)); }
+  };
+
   const playPreview = (key: string, url: string) => {
     if (prevKey === key) { stopPreview(); return; }   // 再点一次就是停
     stopPreview();                                    // 换一条：先把上一条掐了，别叠着放
@@ -1106,6 +1159,7 @@ const App: React.FC = () => {
           </span>
           {!me ? <button className="chip" onClick={() => setSheet('pricing')} title="免费版与高级版">定价</button> : null}
           {me ? <button className="chip" onClick={openLib} title="历史项目与成片">作品库</button> : null}
+          {me ? <button className="chip" onClick={openInbox} title="电脑寄来的素材包 / 生成收件地址">素材</button> : null}
           <Account me={me} authst={authst} sheet={sheet} setSheet={setSheet}
                    refresh={refreshMe} toast={say}
                    onMe={(m) => { meRef.current = m; setMe(m); }}
@@ -1149,6 +1203,10 @@ const App: React.FC = () => {
                      onDrop={onDrop} onDragOver={onDragOver} onDragLeave={() => setHot(false)}>
                   <b>点这里选素材包 zip</b>
                   <span>不解压，文案与素材一起读入 · 也可以直接拖到右边那块</span>
+                  <span>
+                    还没有素材包？<a href="/api/sample-bundle" download>下载一条现成的</a>
+                    看它长什么样 · 注册后每天免费出 2 条（片子在你自己电脑上生成）
+                  </span>
                 </div>
               )}
             </Step>
@@ -1536,6 +1594,12 @@ const App: React.FC = () => {
                     <span>{p.created || ''} · {p.assets_count ?? 0} 素材 · {p.renders_count ?? 0} 成片</span>
                   </div>
                   <div className="li-a">
+                    {p.bundle ? (
+                      <button className="btn ln sm" style={{minWidth: 62}}
+                              onClick={() => void resumeProject(p.project_id, String(p.bundle))}>
+                        接着做
+                      </button>
+                    ) : null}
                     {last ? (
                       <button className="btn ln sm" style={{minWidth: 84}}
                               disabled={libJyKey === p.project_id}
@@ -1553,6 +1617,57 @@ const App: React.FC = () => {
           <div className="note" style={{marginTop: 14}}>
             当时没导剪映？在条目上点「导入剪映」随时补；导入后要逐条改字幕、动分轨，去剪映里接着剪。
           </div>
+        </Sheet>
+      ) : null}
+
+      {inbox !== null ? (
+        <Sheet title="素材" sub="包在电脑上产出、由电脑寄上来；手机上挑一条，让电脑去生成" width={620}
+               onClose={() => { setInbox(null); setInboxMsg(''); }}>
+          <div className="note">
+            要给这台电脑寄一个新包？点下面领一条<b>收件地址</b>（一次一用、24 小时作废），
+            交给电脑上的打包工具传完，回这里刷新就能看到它。
+          </div>
+          <button className="btn" style={{alignSelf: 'flex-start', marginTop: 10}}
+                  onClick={() => void newTicket()}>
+            {ticket ? '再生成一条收件地址' : '生成收件地址'}
+          </button>
+          {ticket ? (
+            <div style={{display: 'flex', gap: 8, marginTop: 10}}>
+              <input readOnly value={ticket} onFocus={(e) => e.currentTarget.select()}
+                     style={{flex: 1, fontSize: 12, padding: '6px 8px'}} />
+              <button className="btn ln sm" onClick={() => {
+                navigator.clipboard?.writeText(ticket).then(() => say('已复制'),
+                  () => say('复制不了：长按那行字选中复制'));
+              }}>复制</button>
+            </div>
+          ) : null}
+          {inboxMsg ? <div className="note">{inboxMsg}</div> : null}
+          {!inbox.length && !inboxMsg ? (
+            <div className="note">还没有寄上来的包。手头已有 zip 的话，直接拖进第 1 步更快。</div>
+          ) : null}
+          <div className="liblist">
+            {inbox.map((it) => (
+              <div className="librow" key={it.code}>
+                <div className="li-t">
+                  <b>{it.file || it.code}</b>
+                  <span>{it.ready ? '已送达 · 可以导入' : '地址已生成，等电脑把包传上来'}</span>
+                </div>
+                <div className="li-a">
+                  {it.ready ? (
+                    <button className="btn sm" style={{minWidth: 62}}
+                            onClick={() => void importCode(it.code)}>导入</button>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="note" style={{marginTop: 14}}>
+            导入后进第 2 步核对文案、挑音色，点「生成视频」——渲染跑在那台开着的电脑上，
+            你人在不在旁边都一样。
+          </div>
+          <button className="btn ln" style={{alignSelf: 'flex-start'}} onClick={openInbox}>
+            刷新收件箱
+          </button>
         </Sheet>
       ) : null}
 

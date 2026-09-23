@@ -312,8 +312,10 @@ class IdShapeBoundaryTest(BoundaryFixture):
             with self.subTest(name=name):
                 self.assertBlockedWire(f"/try/{name}")
         # 形状对但没登记过 → 走 JOBS 表，不是磁盘
-        self.assertBlockedHandler(server.try_video("1a2b3c4d5e6f7890.mp4"), "try_video")
-        self.assertBlockedHandler(server.try_video("../../sentinel.txt"), "try_video 越界")
+        # 形状对但没登记过 → 走 JOBS 表，不是磁盘。两条都到不了归属判定
+        # （形状不对先 404、没登记过也先 404），所以 request 传 None 就够
+        self.assertBlockedHandler(server.try_video("1a2b3c4d5e6f7890.mp4", None), "try_video")
+        self.assertBlockedHandler(server.try_video("../../sentinel.txt", None), "try_video 越界")
 
     def test_voice_clone_staging_needs_40_hex_and_nothing_else(self):
         for name in ("sentinel.txt", "%2e%2e%2fsentinel.txt",

@@ -36,7 +36,8 @@ os.environ.update({
 
 from starlette.requests import Request  # noqa: E402
 
-from videogen import server, try_topics  # noqa: E402
+from videogen import auth, server, try_topics  # noqa: E402
+from starlette.testclient import TestClient  # noqa: E402
 
 
 def _req(peer: str, fwd: str = "") -> Request:
@@ -176,6 +177,66 @@ class TryLedgerTest(unittest.TestCase):
         self.assertEqual(sorted(keep), ["b", "c"])
         keep2 = try_topics._newest({"x": [1.0], "y": [9.0], "z": [5.0]}, 2)
         self.assertEqual(sorted(keep2), ["y", "z"])
+
+
+class TryLoginAndOwnershipTest(unittest.TestCase):
+    """试玩：必须登录才能玩，出好的样片只给本人（2026-09-23 隔离定调）。
+
+    以前 `/api/try` 匿名可提交、`/try/<id>.mp4` 匿名可下载 —— 任务号会直接出现在
+    链接里，等于谁拿到号就能下别人的片子；而试玩单没有归属，普通客户的成片台
+    按"只领自己的单"领不走 ⇒ 线上 100% 不出片，还每条占死一条渲染线程最长 24 小时。
+    """
+
+    A = "try-a@example.invalid"
+    B = "try-b@example.invalid"
+    PW = "Km4-Vb8Qz2Xw7Nt3Rd6P"
+
+    def setUp(self):
+        auth.USERS_FILE = Path(_TMP) / "try-users.json"
+        auth.SECRET_FILE = Path(_TMP) / "try-secret"
+        for e in (self.A, self.B):
+            try:
+                auth.create_user(e, self.PW, role="user")
+            except Exception:  # noqa: BLE001 - 同一条用例重复建号
+                pass
+        self.ck_a = {server.SESSION_COOKIE: auth.make_session(self.A, auth.SESSION_TTL_SHORT)}
+        self.ck_b = {server.SESSION_COOKIE: auth.make_session(self.B, auth.SESSION_TTL_SHORT)}
+        self.client = TestClient(server.app, base_url="http://try.test")
+        self._jobs = dict(server.JOBS)
+        server.JOBS.clear()
+        self.addCleanup(self._restore)
+
+    def _restore(self):
+        server.JOBS.clear()
+        server.JOBS.update(self._jobs)
+
+    def test_anonymous_submission_is_rejected_with_the_freebie_promise(self):
+        r = self.client.post("/api/try", json={"topic": "anything"})
+        self.assertEqual(r.status_code, 401, "免登录还能提交试玩 = 陌生人白烧服务器额度")
+        self.assertIn("2 条", r.json()["error"], "被挡住时该告诉他登录后能得到什么")
+
+    def test_sample_video_is_owner_only(self):
+        mp4 = Path(_TMP) / "sample.mp4"
+        mp4.write_bytes(b"x" * 64)
+        jid = "a1b2c3d4e5f6"
+        server.JOBS[jid] = {"stage": "done", "owner": self.A,
+                            "try": {"topic": "t1", "title": "别人的样片"},
+                            "try_video": str(mp4)}
+        self.assertEqual(self.client.get(f"/try/{jid}.mp4").status_code, 403, "匿名能下别人的样片")
+        self.assertEqual(self.client.get(f"/try/{jid}.mp4", cookies=self.ck_b).status_code, 403,
+                         "别的登录用户能下别人的样片")
+        self.assertEqual(self.client.get(f"/try/{jid}.mp4", cookies=self.ck_a).status_code, 200,
+                         "正主反而下不到自己那条")
+        self.assertEqual(self.client.get(f"/api/try/{jid}", cookies=self.ck_b).status_code, 403)
+
+    def test_orphan_try_jobs_belong_to_nobody_but_the_station(self):
+        """老数据里那些没记归属的试玩单：不给任何登录用户，只给站长通道。"""
+        mp4 = Path(_TMP) / "old.mp4"
+        mp4.write_bytes(b"y" * 64)
+        server.JOBS["f0e1d2c3b4a5"] = {"stage": "done", "try": {"topic": "t"},
+                                       "try_video": str(mp4)}
+        self.assertEqual(self.client.get("/try/f0e1d2c3b4a5.mp4",
+                                         cookies=self.ck_a).status_code, 403)
 
 
 if __name__ == "__main__":

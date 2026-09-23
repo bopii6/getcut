@@ -188,6 +188,30 @@ async def _raw_body(request: Request, cap: int) -> bytes | None:
         if len(buf) > cap:
             return None
     return bytes(buf)
+@router.get("/api/intake")
+def intake_list(request: Request):
+    """我的收件箱：这个账号领过、还没导入的包。手机端「素材」入口读的就是这里。
+
+    只列自己的（owner 写在票上），别人看不见你寄了什么；`ready` 表示 zip 到了没
+    （领了票还没上传时也在列表里，手机上看得见"在等电脑传上来"）。
+    """
+    email = ctx._session_email(request)
+    if not email and not ctx._open_mode():
+        return JSONResponse({"error": "未登录"}, status_code=401)
+    ctx._sweep_intakes()
+    out = []
+    if ctx.INTAKES.is_dir():
+        for f in sorted(ctx.INTAKES.glob("*.json"), key=lambda p: p.name):
+            side = _intake_sidecar(f.stem)
+            if not side or side.get("owner") != email:
+                continue
+            ready = (ctx.INTAKES / f"{f.stem}.zip").is_file()
+            out.append({"code": f.stem, "ready": ready,
+                        "file": Path(str(side.get("file") or "")).name,
+                        "expiresAt": (side.get("created") or 0) + ctx.INTAKE_TTL_SECONDS,
+                        "projectId": side.get("project_id")})
+    out.sort(key=lambda x: -x["expiresAt"])
+    return {"intakes": out[:30]}
 @router.post("/api/intake/ticket")
 def intake_ticket(request: Request, body: dict = None):
     """领一张收件票：客户在自己登录的网页上点一下，拿到一条一次性的上传地址。

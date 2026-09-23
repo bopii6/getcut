@@ -76,7 +76,9 @@ class Base(unittest.TestCase):
         self.client = TestClient(server.app, base_url=BASE)
         self.ck_a = {server.SESSION_COOKIE: auth.make_session(A, auth.SESSION_TTL_SHORT)}
         self.ck_b = {server.SESSION_COOKIE: auth.make_session(B, auth.SESSION_TTL_SHORT)}
-        # 每条用例都从空收件区开始：上一张没用掉的票会算进"最多攒 5 张"那道上限
+        # 每条用例都从空收件区开始：上一张没用掉的票会算进"最多攒 5 张"那道上限，
+        # 而领票的按 IP 滑窗是模块级的，不清就会在第十条用例上撞 429
+        transfer._INTAKE_RATE.clear()
         ctx.INTAKES.mkdir(parents=True, exist_ok=True)
         for f in ctx.INTAKES.iterdir():
             f.unlink(missing_ok=True)
@@ -125,6 +127,20 @@ class IntakeTicketTest(Base):
         r = self.client.post(f"/api/intake/{code}/claim", json={}, cookies=self.ck_a)
         self.assertEqual(r.status_code, 200, r.text)
         self.assertEqual(ctx._bundle_owner(r.json()["name"]), A)
+
+    def test_inbox_lists_only_my_packages(self):
+        """手机端「素材」入口读的 /api/intake：只能看见自己领的票，别人的一条都不列。"""
+        mine = self.deliver()
+        code_b = self.new_ticket(email_a=False)          # B 自己领一张并传上去
+        self.deliver(code_b)
+        r = self.client.get("/api/intake", cookies=self.ck_a)
+        self.assertEqual(r.status_code, 200)
+        codes = [i["code"] for i in r.json()["intakes"]]
+        self.assertEqual(codes, [mine], f"收件箱列出了别人的包：{codes}")
+        self.assertEqual(self.client.get("/api/intake").status_code, 401, "匿名也能列收件箱")
+        b_seen = [i["code"] for i in
+                  self.client.get("/api/intake", cookies=self.ck_b).json()["intakes"]]
+        self.assertEqual(b_seen, [code_b["code"]])
 
     def test_ticket_is_single_use(self):
         tk = self.new_ticket()

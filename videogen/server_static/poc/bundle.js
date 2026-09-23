@@ -12872,6 +12872,9 @@ const App = () => {
   const [stalled, setStalled] = react.useState(false);
   const [lib, setLib] = react.useState(null);
   const [libMsg, setLibMsg] = react.useState("");
+  const [inbox, setInbox] = react.useState(null);
+  const [inboxMsg, setInboxMsg] = react.useState("");
+  const [ticket, setTicket] = react.useState("");
   const playerRef = react.useRef(null);
   const audioRef = react.useRef(null);
   const abortRef = react.useRef(null);
@@ -13441,6 +13444,60 @@ const App = () => {
       setLibMsg(String(e.message || e));
     });
   };
+  const resumeProject = async (pid, bundleName) => {
+    const p = phaseRef.current;
+    if (p === "prepping" || p === "rendering" || p === "uploading") {
+      say("\u8FD9\u4E00\u6761\u6B63\u5728\u751F\u6210\uFF0C\u5148\u7B49\u5B83\u8DD1\u5B8C");
+      return;
+    }
+    const url = `/api/bundle/${encodeURIComponent(bundleName)}`;
+    const b = await api(url);
+    setProjectId(pid);
+    setBundle(b);
+    setLib(null);
+    setInbox(null);
+    setErr("");
+    setPhase("config");
+  };
+  const openInbox = () => {
+    setInboxMsg("\u6B63\u5728\u53D6\u6536\u4EF6\u7BB1\u2026");
+    setInbox([]);
+    api("/api/intake").then((d) => {
+      setInbox(d.intakes || []);
+      setInboxMsg("");
+    }).catch((e) => {
+      setInbox(null);
+      setInboxMsg(String(e.message || e));
+    });
+  };
+  const newTicket = async () => {
+    setInboxMsg("\u6B63\u5728\u751F\u6210\u6536\u4EF6\u5730\u5740\u2026");
+    try {
+      const d = await api("/api/intake/ticket", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      });
+      setTicket(String(d.put_url || ""));
+      setInboxMsg("");
+    } catch (e) {
+      setInboxMsg(String(e.message || e));
+    }
+  };
+  const importCode = async (code) => {
+    setInboxMsg("\u6B63\u5728\u5BFC\u5165\u2026");
+    try {
+      const d = await api(`/api/intake/${encodeURIComponent(code)}/claim`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      });
+      setInboxMsg("");
+      await resumeProject(String(d.project_id || ""), String(d.name || ""));
+    } catch (e) {
+      setInboxMsg(String(e.message || e));
+    }
+  };
   const playPreview = (key, url) => {
     if (prevKey === key) {
       stopPreview();
@@ -13682,6 +13739,7 @@ const App = () => {
         ] }),
         !me ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "chip", onClick: () => setSheet("pricing"), title: "\u514D\u8D39\u7248\u4E0E\u9AD8\u7EA7\u7248", children: "\u5B9A\u4EF7" }) : null,
         me ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "chip", onClick: openLib, title: "\u5386\u53F2\u9879\u76EE\u4E0E\u6210\u7247", children: "\u4F5C\u54C1\u5E93" }) : null,
+        me ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "chip", onClick: openInbox, title: "\u7535\u8111\u5BC4\u6765\u7684\u7D20\u6750\u5305 / \u751F\u6210\u6536\u4EF6\u5730\u5740", children: "\u7D20\u6750" }) : null,
         /* @__PURE__ */ (0,jsx_runtime.jsx)(
           Account,
           {
@@ -13774,7 +13832,12 @@ const App = () => {
                   onDragLeave: () => setHot(false),
                   children: [
                     /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: "\u70B9\u8FD9\u91CC\u9009\u7D20\u6750\u5305 zip" }),
-                    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: "\u4E0D\u89E3\u538B\uFF0C\u6587\u6848\u4E0E\u7D20\u6750\u4E00\u8D77\u8BFB\u5165 \xB7 \u4E5F\u53EF\u4EE5\u76F4\u63A5\u62D6\u5230\u53F3\u8FB9\u90A3\u5757" })
+                    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: "\u4E0D\u89E3\u538B\uFF0C\u6587\u6848\u4E0E\u7D20\u6750\u4E00\u8D77\u8BFB\u5165 \xB7 \u4E5F\u53EF\u4EE5\u76F4\u63A5\u62D6\u5230\u53F3\u8FB9\u90A3\u5757" }),
+                    /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+                      "\u8FD8\u6CA1\u6709\u7D20\u6750\u5305\uFF1F",
+                      /* @__PURE__ */ (0,jsx_runtime.jsx)("a", { href: "/api/sample-bundle", download: true, children: "\u4E0B\u8F7D\u4E00\u6761\u73B0\u6210\u7684" }),
+                      "\u770B\u5B83\u957F\u4EC0\u4E48\u6837 \xB7 \u6CE8\u518C\u540E\u6BCF\u5929\u514D\u8D39\u51FA 2 \u6761\uFF08\u7247\u5B50\u5728\u4F60\u81EA\u5DF1\u7535\u8111\u4E0A\u751F\u6210\uFF09"
+                    ] })
                   ]
                 }
               )
@@ -14265,6 +14328,15 @@ const App = () => {
                 ] })
               ] }),
               /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-a", children: [
+                p.bundle ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  "button",
+                  {
+                    className: "btn ln sm",
+                    style: { minWidth: 62 },
+                    onClick: () => void resumeProject(p.project_id, String(p.bundle)),
+                    children: "\u63A5\u7740\u505A"
+                  }
+                ) : null,
                 last ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
                   "button",
                   {
@@ -14288,6 +14360,71 @@ const App = () => {
             ] }, p.project_id);
           }) }),
           /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 14 }, children: "\u5F53\u65F6\u6CA1\u5BFC\u526A\u6620\uFF1F\u5728\u6761\u76EE\u4E0A\u70B9\u300C\u5BFC\u5165\u526A\u6620\u300D\u968F\u65F6\u8865\uFF1B\u5BFC\u5165\u540E\u8981\u9010\u6761\u6539\u5B57\u5E55\u3001\u52A8\u5206\u8F68\uFF0C\u53BB\u526A\u6620\u91CC\u63A5\u7740\u526A\u3002" })
+        ]
+      }
+    ) : null,
+    inbox !== null ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+      Sheet,
+      {
+        title: "\u7D20\u6750",
+        sub: "\u5305\u5728\u7535\u8111\u4E0A\u4EA7\u51FA\u3001\u7531\u7535\u8111\u5BC4\u4E0A\u6765\uFF1B\u624B\u673A\u4E0A\u6311\u4E00\u6761\uFF0C\u8BA9\u7535\u8111\u53BB\u751F\u6210",
+        width: 620,
+        onClose: () => {
+          setInbox(null);
+          setInboxMsg("");
+        },
+        children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "note", children: [
+            "\u8981\u7ED9\u8FD9\u53F0\u7535\u8111\u5BC4\u4E00\u4E2A\u65B0\u5305\uFF1F\u70B9\u4E0B\u9762\u9886\u4E00\u6761",
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: "\u6536\u4EF6\u5730\u5740" }),
+            "\uFF08\u4E00\u6B21\u4E00\u7528\u300124 \u5C0F\u65F6\u4F5C\u5E9F\uFF09\uFF0C \u4EA4\u7ED9\u7535\u8111\u4E0A\u7684\u6253\u5305\u5DE5\u5177\u4F20\u5B8C\uFF0C\u56DE\u8FD9\u91CC\u5237\u65B0\u5C31\u80FD\u770B\u5230\u5B83\u3002"
+          ] }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "button",
+            {
+              className: "btn",
+              style: { alignSelf: "flex-start", marginTop: 10 },
+              onClick: () => void newTicket(),
+              children: ticket ? "\u518D\u751F\u6210\u4E00\u6761\u6536\u4EF6\u5730\u5740" : "\u751F\u6210\u6536\u4EF6\u5730\u5740"
+            }
+          ),
+          ticket ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", gap: 8, marginTop: 10 }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(
+              "input",
+              {
+                readOnly: true,
+                value: ticket,
+                onFocus: (e) => e.currentTarget.select(),
+                style: { flex: 1, fontSize: 12, padding: "6px 8px" }
+              }
+            ),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn ln sm", onClick: () => {
+              var _a2;
+              (_a2 = navigator.clipboard) == null ? void 0 : _a2.writeText(ticket).then(
+                () => say("\u5DF2\u590D\u5236"),
+                () => say("\u590D\u5236\u4E0D\u4E86\uFF1A\u957F\u6309\u90A3\u884C\u5B57\u9009\u4E2D\u590D\u5236")
+              );
+            }, children: "\u590D\u5236" })
+          ] }) : null,
+          inboxMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: inboxMsg }) : null,
+          !inbox.length && !inboxMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: "\u8FD8\u6CA1\u6709\u5BC4\u4E0A\u6765\u7684\u5305\u3002\u624B\u5934\u5DF2\u6709 zip \u7684\u8BDD\uFF0C\u76F4\u63A5\u62D6\u8FDB\u7B2C 1 \u6B65\u66F4\u5FEB\u3002" }) : null,
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "liblist", children: inbox.map((it) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "librow", children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-t", children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: it.file || it.code }),
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: it.ready ? "\u5DF2\u9001\u8FBE \xB7 \u53EF\u4EE5\u5BFC\u5165" : "\u5730\u5740\u5DF2\u751F\u6210\uFF0C\u7B49\u7535\u8111\u628A\u5305\u4F20\u4E0A\u6765" })
+            ] }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "li-a", children: it.ready ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+              "button",
+              {
+                className: "btn sm",
+                style: { minWidth: 62 },
+                onClick: () => void importCode(it.code),
+                children: "\u5BFC\u5165"
+              }
+            ) : null })
+          ] }, it.code)) }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 14 }, children: "\u5BFC\u5165\u540E\u8FDB\u7B2C 2 \u6B65\u6838\u5BF9\u6587\u6848\u3001\u6311\u97F3\u8272\uFF0C\u70B9\u300C\u751F\u6210\u89C6\u9891\u300D\u2014\u2014\u6E32\u67D3\u8DD1\u5728\u90A3\u53F0\u5F00\u7740\u7684\u7535\u8111\u4E0A\uFF0C \u4F60\u4EBA\u5728\u4E0D\u5728\u65C1\u8FB9\u90FD\u4E00\u6837\u3002" }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn ln", style: { alignSelf: "flex-start" }, onClick: openInbox, children: "\u5237\u65B0\u6536\u4EF6\u7BB1" })
         ]
       }
     ) : null,
