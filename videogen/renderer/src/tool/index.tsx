@@ -772,11 +772,61 @@ const App: React.FC = () => {
     });
   };
 
+  // 直接跳下载时，浏览器在服务端打包完成前只能显示 0%。先把等待阶段说清楚，
+  // 收到响应后再读取流，这样用户能看到真实的网络下载进度。
+  const downloadDraftPackage = async (url: string, notify: (message: string) => void,
+                                      fallbackName: string) => {
+    notify('正在打包剪映草稿…首次导出会整理分镜素材，页面没有卡住');
+    const r = await fetch(url);
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({} as Record<string, unknown>));
+      throw new Error(String(d.error || `HTTP ${r.status}`));
+    }
+    const total = Number(r.headers.get('content-length') || 0);
+    if (!r.body) {
+      const blob = await r.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = fallbackName;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+      notify('草稿包已下载：解压后双击「一键导入剪映.bat」');
+      return;
+    }
+    const reader = r.body.getReader();
+    const chunks: BlobPart[] = [];
+    let received = 0;
+    let lastPct = -1;
+    for (;;) {
+      const part = await reader.read();
+      if (part.done) break;
+      if (part.value) {
+        chunks.push(part.value as BlobPart);
+        received += part.value.byteLength;
+        const pct = total > 0 ? Math.min(99, Math.round(received / total * 100)) : -1;
+        if (pct !== lastPct) {
+          lastPct = pct;
+          notify(pct >= 0 ? `正在下载剪映草稿… ${pct}%` :
+            `正在下载剪映草稿… ${(received / 1024 / 1024).toFixed(1)} MB`);
+        }
+      }
+    }
+    const blob = new Blob(chunks, {type: r.headers.get('content-type') || 'application/zip'});
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = fallbackName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(href), 1000);
+    notify('草稿包已下载：解压后双击「一键导入剪映.bat」');
+  };
+
   // 导入剪映：装了小助手的机器一键直达；没装就回落成下载草稿包
   const jianying = async () => {
     if (!projectId || !jobId || jyBusy) return;
     setJyBusy(true);
-    setJy('正在准备草稿…');
+    setJy('正在准备剪映草稿…首次会整理分镜素材，页面没有卡住');
     try {
       const res = await api(`/api/projects/${projectId}/renders/${jobId}/jianying-import`,
         {method: 'POST'});
@@ -794,12 +844,17 @@ const App: React.FC = () => {
           document.removeEventListener('visibilitychange', off);
           if (!woke) {
             setJy('这台电脑没装导入小助手：草稿包已改为下载，解压后双击「一键导入剪映.bat」；不装也能用——剪映里直接导入那个 MP4。');
-            location.href = `/api/projects/${projectId}/renders/${jobId}/jianying-draft`;
+            void downloadDraftPackage(
+              `/api/projects/${projectId}/renders/${jobId}/jianying-draft`, setJy,
+              `GetCut-剪映草稿-${jobId.slice(-6)}.zip`,
+            ).catch((e) => setJy('下载失败：' + String((e as Error).message || e)));
           }
         }, 2600);
       } else {
-        setJy('草稿包已下载：解压后双击「一键导入剪映.bat」（只想快点剪的话，直接把这个 MP4 拖进剪映就行）');
-        location.href = `/api/projects/${projectId}/renders/${jobId}/jianying-draft`;
+        await downloadDraftPackage(
+          `/api/projects/${projectId}/renders/${jobId}/jianying-draft`, setJy,
+          `GetCut-剪映草稿-${jobId.slice(-6)}.zip`,
+        );
       }
     } catch (e) {
       setJy('导入失败：' + String((e as Error).message));
@@ -829,12 +884,17 @@ const App: React.FC = () => {
           document.removeEventListener('visibilitychange', off);
           if (!woke) {
             say('没装导入小助手：草稿包已改为下载，解压后双击「一键导入剪映.bat」');
-            location.href = `/api/projects/${pid}/renders/${rid}/jianying-draft`;
+            void downloadDraftPackage(
+              `/api/projects/${pid}/renders/${rid}/jianying-draft`, say,
+              `GetCut-剪映草稿-${rid.slice(-6)}.zip`,
+            ).catch((e) => say('下载失败：' + String((e as Error).message || e)));
           }
         }, 2600);
       } else {
-        say('草稿包已下载：解压后双击「一键导入剪映.bat」');
-        location.href = `/api/projects/${pid}/renders/${rid}/jianying-draft`;
+        await downloadDraftPackage(
+          `/api/projects/${pid}/renders/${rid}/jianying-draft`, say,
+          `GetCut-剪映草稿-${rid.slice(-6)}.zip`,
+        );
       }
     } catch (e) {
       say('导入失败：' + String((e as Error).message));

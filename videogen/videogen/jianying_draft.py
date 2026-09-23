@@ -730,22 +730,29 @@ def build_zip(manifest: dict, final_mp4: Path, voice_mp3: Path | None,
                 meta["draft_cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
                 content["cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
             out_zip.parent.mkdir(parents=True, exist_ok=True)
-            with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
+            # MP4/PNG/MP3 are already compressed. Deflating them again burns CPU
+            # before the first response byte without making the archive smaller.
+            with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_STORED) as z:
                 z.writestr(f"{folder}/draft_content.json",
-                           json.dumps(content, ensure_ascii=False, indent=1))
+                           json.dumps(content, ensure_ascii=False, indent=1),
+                           compress_type=zipfile.ZIP_DEFLATED)
                 z.writestr(f"{folder}/draft_meta_info.json",
-                           json.dumps(meta, ensure_ascii=False, indent=1))
+                           json.dumps(meta, ensure_ascii=False, indent=1),
+                           compress_type=zipfile.ZIP_DEFLATED)
                 # 底板（根目录单图）+ 画面/卡片/音频目录
                 files = [plan_dir / plan["base"]] if plan.get("base") else []
                 for sub in ("media", "cards", "audio"):
                     files += [f for f in sorted((plan_dir / sub).glob("*")) if f.is_file()]
                 for f in files:
                     if f.is_file():
-                        z.write(f, f"{folder}/{f.relative_to(plan_dir).as_posix()}")
+                        z.write(f, f"{folder}/{f.relative_to(plan_dir).as_posix()}",
+                                compress_type=zipfile.ZIP_STORED)
                 if has_cover:
-                    z.write(cover, f"{folder}/draft_cover.jpg")
-                z.writestr("一键导入剪映.bat", build_bat(folder).replace("\n", "\r\n"))
-                z.writestr("使用说明.txt", README.replace("\n", "\r\n"))
+                    z.write(cover, f"{folder}/draft_cover.jpg", compress_type=zipfile.ZIP_STORED)
+                z.writestr("一键导入剪映.bat", build_bat(folder).replace("\n", "\r\n"),
+                           compress_type=zipfile.ZIP_DEFLATED)
+                z.writestr("使用说明.txt", README.replace("\n", "\r\n"),
+                           compress_type=zipfile.ZIP_DEFLATED)
             return out_zip
 
         # 兜底：整条成片按分镜切片
@@ -757,16 +764,49 @@ def build_zip(manifest: dict, final_mp4: Path, voice_mp3: Path | None,
             meta["draft_cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
             content["cover"] = f"{PLACEHOLDER}/draft_cover.jpg"
         out_zip.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
+        with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_STORED) as z:
             z.writestr(f"{folder}/draft_content.json",
-                       json.dumps(content, ensure_ascii=False, indent=1))
+                       json.dumps(content, ensure_ascii=False, indent=1),
+                       compress_type=zipfile.ZIP_DEFLATED)
             z.writestr(f"{folder}/draft_meta_info.json",
-                       json.dumps(meta, ensure_ascii=False, indent=1))
-            z.write(final_mp4, f"{folder}/media/final.mp4")
+                       json.dumps(meta, ensure_ascii=False, indent=1),
+                       compress_type=zipfile.ZIP_DEFLATED)
+            z.write(final_mp4, f"{folder}/media/final.mp4", compress_type=zipfile.ZIP_STORED)
             if voice_mp3 and Path(voice_mp3).is_file():
-                z.write(voice_mp3, f"{folder}/media/voice.mp3")
+                z.write(voice_mp3, f"{folder}/media/voice.mp3", compress_type=zipfile.ZIP_STORED)
             if has_cover:
-                z.write(cover, f"{folder}/draft_cover.jpg")
-            z.writestr("一键导入剪映.bat", build_bat(folder).replace("\n", "\r\n"))
-            z.writestr("使用说明.txt", README.replace("\n", "\r\n"))
+                z.write(cover, f"{folder}/draft_cover.jpg", compress_type=zipfile.ZIP_STORED)
+            z.writestr("一键导入剪映.bat", build_bat(folder).replace("\n", "\r\n"),
+                       compress_type=zipfile.ZIP_DEFLATED)
+            z.writestr("使用说明.txt", README.replace("\n", "\r\n"),
+                       compress_type=zipfile.ZIP_DEFLATED)
     return out_zip
+
+
+def build_zip_cached(manifest: dict, final_mp4: Path, voice_mp3: Path | None,
+                     cache_zip: Path, progress=None) -> Path:
+    """Build an archive once and atomically reuse it for later downloads."""
+    import os
+
+    final_mp4 = Path(final_mp4)
+    cache_zip = Path(cache_zip)
+    plan_dir = Path(manifest.get("draft_dir") or draft_dir_for(final_mp4))
+    refs = [final_mp4]
+    plan_file = plan_dir / "draft_plan.json"
+    if plan_file.is_file():
+        refs.append(plan_file)
+    try:
+        if cache_zip.is_file() and cache_zip.stat().st_mtime_ns >= max(
+                ref.stat().st_mtime_ns for ref in refs if ref.is_file()):
+            return cache_zip
+    except OSError:
+        pass
+
+    cache_zip.parent.mkdir(parents=True, exist_ok=True)
+    tmp = cache_zip.with_name(f".{cache_zip.name}.{uuid.uuid4().hex}.part")
+    try:
+        build_zip(manifest, final_mp4, voice_mp3, tmp, progress=progress)
+        os.replace(tmp, cache_zip)
+    finally:
+        tmp.unlink(missing_ok=True)
+    return cache_zip

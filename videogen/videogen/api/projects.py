@@ -11,8 +11,8 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from fastapi import Request, Response
-from fastapi.responses import JSONResponse
+from fastapi import Request
+from fastapi.responses import FileResponse, JSONResponse
 from .. import auth, config, cos_store, preview
 
 from .. import ctx
@@ -272,28 +272,18 @@ def jianying_pull(t: str = ""):
         mf.setdefault("title", info["title"])
         voice = mf.get("voice")
         try:
-            import tempfile
-            with tempfile.TemporaryDirectory() as td:
-                zpath = _P(td) / "draft.zip"
-                jyd.build_zip(mf, video, _P(voice) if voice else None, zpath)
-                data = zpath.read_bytes()
+            zpath = video.with_suffix(".jianying.zip")
+            jyd.build_zip_cached(mf, video, _P(voice) if voice else None, zpath)
         except Exception as exc:  # noqa: BLE001 - 打包失败保留 token，助手重试还能用
             return JSONResponse({"error": f"草稿打包失败: {exc}"}, status_code=500)
         fname = f"GetCut-剪映草稿-{info['rid'][:6]}.zip"
-        from urllib.parse import quote
-        return Response(
-            content=data, media_type="application/zip",
-            headers={"Content-Disposition":
-                     "attachment; filename=getcut-draft.zip; "
-                     "filename*=UTF-8''{}".format(quote(fname))})
+        return FileResponse(zpath, media_type="application/zip", filename=fname)
     finally:
         _drop_staged(video, staged)
 @router.get("/api/projects/{pid}/renders/{rid}/jianying-draft")
 def jianying_draft_zip(pid: str, rid: str, request: Request):
     """把指定成片打包成剪映专业版草稿 zip（分镜切段 + 可编辑字幕[关字幕渲染时]）。"""
-    import tempfile
     from pathlib import Path as _P
-    from urllib.parse import quote
     from .. import jianying_draft as jyd
 
     if (wall := _require_premium(request)) is not None:
@@ -337,18 +327,11 @@ def jianying_draft_zip(pid: str, rid: str, request: Request):
         title = (mf.get("title") or "成片").replace(" ", "_")[:24]
         fname = f"GetCut-剪映草稿-{title}-{rid[:6]}.zip"
         try:
-            with tempfile.TemporaryDirectory() as td:
-                zpath = _P(td) / "draft.zip"
-                jyd.build_zip(mf, video, _P(voice) if voice else None, zpath)
-                data = zpath.read_bytes()
+            zpath = video.with_suffix(".jianying.zip")
+            jyd.build_zip_cached(mf, video, _P(voice) if voice else None, zpath)
         except Exception as exc:
             return JSONResponse({"error": f"草稿打包失败: {exc}"}, status_code=500)
-        return Response(
-            content=data,
-            media_type="application/zip",
-            headers={"Content-Disposition":
-                     "attachment; filename=jianying-draft-{}.zip; "
-                     "filename*=UTF-8''{}".format(rid[:6], quote(fname))})
+        return FileResponse(zpath, media_type="application/zip", filename=fname)
     finally:
         _drop_staged(video, staged)
 @router.post("/api/projects/{pid}/delete")
