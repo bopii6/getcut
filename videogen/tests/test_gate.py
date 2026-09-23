@@ -216,17 +216,29 @@ class ResponseHeaderTest(unittest.TestCase):
         self.assertEqual(again.headers["cache-control"], "no-cache")
 
     def test_html_revalidates_and_answers_304(self):
-        """回访最该省的是整页 HTML：必须回源校验，内容没变就一个字节都不传。"""
-        first = self.client.get("/studio")
+        """回访最该省的是整页 HTML：必须回源校验，内容没变就一个字节都不传。
+
+        2026-09-23 起产品只留成片台一个页面：/studio 已下线（302 回 /），
+        整页 HTML 的缓存语义由还在服务的 /i/<code>（Agent 直投短链，同一份 SPA）继承。
+        """
+        first = self.client.get("/i/selfcheck")
         self.assertEqual(first.status_code, 200)
         self.assertEqual(first.headers["cache-control"], "no-cache")
         tag = first.headers.get("etag")
         self.assertTrue(tag, "没配 ETag 的话 no-cache 等于每次都重拉整页")
-        again = self.client.get("/studio", headers={"if-none-match": tag})
+        again = self.client.get("/i/selfcheck", headers={"if-none-match": tag})
         self.assertEqual(again.status_code, 304)
         self.assertEqual(again.content, b"")
-        stale = self.client.get("/studio", headers={"if-none-match": 'W/"stale00000000000000"'})
+        stale = self.client.get("/i/selfcheck", headers={"if-none-match": 'W/"stale00000000000000"'})
         self.assertEqual(stale.status_code, 200, "标签不匹配时必须回整页")
+
+    def test_studio_is_retired_and_redirects_home(self):
+        """工作台页面已下线：老书签 302 送回成片台，不许再把人带进旧页面。"""
+        r = self.client.get("/studio", follow_redirects=False)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r.headers["location"], "/")
+        r2 = self.client.get("/studio/", follow_redirects=False)
+        self.assertEqual(r2.status_code, 302)
 
     def test_hsts_only_when_served_over_https(self):
         plain = self.client.get("/api/auth/status")

@@ -1205,7 +1205,7 @@ const App: React.FC = () => {
       </footer>
 
       {lib !== null || libMsg ? (
-        <Sheet title="作品库" sub="历史项目与成片；打开可继续精修" width={620}
+        <Sheet title="作品库" sub="历史项目与成片，直接下载带走" width={620}
                onClose={() => { setLib(null); setLibMsg(''); }}>
           {libMsg ? <div className="note">{libMsg}</div> : null}
           {lib && !lib.length ? <div className="note">还没有项目，拖一个素材包进来就是第一条。</div> : null}
@@ -1221,14 +1221,13 @@ const App: React.FC = () => {
                   <div className="li-a">
                     {last ? <a className="btn ln sm" href={`/video/${last.id}`}
                                download>下成片</a> : null}
-                    <a className="btn ln sm" href={`/studio#/project/${p.project_id}`}>打开</a>
                   </div>
                 </div>
               );
             })}
           </div>
           <div className="note" style={{marginTop: 14}}>
-            需要逐条改字幕、动分轨，就在「打开」里进工作台；只出片的话，这一页就够了。
+            要逐条改字幕、动分轨：成片台里点「导入剪映（分轨草稿）」，去剪映里接着剪。
           </div>
         </Sheet>
       ) : null}

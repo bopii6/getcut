@@ -13916,7 +13916,7 @@ const App = () => {
       Sheet,
       {
         title: "\u4F5C\u54C1\u5E93",
-        sub: "\u5386\u53F2\u9879\u76EE\u4E0E\u6210\u7247\uFF1B\u6253\u5F00\u53EF\u7EE7\u7EED\u7CBE\u4FEE",
+        sub: "\u5386\u53F2\u9879\u76EE\u4E0E\u6210\u7247\uFF0C\u76F4\u63A5\u4E0B\u8F7D\u5E26\u8D70",
         width: 620,
         onClose: () => {
           setLib(null);
@@ -13939,21 +13939,18 @@ const App = () => {
                   " \u6210\u7247"
                 ] })
               ] }),
-              /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-a", children: [
-                last ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
-                  "a",
-                  {
-                    className: "btn ln sm",
-                    href: `/video/${last.id}`,
-                    download: true,
-                    children: "\u4E0B\u6210\u7247"
-                  }
-                ) : null,
-                /* @__PURE__ */ (0,jsx_runtime.jsx)("a", { className: "btn ln sm", href: `/studio#/project/${p.project_id}`, children: "\u6253\u5F00" })
-              ] })
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "li-a", children: last ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                "a",
+                {
+                  className: "btn ln sm",
+                  href: `/video/${last.id}`,
+                  download: true,
+                  children: "\u4E0B\u6210\u7247"
+                }
+              ) : null })
             ] }, p.project_id);
           }) }),
-          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 14 }, children: "\u9700\u8981\u9010\u6761\u6539\u5B57\u5E55\u3001\u52A8\u5206\u8F68\uFF0C\u5C31\u5728\u300C\u6253\u5F00\u300D\u91CC\u8FDB\u5DE5\u4F5C\u53F0\uFF1B\u53EA\u51FA\u7247\u7684\u8BDD\uFF0C\u8FD9\u4E00\u9875\u5C31\u591F\u4E86\u3002" })
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 14 }, children: "\u8981\u9010\u6761\u6539\u5B57\u5E55\u3001\u52A8\u5206\u8F68\uFF1A\u6210\u7247\u53F0\u91CC\u70B9\u300C\u5BFC\u5165\u526A\u6620\uFF08\u5206\u8F68\u8349\u7A3F\uFF09\u300D\uFF0C\u53BB\u526A\u6620\u91CC\u63A5\u7740\u526A\u3002" })
         ]
       }
     ) : null,

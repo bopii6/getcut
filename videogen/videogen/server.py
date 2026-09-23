@@ -235,7 +235,7 @@ def _enqueue_render(job_id: str, prio: int) -> None:
         _RENDER_CV.notify()
 
 
-_PUBLIC_PATHS = {"/", "/index.html", "/studio", "/healthz", "/api/templates",
+_PUBLIC_PATHS = {"/", "/index.html", "/studio", "/studio/", "/healthz", "/api/templates",
                  "/api/auth/status", "/api/auth/login", "/api/auth/register",
                  "/api/auth/send-code", "/api/auth/reset-code", "/api/auth/reset",
                  "/api/pricing", "/api/sample-bundle",

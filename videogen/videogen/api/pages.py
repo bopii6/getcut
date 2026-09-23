@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from fastapi import Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from .. import version
 
 from .. import ctx
@@ -24,11 +24,15 @@ def index(request: Request) -> Response:
     if isinstance(page, JSONResponse):
         return page
     return ctx._page(request, page.replace("<head>", '<head><base href="/poc/">', 1))
-@router.get("/studio", response_class=HTMLResponse)
-@router.get("/studio/", response_class=HTMLResponse)
+@router.get("/studio", response_class=Response)
+@router.get("/studio/", response_class=Response)
 def studio(request: Request) -> Response:
-    """工作台：作品库与历史项目。主路径已在成片台，这里退成后台。"""
-    return ctx._page(request, _inject_browser_export((ctx.STATIC / "index.html").read_text(encoding="utf-8")))
+    """工作台已下线（2026-09-23 用户拍板：整个产品只留成片台一个页面）。
+
+    老书签/旧链接 302 送回成片台；历史版本与剪映草稿由成片台页内的
+    「导入剪映（分轨草稿）」与作品库承接，不再有独立页面。
+    """
+    return RedirectResponse("/", status_code=302)
 @router.get("/i/{code}", response_class=HTMLResponse)
 def intake_page(code: str, request: Request) -> Response:
     """Agent 直投短链：与 / 同一份 SPA，前端按路径进入「素材包已送达」落地页。"""
