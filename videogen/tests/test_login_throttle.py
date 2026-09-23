@@ -148,5 +148,38 @@ class LoginThrottleTest(unittest.TestCase):
         self.addCleanup(auth._login_fail.clear)
 
 
+class AgentLoginThrottleTest(LoginThrottleTest):
+    """/api/agent/login 必须和普通登录共用同一道闸门（整批断言直接继承过来跑）。
+
+    它以前是一句裸 `verify_login`：不排队、不延时，每试一次还替对方跑一次 PBKDF2，
+    试对了就签一张 90 天、不记设备的票。这条路口虽然不在匿名公开名单里
+    （要先有一张会话才够得到），但**注册是开放的** —— 任何注册进来的人都能拿它
+    去爆破别人的邮箱密码，而这台成片台票的分量比网页登录更重：拿到它就能领走
+    那个客户的全部任务，连他还没交回服务器的口播、素材与成片都看得到。
+    """
+
+    def setUp(self):
+        super().setUp()
+        # 够得到这道口要先有一张会话（它不在 _PUBLIC_PATHS 里）：模拟"已登录的
+        # 别人"来换票，正是要限流的那个身份
+        self.sess = auth.make_session(OTHER, auth.SESSION_TTL_SHORT)
+
+    def try_login(self, email, password, ip=IP):
+        return self.client.post("/api/agent/login",
+                                json={"email": email, "password": password,
+                                      "device": "客厅那台"},
+                                headers={"x-forwarded-for": ip},
+                                cookies={server.SESSION_COOKIE: self.sess})
+
+    def test_token_records_which_device_it_was_issued_to(self):
+        """90 天的设备令牌不能是匿名的一张空白票：得能在「登录设备」里被认出来踢掉。"""
+        r = self.try_login(GOOD, PASSWORD)
+        self.assertEqual(r.status_code, 200, r.text)
+        rows = [x for x in auth.list_sessions(GOOD) if x["ip"] == IP]
+        self.assertTrue(rows, "设备令牌没登记来源 IP，登录设备列表里查不到它")
+        self.assertTrue(any(x["device"] == "客厅那台" for x in rows),
+                        "设备令牌没记是哪台机器，客户想只踢这一台都挑不出来")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

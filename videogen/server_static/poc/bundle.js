@@ -12692,6 +12692,7 @@ var update = injectStylesIntoStyleTag_default()(ui/* default */.A, options);
 
 const qs = new URLSearchParams(location.search);
 const DEVICE = qs.get("device") || "\u7F51\u9875\u6210\u7247\u53F0";
+const IS_HANDHELD = /Android|iPhone|iPod|iPad|HarmonyOS|Mobile/i.test(navigator.userAgent);
 async function probeEnv() {
   const nav = navigator;
   const hasVE = typeof window.VideoEncoder !== "undefined";
@@ -12914,12 +12915,13 @@ const App = () => {
       return cur.job;
     };
     const leave = () => {
+      const cur = packRef.current;
       const job = inFlight();
-      if (!job) return;
+      if (!job || !cur) return;
       fetch(`/api/agent/job/${job}/progress?device=${encodeURIComponent(DEVICE)}`, {
         method: "POST",
         keepalive: true,
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-agent-claim": cur.claim },
         body: JSON.stringify({
           pct: 0,
           detail: "\u9875\u9762\u5237\u65B0\uFF0C\u5148\u4EA4\u8FD8\u4EFB\u52A1",
@@ -12966,7 +12968,7 @@ const App = () => {
     try {
       const r = await fetch(`/api/agent/job/${cur.job}/progress?device=${encodeURIComponent(DEVICE)}`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-agent-claim": cur.claim },
         body: JSON.stringify({ pct: p, detail, requeue })
       });
       const d = await r.json().catch(() => ({}));
@@ -13004,7 +13006,11 @@ const App = () => {
     }).catch(() => {
     });
   }, []);
-  const mayPoll = authReady && (!!me || authst.open);
+  const mayPoll = authReady && !IS_HANDHELD && (!!me || authst.open);
+  const [pollNonce, setPollNonce] = react.useState(0);
+  react.useEffect(() => {
+    if (phase === "done" || phase === "error") setPollNonce((n) => n + 1);
+  }, [phase]);
   react.useEffect(() => {
     if (!mayPoll) return;
     let alive = true;
@@ -13025,7 +13031,12 @@ const App = () => {
           const data = await r.json();
           if (!data.job) continue;
           window.remotion_staticBase = `/agent-media/${data.job}`;
-          const p = { job: data.job, props: data.props, files: data.files || [] };
+          const p = {
+            job: data.job,
+            props: data.props,
+            files: data.files || [],
+            claim: String(data.claim || "")
+          };
           if (!alive) return;
           const resuming = sessionStorage.getItem(RESUME_KEY) === data.job;
           if (resuming) {
@@ -13037,8 +13048,11 @@ const App = () => {
           setPack(p);
           packRef.current = p;
           setStalled(false);
-          autoRef.current = resuming || !!jobIdRef.current && jobIdRef.current === data.job;
-          setPhase(autoRef.current ? "prepping" : "ready");
+          autoRef.current = true;
+          if (phaseRef.current === "done" || phaseRef.current === "error") {
+            say("\u63A5\u5230\u4E0B\u4E00\u6761\uFF0C\u5F00\u59CB\u751F\u6210");
+          }
+          setPhase("prepping");
           setPrewarmDone(0);
           stage = "\u7D20\u6750";
           let done = 0;
@@ -13108,7 +13122,7 @@ const App = () => {
     return () => {
       alive = false;
     };
-  }, [mayPoll]);
+  }, [mayPoll, pollNonce]);
   const importZip = async (file) => {
     if (!file || phaseRef.current === "importing") return;
     if (!meRef.current && authReady && !authst.open) {
@@ -13218,11 +13232,17 @@ const App = () => {
             setPhase("config");
             return;
           }
-          if (stage === "done" || stage === "cancelled") return;
+          if (stage === "done" || stage === "cancelled") {
+            if (IS_HANDHELD && stage === "done" && !packRef.current) {
+              setFinalUrl(`/video/${jid}`);
+              setCloudOk(true);
+            }
+            return;
+          }
           setPrepMsg(String(j.detail || stage));
           setPrepStage(stage);
           setPrepPct(Number(j.progress ?? 0));
-          setStalled(!packRef.current && stage === "render" && /已领取/.test(String(j.detail || "")) && Date.now() - t0Ref.current > 6e4);
+          setStalled(!IS_HANDHELD && !packRef.current && stage === "render" && /已领取/.test(String(j.detail || "")) && Date.now() - t0Ref.current > 6e4);
           if (packRef.current && packRef.current.job === jid) return;
         }
       };
@@ -13242,7 +13262,7 @@ const App = () => {
     const post = async (name, body, type) => {
       const r = await fetch(
         `/api/agent/job/${cur.job}/layer?name=${encodeURIComponent(name)}&device=${encodeURIComponent(DEVICE)}`,
-        { method: "POST", headers: { "content-type": type }, body }
+        { method: "POST", headers: { "content-type": type, "x-agent-claim": cur.claim }, body }
       );
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
@@ -13332,12 +13352,20 @@ const App = () => {
       setFinalUrl(URL.createObjectURL(blob));
       setPhase("uploading");
       setMsg("\u6B63\u5728\u4EA4\u56DE\u4E91\u7AEF\u2026");
-      const r = await fetch(`/api/agent/job/${cur.job}/visual?final=1&device=${encodeURIComponent(DEVICE)}`, {
-        method: "POST",
-        headers: { "content-type": "application/octet-stream" },
-        body: blob
-      });
-      const ok = r.ok;
+      const upBeat = setInterval(() => {
+        void report(99, "\u6B63\u5728\u4EA4\u56DE\u4E91\u7AEF");
+      }, 15e3);
+      let ok = false;
+      try {
+        const r = await fetch(`/api/agent/job/${cur.job}/visual?final=1&device=${encodeURIComponent(DEVICE)}`, {
+          method: "POST",
+          headers: { "content-type": "application/octet-stream", "x-agent-claim": cur.claim },
+          body: blob
+        });
+        ok = r.ok;
+      } finally {
+        clearInterval(upBeat);
+      }
       setCloudOk(ok);
       if (ok) {
         await report(100, "\u6D4F\u89C8\u5668\u6210\u7247\u5DF2\u4EA4\u56DE");
@@ -13367,6 +13395,8 @@ const App = () => {
       setPhase("error");
       setErr(renderHint(e));
       console.warn("GetCut \u6D4F\u89C8\u5668\u51FA\u7247\u5931\u8D25", e.stack || String(e));
+      await report(0, "\u672C\u673A\u751F\u6210\u5931\u8D25\uFF0C\u9000\u56DE\u961F\u5217", true).catch(() => {
+      });
     } finally {
       try {
         await (wake == null ? void 0 : wake.release());
@@ -13941,6 +13971,7 @@ const App = () => {
           "\u51FA\u9519\uFF1A",
           err
         ] }) : null,
+        IS_HANDHELD ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: "\u624B\u673A\u8FD9\u53F0\u4E0D\u51FA\u7247\uFF1A\u8FD9\u4E00\u6761\u4EA4\u7ED9\u4F60\u7684\u7535\u8111\u751F\u6210\u3002\u90A3\u53F0\u7535\u8111\u7684\u6210\u7247\u53F0\u5F00\u7740\u5C31\u4F1A\u81EA\u52A8\u63A5\u6D3B\uFF0C \u751F\u6210\u597D\u4EE5\u540E\u8FD9\u91CC\u76F4\u63A5\u7ED9\u4F60\u4E0B\u8F7D\u3002" }) : null,
         resumeJob && !pack && phase === "drop" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "note", style: { color: "var(--acc)" }, children: [
           "\u521A\u624D\u90A3\u4E00\u6761\uFF08",
           resumeJob.slice(-6),

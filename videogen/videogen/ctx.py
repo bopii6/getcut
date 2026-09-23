@@ -69,7 +69,10 @@ _PREP_CV = threading.Condition(_LOCK)
 # 只负责「挂单等成片台领走 + 等带声成片交回」，画面渲染与混音都发生在用户
 # 自己的浏览器里（协议见 agenthub.py 模块注释）。灶台线程数因此可以
 # 放开——每个线程只是在等 IO，不再吃主机 CPU/内存。
-_RENDER_STAGE_WORKERS = max(1, int(os.environ.get("VIDEOGEN_RENDER_STAGES", "6") or "6"))
+# 6 → 24：一条在等的任务就占一条线程，而"没人领就一直等"最长是 24 小时
+# （agenthub._WAIT_PATIENCE）。公开入口（免登录试玩）哪怕单条只等 5 分钟，
+# 6 条也够把全站真客户的渲染排空 —— 这里留足余量，配合 try 的短耐心一起止血。
+_RENDER_STAGE_WORKERS = max(1, int(os.environ.get("VIDEOGEN_RENDER_STAGES", "24") or "24"))
 
 # 正在干活（非排队/非终态）的阶段：算排队位置时要把它们算在"前面"
 _ACTIVE_STAGES = ("tts", "plan", "props", "prepped", "render", "audio", "mux")
@@ -246,8 +249,6 @@ def _agent_job_ok(job_id: str, request: Request):
         j = JOBS.get(str(job_id))
         if j is None:
             owner = None
-        elif j.get("try"):
-            return None                      # 试玩样片本就是公开引流物
         elif j.get("owner") is not None:
             owner = j["owner"]
         else:                                # 老任务没记 owner，退到项目归属

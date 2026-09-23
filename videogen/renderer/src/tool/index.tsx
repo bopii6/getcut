@@ -13,6 +13,13 @@ import './ui.css';
 
 const qs = new URLSearchParams(location.search);
 const DEVICE = qs.get('device') || '网页成片台';
+// 手机/平板上的浏览器不当出片的那台机器：一条片子要连渲两分钟，手机的内存
+// 与"切后台就冻结网页"撑不住这段（同一条链路在客户电脑上都顶出过 Out of Memory）。
+// 它只负责下单与看进度，渲染照旧走客户自己那台开着的电脑。
+// 只认 UA，不要用「触屏 + 窄窗口」那类推法：带触屏的笔记本、把窗口拖窄的桌面
+// Chrome 都会被误判成手机而**拒绝接单**（headless 实测真踩中：maxTouchPoints=5
+// 且默认窗口 800px）。宁可放过 iPad 桌面模式，也不能把客户的电脑挡在门外。
+const IS_HANDHELD = /Android|iPhone|iPod|iPad|HarmonyOS|Mobile/i.test(navigator.userAgent);
 
 // 出片靠这台电脑的浏览器算：审一遍浏览器/硬件/网络，只给三档结论，技术细节收进小字
 type EnvResult = {
@@ -145,6 +152,8 @@ interface JobPack {
   job: string;
   props: NiwoProps;
   files: {path: string; size: number}[];
+  // 领单时服务端发的认领凭据：进度/成片/图层三样都只认它（设备名只是标签）
+  claim: string;
 }
 interface BundleInfo {
   name: string; title: string; script: string; estSeconds: number;
@@ -294,12 +303,13 @@ const App: React.FC = () => {
       return cur.job;
     };
     const leave = () => {
+      const cur = packRef.current;
       const job = inFlight();
-      if (!job) return;
+      if (!job || !cur) return;
       fetch(`/api/agent/job/${job}/progress?device=${encodeURIComponent(DEVICE)}`, {
         method: 'POST',
         keepalive: true,
-        headers: {'content-type': 'application/json'},
+        headers: {'content-type': 'application/json', 'x-agent-claim': cur.claim},
         body: JSON.stringify({pct: 0, detail: '页面刷新，先交还任务',
                               requeue: true, voluntary: true}),
       }).catch(() => {});
@@ -352,7 +362,7 @@ const App: React.FC = () => {
     try {
       const r = await fetch(`/api/agent/job/${cur.job}/progress?device=${encodeURIComponent(DEVICE)}`, {
         method: 'POST',
-        headers: {'content-type': 'application/json'},
+        headers: {'content-type': 'application/json', 'x-agent-claim': cur.claim},
         body: JSON.stringify({pct: p, detail, requeue}),
       });
       const d = await r.json().catch(() => ({}));
@@ -397,7 +407,17 @@ const App: React.FC = () => {
   // ---- 成片台轮询：领任务（本页提交的或别的页提交的都走这里） ----
   // 访客（未登录）不开这条轮询：poll 一定 401，落地页会凭空糊一屏红字，
   // 说的还是"这一单已作废"——可他连单都还没有。开放模式例外，问服务端要结论别自己猜。
-  const mayPoll = authReady && (!!me || authst.open);
+  // 手机/平板也不开：它领到单只会把任务拖死在路上（拉几十兆素材 + 锁屏即冻结 +
+  // 4 分钟判失联），而这段时间里电脑上那台根本看不到这一单。
+  const mayPoll = authReady && !IS_HANDHELD && (!!me || authst.open);
+
+  // 一条跑完（交回成功或本机失败）就重新挂上去领下一条。以前轮询是"一次性"的：
+  // 领到一条就 return 退出循环，只有成功交回那条靠父页面整页刷新才重新开始，
+  // 失败那一支干脆不再领 —— 页面看着在线，其实已经对后面的单永久失聪。
+  const [pollNonce, setPollNonce] = React.useState(0);
+  React.useEffect(() => {
+    if (phase === 'done' || phase === 'error') setPollNonce((n) => n + 1);
+  }, [phase]);
 
   React.useEffect(() => {
     if (!mayPoll) return;
@@ -421,7 +441,8 @@ const App: React.FC = () => {
           if (!data.job) continue;
           (window as unknown as Record<string, unknown>).remotion_staticBase =
             `/agent-media/${data.job}`;
-          const p: JobPack = {job: data.job, props: data.props, files: data.files || []};
+          const p: JobPack = {job: data.job, props: data.props,
+                               files: data.files || [], claim: String(data.claim || '')};
           if (!alive) return;
           // 刷新前那条是这一页自己交还的：领回来就直接接着跑，不再要用户点一次
           const resuming = sessionStorage.getItem(RESUME_KEY) === data.job;
@@ -434,9 +455,13 @@ const App: React.FC = () => {
           setPack(p);
           packRef.current = p;
           setStalled(false);
-          autoRef.current = resuming
-            || (!!jobIdRef.current && jobIdRef.current === data.job);
-          setPhase(autoRef.current ? 'prepping' : 'ready');
+          // 这台既然开着成片台，就是"这台电脑来出片"的意思 —— 领到就开跑，
+          // 不再要人回到页面上再点一次「生成视频」（手机下的单在电脑上自动接）
+          autoRef.current = true;
+          if (phaseRef.current === 'done' || phaseRef.current === 'error') {
+            say('接到下一条，开始生成');
+          }
+          setPhase('prepping');
           setPrewarmDone(0);
           stage = '素材';        // 下面这段失败才是"素材拉不下来"
           let done = 0;
@@ -519,7 +544,7 @@ const App: React.FC = () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mayPoll]);
+  }, [mayPoll, pollNonce]);
 
   // ---- 导入：建项目 → 上传 zip → 挂载 → 读摘要 ----
   const importZip = async (file?: File) => {
@@ -617,13 +642,23 @@ const App: React.FC = () => {
             setPhase('config');
             return;
           }
-          if (stage === 'done' || stage === 'cancelled') return;
+          if (stage === 'done' || stage === 'cancelled') {
+            // 手机端不当出片的机器：这一条是在他自己那台电脑上渲好交回云端的。
+            // 把云端那份挂到第 4 步上，手机上点开就能播/能存（限时签名链接，
+            // 而且 /video/<id> 查归属，别人要不到这一条）
+            if (IS_HANDHELD && stage === 'done' && !packRef.current) {
+              setFinalUrl(`/video/${jid}`);
+              setCloudOk(true);
+            }
+            return;
+          }
           setPrepMsg(String(j.detail || stage));
           setPrepStage(stage);
           setPrepPct(Number(j.progress ?? 0));
           // 这一单被别的页面（含自己另开的标签页）领走了：本页领不到，
-          // 只能等云端「多久没心跳」判定收回 —— 不告诉人就是一直转圈
-          setStalled(!packRef.current && stage === 'render'
+          // 只能等云端「多久没心跳」判定收回 —— 不告诉人就是一直转圈。
+          // 手机端是故意不领单的：他那台电脑领走算正常，不算卡住。
+          setStalled(!IS_HANDHELD && !packRef.current && stage === 'render'
             && /已领取/.test(String(j.detail || ''))
             && Date.now() - t0Ref.current > 60_000);
           if (packRef.current && packRef.current.job === jid) return;  // 已领单，交给渲染线
@@ -645,7 +680,7 @@ const App: React.FC = () => {
     const last = Math.max(0, props.durationInFrames - 1);
     const post = async (name: string, body: Blob | string, type: string) => {
       const r = await fetch(`/api/agent/job/${cur.job}/layer?name=${encodeURIComponent(name)}&device=${encodeURIComponent(DEVICE)}`,
-        {method: 'POST', headers: {'content-type': type}, body});
+        {method: 'POST', headers: {'content-type': type, 'x-agent-claim': cur.claim}, body});
       if (!r.ok) {
         const d = await r.json().catch(() => ({}) as Record<string, unknown>);
         throw new Error(`${name} 交回失败：${String(d.error || `HTTP ${r.status}`)}`);
@@ -733,12 +768,22 @@ const App: React.FC = () => {
       setFinalUrl(URL.createObjectURL(blob));
       setPhase('uploading');
       setMsg('正在交回云端…');
-      const r = await fetch(`/api/agent/job/${cur.job}/visual?final=1&device=${encodeURIComponent(DEVICE)}`, {
-        method: 'POST',
-        headers: {'content-type': 'application/octet-stream'},
-        body: blob,
-      });
-      const ok = r.ok;
+      // 交回这一段也要心跳：二三十兆的成片从上行慢的线路上去，几分钟不吭声
+      // 就会被云端判成"这台成片台没了"，把一条已经渲完的单收走重排
+      const upBeat = setInterval(() => {
+        void report(99, '正在交回云端');
+      }, 15000);
+      let ok = false;
+      try {
+        const r = await fetch(`/api/agent/job/${cur.job}/visual?final=1&device=${encodeURIComponent(DEVICE)}`, {
+          method: 'POST',
+          headers: {'content-type': 'application/octet-stream', 'x-agent-claim': cur.claim},
+          body: blob,
+        });
+        ok = r.ok;
+      } finally {
+        clearInterval(upBeat);
+      }
       setCloudOk(ok);
       if (ok) {
         await report(100, '浏览器成片已交回');
@@ -768,6 +813,9 @@ const App: React.FC = () => {
       setPhase('error');
       setErr(renderHint(e));
       console.warn('GetCut 浏览器出片失败', (e as Error).stack || String(e));
+      // 当场交回队列，而不是让云端干等 4 分钟失联判定：这条单可能被这台
+      // 电脑的某个瞬时问题卡住了，退回去重排（最多两次，第三次按失败收口）
+      await report(0, '本机生成失败，退回队列', true).catch(() => {});
     } finally {
       try {
         await wake?.release();
@@ -1257,6 +1305,12 @@ const App: React.FC = () => {
           </div>
 
           {err ? <div className="err">出错：{err}</div> : null}
+          {IS_HANDHELD ? (
+            <div className="note">
+              手机这台不出片：这一条交给你的电脑生成。那台电脑的成片台开着就会自动接活，
+              生成好以后这里直接给你下载。
+            </div>
+          ) : null}
           {resumeJob && !pack && phase === 'drop' ? (
             <div className="note" style={{color: 'var(--acc)'}}>
               刚才那一条（{resumeJob.slice(-6)}）已交还队列，正在重新领回来——不用重拖素材包。

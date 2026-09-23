@@ -1051,7 +1051,9 @@ def _agent_visual(job_id: str, layers_dir: Path | None = None):
 
     def fn(props, out_path, progress=None, cancel_check=None, audio=None):
         with ctx._LOCK:
-            owner = (ctx.JOBS.get(job_id) or {}).get("owner")
+            _job = ctx.JOBS.get(job_id) or {}
+            owner = _job.get("owner")
+            is_try = bool(_job.get("try"))
         media, logo_path = rr.collect_remote_assets(props)
         # 素材统一改成分配的 ASCII 名：中文包名生成的媒体名不再进 URL，
         # 浏览器/Caddy/编码各种环节都再无中文路径隐患
@@ -1082,8 +1084,11 @@ def _agent_visual(job_id: str, layers_dir: Path | None = None):
                           audio=audio_pkg,
                           layers_dir=str(layers_dir) if layers_dir else None)
         try:
+            # 试玩是免登录公开入口，谁都能连着提交几条；让它最多占一条渲染灶台
+            # 线程 5 分钟（真人客户的单才配"等你的电脑开机"那 24 小时）
             visual = agenthub.wait_result(job_id, progress=progress,
-                                          cancel_check=cancel_check)
+                                          cancel_check=cancel_check,
+                                          patience=300.0 if is_try else None)
             delivered_final = agenthub.is_final_delivered(job_id)
             agenthub.discard(job_id)
         except BaseException:

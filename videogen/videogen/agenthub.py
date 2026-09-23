@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import re
+import secrets
 import threading
 import time
 from pathlib import Path
@@ -36,8 +37,10 @@ _MAX_RECLAIMS = 2            # 收回 2 次还失联就按失败处理（第三�
 _MAX_VOLUNTARY = 10          # 成片台自己交还（刷新页面）另算：正常操作，不烧失联额度
 _WAIT_PATIENCE = 24 * 3600   # 待领取最长等 24 小时（成片台可能就是没开机）
 
-# 分轨图层的文件名是成片台报上来的，只认这三种写法（挡住一切路径拼接花样）
-LAYER_NAME = re.compile(r"^(?:base\.png|cards/shot_[0-9]{3}\.png|texts\.json)$")
+# 分轨图层的文件名是成片台报上来的，只认这三种写法（挡住一切路径拼接花样）。
+# 必须 fullmatch：`re.match(r"^...$")` 会放过尾随换行，"texts.json\n" 能写出一个
+# 带换行的野文件名，而真图层没落盘——用户只看到"分轨图层没出全"。
+LAYER_NAME = re.compile(r"(?:base\.png|cards/shot_[0-9]{3}\.png|texts\.json)")
 _LAYER_TTL = 3600            # 交片后 1 小时内还允许补图层，过期即弃
 # 摘牌后渲染包的素材下载链接再活 30 分钟：成片交回那一刻任务就摘牌了，
 # 而页面还停在「已完成」上——刷新回到预览态、或过一阵再点「重试这一步」，
@@ -72,7 +75,7 @@ def register(job_id: str, owner: str | None, props: dict,
         if audio:
             all_files.update(audio[1])   # 音频文件同画面素材一样走 /agent-media 放行表
         _JOBS[_jid(job_id)] = {
-            "owner": owner, "device": None, "status": "waiting",
+            "owner": owner, "device": None, "status": "waiting", "claim": None,
             "pct": 0, "detail": "等待成片台领取", "props": props,
             "files": all_files, "out_path": out_path,
             "audio": audio, "layers_dir": layers_dir,
@@ -94,10 +97,17 @@ def discard(job_id: str) -> None:
             if j.get("files"):
                 _GRACE_FILES[_jid(job_id)] = (dict(j["files"]), time.time())
             if j["device"]:
-                d = _DEVICES.get(j["device"])
-                if d and d.get("job") == _jid(job_id):
-                    d["job"] = None
+                _unhang_locked(job_id, j)
         _CV.notify_all()
+
+
+def _dev_key(owner, device: str) -> str:
+    """设备表按「归属 + 设备名」分键。
+
+    设备名是客户端自报的字符串，只当标签用（认领靠 claim 令牌）；但两个客户都
+    用默认名「网页成片台」时不该挤进同一行——在线数与 idle 时长会互相盖掉。
+    """
+    return f"{owner or '-'}|{device}"
 
 
 def _claim_locked(owners: list, device: str, want_audio: bool = False) -> dict | None:
@@ -106,16 +116,21 @@ def _claim_locked(owners: list, device: str, want_audio: bool = False) -> dict |
         j = _JOBS[jid]
         if j["status"] != "waiting" or j["owner"] not in owners:
             continue
-        j.update(status="rendering", device=device, pct=0,
+        # 一次性认领令牌：此后这一步之内的所有上报（进度/交片/交图层）只认它。
+        # 以前认的是设备名，而设备名是客户端自己填的 —— 同账号另一个标签页
+        # 报同一个名字就能凭空摘走这台正在渲的单、甚至交一份别的 mp4 上去。
+        claim = secrets.token_urlsafe(16)
+        j.update(status="rendering", device=device, claim=claim, pct=0,
                  detail="成片台已领取，正在本机生成", t_progress=now)
-        _DEVICES[device] = {"last_seen": now, "job": jid}
+        _DEVICES[_dev_key(j["owner"], device)] = {"last_seen": now, "job": jid}
         if on_claim is not None:
             try:
                 on_claim(jid, device)
             except Exception as exc:  # noqa: BLE001 - 回调绝不能卡住领取
                 log.error("agenthub on_claim error", extra={"job": jid, "device": device},
                           exc_info=exc)
-        payload = {"job": jid, "props": j["props"], "files": dict(j["files"])}
+        payload = {"job": jid, "props": j["props"], "files": dict(j["files"]),
+                   "claim": claim}
         if want_audio and j.get("audio"):
             payload["props"] = {**j["props"], "audio": j["audio"][0]}
         return payload
@@ -153,10 +168,12 @@ def file_path(job_id: str, rel: str) -> Path | None:
     return Path(p) if p and Path(p).is_file() else None
 
 
-def progress(job_id: str, device: str, pct: int, detail: str | None,
-             failed: bool = False, requeue: bool = False,
+def progress(job_id: str, claim: str, pct: int, detail: str | None,
+             device: str = "", failed: bool = False, requeue: bool = False,
              voluntary: bool = False) -> dict:
     """成片台上报进度；返回里带 cancel 让它知道该收手了。
+    认领凭据（claim）不对就不是这台设备在渲这一单：直接拒，别让它改写
+    别人的进度与状态（设备名只是标签，客户端爱填什么填什么）。
     failed=True 是成片台主动报错（Remotion 退出码非 0 等）：任务立刻判失败，
     别让云端傻等失联超时才发现。
     requeue=True 是成片台中途撤了（页面切走/用户放弃）：立即收回重新排队，
@@ -166,8 +183,8 @@ def progress(job_id: str, device: str, pct: int, detail: str | None,
     """
     with _CV:
         j = _JOBS.get(_jid(job_id))
-        if not j or j["device"] != device:
-            return {"error": "unknown job"}
+        if not j or not claim or j.get("claim") != claim:
+            return {"error": "认领凭据不对", "claim_bad": True}
         if failed:
             j["status"] = "error"
             j["error"] = "成片台渲染失败: " + str(detail or "未知错误")[:3900]
@@ -188,38 +205,51 @@ def progress(job_id: str, device: str, pct: int, detail: str | None,
                 j["error"] = why
                 _CV.notify_all()
                 return {"cancel": True}
-            j.update(status="waiting", device=None, pct=0,
+            _unhang_locked(job_id, j)      # 先抹，趁 j["device"] 还在
+            j.update(status="waiting", device=None, claim=None, pct=0,
                      detail="成片台中途离开，任务已重新排队",
                      t_progress=time.time())
-            d = _DEVICES.get(device)
-            if d and d.get("job") == _jid(job_id):
-                d["job"] = None
             _CV.notify_all()
             return {"cancel": True}
         j["pct"] = max(0, min(100, int(pct)))
         if detail:
             j["detail"] = str(detail)[:200]
         j["t_progress"] = time.time()
-        d = _DEVICES.get(device)
+        d = _DEVICES.get(_dev_key(j["owner"], j["device"] or ""))
         if d:
             d["last_seen"] = j["t_progress"]
         return {"cancel": j["cancel"].is_set()}
 
 
-def upload_target(job_id: str, device: str) -> Path | None:
-    """交片第一步：校验身份，给一个临时落盘路径。"""
+def _unhang_locked(jid: str, j: dict) -> None:
+    """把设备表里「这台在渲这条」那行抹掉（任务已经不在它手上了）。
+
+    失联收回那一路以前漏了抹，只有主动交还那一路抹 —— 快照里那台电脑永远
+    挂着一条它早就不在渲的任务，排障时以为它还在干活。调用前须持 _CV。
+    """
+    d = _DEVICES.get(_dev_key(j.get("owner"), j.get("device") or ""))
+    if d and d.get("job") == _jid(jid):
+        d["job"] = None
+
+
+def upload_target(job_id: str, claim: str) -> Path | None:
+    """交片第一步：校验认领凭据，给一个临时落盘路径。
+
+    临时名带上凭据：以前所有设备共用 `xxx.uploading` 这一个名字，两次并发交回
+    互相踩，失败路径那句 unlink 还能把对方正在写的文件删掉。
+    """
     with _CV:
         j = _JOBS.get(_jid(job_id))
-        if not j or j["device"] != device or j["status"] != "rendering":
+        if not j or j["status"] != "rendering" or not claim or j.get("claim") != claim:
             return None
-        return Path(str(j["out_path"]) + ".uploading")
+        return Path(f'{j["out_path"]}.uploading-{claim[:8]}')
 
 
-def set_crop(job_id: str, device: str, crop: str) -> None:
+def set_crop(job_id: str, claim: str, crop: str) -> None:
     """浏览器上报播放器在捕获画面里的裁剪区（x,y,w,h，捕获像素）。"""
     with _CV:
         j = _JOBS.get(_jid(job_id))
-        if j and j["device"] == device:
+        if j and claim and j.get("claim") == claim:
             j["crop"] = str(crop)[:120]
 
 
@@ -229,7 +259,7 @@ def crop_of(job_id: str) -> str | None:
         return (j or {}).get("crop")
 
 
-def deliver(job_id: str, device: str, tmp: Path, final: bool = False) -> bool:
+def deliver(job_id: str, claim: str, tmp: Path, final: bool = False) -> bool:
     """交片第二步：临时文件原子改名成画面轨，唤醒云端灶台继续混音。
 
     final=True：交回的不是裸画面轨，而是浏览器已混好音的**完整成片**——
@@ -237,7 +267,7 @@ def deliver(job_id: str, device: str, tmp: Path, final: bool = False) -> bool:
     """
     with _CV:
         j = _JOBS.get(_jid(job_id))
-        if not j or j["device"] != device or j["status"] != "rendering":
+        if not j or j["status"] != "rendering" or not claim or j.get("claim") != claim:
             return False
         out = Path(j["out_path"])
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -249,7 +279,8 @@ def deliver(job_id: str, device: str, tmp: Path, final: bool = False) -> bool:
                        else "成片台渲染完成，正在合成音轨")
         if j.get("layers_dir"):
             _prune_layers(time.time())
-            _LAYER_SLOTS[_jid(job_id)] = {"device": device, "dir": j["layers_dir"],
+            # 凭据留在槽位上：图层是成片之后才陆续交的，那时任务记录已摘牌
+            _LAYER_SLOTS[_jid(job_id)] = {"claim": claim, "dir": j["layers_dir"],
                                           "t": time.time()}
         _CV.notify_all()
     return True
@@ -260,18 +291,18 @@ def _prune_layers(now: float) -> None:
         _LAYER_SLOTS.pop(k, None)
 
 
-def layer_target(job_id: str, device: str, name: str) -> Path | None:
+def layer_target(job_id: str, claim: str, name: str) -> Path | None:
     """剪映分轨图层（底板/卡片 PNG、文字几何 JSON）的落盘路径。
 
     这些是成片交回**之后**成片台才陆续渲出来的，那时任务记录已经摘牌，
     所以认的是 deliver() 留下的那张凭据：交片的设备 + 挂单时指定的目录。
     """
-    if not LAYER_NAME.match(name):
+    if not name or not LAYER_NAME.fullmatch(name):
         return None
     with _CV:
         _prune_layers(time.time())
         rec = _LAYER_SLOTS.get(_jid(job_id))
-        if not rec or rec["device"] != device:
+        if not rec or not claim or rec["claim"] != claim:
             return None
         root = Path(rec["dir"])
     (root / Path(name).parent).mkdir(parents=True, exist_ok=True)
@@ -285,9 +316,16 @@ def is_final_delivered(job_id: str) -> bool:
         return bool(j and j.get("delivered_final"))
 
 
-def wait_result(job_id: str, progress=None, cancel_check=None) -> Path:
-    """云端灶台在此阻塞：等成片台交回画面轨，中途桥接进度/取消/失联收回。"""
-    deadline = time.time() + _WAIT_PATIENCE
+def wait_result(job_id: str, progress=None, cancel_check=None,
+                patience: float | None = None) -> Path:
+    """云端灶台在此阻塞：等成片台交回画面轨，中途桥接进度/取消/失联收回。
+
+    patience：这一单最多让灶台等多久。**每个在等的任务占着一条渲染灶台线程**
+    （线程只是 sleep 轮询，不吃算力，但数量有限），所以"没人领就一直等 24 小时"
+    这种默认只适合真人客户那种"你的片子你自己电脑渲"的单。公开试玩那种
+    免登录、随时能被陌生人刷一堆的单必须传个短值，否则几条就把全站渲染排空。
+    """
+    deadline = time.time() + (patience or _WAIT_PATIENCE)
     last = (-1, None)
     while True:
         if cancel_check is not None and cancel_check():
@@ -315,7 +353,8 @@ def wait_result(job_id: str, progress=None, cancel_check=None) -> Path:
                     j["status"] = "error"
                     j["error"] = "成片台反复失联，任务已终止。请重新打开成片台页面并保持打开"
                     continue
-                j.update(status="waiting", device=None, pct=0,
+                _unhang_locked(job_id, j)      # 先抹，趁 j["device"] 还在
+                j.update(status="waiting", device=None, claim=None, pct=0,
                          detail="成片台失联，任务已重新排队",
                          t_progress=now)
                 _CV.notify_all()
@@ -324,7 +363,10 @@ def wait_result(job_id: str, progress=None, cancel_check=None) -> Path:
             last = cur
             progress(cur[0], cur[1])
         if time.time() > deadline:
-            raise RuntimeError("等成片台超时（24 小时）：请打开成片台页面领取渲染")
+            wait_s = int(patience or _WAIT_PATIENCE)
+            raise RuntimeError(
+                "等成片台超时（%s）：请打开成片台页面领取渲染"
+                % ("%.0f 分钟" % (wait_s / 60) if wait_s < 7200 else "%.0f 小时" % (wait_s / 3600)))
         time.sleep(1.0)
 
 
@@ -340,7 +382,11 @@ def snapshot() -> dict:
     """给状态页/排障用：成片台在位情况 + 队列水位。"""
     with _CV:
         now = time.time()
-        devices = [{"device": name, "job": d.get("job"),
+        # 键是「归属|设备名」（设备名是客户端自报的，两个客户可以重名），
+        # 给状态页拆开：device 只显示名字，owner 单独一列
+        devices = [{"device": name.split("|", 1)[-1],
+                    "owner": name.split("|", 1)[0],
+                    "job": d.get("job"),
                     "idle_minutes": int((now - d["last_seen"]) / 60)}
                    for name, d in sorted(_DEVICES.items())]
         waiting = sum(1 for j in _JOBS.values() if j["status"] == "waiting")
