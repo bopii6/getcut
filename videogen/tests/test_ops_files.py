@@ -72,6 +72,18 @@ class DeployScriptTest(unittest.TestCase):
         self.assertIn("grep -E '[.]py$'", self.s)
         self.assertIn("server_static) keep=clean", self.s)
 
+    def test_frontend_bundle_is_verified_before_upload(self):
+        """源码更新但 bundle 没重建时必须阻断，不能把旧前端静默发上去。"""
+        self.assertIn("build_frontend.sh", self.s)
+        self.assertIn("server_static/poc/bundle.js", read("tools/build_frontend.sh"))
+
+    def test_deploy_skips_non_runtime_hash_noise_and_scans_changed_dirs(self):
+        """pycache/source map/备份不该拖慢部署，未改资源目录也不必全量扫描。"""
+        self.assertIn("__pycache__", self.s)
+        self.assertIn("*.map", self.s)
+        self.assertIn("*.bak*", self.s)
+        self.assertIn("git diff-tree", self.s)
+
 
 class SelfCheckScriptTest(unittest.TestCase):
     def test_all_three_gates_are_present_and_it_can_fail(self):

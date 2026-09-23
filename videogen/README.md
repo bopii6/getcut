@@ -157,6 +157,17 @@ bash deploy.sh          # 自动生成 .env 与访问令牌，拉取或构建镜
 
 ## 上线与回滚（2026-09-21 起一条命令）
 
+成片台源码改动后，先把浏览器实际加载的 bundle 一起更新并提交：
+
+```bash
+bash tools/build_frontend.sh       # 只构建并校验，不自动改 tracked 文件
+cp renderer/browsertool-dist/bundle.js server_static/poc/bundle.js
+git add renderer/src server_static/poc/bundle.js
+git commit -m "fix(成片台): ..."
+```
+
+正式部署脚本会再次构建校验；源码与 bundle 不一致会直接停止，不会把旧前端静默发布。部署默认只扫描本次提交涉及的目录，并跳过 `__pycache__`、`.pyc`、source map 与 `.bak` 备份文件，避免无关文件拖慢远端 MD5。
+
 ```bash
 cd videogen
 bash tools/deploy_to_prod.sh --check     # 只看线上与 HEAD 差哪些文件（按 md5）
