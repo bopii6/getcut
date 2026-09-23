@@ -154,11 +154,19 @@ const App: React.FC = () => {
           const VE = (window as unknown as {
             VideoEncoder: {isConfigSupported: (c: Record<string, unknown>) => Promise<{supported?: boolean}>};
           }).VideoEncoder;
-          const r = await VE.isConfigSupported({
-            codec: 'avc1.42001f', width: 1080, height: 1920, framerate: 30,
-            bitrate: 8_000_000, hardwareAcceleration: 'prefer-hardware',
-          });
-          hw = r.supported === true;
+          // 1080×1920 至少要 H.264 level 4.0——用 42001f（level 3.1，上限 720p）探测
+          // 会在任何显卡上都得到 false 的假警报（2026-09-23 用户实测踩中）
+          const base = {width: 1080, height: 1920, framerate: 30, bitrate: 8_000_000};
+          for (const codec of ['avc1.42002a', 'avc1.4d002a', 'avc1.64002a']) {
+            try {
+              const r = await VE.isConfigSupported(
+                {...base, codec, hardwareAcceleration: 'prefer-hardware'});
+              if (r.supported === true) {
+                hw = true;
+                break;
+              }
+            } catch { /* 单个 profile 探测失败不致命 */ }
+          }
         } catch { /* 老浏览器没有这个 API */ }
       }
       if (!dead) {

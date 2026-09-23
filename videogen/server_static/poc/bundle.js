@@ -12788,15 +12788,19 @@ const App = () => {
       if (hasVE) {
         try {
           const VE = window.VideoEncoder;
-          const r = await VE.isConfigSupported({
-            codec: "avc1.42001f",
-            width: 1080,
-            height: 1920,
-            framerate: 30,
-            bitrate: 8e6,
-            hardwareAcceleration: "prefer-hardware"
-          });
-          hw = r.supported === true;
+          const base = { width: 1080, height: 1920, framerate: 30, bitrate: 8e6 };
+          for (const codec of ["avc1.42002a", "avc1.4d002a", "avc1.64002a"]) {
+            try {
+              const r = await VE.isConfigSupported(
+                { ...base, codec, hardwareAcceleration: "prefer-hardware" }
+              );
+              if (r.supported === true) {
+                hw = true;
+                break;
+              }
+            } catch {
+            }
+          }
         } catch {
         }
       }
