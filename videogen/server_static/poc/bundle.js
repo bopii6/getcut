@@ -12756,6 +12756,16 @@ const layerHint = (e) => {
   if (/401|403|未登录/.test(m)) return "\u767B\u5F55\u6389\u4E86\uFF0C\u91CD\u65B0\u767B\u5F55\u540E\u518D\u51FA";
   return m.replace(/交回失败：/, "").slice(0, 46);
 };
+const renderHint = (e) => {
+  const m = String(e.message || e);
+  if (/reclaimed due to inactivity|Codec/i.test(m)) {
+    return "\u751F\u6210\u65F6\u8FD9\u4E2A\u6807\u7B7E\u9875\u88AB\u5207\u8D70\u6216\u6700\u5C0F\u5316\u4E86\uFF0C\u6D4F\u89C8\u5668\u628A\u89C6\u9891\u7F16\u7801\u6536\u4E86\u56DE\u53BB\u3002\u8BA9\u5B83\u7559\u5728\u6700\u524D\u9762\uFF0C\u70B9\u300C\u91CD\u8BD5\u8FD9\u4E00\u6B65\u300D\u518D\u51FA";
+  }
+  if (/Out of memory|OutOfMemory|killed/i.test(m)) {
+    return "\u8FD9\u53F0\u7535\u8111\u5185\u5B58\u4E0D\u591F\u4E86\u3002\u5173\u6389\u522B\u7684\u6807\u7B7E\u9875\u548C\u8F6F\u4EF6\uFF0C\u70B9\u300C\u91CD\u8BD5\u8FD9\u4E00\u6B65\u300D\u518D\u51FA";
+  }
+  return m.slice(0, 120);
+};
 const groupVoices = (list) => {
   const g = { \u6C89\u7A33\u64AD\u62A5: [], \u6E05\u723D\u7537\u58F0: [], \u5973\u58F0: [], \u7279\u8272\u53E3\u97F3: [], \u5176\u4ED6: [] };
   for (const v of list) {
@@ -13273,7 +13283,7 @@ const App = () => {
     await post("texts.json", JSON.stringify(texts), "application/json");
   };
   const startRender = async () => {
-    var _a2;
+    var _a2, _b2;
     const cur = packRef.current;
     if (!cur) return;
     (_a2 = playerRef.current) == null ? void 0 : _a2.pause();
@@ -13283,6 +13293,11 @@ const App = () => {
     abortRef.current = ac;
     const total = cur.props.durationInFrames;
     let lastReport = 0;
+    let wake = null;
+    try {
+      wake = await ((_b2 = navigator.wakeLock) == null ? void 0 : _b2.request("screen")) ?? null;
+    } catch {
+    }
     try {
       const { getBlob } = await (0,dist_esm/* renderMediaOnWeb */.CE)({
         composition: compositionOf(total),
@@ -13350,7 +13365,13 @@ const App = () => {
       }
     } catch (e) {
       setPhase("error");
-      setErr(String(e.message || e).slice(0, 200));
+      setErr(renderHint(e));
+      console.warn("GetCut \u6D4F\u89C8\u5668\u51FA\u7247\u5931\u8D25", e.stack || String(e));
+    } finally {
+      try {
+        await (wake == null ? void 0 : wake.release());
+      } catch {
+      }
     }
   };
   const reset = () => {
@@ -13876,7 +13897,8 @@ const App = () => {
                   Math.round(bar),
                   "%"
                 ] })
-              ] })
+              ] }),
+              phase === "rendering" ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: "\u8FD9\u4E00\u6BB5\u753B\u9762\u5728\u8FD9\u53F0\u7535\u8111\u4E0A\u7B97\uFF0C\u8BF7\u628A\u8FD9\u4E2A\u6807\u7B7E\u9875\u7559\u5728\u6700\u524D\u9762\u2014\u2014\u5207\u8D70\u6216\u6700\u5C0F\u5316\uFF0C\u6D4F\u89C8\u5668\u4F1A\u628A\u7B97\u529B\u6536\u56DE\u53BB\u3002" }) : null
             ] }) : null,
             phase === "ready" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { className: "btn", style: { marginTop: 12 }, onClick: () => void startRender(), children: [
               "\u751F\u6210\u89C6\u9891\uFF08\u7EA6 ",

@@ -95,6 +95,18 @@ const layerHint = (e: unknown) => {
   return m.replace(/交回失败：/, '').slice(0, 46);
 };
 
+/** 出片靠本机浏览器算：标签页被切走时 Chromium 会收回视频编码器，原文是英文客户看不懂 */
+const renderHint = (e: unknown) => {
+  const m = String((e as Error).message || e);
+  if (/reclaimed due to inactivity|Codec/i.test(m)) {
+    return '生成时这个标签页被切走或最小化了，浏览器把视频编码收了回去。让它留在最前面，点「重试这一步」再出';
+  }
+  if (/Out of memory|OutOfMemory|killed/i.test(m)) {
+    return '这台电脑内存不够了。关掉别的标签页和软件，点「重试这一步」再出';
+  }
+  return m.slice(0, 120);
+};
+
 const groupVoices = (list: Voice[]) => {
   const g: Record<string, Voice[]> = {沉稳播报: [], 清爽男声: [], 女声: [], 特色口音: [], 其他: []};
   for (const v of list) {
@@ -680,6 +692,13 @@ const App: React.FC = () => {
     abortRef.current = ac;
     const total = cur.props.durationInFrames;
     let lastReport = 0;
+    // 屏幕一灭，标签页就被节流，编码器跟着被收回：几分钟的活儿先钉住屏幕
+    let wake: {release: () => Promise<void>} | null = null;
+    try {
+      wake = (await (navigator as unknown as {
+        wakeLock?: {request: (t: 'screen') => Promise<{release: () => Promise<void>}>};
+      }).wakeLock?.request('screen')) ?? null;
+    } catch { /* 浏览器不给锁就算了，不影响出片 */ }
     try {
       const {getBlob} = await renderMediaOnWeb({
         composition: compositionOf(total),
@@ -747,7 +766,12 @@ const App: React.FC = () => {
       }
     } catch (e) {
       setPhase('error');
-      setErr(String((e as Error).message || e).slice(0, 200));
+      setErr(renderHint(e));
+      console.warn('GetCut 浏览器出片失败', (e as Error).stack || String(e));
+    } finally {
+      try {
+        await wake?.release();
+      } catch { /* 已经释放了 */ }
     }
   };
 
@@ -1172,6 +1196,11 @@ const App: React.FC = () => {
                       <span className="st">{line}</span>
                       <span className="pc">{Math.round(bar)}%</span>
                     </div>
+                    {phase === 'rendering' ? (
+                      <div className="note">
+                        这一段画面在这台电脑上算，请把这个标签页留在最前面——切走或最小化，浏览器会把算力收回去。
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
                 {phase === 'ready' ? (
