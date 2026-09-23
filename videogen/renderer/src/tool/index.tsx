@@ -21,7 +21,7 @@ const RESUME_KEY = 'vg-resume';
 const NL = /\r?\n/;   // 口播文案按段切开
 // 配色主题：名字与工作台的 data-theme 同一套，两页之间切换互相认得
 const THEMES = [
-  {id: 'ziyu', name: '紫玉描金'}, {id: 'xuanqing', name: '玄青'}, {id: 'shimo', name: '石墨'},
+  {id: 'ziyu', name: '石墨金'}, {id: 'xuanqing', name: '玄青'}, {id: 'shimo', name: '石墨'},
   {id: 'zhimu', name: '纸墨'}, {id: 'daiqing', name: '黛青'},
 ];
 
@@ -861,7 +861,6 @@ const App: React.FC = () => {
             </select>
             <span className="car">▾</span>
           </span>
-          {!me ? <a className="chip" href="/studio" title="这产品是什么、怎么做">怎么用</a> : null}
           {!me ? <button className="chip" onClick={() => setSheet('pricing')} title="免费版与高级版">定价</button> : null}
           {me ? <button className="chip" onClick={openLib} title="历史项目与成片">作品库</button> : null}
           <Account me={me} authst={authst} sheet={sheet} setSheet={setSheet}
@@ -1024,7 +1023,7 @@ const App: React.FC = () => {
                   </div>
                   <div className="note" style={{color: cloudOk ? 'var(--ok)' : undefined}}>
                     {cloudOk ? '已同步云端作品库 · ' : '交回云端失败，不影响本机下载 · '}
-                    {cloudOk && jobId ? <a href={`/studio#/project/${projectId}`} style={{color: 'var(--acc)'}}>去看历史</a> : null}
+                    {cloudOk && jobId ? <button style={lnkAcc} onClick={openLib}>去看历史</button> : null}
                   </div>
                   <button className="btn ln" style={{alignSelf: 'flex-start'}} onClick={reset}>再做一条</button>
                 </div>

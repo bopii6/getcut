@@ -6,6 +6,8 @@
 
 "use strict";
 
+// EXTERNAL MODULE: ./node_modules/react/jsx-runtime.js
+var jsx_runtime = __webpack_require__(4848);
 // EXTERNAL MODULE: ./node_modules/react/index.js
 var react = __webpack_require__(6540);
 // EXTERNAL MODULE: ./node_modules/react-dom/client.js
@@ -14,8 +16,6 @@ var client = __webpack_require__(5338);
 var esm = __webpack_require__(4229);
 // EXTERNAL MODULE: ./node_modules/@remotion/web-renderer/dist/esm/index.mjs + 1 modules
 var dist_esm = __webpack_require__(8451);
-// EXTERNAL MODULE: ./node_modules/react/jsx-runtime.js
-var jsx_runtime = __webpack_require__(4848);
 // EXTERNAL MODULE: ./node_modules/remotion/dist/esm/index.mjs
 var remotion_dist_esm = __webpack_require__(3947);
 // EXTERNAL MODULE: ./node_modules/mediabunny/dist/modules/src/media-sink.js
@@ -7087,10 +7087,10 @@ var experimental_Video = (/* unused pure expression or super */ null && (Video))
 ;// ./src/webmedia.tsx
 
 
-const ShotVideo = ({ src, style, muted = true }) => /* @__PURE__ */ react.createElement(Video, { src, muted: muted || void 0, style });
+const ShotVideo = ({ src, style, muted = true }) => /* @__PURE__ */ (0,jsx_runtime.jsx)(Video, { src, muted: muted || void 0, style });
 
 ;// ./src/layouts.json
-const layouts_namespaceObject = /*#__PURE__*/JSON.parse('{"_comment":"版式几何：每套模板自己的尺寸参数。TS 渲染器（skin.ts）与 Python 剪映草稿（draft_build.py）读同一份，避免两边各写一套漂移。改这里 = 画面与草稿一起改。layout 字段决定用哪套骨架代码（editorial/bleed/lower/poster/data/zhigu）。","editorial":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"finance":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"minimal":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"retro":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"bleed":{"layout":"bleed","headline":{"top":150,"size":76,"lineGap":12},"subtitle":{"bottom":330,"size":62,"side":80},"sectionLabel":{"left":64,"top":84,"size":28},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1690,"size":24,"width":980}},"portrait":{"layout":"bleed","headline":{"top":150,"size":76,"lineGap":12},"subtitle":{"bottom":330,"size":62,"side":80},"sectionLabel":{"left":64,"top":84,"size":28},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1690,"size":24,"width":980}},"news":{"layout":"lower","headline":{"top":1160,"size":68,"size2":60,"padLeft":64,"padTop":26,"padBottom":30,"borderTop":6},"subtitle":{"bottom":800,"size":58,"side":70},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1600,"size":27,"width":1010},"contentCenterY":560},"zhigu":{"layout":"zhigu","headline":{"top":90,"size":92,"lineGap":18},"subtitle":{"bottom":96,"size":66,"side":70},"footer":{"top":1640,"size":26,"width":1010}},"poster":{"layout":"poster","headline":{"top":190,"size":104,"lineGap":18},"subtitle":{"bottom":250,"size":74,"side":90},"bigText":{"size":168,"subSize":40,"side":90},"card":{"side":80,"topPct":34,"size":72,"titleSize":32,"subSize":36},"footer":{"top":1710,"size":26,"width":1010}},"data":{"layout":"data","headline":{"top":150,"size":74,"lineGap":12},"subtitle":{"bottom":300,"size":60,"side":80},"panel":{"left":60,"top":470,"width":960,"height":800,"radius":20},"mediaWin":{"left":490,"top":56,"width":430,"height":620},"bigText":{"size":128,"subSize":36,"side":100},"card":{"side":80,"topPct":36,"size":62,"titleSize":28,"subSize":32},"footer":{"top":1660,"size":26,"width":1010}}}');
+const layouts_namespaceObject = /*#__PURE__*/JSON.parse('{"_comment":"版式几何：每套模板自己的尺寸参数。TS 渲染器（skin.ts）与 Python 剪映草稿（draft_build.py）读同一份，避免两边各写一套漂移。改这里 = 画面与草稿一起改。layout 字段决定用哪套骨架代码（editorial/bleed/lower/poster/data/zhigu）。","editorial":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"bottom":532,"size":56,"side":143,"maxWidth":793},"footer":{"top":1600,"size":27,"width":1010}},"finance":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"minimal":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"retro":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"bleed":{"layout":"bleed","headline":{"top":150,"size":76,"lineGap":12},"subtitle":{"bottom":330,"size":62,"side":80},"sectionLabel":{"left":64,"top":84,"size":28},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1690,"size":24,"width":980}},"portrait":{"layout":"bleed","headline":{"top":150,"size":76,"lineGap":12},"subtitle":{"bottom":330,"size":62,"side":80},"sectionLabel":{"left":64,"top":84,"size":28},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1690,"size":24,"width":980}},"news":{"layout":"lower","headline":{"top":1160,"size":68,"size2":60,"padLeft":64,"padTop":26,"padBottom":30,"borderTop":6},"subtitle":{"bottom":800,"size":58,"side":70},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1600,"size":27,"width":1010},"contentCenterY":560},"zhigu":{"layout":"zhigu","headline":{"top":90,"size":92,"lineGap":18},"subtitle":{"bottom":96,"size":66,"side":70},"footer":{"top":1640,"size":26,"width":1010}},"poster":{"layout":"poster","headline":{"top":190,"size":104,"lineGap":18},"subtitle":{"bottom":250,"size":74,"side":90},"bigText":{"size":168,"subSize":40,"side":90},"card":{"side":80,"topPct":34,"size":72,"titleSize":32,"subSize":36},"footer":{"top":1710,"size":26,"width":1010}},"data":{"layout":"data","headline":{"top":150,"size":74,"lineGap":12},"subtitle":{"bottom":300,"size":60,"side":80},"panel":{"left":60,"top":470,"width":960,"height":800,"radius":20},"mediaWin":{"left":490,"top":56,"width":430,"height":620},"bigText":{"size":128,"subSize":36,"side":100},"card":{"side":80,"topPct":36,"size":62,"titleSize":28,"subSize":32},"footer":{"top":1660,"size":26,"width":1010}}}');
 ;// ./src/skin.ts
 
 const SANS = "'SSH','Source Han Sans CN','Microsoft YaHei',sans-serif";
@@ -7893,9 +7893,9 @@ const estW100 = (text) => {
 };
 const MediaFill = ({ src, kind, dur }) => {
   if (kind === "video") {
-    return /* @__PURE__ */ react.createElement(remotion_dist_esm.Loop, { durationInFrames: Math.max(1, dur) }, /* @__PURE__ */ react.createElement(ShotVideo, { src, style: { width: "100%", height: "100%", objectFit: "cover" } }));
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Loop, { durationInFrames: Math.max(1, dur), children: /* @__PURE__ */ (0,jsx_runtime.jsx)(ShotVideo, { src, style: { width: "100%", height: "100%", objectFit: "cover" } }) });
   }
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.Img, { src, style: { width: "100%", height: "100%", objectFit: "cover" } });
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Img, { src, style: { width: "100%", height: "100%", objectFit: "cover" } });
 };
 const ElementBody = ({ cue, w, media, mediaKind, dur }) => {
   const inner = (w2, h, bg) => ({
@@ -7905,9 +7905,9 @@ const ElementBody = ({ cue, w, media, mediaKind, dur }) => {
   });
   switch (cue.el) {
     case "vbar":
-      return /* @__PURE__ */ react.createElement("div", { style: inner(cue.thick === "thin" ? 14 : 26, LEN_H[cue.len], T.accent) });
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: inner(cue.thick === "thin" ? 14 : 26, LEN_H[cue.len], T.accent) });
     case "rule":
-      return /* @__PURE__ */ react.createElement(
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)(
         "div",
         {
           style: inner(
@@ -7918,22 +7918,25 @@ const ElementBody = ({ cue, w, media, mediaKind, dur }) => {
         }
       );
     case "kicker":
-      return /* @__PURE__ */ react.createElement("div", { style: { display: "flex", alignItems: "center" } }, /* @__PURE__ */ react.createElement("span", { style: { ...Tick, height: 32 } }), /* @__PURE__ */ react.createElement("span", { style: { ...heavy, fontSize: 34, color: T.accentSoft } }, cue.text));
+      return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", alignItems: "center" }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...Tick, height: 32 } }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: 34, color: T.accentSoft }, children: cue.text })
+      ] });
     case "big": {
       const text = cue.text || "";
       const cap = BIG_SIZE[cue.size];
       const fit = (w - P * 2 - 20) / Math.max(estW100(text), 1) * 100;
-      return /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: Math.min(cap, Math.max(40, fit)), color: toneColor(cue.tone || "accent"), lineHeight: 1.12, whiteSpace: "nowrap" } }, text);
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: Math.min(cap, Math.max(40, fit)), color: toneColor(cue.tone || "accent"), lineHeight: 1.12, whiteSpace: "nowrap" }, children: text });
     }
     case "line": {
       const text = cue.text || "";
       const fit = (w - P * 2 - 20) / Math.max(estW100(text), 1) * 100;
-      return /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: Math.min(54, Math.max(30, fit)), color: cue.tone === "accent" ? T.accentSoft : T.white, whiteSpace: "nowrap" } }, text);
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: Math.min(54, Math.max(30, fit)), color: cue.tone === "accent" ? T.accentSoft : T.white, whiteSpace: "nowrap" }, children: text });
     }
     case "meta":
-      return /* @__PURE__ */ react.createElement("div", { style: { fontSize: 26, color: T.codeInk, letterSpacing: 2, fontFamily: T.fontMono, whiteSpace: "nowrap" } }, cue.text);
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 26, color: T.codeInk, letterSpacing: 2, fontFamily: T.fontMono, whiteSpace: "nowrap" }, children: cue.text });
     case "chip":
-      return /* @__PURE__ */ react.createElement(
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)(
         "div",
         {
           style: {
@@ -7943,21 +7946,21 @@ const ElementBody = ({ cue, w, media, mediaKind, dur }) => {
             padding: "8px 22px",
             borderRadius: 26,
             ...heavy
-          }
-        },
-        cue.text
+          },
+          children: cue.text
+        }
       );
     case "issue":
-      return /* @__PURE__ */ react.createElement("div", { style: { fontSize: 42, color: T.gray, letterSpacing: 6, fontFamily: T.fontMono, whiteSpace: "nowrap" } }, cue.text);
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 42, color: T.gray, letterSpacing: 6, fontFamily: T.fontMono, whiteSpace: "nowrap" }, children: cue.text });
     case "dots":
-      return /* @__PURE__ */ react.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(6, 7px)", gap: 16 } }, Array.from({ length: 24 }).map((_, i) => /* @__PURE__ */ react.createElement("div", { key: i, style: { width: 7, height: 7, borderRadius: 4, background: T.grayDim, opacity: 0.65 } })));
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "grid", gridTemplateColumns: "repeat(6, 7px)", gap: 16 }, children: Array.from({ length: 24 }).map((_, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { width: 7, height: 7, borderRadius: 4, background: T.grayDim, opacity: 0.65 } }, i)) });
     case "frame":
-      return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, border: `2px solid ${T.cardLine}` } });
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", inset: 0, border: `2px solid ${T.cardLine}` } });
     case "photo":
-      return media && !hideMedia() ? /* @__PURE__ */ react.createElement(MediaFill, { src: media, kind: mediaKind, dur }) : /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", inset: 0, background: T.panel } });
+      return media && !hideMedia() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(MediaFill, { src: media, kind: mediaKind, dur }) : /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", inset: 0, background: T.panel } });
     case "scrim":
       if (hideMedia()) return null;
-      return /* @__PURE__ */ react.createElement(
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)(
         "div",
         {
           style: {
@@ -7971,7 +7974,7 @@ const ElementBody = ({ cue, w, media, mediaKind, dur }) => {
       const text = cue.text || "";
       const maxW = w - P * 2 - 20;
       const size = Math.min(168, Math.max(64, maxW / Math.max(estW100(text), 1) * 100));
-      return /* @__PURE__ */ react.createElement("div", { style: { ...heavy, fontSize: size, color: toneColor(cue.tone || "white"), lineHeight: 1.05, whiteSpace: "nowrap" } }, text);
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...heavy, fontSize: size, color: toneColor(cue.tone || "white"), lineHeight: 1.05, whiteSpace: "nowrap" }, children: text });
     }
     default:
       return null;
@@ -7997,14 +8000,13 @@ const CueView = ({ cue, w, fps, media, mediaKind, dur: shotDur, origin }) => {
     else if (typeof t === "number") anchor.top = t + origin.top;
   }
   const fill = cue.slot === "canvas" || cue.slot === "full" ? { width: "100%", height: "100%", position: "absolute", inset: 0 } : void 0;
-  return /* @__PURE__ */ react.createElement("div", { style: anchor }, /* @__PURE__ */ react.createElement("div", { style: { ...st, ...fill } }, /* @__PURE__ */ react.createElement(ElementBody, { cue, w, media, mediaKind, dur: shotDur })));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: anchor, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...st, ...fill }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(ElementBody, { cue, w, media, mediaKind, dur: shotDur }) }) });
 };
 const DotsCue = ({ cue }) => {
   const f = useAnimFrame();
-  return /* @__PURE__ */ react.createElement("div", { style: anchorStyle(cue.slot || "bottom-right", 0) }, /* @__PURE__ */ react.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(6, 7px)", gap: 16 } }, Array.from({ length: 24 }).map((_, i) => /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: anchorStyle(cue.slot || "bottom-right", 0), children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "grid", gridTemplateColumns: "repeat(6, 7px)", gap: 16 }, children: Array.from({ length: 24 }).map((_, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "div",
     {
-      key: i,
       style: {
         width: 7,
         height: 7,
@@ -8015,22 +8017,22 @@ const DotsCue = ({ cue }) => {
           extrapolateRight: "clamp"
         })
       }
-    }
-  ))));
+    },
+    i
+  )) }) });
 };
 const ChoreoCard = ({ cues, fps, media, mediaKind, dur, mediaOrigin, bare }) => {
   var _a;
   const geo = ((_a = T.geo) == null ? void 0 : _a.panel) || { width: 849, height: 844 };
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
     inset: 0,
     overflow: "hidden",
     background: bare ? "transparent" : T.panel
-  } }, cues.map(
-    (c, i) => c.el === "dots" ? /* @__PURE__ */ react.createElement(DotsCue, { key: i, cue: c }) : /* @__PURE__ */ react.createElement(
+  }, children: cues.map(
+    (c, i) => c.el === "dots" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(DotsCue, { cue: c }, i) : /* @__PURE__ */ (0,jsx_runtime.jsx)(
       CueView,
       {
-        key: i,
         cue: c,
         w: geo.width,
         fps,
@@ -8038,9 +8040,10 @@ const ChoreoCard = ({ cues, fps, media, mediaKind, dur, mediaOrigin, bare }) => 
         mediaKind,
         dur,
         origin: mediaOrigin
-      }
+      },
+      i
     )
-  ));
+  ) });
 };
 
 ;// ./src/ZhiguVideo.tsx
@@ -8733,6 +8736,7 @@ const BottomSubtitle = ({ clauses }) => {
 
 
 
+
 const MacroVideo_W = 1080;
 const GOLD = "#e8a833";
 const INK_DIM = "rgba(255,255,255,0.55)";
@@ -8746,33 +8750,40 @@ const MacroVideo_Enter = ({ children, at = 0, y = 22, pop = false }) => {
   const a = (0,remotion_dist_esm.interpolate)(f, [at, at + 9], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const ty = (0,remotion_dist_esm.interpolate)(f, [at, at + 11], [y, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const s = pop ? (0,remotion_dist_esm.interpolate)(f, [at, at + 10], [0.94, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
-  return /* @__PURE__ */ react.createElement("div", { style: { opacity: a, transform: `translateY(${ty}px) scale(${s})` } }, children);
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { opacity: a, transform: `translateY(${ty}px) scale(${s})` }, children });
 };
-const Backdrop = ({ bg }) => /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: "#04080a" } }, bg ? /* @__PURE__ */ react.createElement(remotion_dist_esm.Img, { src: (0,remotion_dist_esm.staticFile)(`media/${bg}`), style: {
-  position: "absolute",
-  inset: 0,
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-  opacity: 0.9,
-  filter: "saturate(0.5) brightness(0.85)"
-} }) : null, /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(2,7,8,0.88)" } }), /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: "linear-gradient(180deg, rgba(2,6,8,0.5), rgba(2,6,8,0) 30%, rgba(2,6,8,0) 62%, rgba(2,6,8,0.72))" } }));
-const MacroVideo_ChannelMark = ({ name }) => /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 52, top: 44, display: "flex", alignItems: "center", gap: 14 } }, /* @__PURE__ */ react.createElement("span", { style: {
-  width: 58,
-  height: 58,
-  borderRadius: "50%",
-  background: "rgba(255,255,255,0.14)",
-  border: "1px solid rgba(255,255,255,0.25)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  ...MacroVideo_heavy,
-  fontSize: 26,
-  color: "#ffffff"
-} }, "\u68F1"), /* @__PURE__ */ react.createElement("span", { style: { fontSize: 30, color: "rgba(255,255,255,0.85)" } }, name));
+const Backdrop = ({ bg }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { background: "#04080a" }, children: [
+  bg ? /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Img, { src: (0,remotion_dist_esm.staticFile)(`media/${bg}`), style: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    opacity: 0.9,
+    filter: "saturate(0.5) brightness(0.85)"
+  } }) : null,
+  /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: "rgba(2,7,8,0.88)" } }),
+  /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.AbsoluteFill, { style: { background: "linear-gradient(180deg, rgba(2,6,8,0.5), rgba(2,6,8,0) 30%, rgba(2,6,8,0) 62%, rgba(2,6,8,0.72))" } })
+] });
+const MacroVideo_ChannelMark = ({ name }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 52, top: 44, display: "flex", alignItems: "center", gap: 14 }, children: [
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+    width: 58,
+    height: 58,
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.14)",
+    border: "1px solid rgba(255,255,255,0.25)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    ...MacroVideo_heavy,
+    fontSize: 26,
+    color: "#ffffff"
+  }, children: "\u68F1" }),
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 30, color: "rgba(255,255,255,0.85)" }, children: name })
+] });
 const SeriesTitle = ({ text }) => {
   const size = text.length > 18 ? 42 : text.length > 14 ? 48 : 56;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
     top: 306,
     left: 50,
@@ -8783,7 +8794,7 @@ const SeriesTitle = ({ text }) => {
     lineHeight: 1.15,
     color: GOLD,
     letterSpacing: 2
-  } }, text);
+  }, children: text });
 };
 const VoiceWave = ({ name }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
@@ -8795,21 +8806,27 @@ const VoiceWave = ({ name }) => {
     };
     return Array.from({ length: 46 }, (_, i) => ({ ph: rnd() * Math.PI * 2, sp: 0.5 + rnd(), base: 8 + rnd() * 30, key: i }));
   }, []);
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", top: 1330, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center" } }, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", alignItems: "center", gap: 20 } }, /* @__PURE__ */ react.createElement("span", { style: {
-    width: 86,
-    height: 86,
-    borderRadius: "50%",
-    background: "rgba(255,255,255,0.92)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    ...MacroVideo_heavy,
-    fontSize: 30,
-    color: "#22262b"
-  } }, "\u68F1"), /* @__PURE__ */ react.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, height: 56 } }, bars.map((b) => {
-    const h = Math.max(6, b.base + Math.sin(f * 0.11 * b.sp + b.ph) * 23);
-    return /* @__PURE__ */ react.createElement("span", { key: b.key, style: { width: 4, height: h, borderRadius: 2, background: GOLD, opacity: 0.95 } });
-  }))), /* @__PURE__ */ react.createElement("div", { style: { marginTop: 16, fontSize: 24, color: GOLD } }, name));
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", top: 1330, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center" }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 20 }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+        width: 86,
+        height: 86,
+        borderRadius: "50%",
+        background: "rgba(255,255,255,0.92)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        ...MacroVideo_heavy,
+        fontSize: 30,
+        color: "#22262b"
+      }, children: "\u68F1" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { display: "flex", alignItems: "center", gap: 3, height: 56 }, children: bars.map((b) => {
+        const h = Math.max(6, b.base + Math.sin(f * 0.11 * b.sp + b.ph) * 23);
+        return /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { width: 4, height: h, borderRadius: 2, background: GOLD, opacity: 0.95 } }, b.key);
+      }) })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 16, fontSize: 24, color: GOLD }, children: name })
+  ] });
 };
 const MacroVideo_BottomSubtitle = ({ clauses }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
@@ -8818,7 +8835,7 @@ const MacroVideo_BottomSubtitle = ({ clauses }) => {
   if (hideMedia()) return null;
   const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
   if (!active) return null;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
     left: 70,
     right: 70,
@@ -8829,51 +8846,65 @@ const MacroVideo_BottomSubtitle = ({ clauses }) => {
     color: "#ffffff",
     lineHeight: 1.35,
     textShadow: "0 2px 12px rgba(0,0,0,0.8)"
-  } }, active.text);
+  }, children: active.text });
 };
-const BlockList = ({ rows, fps }) => /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 722, display: "flex", flexDirection: "column", gap: 36 } }, rows.map((r, i) => /* @__PURE__ */ react.createElement(MacroVideo_Enter, { key: i, at: MacroVideo_msToF(r.atMs, fps), pop: true }, /* @__PURE__ */ react.createElement("div", { style: { ...MacroVideo_heavy, fontSize: 56, color: r.gold ? GOLD : "#ffffff", letterSpacing: 2 } }, r.text))));
+const BlockList = ({ rows, fps }) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: LEFT, top: 722, display: "flex", flexDirection: "column", gap: 36 }, children: rows.map((r, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_Enter, { at: MacroVideo_msToF(r.atMs, fps), pop: true, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...MacroVideo_heavy, fontSize: 56, color: r.gold ? GOLD : "#ffffff", letterSpacing: 2 }, children: r.text }) }, i)) });
 const BlockBars = ({ rows, fps, axis = true, zeroX = 530 }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const maxAbs = Math.max(...rows.map((r) => Math.abs(r.value)), 1e-3);
   const span = Math.max(zeroX - LEFT, RIGHT - zeroX) - 60;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, top: 700, width: MacroVideo_W } }, axis ? /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    left: zeroX,
-    top: 8,
-    height: rows.length * 140 - 30,
-    width: 2,
-    background: LINE_DIM
-  } }, /* @__PURE__ */ react.createElement("span", { style: { position: "absolute", left: 10, bottom: -8, fontSize: 22, color: INK_DIM } }, "0")) : null, rows.map((r, i) => {
-    const at = MacroVideo_msToF(r.atMs, fps);
-    const w = Math.abs(r.value) / maxAbs * span;
-    const grow = (0,remotion_dist_esm.interpolate)(f, [at + 3, at + 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    const barW = Math.max(w * grow, 0);
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: { position: "absolute", top: 20 + i * 140, left: 0, width: MacroVideo_W } }, i > 0 ? /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 0, top: 700, width: MacroVideo_W }, children: [
+    axis ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
       position: "absolute",
-      top: -22,
+      left: zeroX,
+      top: 8,
+      height: rows.length * 140 - 30,
+      width: 2,
+      background: LINE_DIM
+    }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { position: "absolute", left: 10, bottom: -8, fontSize: 22, color: INK_DIM }, children: "0" }) }) : null,
+    rows.map((r, i) => {
+      const at = MacroVideo_msToF(r.atMs, fps);
+      const w = Math.abs(r.value) / maxAbs * span;
+      const grow = (0,remotion_dist_esm.interpolate)(f, [at + 3, at + 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+      const barW = Math.max(w * grow, 0);
+      return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", top: 20 + i * 140, left: 0, width: MacroVideo_W }, children: [
+        i > 0 ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+          position: "absolute",
+          top: -22,
+          left: LEFT,
+          width: RIGHT - LEFT,
+          height: 1,
+          background: "rgba(255,255,255,0.14)"
+        } }) : null,
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: LEFT, top: 0, display: "flex", justifyContent: "space-between", width: RIGHT - LEFT }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 32, color: "rgba(255,255,255,0.92)" }, children: r.name }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_Enter, { at, y: 10, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...MacroVideo_heavy, fontSize: 56, color: GOLD, letterSpacing: 1 }, children: r.display.replace(/-/g, "\u2212") }) })
+        ] }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+          position: "absolute",
+          top: 66,
+          left: r.value >= 0 ? zeroX : zeroX - barW,
+          width: barW,
+          height: 19,
+          borderRadius: 4,
+          background: GOLD
+        } })
+      ] }, i);
+    }),
+    axis ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      position: "absolute",
+      top: rows.length * 140 - 10,
       left: LEFT,
       width: RIGHT - LEFT,
-      height: 1,
-      background: "rgba(255,255,255,0.14)"
-    } }) : null, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 0, display: "flex", justifyContent: "space-between", width: RIGHT - LEFT } }, /* @__PURE__ */ react.createElement("span", { style: { fontSize: 32, color: "rgba(255,255,255,0.92)" } }, r.name), /* @__PURE__ */ react.createElement(MacroVideo_Enter, { at, y: 10 }, /* @__PURE__ */ react.createElement("span", { style: { ...MacroVideo_heavy, fontSize: 56, color: GOLD, letterSpacing: 1 } }, r.display.replace(/-/g, "\u2212")))), /* @__PURE__ */ react.createElement("div", { style: {
-      position: "absolute",
-      top: 66,
-      left: r.value >= 0 ? zeroX : zeroX - barW,
-      width: barW,
-      height: 19,
-      borderRadius: 4,
-      background: GOLD
-    } }));
-  }), axis ? /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    top: rows.length * 140 - 10,
-    left: LEFT,
-    width: RIGHT - LEFT,
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: 24,
-    color: INK_DIM
-  } }, /* @__PURE__ */ react.createElement("span", null, "\u2190 \u4E0B\u964D"), /* @__PURE__ */ react.createElement("span", null, "\u589E\u957F \u2192")) : null);
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 24,
+      color: INK_DIM
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: "\u2190 \u4E0B\u964D" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: "\u589E\u957F \u2192" })
+    ] }) : null
+  ] });
 };
 const BlockLine = ({ points, ticks, spanMs, unit, fps }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
@@ -8889,100 +8920,144 @@ const BlockLine = ({ points, ticks, spanMs, unit, fps }) => {
   const spanF = Math.max(Math.round(spanMs / 1e3 * fps), points.length * 3);
   const drawn = Math.min(points.length - 1, Math.floor(frame / spanF * (points.length - 1) * 1.12));
   const path = points.slice(0, drawn + 2).map((p, i) => `${i === 0 ? "M" : "L"}${xOf(i)},${yOf(p.y)}`).join(" ");
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: 0, top: 0, width: MacroVideo_W } }, (ticks ?? []).map((tk, i) => /* @__PURE__ */ react.createElement("div", { key: i, style: { position: "absolute", left: 88, top: yOf(tk) - 14, fontSize: 22, color: INK_DIM, width: 50, textAlign: "right" } }, tk)), (ticks ?? []).map((tk, i) => /* @__PURE__ */ react.createElement("div", { key: `g${i}`, style: {
-    position: "absolute",
-    left: boxL,
-    right: MacroVideo_W - boxR,
-    top: yOf(tk),
-    height: 1,
-    background: "rgba(255,255,255,0.10)"
-  } })), /* @__PURE__ */ react.createElement("svg", { width: MacroVideo_W, height: 1920, style: { position: "absolute", left: 0, top: 0 } }, /* @__PURE__ */ react.createElement("line", { x1: boxL, y1: boxT - 6, x2: boxL, y2: boxB, stroke: "rgba(255,255,255,0.45)", strokeWidth: 2 }), /* @__PURE__ */ react.createElement("line", { x1: boxL, y1: boxB, x2: boxR, y2: boxB, stroke: "rgba(255,255,255,0.45)", strokeWidth: 2 }), /* @__PURE__ */ react.createElement("path", { d: path, fill: "none", stroke: GOLD, strokeWidth: 5, strokeLinejoin: "round", strokeLinecap: "round" }), points.slice(0, drawn + 1).map((p, i) => /* @__PURE__ */ react.createElement("circle", { key: i, cx: xOf(i), cy: yOf(p.y), r: 6, fill: GOLD }))), points.slice(0, drawn + 1).map((p, i) => {
-    const above = i % 2 === 0;
-    return /* @__PURE__ */ react.createElement("div", { key: `v${i}`, style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: 0, top: 0, width: MacroVideo_W }, children: [
+    (ticks ?? []).map((tk, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: 88, top: yOf(tk) - 14, fontSize: 22, color: INK_DIM, width: 50, textAlign: "right" }, children: tk }, i)),
+    (ticks ?? []).map((tk, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
       position: "absolute",
-      left: xOf(i) - 34,
-      top: yOf(p.y) + (above ? -54 : 22),
-      width: 68,
-      textAlign: "center",
-      fontSize: 22,
-      fontWeight: 700,
-      color: GOLD
-    } }, p.label ?? p.y);
-  }), points.map((p, i) => /* @__PURE__ */ react.createElement("div", { key: `x${i}`, style: {
-    position: "absolute",
-    left: xOf(i) - 16,
-    top: boxB + 18,
-    width: 90,
-    textAlign: "right",
-    fontSize: 19,
-    color: INK_DIM,
-    opacity: i % 2 === 0 ? 1 : 0.6,
-    transform: "rotate(-38deg)",
-    transformOrigin: "right top"
-  } }, p.x)), (() => {
-    const yi = points.findIndex((p) => p.x.startsWith("1-2\u6708") || p.x === "2\u6708");
-    const split = yi > 0 ? xOf(yi) : boxL + (boxR - boxL) * 0.3;
-    return /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: boxL, top: boxB + 52, fontSize: 22, color: "rgba(255,255,255,0.75)" } }, "2025\u5E74"), /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: split + 30, top: boxB + 52, fontSize: 22, color: "rgba(255,255,255,0.75)" } }, "2026\u5E74"));
-  })(), unit ? /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: boxR - 60, top: boxT - 44, fontSize: 22, color: INK_DIM } }, "(", unit, ")") : null);
+      left: boxL,
+      right: MacroVideo_W - boxR,
+      top: yOf(tk),
+      height: 1,
+      background: "rgba(255,255,255,0.10)"
+    } }, `g${i}`)),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("svg", { width: MacroVideo_W, height: 1920, style: { position: "absolute", left: 0, top: 0 }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("line", { x1: boxL, y1: boxT - 6, x2: boxL, y2: boxB, stroke: "rgba(255,255,255,0.45)", strokeWidth: 2 }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("line", { x1: boxL, y1: boxB, x2: boxR, y2: boxB, stroke: "rgba(255,255,255,0.45)", strokeWidth: 2 }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("path", { d: path, fill: "none", stroke: GOLD, strokeWidth: 5, strokeLinejoin: "round", strokeLinecap: "round" }),
+      points.slice(0, drawn + 1).map((p, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("circle", { cx: xOf(i), cy: yOf(p.y), r: 6, fill: GOLD }, i))
+    ] }),
+    points.slice(0, drawn + 1).map((p, i) => {
+      const above = i % 2 === 0;
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+        position: "absolute",
+        left: xOf(i) - 34,
+        top: yOf(p.y) + (above ? -54 : 22),
+        width: 68,
+        textAlign: "center",
+        fontSize: 22,
+        fontWeight: 700,
+        color: GOLD
+      }, children: p.label ?? p.y }, `v${i}`);
+    }),
+    points.map((p, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      position: "absolute",
+      left: xOf(i) - 16,
+      top: boxB + 18,
+      width: 90,
+      textAlign: "right",
+      fontSize: 19,
+      color: INK_DIM,
+      opacity: i % 2 === 0 ? 1 : 0.6,
+      transform: "rotate(-38deg)",
+      transformOrigin: "right top"
+    }, children: p.x }, `x${i}`)),
+    (() => {
+      const yi = points.findIndex((p) => p.x.startsWith("1-2\u6708") || p.x === "2\u6708");
+      const split = yi > 0 ? xOf(yi) : boxL + (boxR - boxL) * 0.3;
+      return /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: boxL, top: boxB + 52, fontSize: 22, color: "rgba(255,255,255,0.75)" }, children: "2025\u5E74" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: split + 30, top: boxB + 52, fontSize: 22, color: "rgba(255,255,255,0.75)" }, children: "2026\u5E74" })
+      ] });
+    })(),
+    unit ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: boxR - 60, top: boxT - 44, fontSize: 22, color: INK_DIM }, children: [
+      "(",
+      unit,
+      ")"
+    ] }) : null
+  ] });
 };
-const BlockBig = ({ number, label, atMs, deco, fps }) => /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 760, width: RIGHT - LEFT } }, /* @__PURE__ */ react.createElement(MacroVideo_Enter, { at: MacroVideo_msToF(atMs, fps), y: 16 }, /* @__PURE__ */ react.createElement("div", { style: { ...MacroVideo_heavy, fontSize: number.length > 7 ? 96 : 128, color: GOLD, letterSpacing: 2, lineHeight: 1.1 } }, number), /* @__PURE__ */ react.createElement("div", { style: { marginTop: 14, fontSize: 32, color: "rgba(255,255,255,0.85)" } }, label), deco === "dots" ? /* @__PURE__ */ react.createElement("div", { style: { marginTop: 22, display: "flex", gap: 6 } }, Array.from({ length: 46 }, (_, i) => /* @__PURE__ */ react.createElement("span", { key: i, style: { width: 11, height: 11, background: i < 40 ? GOLD : "rgba(232,168,51,0.22)" } }))) : null));
-const BlockCards = ({ rows, fps }) => /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 716, width: RIGHT - LEFT } }, rows.map((r, i) => {
+const BlockBig = ({ number, label, atMs, deco, fps }) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: LEFT, top: 760, width: RIGHT - LEFT }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)(MacroVideo_Enter, { at: MacroVideo_msToF(atMs, fps), y: 16, children: [
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...MacroVideo_heavy, fontSize: number.length > 7 ? 96 : 128, color: GOLD, letterSpacing: 2, lineHeight: 1.1 }, children: number }),
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 14, fontSize: 32, color: "rgba(255,255,255,0.85)" }, children: label }),
+  deco === "dots" ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 22, display: "flex", gap: 6 }, children: Array.from({ length: 46 }, (_, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { width: 11, height: 11, background: i < 40 ? GOLD : "rgba(232,168,51,0.22)" } }, i)) }) : null
+] }) });
+const BlockCards = ({ rows, fps }) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: LEFT, top: 716, width: RIGHT - LEFT }, children: rows.map((r, i) => {
   const prev = rows.slice(0, i);
   const at = MacroVideo_msToF(r.atMs, fps);
-  return /* @__PURE__ */ react.createElement("div", { key: i, style: { position: "absolute", top: prev.length * 136, left: 0, width: "100%" } }, /* @__PURE__ */ react.createElement(MacroVideo_Enter, { at, y: 18, pop: true }, /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", top: prev.length * 136, left: 0, width: "100%" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_Enter, { at, y: 18, pop: true, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     border: `2px solid ${r.gold ? GOLD : "rgba(255,255,255,0.45)"}`,
     background: "rgba(5,10,11,0.55)",
     borderRadius: 6,
     padding: "26px 30px"
-  } }, /* @__PURE__ */ react.createElement("span", { style: { ...MacroVideo_heavy, fontSize: 36, color: r.gold ? GOLD : "#ffffff", letterSpacing: 1 } }, r.text))));
-}));
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...MacroVideo_heavy, fontSize: 36, color: r.gold ? GOLD : "#ffffff", letterSpacing: 1 }, children: r.text }) }) }) }, i);
+}) });
 const BlockGrid = ({ items, cols = 2, fps }) => {
   const gap = 24;
   const cw = (RIGHT - LEFT - gap * (cols - 1)) / cols;
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 726, width: RIGHT - LEFT } }, items.map((it, i) => {
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: LEFT, top: 726, width: RIGHT - LEFT }, children: items.map((it, i) => {
     const cx = i % cols * (cw + gap);
     const cy = Math.floor(i / cols) * 176;
-    return /* @__PURE__ */ react.createElement("div", { key: i, style: { position: "absolute", left: cx, top: cy, width: cw } }, /* @__PURE__ */ react.createElement(MacroVideo_Enter, { at: MacroVideo_msToF(it.atMs, fps), y: 16, pop: true }, /* @__PURE__ */ react.createElement("div", { style: {
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: cx, top: cy, width: cw }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_Enter, { at: MacroVideo_msToF(it.atMs, fps), y: 16, pop: true, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
       border: "2px solid rgba(255,255,255,0.45)",
       background: "rgba(5,10,11,0.55)",
       borderRadius: 6,
       padding: "24px 26px",
       minHeight: 128
-    } }, it.sub ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 21, color: INK_DIM, letterSpacing: 3, marginBottom: 8 } }, String(i + 1).padStart(2, "0")) : null, /* @__PURE__ */ react.createElement("div", { style: { ...MacroVideo_heavy, fontSize: 32, color: "#ffffff", lineHeight: 1.3 } }, it.title), it.sub ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 24, color: "rgba(255,255,255,0.6)", marginTop: 8 } }, it.sub) : null)));
-  }));
+    }, children: [
+      it.sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 21, color: INK_DIM, letterSpacing: 3, marginBottom: 8 }, children: String(i + 1).padStart(2, "0") }) : null,
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...MacroVideo_heavy, fontSize: 32, color: "#ffffff", lineHeight: 1.3 }, children: it.title }),
+      it.sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 24, color: "rgba(255,255,255,0.6)", marginTop: 8 }, children: it.sub }) : null
+    ] }) }) }, i);
+  }) });
 };
 const BlockVs = ({ left, right, atMs, fps }) => {
   const at = MacroVideo_msToF(atMs, fps);
-  const col = (v, gold, delay) => /* @__PURE__ */ react.createElement(MacroVideo_Enter, { at: at + delay, y: 16, pop: true }, /* @__PURE__ */ react.createElement("div", { style: {
+  const col = (v, gold, delay) => /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_Enter, { at: at + delay, y: 16, pop: true, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     border: `2px solid ${gold ? GOLD : "rgba(255,255,255,0.45)"}`,
     background: "rgba(5,10,11,0.55)",
     borderRadius: 6,
     padding: "26px 28px",
     minHeight: 210
-  } }, /* @__PURE__ */ react.createElement("div", { style: { fontSize: 21, color: gold ? GOLD : INK_DIM, letterSpacing: 3 } }, v.label), /* @__PURE__ */ react.createElement("div", { style: { marginTop: 14, display: "flex", flexDirection: "column", gap: 10 } }, v.lines.map((ln, i) => /* @__PURE__ */ react.createElement("div", { key: i, style: { ...MacroVideo_heavy, fontSize: 30, color: gold ? GOLD : "#ffffff", lineHeight: 1.3 } }, ln)))));
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 726, width: RIGHT - LEFT, display: "flex", gap: 24 } }, /* @__PURE__ */ react.createElement("div", { style: { flex: 1 } }, col(left, false, 0)), /* @__PURE__ */ react.createElement("div", { style: { flex: 1 } }, col(right, true, 8)));
+  }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 21, color: gold ? GOLD : INK_DIM, letterSpacing: 3 }, children: v.label }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }, children: v.lines.map((ln, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...MacroVideo_heavy, fontSize: 30, color: gold ? GOLD : "#ffffff", lineHeight: 1.3 }, children: ln }, i)) })
+  ] }) });
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: LEFT, top: 726, width: RIGHT - LEFT, display: "flex", gap: 24 }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { flex: 1 }, children: col(left, false, 0) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { flex: 1 }, children: col(right, true, 8) })
+  ] });
 };
 const BlockArrow = ({ from, to, note, atMs, fps }) => {
   const at = MacroVideo_msToF(atMs, fps);
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const grow = (0,remotion_dist_esm.interpolate)(f, [at + 6, at + 34], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 780, width: RIGHT - LEFT } }, /* @__PURE__ */ react.createElement(MacroVideo_Enter, { at, y: 12 }, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } }, /* @__PURE__ */ react.createElement("span", { style: { ...MacroVideo_heavy, fontSize: 30, color: "#ffffff" } }, from), /* @__PURE__ */ react.createElement("span", { style: { ...MacroVideo_heavy, fontSize: 30, color: GOLD } }, to))), /* @__PURE__ */ react.createElement("div", { style: { marginTop: 22, height: 3, background: "rgba(255,255,255,0.18)", position: "relative" } }, /* @__PURE__ */ react.createElement("div", { style: { width: `${grow * 100}%`, height: 3, background: GOLD } }), /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    right: `${(1 - grow) * 100}%`,
-    top: -7,
-    width: 17,
-    height: 17,
-    borderTop: `3px solid ${GOLD}`,
-    borderRight: `3px solid ${GOLD}`,
-    transform: "rotate(45deg)",
-    opacity: grow > 0.02 ? 1 : 0
-  } })), note ? /* @__PURE__ */ react.createElement(MacroVideo_Enter, { at: at + 30, y: 12 }, /* @__PURE__ */ react.createElement("div", { style: {
-    marginTop: 34,
-    border: "2px solid rgba(255,255,255,0.45)",
-    borderRadius: 6,
-    background: "rgba(5,10,11,0.55)",
-    padding: "22px 28px"
-  } }, /* @__PURE__ */ react.createElement("span", { style: { ...MacroVideo_heavy, fontSize: 30, color: "#ffffff" } }, note))) : null);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { position: "absolute", left: LEFT, top: 780, width: RIGHT - LEFT }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_Enter, { at, y: 12, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...MacroVideo_heavy, fontSize: 30, color: "#ffffff" }, children: from }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...MacroVideo_heavy, fontSize: 30, color: GOLD }, children: to })
+    ] }) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { marginTop: 22, height: 3, background: "rgba(255,255,255,0.18)", position: "relative" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { width: `${grow * 100}%`, height: 3, background: GOLD } }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+        position: "absolute",
+        right: `${(1 - grow) * 100}%`,
+        top: -7,
+        width: 17,
+        height: 17,
+        borderTop: `3px solid ${GOLD}`,
+        borderRight: `3px solid ${GOLD}`,
+        transform: "rotate(45deg)",
+        opacity: grow > 0.02 ? 1 : 0
+      } })
+    ] }),
+    note ? /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_Enter, { at: at + 30, y: 12, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      marginTop: 34,
+      border: "2px solid rgba(255,255,255,0.45)",
+      borderRadius: 6,
+      background: "rgba(5,10,11,0.55)",
+      padding: "22px 28px"
+    }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...MacroVideo_heavy, fontSize: 30, color: "#ffffff" }, children: note }) }) }) : null
+  ] });
 };
 const ChapterStage = ({ startMs, endMs, stage: st }) => {
   var _a;
@@ -8991,44 +9066,66 @@ const ChapterStage = ({ startMs, endMs, stage: st }) => {
   const headIn = (0,remotion_dist_esm.interpolate)(f, [2, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const relMs = (absMs) => Math.max(0, absMs - startMs);
   const block = st.block;
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, null, st.kicker ? /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    left: LEFT,
-    top: 466,
-    fontSize: 25,
-    fontWeight: 700,
-    color: GOLD,
-    letterSpacing: 5,
-    opacity: headIn
-  } }, st.kicker) : null, /* @__PURE__ */ react.createElement("div", { style: {
-    position: "absolute",
-    left: LEFT,
-    top: 516,
-    right: 60,
-    ...MacroVideo_heavy,
-    fontSize: 78,
-    lineHeight: 1.14,
-    color: GOLD,
-    letterSpacing: 2,
-    opacity: headIn,
-    transform: `translateY(${(1 - headIn) * 18}px)`
-  } }, st.title), st.sub ? /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 646, fontSize: 30, color: INK_DIM, opacity: headIn } }, st.sub) : null, (block == null ? void 0 : block.type) === "list" ? /* @__PURE__ */ react.createElement(BlockList, { rows: block.rows, fps }) : null, (block == null ? void 0 : block.type) === "bars" ? /* @__PURE__ */ react.createElement(BlockBars, { rows: block.rows, fps, axis: block.axis, zeroX: block.zeroX }) : null, (block == null ? void 0 : block.type) === "line" ? /* @__PURE__ */ react.createElement(BlockLine, { points: block.points, ticks: block.ticks, spanMs: block.spanMs, unit: block.unit, fps }) : null, (block == null ? void 0 : block.type) === "big" ? /* @__PURE__ */ react.createElement(BlockBig, { number: block.number, label: block.label, atMs: relMs(block.atMs), deco: block.deco, fps }) : null, (block == null ? void 0 : block.type) === "cards" ? /* @__PURE__ */ react.createElement(BlockCards, { rows: block.rows, fps }) : null, (block == null ? void 0 : block.type) === "grid" ? /* @__PURE__ */ react.createElement(BlockGrid, { items: block.items, cols: block.cols, fps }) : null, (block == null ? void 0 : block.type) === "vs" ? /* @__PURE__ */ react.createElement(BlockVs, { left: block.left, right: block.right, atMs: relMs(block.atMs), fps }) : null, (block == null ? void 0 : block.type) === "arrow" ? /* @__PURE__ */ react.createElement(BlockArrow, { from: block.from, to: block.to, note: block.note, atMs: relMs(block.atMs), fps }) : null, st.caption ? /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 1216, width: RIGHT - LEFT } }, /* @__PURE__ */ react.createElement(MacroVideo_Enter, { at: MacroVideo_msToF(relMs(st.caption.atMs), fps), y: 12 }, /* @__PURE__ */ react.createElement("span", { style: { ...MacroVideo_heavy, fontSize: 30, color: GOLD, letterSpacing: 1 } }, st.caption.text))) : null, st.rule ? /* @__PURE__ */ react.createElement(GrowingRule, { at: MacroVideo_msToF(relMs((((_a = st.caption) == null ? void 0 : _a.atMs) ?? endMs) + 600), fps) }) : null);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { children: [
+    st.kicker ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      position: "absolute",
+      left: LEFT,
+      top: 466,
+      fontSize: 25,
+      fontWeight: 700,
+      color: GOLD,
+      letterSpacing: 5,
+      opacity: headIn
+    }, children: st.kicker }) : null,
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      position: "absolute",
+      left: LEFT,
+      top: 516,
+      right: 60,
+      ...MacroVideo_heavy,
+      fontSize: 78,
+      lineHeight: 1.14,
+      color: GOLD,
+      letterSpacing: 2,
+      opacity: headIn,
+      transform: `translateY(${(1 - headIn) * 18}px)`
+    }, children: st.title }),
+    st.sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: LEFT, top: 646, fontSize: 30, color: INK_DIM, opacity: headIn }, children: st.sub }) : null,
+    (block == null ? void 0 : block.type) === "list" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BlockList, { rows: block.rows, fps }) : null,
+    (block == null ? void 0 : block.type) === "bars" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BlockBars, { rows: block.rows, fps, axis: block.axis, zeroX: block.zeroX }) : null,
+    (block == null ? void 0 : block.type) === "line" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BlockLine, { points: block.points, ticks: block.ticks, spanMs: block.spanMs, unit: block.unit, fps }) : null,
+    (block == null ? void 0 : block.type) === "big" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BlockBig, { number: block.number, label: block.label, atMs: relMs(block.atMs), deco: block.deco, fps }) : null,
+    (block == null ? void 0 : block.type) === "cards" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BlockCards, { rows: block.rows, fps }) : null,
+    (block == null ? void 0 : block.type) === "grid" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BlockGrid, { items: block.items, cols: block.cols, fps }) : null,
+    (block == null ? void 0 : block.type) === "vs" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BlockVs, { left: block.left, right: block.right, atMs: relMs(block.atMs), fps }) : null,
+    (block == null ? void 0 : block.type) === "arrow" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BlockArrow, { from: block.from, to: block.to, note: block.note, atMs: relMs(block.atMs), fps }) : null,
+    st.caption ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: LEFT, top: 1216, width: RIGHT - LEFT }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_Enter, { at: MacroVideo_msToF(relMs(st.caption.atMs), fps), y: 12, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...MacroVideo_heavy, fontSize: 30, color: GOLD, letterSpacing: 1 }, children: st.caption.text }) }) }) : null,
+    st.rule ? /* @__PURE__ */ (0,jsx_runtime.jsx)(GrowingRule, { at: MacroVideo_msToF(relMs((((_a = st.caption) == null ? void 0 : _a.atMs) ?? endMs) + 600), fps) }) : null
+  ] });
 };
 const GrowingRule = ({ at }) => {
   const f = (0,remotion_dist_esm.useCurrentFrame)();
   const w = (0,remotion_dist_esm.interpolate)(f, [at, at + 22], [0, RIGHT - LEFT], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  return /* @__PURE__ */ react.createElement("div", { style: { position: "absolute", left: LEFT, top: 1272, width: w, height: 3, background: GOLD, opacity: 0.9 } });
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: LEFT, top: 1272, width: w, height: 3, background: GOLD, opacity: 0.9 } });
 };
 const MacroVideo = (props) => {
   var _a;
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
   const bg = props.bgImage;
   const channel = props.channelName ?? "@\u5B8F\u89C2\u68F1\u955C";
-  return /* @__PURE__ */ react.createElement(remotion_dist_esm.AbsoluteFill, { style: { background: "#04080a", fontFamily: T.font } }, /* @__PURE__ */ react.createElement(FontFace, null), isCard() ? null : /* @__PURE__ */ react.createElement(Backdrop, { bg }), isCard() ? null : /* @__PURE__ */ react.createElement(MacroVideo_ChannelMark, { name: channel }), isCard() ? null : /* @__PURE__ */ react.createElement(SeriesTitle, { text: ((_a = props.headline.lines[0]) == null ? void 0 : _a.text) ?? "" }), isBase() ? null : props.shots.map((shot, i) => {
-    const st = shot.macroStage;
-    if (!st || st.mode !== "macro") return null;
-    return /* @__PURE__ */ react.createElement(remotion_dist_esm.Sequence, { key: i, from: MacroVideo_msToF(shot.startMs, fps), durationInFrames: MacroVideo_msToF(shot.endMs - shot.startMs, fps) + 1 }, /* @__PURE__ */ react.createElement(ChapterStage, { startMs: shot.startMs, endMs: shot.endMs, stage: st }));
-  }), isCard() ? null : /* @__PURE__ */ react.createElement(VoiceWave, { name: channel }), props.showSubtitles !== false ? /* @__PURE__ */ react.createElement(MacroVideo_BottomSubtitle, { clauses: props.clauses }) : null);
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(remotion_dist_esm.AbsoluteFill, { style: { background: "#04080a", fontFamily: T.font }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(FontFace, {}),
+    isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(Backdrop, { bg }),
+    isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_ChannelMark, { name: channel }),
+    isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(SeriesTitle, { text: ((_a = props.headline.lines[0]) == null ? void 0 : _a.text) ?? "" }),
+    isBase() ? null : props.shots.map((shot, i) => {
+      const st = shot.macroStage;
+      if (!st || st.mode !== "macro") return null;
+      return /* @__PURE__ */ (0,jsx_runtime.jsx)(remotion_dist_esm.Sequence, { from: MacroVideo_msToF(shot.startMs, fps), durationInFrames: MacroVideo_msToF(shot.endMs - shot.startMs, fps) + 1, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(ChapterStage, { startMs: shot.startMs, endMs: shot.endMs, stage: st }) }, i);
+    }),
+    isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(VoiceWave, { name: channel }),
+    props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(MacroVideo_BottomSubtitle, { clauses: props.clauses }) : null
+  ] });
 };
 
 ;// ./src/NiwoVideo.tsx
@@ -9885,7 +9982,26 @@ const Footer = ({ sources, disclaimer }) => {
     disclaimer ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: fitSize(disclaimer, F.size, F.width), color: T.gray, whiteSpace: "nowrap" }, children: disclaimer }) : null
   ] });
 };
-const buildSubtitleChunks = (clauses) => {
+const VIS_PUNCT = "\uFF0C\u3002\u3001\uFF1A\uFF1B\uFF01\uFF1F\u2026\u2014\xB7\uFF08\uFF09()\u300A\u300B\u201C\u201D\u2018\u2019-";
+const visWidth = (s) => {
+  let w = 0;
+  for (const ch of s) w += VIS_PUNCT.includes(ch) ? 0.55 : /[ -]/.test(ch) ? 0.62 : 1;
+  return w;
+};
+const fitCaptionSize = (lines, base, avail) => {
+  const longest = Math.max(1, ...lines.map(visWidth));
+  return Math.min(base, Math.max(26, Math.floor(avail * 0.97 / longest)));
+};
+const SubtitleLines = ({ lines, size, avail }) => /* @__PURE__ */ (0,jsx_runtime.jsx)(jsx_runtime.Fragment, { children: lines.map((l, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: fitCaptionSize(lines, size, avail), lineHeight: 1.3 }, children: l }, i)) });
+const buildSubtitleChunks = (clauses, subtitles) => {
+  if (subtitles && subtitles.length) {
+    return subtitles.map((s) => ({
+      text: s.text,
+      lines: s.lines && s.lines.length ? s.lines : [s.text],
+      startMs: s.startMs,
+      endMs: s.endMs
+    }));
+  }
   const chunks = [];
   for (const c of clauses) {
     const n = c.text.length;
@@ -9899,8 +10015,10 @@ const buildSubtitleChunks = (clauses) => {
         while (e < n && /[A-Za-z0-9]/.test(c.text[e])) e += 1;
         if (e - at <= 16) end = e;
       }
+      const piece = c.text.slice(at, end);
       chunks.push({
-        text: c.text.slice(at, end),
+        text: piece,
+        lines: [piece],
         startMs: c.startMs + (c.endMs - c.startMs) * at / n,
         endMs: c.startMs + (c.endMs - c.startMs) * end / n
       });
@@ -9909,29 +10027,31 @@ const buildSubtitleChunks = (clauses) => {
   }
   return chunks;
 };
-const Subtitles = ({ clauses, holes }) => {
+const Subtitles = ({ clauses, captions, holes }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
   const t = frame / fps * 1e3;
-  const chunks = buildSubtitleChunks(clauses);
+  const chunks = buildSubtitleChunks(clauses, captions);
   const active = chunks.find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
-  if (holes == null ? void 0 : holes.some(([a, b]) => active.startMs >= a - 200 && active.endMs <= b + 200)) return null;
+  if (holes == null ? void 0 : holes.some(([a, b]) => t >= a && t < b)) return null;
+  const S = T.geo.subtitle;
+  const avail = Number(S.maxWidth) || 1080 - 2 * (S.side ?? 60);
   return /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "div",
     {
       style: {
         position: "absolute",
-        left: T.geo.subtitle.side ?? 60,
-        right: T.geo.subtitle.side ?? 60,
-        top: T.geo.subtitle.top,
+        left: S.side ?? 60,
+        right: S.side ?? 60,
+        bottom: Number(S.bottom) || 480,
         textAlign: "center",
         ...heavy,
-        fontSize: T.geo.subtitle.size,
+        fontSize: S.size,
         color: T.white,
         textShadow: "0 2px 10px rgba(0,0,0,0.45)"
       },
-      children: active.text
+      children: /* @__PURE__ */ (0,jsx_runtime.jsx)(SubtitleLines, { lines: active.lines, size: S.size, avail })
     }
   );
 };
@@ -9996,11 +10116,11 @@ const PortraitHeadline = ({ lines }) => {
     ] }) : l.text }, i);
   }) });
 };
-const PortraitSubtitles = ({ clauses }) => {
+const PortraitSubtitles = ({ clauses, captions }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
   const t = frame / fps * 1e3;
-  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  const active = buildSubtitleChunks(clauses, captions).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
@@ -10012,7 +10132,7 @@ const PortraitSubtitles = ({ clauses }) => {
     fontSize: T.geo.subtitle.size,
     color: T.white,
     textShadow: "0 3px 16px rgba(0,0,0,0.75)"
-  }, children: active.text });
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(SubtitleLines, { lines: active.lines, size: T.geo.subtitle.size, avail: 1080 - 2 * (T.geo.subtitle.side ?? 60) }) });
 };
 const PortraitCard = ({ spec }) => {
   var _a, _b;
@@ -10113,7 +10233,7 @@ const PortraitVideo = (props) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
       /* @__PURE__ */ (0,jsx_runtime.jsx)(FontFace, {}),
       isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitShot, { shot, index: i }, i)),
       isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitHeadline, { lines: props.headline.lines }),
-      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitSubtitles, { clauses: props.clauses }) : null,
+      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitSubtitles, { clauses: props.clauses, captions: props.captions }) : null,
       isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(PortraitFooter, { sources: props.sources, disclaimer: props.disclaimer })
     ]
   }
@@ -10344,7 +10464,7 @@ const EditorialVideo = ({ props }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
         }
       ),
       isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(ShotView, { shot, index: i }, i)),
-      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Subtitles, { clauses: props.clauses, holes: props.subtitleHoles }) : null,
+      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Subtitles, { clauses: props.clauses, captions: props.captions, holes: props.subtitleHoles }) : null,
       isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(Footer, { sources: props.sources, disclaimer: props.disclaimer })
     ]
   }
@@ -10358,7 +10478,7 @@ const LowerVideo = (props) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
       /* @__PURE__ */ (0,jsx_runtime.jsx)(FontFace, {}),
       isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(LowerShot, { shot, index: i }, i)),
       isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(LowerBar, { lines: props.headline.lines }),
-      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(LowerSubtitles, { clauses: props.clauses }) : null,
+      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(LowerSubtitles, { clauses: props.clauses, captions: props.captions }) : null,
       isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(Footer, { sources: props.sources, disclaimer: props.disclaimer })
     ]
   }
@@ -10442,11 +10562,11 @@ const LowerBar = ({ lines }) => {
     }
   );
 };
-const LowerSubtitles = ({ clauses }) => {
+const LowerSubtitles = ({ clauses, captions }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
   const t = frame / fps * 1e3;
-  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  const active = buildSubtitleChunks(clauses, captions).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
     position: "absolute",
@@ -10466,7 +10586,7 @@ const LowerSubtitles = ({ clauses }) => {
         borderRadius: 8,
         lineHeight: 1.3
       },
-      children: active.text
+      children: /* @__PURE__ */ (0,jsx_runtime.jsx)(SubtitleLines, { lines: active.lines, size: T.geo.subtitle.size, avail: 1080 - 2 * (T.geo.subtitle.side ?? 60) })
     }
   ) });
 };
@@ -10599,11 +10719,11 @@ const PosterHeadline = ({ lines }) => {
     }, children: l.text }, i))
   ] });
 };
-const PosterSubtitles = ({ clauses }) => {
+const PosterSubtitles = ({ clauses, captions }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
   const t = frame / fps * 1e3;
-  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  const active = buildSubtitleChunks(clauses, captions).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   const S = T.geo.subtitle;
   return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
@@ -10614,7 +10734,7 @@ const PosterSubtitles = ({ clauses }) => {
     background: T.barBg ?? "rgba(10,10,12,0.86)",
     borderTop: `5px solid ${T.accent}`,
     padding: "22px 90px 26px 90px"
-  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: S.size, color: T.white, lineHeight: 1.25 }, children: active.text }) });
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { ...heavy, fontSize: S.size, color: T.white, lineHeight: 1.25 }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(SubtitleLines, { lines: active.lines, size: S.size, avail: 1080 - 180 }) }) });
 };
 const PosterFooter = ({ sources, disclaimer }) => {
   const F = T.geo.footer;
@@ -10660,7 +10780,7 @@ const PosterVideo = (props) => /* @__PURE__ */ (0,jsx_runtime.jsxs)(
       isCard() ? null : isBase() ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterSubtitlePlate, {}) : null,
       isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterShot, { shot, index: i }, i)),
       isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterHeadline, { lines: props.headline.lines }),
-      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterSubtitles, { clauses: props.clauses }) : null,
+      props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterSubtitles, { clauses: props.clauses, captions: props.captions }) : null,
       isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(PosterFooter, { sources: props.sources, disclaimer: props.disclaimer })
     ]
   }
@@ -10849,17 +10969,17 @@ const DataVideo = (props) => {
         isBase() ? null : props.shots.map((shot, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)(DataShot, { shot, index: i, runningText: runningOf(shot) }, i)),
         isBase() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(DataProgress, { shots: props.shots }),
         isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(DataHeader, { lines: props.headline.lines }),
-        props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(DataSubtitles, { clauses: props.clauses }) : null,
+        props.showSubtitles !== false ? /* @__PURE__ */ (0,jsx_runtime.jsx)(DataSubtitles, { clauses: props.clauses, captions: props.captions }) : null,
         isCard() ? null : /* @__PURE__ */ (0,jsx_runtime.jsx)(Footer, { sources: props.sources, disclaimer: props.disclaimer })
       ]
     }
   );
 };
-const DataSubtitles = ({ clauses }) => {
+const DataSubtitles = ({ clauses, captions }) => {
   const frame = (0,remotion_dist_esm.useCurrentFrame)();
   const fps = (0,remotion_dist_esm.useVideoConfig)().fps;
   const t = frame / fps * 1e3;
-  const active = buildSubtitleChunks(clauses).find((c) => t >= c.startMs && t < c.endMs);
+  const active = buildSubtitleChunks(clauses, captions).find((c) => t >= c.startMs && t < c.endMs);
   if (!active || hideMedia()) return null;
   const S = T.geo.subtitle;
   return /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { position: "absolute", left: S.side ?? 80, right: S.side ?? 80, bottom: S.bottom, textAlign: "center" }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
@@ -10870,7 +10990,7 @@ const DataSubtitles = ({ clauses }) => {
     borderLeft: `6px solid ${T.accent}`,
     padding: "10px 26px 14px 26px",
     lineHeight: 1.3
-  }, children: active.text }) });
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(SubtitleLines, { lines: active.lines, size: T.geo.subtitle.size, avail: 1080 - 2 * (T.geo.subtitle.side ?? 60) }) }) });
 };
 const StatCard = ({ spec }) => {
   const f = useAnimFrame();
@@ -11019,6 +11139,7 @@ const Timeline3 = ({ spec }) => {
 
 ;// ./src/tool/ui.tsx
 
+
 const C = {
   ink: "var(--ink)",
   soft: "var(--ink-2)",
@@ -11087,7 +11208,7 @@ const api = async (u, o) => {
   if (!r.ok) throw new Error(d && d.error || `HTTP ${r.status}`);
   return d;
 };
-const Toggle = ({ label, on, set }) => /* @__PURE__ */ react.createElement("button", { onClick: () => set(!on), style: {
+const Toggle = ({ label, on, set }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { onClick: () => set(!on), style: {
   all: "unset",
   cursor: "pointer",
   display: "flex",
@@ -11095,24 +11216,27 @@ const Toggle = ({ label, on, set }) => /* @__PURE__ */ react.createElement("butt
   gap: 8,
   fontSize: 13.5,
   color: C.ink
-} }, /* @__PURE__ */ react.createElement("span", { style: {
-  width: 30,
-  height: 17,
-  borderRadius: 9,
-  position: "relative",
-  flexShrink: 0,
-  background: on ? C.accent : C.track,
-  transition: "background .15s"
-} }, /* @__PURE__ */ react.createElement("span", { style: {
-  position: "absolute",
-  top: 2,
-  left: on ? 15 : 2,
-  width: 13,
-  height: 13,
-  borderRadius: "50%",
-  background: on ? C.onAcc : C.card,
-  transition: "left .15s"
-} })), label);
+}, children: [
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+    width: 30,
+    height: 17,
+    borderRadius: 9,
+    position: "relative",
+    flexShrink: 0,
+    background: on ? C.accent : C.track,
+    transition: "background .15s"
+  }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+    position: "absolute",
+    top: 2,
+    left: on ? 15 : 2,
+    width: 13,
+    height: 13,
+    borderRadius: "50%",
+    background: on ? C.onAcc : C.card,
+    transition: "left .15s"
+  } }) }),
+  label
+] });
 const Sheet = ({ title, sub, width = 460, onClose, children, footer }) => {
   react.useEffect(() => {
     const k = (e) => {
@@ -11121,7 +11245,7 @@ const Sheet = ({ title, sub, width = 460, onClose, children, footer }) => {
     document.addEventListener("keydown", k);
     return () => document.removeEventListener("keydown", k);
   }, [onClose]);
-  return /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "div",
     {
       onClick: (e) => {
@@ -11136,31 +11260,43 @@ const Sheet = ({ title, sub, width = 460, onClose, children, footer }) => {
         alignItems: "center",
         justifyContent: "center",
         padding: 20
-      }
-    },
-    /* @__PURE__ */ react.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: {
-      width,
-      maxWidth: "100%",
-      maxHeight: "92vh",
-      display: "flex",
-      flexDirection: "column",
-      background: C.card,
-      color: C.ink,
-      borderRadius: 16,
-      boxShadow: "0 24px 70px rgba(0,0,0,.28)",
-      border: `1px solid ${C.line}`
-    } }, /* @__PURE__ */ react.createElement("div", { style: { padding: "22px 26px 0", display: "flex", gap: 14, alignItems: "flex-start" } }, /* @__PURE__ */ react.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ react.createElement("div", { style: { fontSize: 19, fontWeight: 800, color: C.ink } }, title), sub ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13.5, color: C.soft, marginTop: 5, lineHeight: 1.7 } }, sub) : null), /* @__PURE__ */ react.createElement("button", { onClick: onClose, "aria-label": "\u5173\u95ED", style: {
-      all: "unset",
-      cursor: "pointer",
-      fontSize: 19,
-      lineHeight: 1,
-      color: C.soft,
-      padding: 6,
-      borderRadius: 8
-    } }, "\xD7")), /* @__PURE__ */ react.createElement("div", { style: { padding: "18px 26px 22px", overflowY: "auto" } }, children, footer))
+      },
+      children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: {
+        width,
+        maxWidth: "100%",
+        maxHeight: "92vh",
+        display: "flex",
+        flexDirection: "column",
+        background: C.card,
+        color: C.ink,
+        borderRadius: 16,
+        boxShadow: "0 24px 70px rgba(0,0,0,.28)",
+        border: `1px solid ${C.line}`
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { padding: "22px 26px 0", display: "flex", gap: 14, alignItems: "flex-start" }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { flex: 1, minWidth: 0 }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 19, fontWeight: 800, color: C.ink }, children: title }),
+            sub ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13.5, color: C.soft, marginTop: 5, lineHeight: 1.7 }, children: sub }) : null
+          ] }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { onClick: onClose, "aria-label": "\u5173\u95ED", style: {
+            all: "unset",
+            cursor: "pointer",
+            fontSize: 19,
+            lineHeight: 1,
+            color: C.soft,
+            padding: 6,
+            borderRadius: 8
+          }, children: "\xD7" })
+        ] }),
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { padding: "18px 26px 22px", overflowY: "auto" }, children: [
+          children,
+          footer
+        ] })
+      ] })
+    }
   );
 };
-const TierChip = ({ tier, label }) => /* @__PURE__ */ react.createElement("span", { style: {
+const TierChip = ({ tier, label }) => /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
   fontSize: 11.5,
   fontWeight: 700,
   padding: "2px 8px",
@@ -11169,9 +11305,13 @@ const TierChip = ({ tier, label }) => /* @__PURE__ */ react.createElement("span"
   background: tier === "free" ? C.paper : C.accentSoft,
   color: tier === "free" ? C.soft : C.accent,
   border: `1px solid ${tier === "free" ? C.line : C.accent}`
-} }, label);
-const Field = ({ label, children, hint }) => /* @__PURE__ */ react.createElement("div", { style: { marginBottom: 13 } }, /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13, color: C.soft, marginBottom: 5 } }, label), children, hint ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 12.5, color: C.soft, marginTop: 5 } }, hint) : null);
-const Msg = ({ t, k }) => t ? /* @__PURE__ */ react.createElement("div", { style: {
+}, children: label });
+const Field = ({ label, children, hint }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { marginBottom: 13 }, children: [
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13, color: C.soft, marginBottom: 5 }, children: label }),
+  children,
+  hint ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 12.5, color: C.soft, marginTop: 5 }, children: hint }) : null
+] });
+const Msg = ({ t, k }) => t ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
   fontSize: 13,
   lineHeight: 1.6,
   marginBottom: 12,
@@ -11179,7 +11319,7 @@ const Msg = ({ t, k }) => t ? /* @__PURE__ */ react.createElement("div", { style
   borderRadius: 8,
   color: k === "err" ? C.err : k === "ok" ? C.ok : C.ink,
   background: k === "err" ? C.errSoft : k === "ok" ? C.okSoft : C.paper
-} }, t) : null;
+}, children: t }) : null;
 const lnk = {
   all: "unset",
   cursor: "pointer",
@@ -11189,6 +11329,7 @@ const lnk = {
 const lnkAcc = { ...lnk, color: C.accent, fontWeight: 650 };
 
 ;// ./src/tool/brand.tsx
+
 
 
 const sec = { borderTop: `1px solid ${C.line}`, paddingTop: 18, marginTop: 18 };
@@ -11334,91 +11475,140 @@ const BrandSheet = ({ onClose, toast, onBrandChanged }) => {
   };
   const mm = `${Math.floor(recSec / 60)}:${String(recSec % 60).padStart(2, "0")}`;
   const premium = (st == null ? void 0 : st.premium) !== false;
-  return /* @__PURE__ */ react.createElement(Sheet, { title: "\u54C1\u724C\u5957\u88C5", sub: "\u8DDF\u7740\u8D26\u53F7\u8D70\uFF0C\u4E4B\u540E\u7684\u6BCF\u6761\u7247\u5B50\u81EA\u52A8\u5E26\u4E0A\u3002", width: 520, onClose }, !st ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13.5, color: C.soft } }, "\u52A0\u8F7D\u4E2D\u2026") : /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 16, alignItems: "center" } }, /* @__PURE__ */ react.createElement("div", { style: {
-    width: 76,
-    height: 76,
-    flexShrink: 0,
-    borderRadius: 10,
-    overflow: "hidden",
-    border: `1px dashed ${C.line}`,
-    background: C.field,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center"
-  } }, st.has_logo ? /* @__PURE__ */ react.createElement(
-    "img",
-    {
-      src: `/api/brand/logo?t=${Date.now()}`,
-      alt: "Logo",
-      style: { maxWidth: 68, maxHeight: 68, objectFit: "contain" }
-    }
-  ) : /* @__PURE__ */ react.createElement("span", { style: { fontSize: 12.5, color: C.soft } }, "\u8FD8\u6CA1\u4F20")), /* @__PURE__ */ react.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ react.createElement("div", { style: secTitle }, "Logo"), /* @__PURE__ */ react.createElement("div", { style: secSub }, "\u5F00\u573A\u5C31\u8BA9\u4EBA\u8BA4\u51FA\u4F60 \xB7 PNG \u900F\u660E\u5E95\u6700\u4F73"), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } }, /* @__PURE__ */ react.createElement("label", { style: { ...btnSmLine, cursor: "pointer", display: "inline-block" } }, st.has_logo ? "\u6362\u4E00\u5F20" : "\u4E0A\u4F20 Logo", /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      type: "file",
-      accept: "image/png,image/jpeg,image/webp",
-      style: { display: "none" },
-      onChange: (e) => {
-        var _a2;
-        return void uploadLogo((_a2 = e.target.files) == null ? void 0 : _a2[0]);
-      }
-    }
-  )), st.has_logo ? /* @__PURE__ */ react.createElement("button", { style: btnSmLine, onClick: () => void dropLogo() }, "\u79FB\u9664") : null), logoMsg ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 12.5, color: C.soft, marginTop: 6 } }, logoMsg) : null)), /* @__PURE__ */ react.createElement("div", { style: sec }, /* @__PURE__ */ react.createElement("div", { style: secTitle }, "\u6211\u7684\u58F0\u97F3"), /* @__PURE__ */ react.createElement("div", { style: secSub }, "\u5F55 30 \u79D2\uFF0C\u4E4B\u540E\u914D\u97F3\u5C31\u7528\u4F60\u7684\u58F0\u97F3"), (cl == null ? void 0 : cl.has_voice) ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13, color: C.ok, marginBottom: 10 } }, "\u5DF2\u514B\u9686", ((_a = cl.clone) == null ? void 0 : _a.created) ? ` \xB7 ${cl.clone.created}` : "", "\uFF0C\u91CD\u5F55\u53EF\u8986\u76D6") : null, cl && !cl.dashscope ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13, color: C.soft, marginBottom: 10, lineHeight: 1.7 } }, "\u914D\u97F3\u670D\u52A1\u5C1A\u672A\u914D\u7F6E\uFF08\u7B49\u7AD9\u957F\u5F00\u901A\u767E\u70BC\uFF09\uFF0C\u73B0\u5728\u5F55\u97F3\u8FD8\u4E0D\u80FD\u514B\u9686\u3002") : null, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" } }, /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: recState === "rec" ? { ...btnSm, background: C.err } : btnSm,
-      onClick: () => {
-        var _a2;
-        return recState === "rec" ? (_a2 = rec.current.mr) == null ? void 0 : _a2.stop() : void startRec();
-      }
-    },
-    recState === "rec" ? `\u25A0 \u505C\u6B62 ${mm}` : recState === "done" ? "\u25CF \u91CD\u65B0\u5F55" : "\u25CF \u5F00\u59CB\u5F55\u97F3"
-  ), blobUrl ? /* @__PURE__ */ react.createElement("audio", { controls: true, src: blobUrl, style: { height: 30 } }) : null, /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: { ...btnSmLine, opacity: consent && blobUrl && recState === "done" ? 1 : 0.45 },
-      disabled: !(consent && blobUrl && recState === "done"),
-      onClick: () => void cloneWith()
-    },
-    "\u7528\u8FD9\u6BB5\u514B\u9686\u6211\u7684\u58F0\u97F3"
-  ), (cl == null ? void 0 : cl.has_voice) ? /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: { ...btnSmLine, color: C.err, borderColor: C.err },
-      onClick: () => void dropClone()
-    },
-    "\u6E05\u9664\u6211\u7684\u58F0\u97F3"
-  ) : null), /* @__PURE__ */ react.createElement("label", { style: {
-    display: "flex",
-    gap: 7,
-    alignItems: "flex-start",
-    fontSize: 12.5,
-    color: C.soft,
-    marginTop: 12,
-    lineHeight: 1.7,
-    cursor: "pointer"
-  } }, /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      type: "checkbox",
-      checked: consent,
-      style: { marginTop: 2 },
-      onChange: (e) => setConsent(e.target.checked)
-    }
-  ), /* @__PURE__ */ react.createElement("span", null, "\u6211\u786E\u8BA4\u5F55\u5236\u7684\u662F", /* @__PURE__ */ react.createElement("b", null, "\u6211\u672C\u4EBA"), "\u7684\u58F0\u97F3\uFF0C\u5E76\u540C\u610F GetCut \u7528\u5B83\u5408\u6210\u6211\u8D26\u53F7\u4E0B\u7684\u89C6\u9891\u914D\u97F3\u3002 \u6210\u7247\u6309\u89C4\u8303\u6807\u6CE8 AI \u914D\u97F3\u3002")), /* @__PURE__ */ react.createElement(Msg, { ...recMsg })), /* @__PURE__ */ react.createElement("div", { style: sec }, /* @__PURE__ */ react.createElement("div", { style: secTitle }, "\u6587\u5B57\u6C34\u5370"), /* @__PURE__ */ react.createElement("div", { style: secSub }, "\u51FA\u5728\u6BCF\u6761\u7247\u5B50\u53F3\u4E0A\u89D2\uFF0C\u5982\u300C@\u963F\u4F1F\u8BF4\u8D22\u7ECF\u300D"), /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      style: inp,
-      maxLength: 16,
-      value: wm,
-      placeholder: "\u7559\u7A7A = \u663E\u793A Powered by GetCut",
-      onChange: (e) => setWm(e.target.value),
-      onBlur: () => void saveWm()
-    }
-  ), /* @__PURE__ */ react.createElement(Msg, { ...wmMsg })), !premium ? /* @__PURE__ */ react.createElement("div", { style: { ...sec, fontSize: 13, color: C.err } }, "\u54C1\u724C\u5957\u88C5\u662F\u9AD8\u7EA7\u7248\u529F\u80FD\u2014\u2014\u5347\u7EA7\u540E\u8FD9\u91CC\u6539\u7684\u4E1C\u897F\u624D\u771F\u6B63\u4E0A\u7247\u3002") : null));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(Sheet, { title: "\u54C1\u724C\u5957\u88C5", sub: "\u8DDF\u7740\u8D26\u53F7\u8D70\uFF0C\u4E4B\u540E\u7684\u6BCF\u6761\u7247\u5B50\u81EA\u52A8\u5E26\u4E0A\u3002", width: 520, onClose, children: !st ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13.5, color: C.soft }, children: "\u52A0\u8F7D\u4E2D\u2026" }) : /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", gap: 16, alignItems: "center" }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+        width: 76,
+        height: 76,
+        flexShrink: 0,
+        borderRadius: 10,
+        overflow: "hidden",
+        border: `1px dashed ${C.line}`,
+        background: C.field,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }, children: st.has_logo ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "img",
+        {
+          src: `/api/brand/logo?t=${Date.now()}`,
+          alt: "Logo",
+          style: { maxWidth: 68, maxHeight: 68, objectFit: "contain" }
+        }
+      ) : /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 12.5, color: C.soft }, children: "\u8FD8\u6CA1\u4F20" }) }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { minWidth: 0 }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: secTitle, children: "Logo" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: secSub, children: "\u5F00\u573A\u5C31\u8BA9\u4EBA\u8BA4\u51FA\u4F60 \xB7 PNG \u900F\u660E\u5E95\u6700\u4F73" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("label", { style: { ...btnSmLine, cursor: "pointer", display: "inline-block" }, children: [
+            st.has_logo ? "\u6362\u4E00\u5F20" : "\u4E0A\u4F20 Logo",
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(
+              "input",
+              {
+                type: "file",
+                accept: "image/png,image/jpeg,image/webp",
+                style: { display: "none" },
+                onChange: (e) => {
+                  var _a2;
+                  return void uploadLogo((_a2 = e.target.files) == null ? void 0 : _a2[0]);
+                }
+              }
+            )
+          ] }),
+          st.has_logo ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { style: btnSmLine, onClick: () => void dropLogo(), children: "\u79FB\u9664" }) : null
+        ] }),
+        logoMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 12.5, color: C.soft, marginTop: 6 }, children: logoMsg }) : null
+      ] })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: sec, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: secTitle, children: "\u6211\u7684\u58F0\u97F3" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: secSub, children: "\u5F55 30 \u79D2\uFF0C\u4E4B\u540E\u914D\u97F3\u5C31\u7528\u4F60\u7684\u58F0\u97F3" }),
+      (cl == null ? void 0 : cl.has_voice) ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { fontSize: 13, color: C.ok, marginBottom: 10 }, children: [
+        "\u5DF2\u514B\u9686",
+        ((_a = cl.clone) == null ? void 0 : _a.created) ? ` \xB7 ${cl.clone.created}` : "",
+        "\uFF0C\u91CD\u5F55\u53EF\u8986\u76D6"
+      ] }) : null,
+      cl && !cl.dashscope ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13, color: C.soft, marginBottom: 10, lineHeight: 1.7 }, children: "\u914D\u97F3\u670D\u52A1\u5C1A\u672A\u914D\u7F6E\uFF08\u7B49\u7AD9\u957F\u5F00\u901A\u767E\u70BC\uFF09\uFF0C\u73B0\u5728\u5F55\u97F3\u8FD8\u4E0D\u80FD\u514B\u9686\u3002" }) : null,
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "button",
+          {
+            style: recState === "rec" ? { ...btnSm, background: C.err } : btnSm,
+            onClick: () => {
+              var _a2;
+              return recState === "rec" ? (_a2 = rec.current.mr) == null ? void 0 : _a2.stop() : void startRec();
+            },
+            children: recState === "rec" ? `\u25A0 \u505C\u6B62 ${mm}` : recState === "done" ? "\u25CF \u91CD\u65B0\u5F55" : "\u25CF \u5F00\u59CB\u5F55\u97F3"
+          }
+        ),
+        blobUrl ? /* @__PURE__ */ (0,jsx_runtime.jsx)("audio", { controls: true, src: blobUrl, style: { height: 30 } }) : null,
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "button",
+          {
+            style: { ...btnSmLine, opacity: consent && blobUrl && recState === "done" ? 1 : 0.45 },
+            disabled: !(consent && blobUrl && recState === "done"),
+            onClick: () => void cloneWith(),
+            children: "\u7528\u8FD9\u6BB5\u514B\u9686\u6211\u7684\u58F0\u97F3"
+          }
+        ),
+        (cl == null ? void 0 : cl.has_voice) ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "button",
+          {
+            style: { ...btnSmLine, color: C.err, borderColor: C.err },
+            onClick: () => void dropClone(),
+            children: "\u6E05\u9664\u6211\u7684\u58F0\u97F3"
+          }
+        ) : null
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("label", { style: {
+        display: "flex",
+        gap: 7,
+        alignItems: "flex-start",
+        fontSize: 12.5,
+        color: C.soft,
+        marginTop: 12,
+        lineHeight: 1.7,
+        cursor: "pointer"
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "input",
+          {
+            type: "checkbox",
+            checked: consent,
+            style: { marginTop: 2 },
+            onChange: (e) => setConsent(e.target.checked)
+          }
+        ),
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+          "\u6211\u786E\u8BA4\u5F55\u5236\u7684\u662F",
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: "\u6211\u672C\u4EBA" }),
+          "\u7684\u58F0\u97F3\uFF0C\u5E76\u540C\u610F GetCut \u7528\u5B83\u5408\u6210\u6211\u8D26\u53F7\u4E0B\u7684\u89C6\u9891\u914D\u97F3\u3002 \u6210\u7247\u6309\u89C4\u8303\u6807\u6CE8 AI \u914D\u97F3\u3002"
+        ] })
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(Msg, { ...recMsg })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: sec, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: secTitle, children: "\u6587\u5B57\u6C34\u5370" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: secSub, children: "\u51FA\u5728\u6BCF\u6761\u7247\u5B50\u53F3\u4E0A\u89D2\uFF0C\u5982\u300C@\u963F\u4F1F\u8BF4\u8D22\u7ECF\u300D" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "input",
+        {
+          style: inp,
+          maxLength: 16,
+          value: wm,
+          placeholder: "\u7559\u7A7A = \u663E\u793A Powered by GetCut",
+          onChange: (e) => setWm(e.target.value),
+          onBlur: () => void saveWm()
+        }
+      ),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(Msg, { ...wmMsg })
+    ] }),
+    !premium ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { ...sec, fontSize: 13, color: C.err }, children: "\u54C1\u724C\u5957\u88C5\u662F\u9AD8\u7EA7\u7248\u529F\u80FD\u2014\u2014\u5347\u7EA7\u540E\u8FD9\u91CC\u6539\u7684\u4E1C\u897F\u624D\u771F\u6B63\u4E0A\u7247\u3002" }) : null
+  ] }) });
 };
 
 ;// ./src/tool/account.tsx
+
 
 
 
@@ -11521,16 +11711,16 @@ const AuthSheet = ({ authst, mode0, note, onClose, onSignedIn }) => {
       { email: f.liEmail.trim(), password: f.liPass, remember: f.remember }
     );
   };
-  const codeBtn = (endpoint, field) => /* @__PURE__ */ react.createElement(
+  const codeBtn = (endpoint, field) => /* @__PURE__ */ (0,jsx_runtime.jsx)(
     "button",
     {
       style: { ...btnSmLine, whiteSpace: "nowrap", opacity: busy || cooldown ? 0.6 : 1 },
       disabled: busy || cooldown > 0,
-      onClick: () => void sendCode(endpoint, field)
-    },
-    cooldown > 0 ? `${cooldown} \u79D2\u540E\u91CD\u53D1` : "\u83B7\u53D6\u9A8C\u8BC1\u7801"
+      onClick: () => void sendCode(endpoint, field),
+      children: cooldown > 0 ? `${cooldown} \u79D2\u540E\u91CD\u53D1` : "\u83B7\u53D6\u9A8C\u8BC1\u7801"
+    }
   );
-  const tab = (m, label) => /* @__PURE__ */ react.createElement("button", { onClick: () => setMode(m), style: {
+  const tab = (m, label) => /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { onClick: () => setMode(m), style: {
     all: "unset",
     cursor: "pointer",
     textAlign: "center",
@@ -11541,144 +11731,172 @@ const AuthSheet = ({ authst, mode0, note, onClose, onSignedIn }) => {
     fontWeight: 700,
     background: mode === m ? C.accent : "transparent",
     color: mode === m ? C.onAcc : C.soft
-  } }, label);
-  return /* @__PURE__ */ react.createElement(
+  }, children: label });
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(
     Sheet,
     {
       title: mode === "register" ? "\u6CE8\u518C GetCut" : mode === "reset" ? "\u91CD\u8BBE\u5BC6\u7801" : "\u6B22\u8FCE\u56DE\u6765",
       sub: mode === "register" ? "\u628A\u4E00\u7BC7\u6587\u6848\u53D8\u6210\u80FD\u53D1\u7684\u7AD6\u5C4F\u77ED\u7247" : mode === "reset" ? "\u90AE\u7BB1\u9A8C\u8BC1\u7801\u9A8C\u8BC1\u662F\u4F60\u672C\u4EBA\uFF0C\u7136\u540E\u8BBE\u4E2A\u65B0\u5BC6\u7801" : "\u767B\u5F55\u540E\u7EE7\u7EED\u505A\u4F60\u7684\u7247\u5B50",
-      onClose
-    },
-    /* @__PURE__ */ react.createElement(Msg, { ...msg }),
-    note ? /* @__PURE__ */ react.createElement("div", { style: {
-      fontSize: 13,
-      color: C.soft,
-      background: C.paper,
-      borderRadius: 8,
-      padding: "9px 11px",
-      marginBottom: 12,
-      lineHeight: 1.6
-    } }, note) : null,
-    mode !== "reset" ? /* @__PURE__ */ react.createElement("div", { style: {
-      display: "flex",
-      gap: 6,
-      padding: 4,
-      background: C.paper,
-      borderRadius: 10,
-      marginBottom: 16
-    } }, tab("register", "\u6CE8\u518C"), tab("login", "\u767B\u5F55")) : null,
-    mode === "login" ? /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(Field, { label: "\u90AE\u7BB1" }, /* @__PURE__ */ react.createElement(
-      "input",
-      {
-        style: inp,
-        type: "email",
-        placeholder: "you@example.com",
-        autoComplete: "username",
-        value: f.liEmail,
-        onChange: set("liEmail")
-      }
-    )), /* @__PURE__ */ react.createElement(Field, { label: "\u5BC6\u7801" }, /* @__PURE__ */ react.createElement(
-      "input",
-      {
-        style: inp,
-        type: "password",
-        placeholder: "\u5BC6\u7801",
-        autoComplete: "current-password",
-        value: f.liPass,
-        onChange: set("liPass"),
-        onKeyDown: (e) => {
-          if (e.key === "Enter") login();
-        }
-      }
-    )), /* @__PURE__ */ react.createElement("label", { style: {
-      display: "flex",
-      gap: 7,
-      alignItems: "center",
-      fontSize: 13.5,
-      color: C.soft,
-      marginBottom: 16,
-      cursor: "pointer"
-    } }, /* @__PURE__ */ react.createElement("input", { type: "checkbox", checked: f.remember, onChange: set("remember") }), "\u8BB0\u4F4F\u6211\uFF0C30 \u5929\u5185\u514D\u767B\u5F55"), /* @__PURE__ */ react.createElement(
-      "button",
-      {
-        style: { ...btn, width: "100%", opacity: busy ? 0.7 : 1 },
-        disabled: busy,
-        onClick: login
-      },
-      busy ? "\u767B\u5F55\u4E2D\u2026" : "\u767B\u5F55"
-    ), /* @__PURE__ */ react.createElement(
-      "button",
-      {
-        style: { ...lnk, display: "block", marginTop: 12 },
-        onClick: () => setMode("reset")
-      },
-      "\u5FD8\u8BB0\u5BC6\u7801\uFF1F"
-    )) : !canRegister ? /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13.5, color: C.soft, lineHeight: 1.8 } }, mode === "register" ? "\u6CE8\u518C\u529F\u80FD\u9700\u8981\u5148\u5728\u670D\u52A1\u5668\u914D\u7F6E\u53D1\u4FE1\u90AE\u7BB1\uFF08SMTP\uFF09\u3002\u914D\u7F6E\u597D\u4E4B\u540E\uFF0C\u8FD9\u91CC\u5C31\u662F\u300C\u8F93\u90AE\u7BB1 \u2192 \u6536\u9A8C\u8BC1\u7801 \u2192 \u8BBE\u5BC6\u7801\u300D\u3002" : "\u91CD\u8BBE\u5BC6\u7801\u9700\u8981\u670D\u52A1\u5668\u914D\u7F6E\u53D1\u4FE1\u90AE\u7BB1\uFF08SMTP\uFF09\uFF0C\u5426\u5219\u6536\u4E0D\u5230\u9A8C\u8BC1\u7801\u3002\u8BF7\u8054\u7CFB\u7BA1\u7406\u5458\u3002"), /* @__PURE__ */ react.createElement(
-      "button",
-      {
-        style: { ...btnLine, width: "100%", marginTop: 14 },
-        onClick: () => setMode("login")
-      },
-      "\u6211\u6709\u8D26\u53F7\uFF0C\u53BB\u767B\u5F55"
-    )) : /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(Field, { label: "\u90AE\u7BB1" }, /* @__PURE__ */ react.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr auto", gap: 8 } }, /* @__PURE__ */ react.createElement(
-      "input",
-      {
-        style: inp,
-        type: "email",
-        placeholder: "you@example.com",
-        autoComplete: "username",
-        value: f.email,
-        onChange: set("email")
-      }
-    ), codeBtn(mode === "reset" ? "/api/auth/reset-code" : "/api/auth/send-code", "email"))), /* @__PURE__ */ react.createElement(Field, { label: "\u9A8C\u8BC1\u7801" }, /* @__PURE__ */ react.createElement(
-      "input",
-      {
-        style: inp,
-        type: "text",
-        placeholder: "6 \u4F4D\u6570\u5B57",
-        maxLength: 6,
-        inputMode: "numeric",
-        value: f.code,
-        onChange: set("code")
-      }
-    )), /* @__PURE__ */ react.createElement(Field, { label: mode === "reset" ? "\u65B0\u5BC6\u7801" : "\u8BBE\u7F6E\u5BC6\u7801" }, /* @__PURE__ */ react.createElement(
-      "input",
-      {
-        style: inp,
-        type: "password",
-        placeholder: "\u81F3\u5C11 8 \u4F4D",
-        autoComplete: "new-password",
-        value: f.pass,
-        onChange: set("pass")
-      }
-    )), /* @__PURE__ */ react.createElement(Field, { label: "\u786E\u8BA4\u5BC6\u7801" }, /* @__PURE__ */ react.createElement(
-      "input",
-      {
-        style: inp,
-        type: "password",
-        autoComplete: "new-password",
-        value: f.pass2,
-        onChange: set("pass2"),
-        onKeyDown: (e) => {
-          if (e.key === "Enter") (mode === "reset" ? reset : register)();
-        }
-      }
-    )), /* @__PURE__ */ react.createElement(
-      "button",
-      {
-        style: { ...btn, width: "100%", opacity: busy ? 0.7 : 1 },
-        disabled: busy,
-        onClick: mode === "reset" ? reset : register
-      },
-      busy ? "\u63D0\u4EA4\u4E2D\u2026" : mode === "reset" ? "\u91CD\u8BBE\u5BC6\u7801\u5E76\u8FDB\u5165" : "\u6CE8\u518C\u5E76\u8FDB\u5165"
-    ), mode === "reset" ? /* @__PURE__ */ react.createElement(
-      "button",
-      {
-        style: { ...lnk, display: "block", marginTop: 12 },
-        onClick: () => setMode("login")
-      },
-      "\u8FD4\u56DE\u767B\u5F55"
-    ) : null, authst.dev_email ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 12.5, color: C.soft, marginTop: 12 } }, "\uFF08\u672C\u673A\u5F00\u53D1\u6A21\u5F0F\uFF1A\u9A8C\u8BC1\u7801\u4F1A\u76F4\u63A5\u663E\u793A\u5728\u63D0\u793A\u91CC\uFF09") : null)
+      onClose,
+      children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(Msg, { ...msg }),
+        note ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+          fontSize: 13,
+          color: C.soft,
+          background: C.paper,
+          borderRadius: 8,
+          padding: "9px 11px",
+          marginBottom: 12,
+          lineHeight: 1.6
+        }, children: note }) : null,
+        mode !== "reset" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+          display: "flex",
+          gap: 6,
+          padding: 4,
+          background: C.paper,
+          borderRadius: 10,
+          marginBottom: 16
+        }, children: [
+          tab("register", "\u6CE8\u518C"),
+          tab("login", "\u767B\u5F55")
+        ] }) : null,
+        mode === "login" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(Field, { label: "\u90AE\u7BB1", children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "input",
+            {
+              style: inp,
+              type: "email",
+              placeholder: "you@example.com",
+              autoComplete: "username",
+              value: f.liEmail,
+              onChange: set("liEmail")
+            }
+          ) }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(Field, { label: "\u5BC6\u7801", children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "input",
+            {
+              style: inp,
+              type: "password",
+              placeholder: "\u5BC6\u7801",
+              autoComplete: "current-password",
+              value: f.liPass,
+              onChange: set("liPass"),
+              onKeyDown: (e) => {
+                if (e.key === "Enter") login();
+              }
+            }
+          ) }),
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("label", { style: {
+            display: "flex",
+            gap: 7,
+            alignItems: "center",
+            fontSize: 13.5,
+            color: C.soft,
+            marginBottom: 16,
+            cursor: "pointer"
+          }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("input", { type: "checkbox", checked: f.remember, onChange: set("remember") }),
+            "\u8BB0\u4F4F\u6211\uFF0C30 \u5929\u5185\u514D\u767B\u5F55"
+          ] }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "button",
+            {
+              style: { ...btn, width: "100%", opacity: busy ? 0.7 : 1 },
+              disabled: busy,
+              onClick: login,
+              children: busy ? "\u767B\u5F55\u4E2D\u2026" : "\u767B\u5F55"
+            }
+          ),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "button",
+            {
+              style: { ...lnk, display: "block", marginTop: 12 },
+              onClick: () => setMode("reset"),
+              children: "\u5FD8\u8BB0\u5BC6\u7801\uFF1F"
+            }
+          )
+        ] }) : !canRegister ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13.5, color: C.soft, lineHeight: 1.8 }, children: mode === "register" ? "\u6CE8\u518C\u529F\u80FD\u9700\u8981\u5148\u5728\u670D\u52A1\u5668\u914D\u7F6E\u53D1\u4FE1\u90AE\u7BB1\uFF08SMTP\uFF09\u3002\u914D\u7F6E\u597D\u4E4B\u540E\uFF0C\u8FD9\u91CC\u5C31\u662F\u300C\u8F93\u90AE\u7BB1 \u2192 \u6536\u9A8C\u8BC1\u7801 \u2192 \u8BBE\u5BC6\u7801\u300D\u3002" : "\u91CD\u8BBE\u5BC6\u7801\u9700\u8981\u670D\u52A1\u5668\u914D\u7F6E\u53D1\u4FE1\u90AE\u7BB1\uFF08SMTP\uFF09\uFF0C\u5426\u5219\u6536\u4E0D\u5230\u9A8C\u8BC1\u7801\u3002\u8BF7\u8054\u7CFB\u7BA1\u7406\u5458\u3002" }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "button",
+            {
+              style: { ...btnLine, width: "100%", marginTop: 14 },
+              onClick: () => setMode("login"),
+              children: "\u6211\u6709\u8D26\u53F7\uFF0C\u53BB\u767B\u5F55"
+            }
+          )
+        ] }) : /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(Field, { label: "\u90AE\u7BB1", children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(
+              "input",
+              {
+                style: inp,
+                type: "email",
+                placeholder: "you@example.com",
+                autoComplete: "username",
+                value: f.email,
+                onChange: set("email")
+              }
+            ),
+            codeBtn(mode === "reset" ? "/api/auth/reset-code" : "/api/auth/send-code", "email")
+          ] }) }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(Field, { label: "\u9A8C\u8BC1\u7801", children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "input",
+            {
+              style: inp,
+              type: "text",
+              placeholder: "6 \u4F4D\u6570\u5B57",
+              maxLength: 6,
+              inputMode: "numeric",
+              value: f.code,
+              onChange: set("code")
+            }
+          ) }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(Field, { label: mode === "reset" ? "\u65B0\u5BC6\u7801" : "\u8BBE\u7F6E\u5BC6\u7801", children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "input",
+            {
+              style: inp,
+              type: "password",
+              placeholder: "\u81F3\u5C11 8 \u4F4D",
+              autoComplete: "new-password",
+              value: f.pass,
+              onChange: set("pass")
+            }
+          ) }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(Field, { label: "\u786E\u8BA4\u5BC6\u7801", children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "input",
+            {
+              style: inp,
+              type: "password",
+              autoComplete: "new-password",
+              value: f.pass2,
+              onChange: set("pass2"),
+              onKeyDown: (e) => {
+                if (e.key === "Enter") (mode === "reset" ? reset : register)();
+              }
+            }
+          ) }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "button",
+            {
+              style: { ...btn, width: "100%", opacity: busy ? 0.7 : 1 },
+              disabled: busy,
+              onClick: mode === "reset" ? reset : register,
+              children: busy ? "\u63D0\u4EA4\u4E2D\u2026" : mode === "reset" ? "\u91CD\u8BBE\u5BC6\u7801\u5E76\u8FDB\u5165" : "\u6CE8\u518C\u5E76\u8FDB\u5165"
+            }
+          ),
+          mode === "reset" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "button",
+            {
+              style: { ...lnk, display: "block", marginTop: 12 },
+              onClick: () => setMode("login"),
+              children: "\u8FD4\u56DE\u767B\u5F55"
+            }
+          ) : null,
+          authst.dev_email ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 12.5, color: C.soft, marginTop: 12 }, children: "\uFF08\u672C\u673A\u5F00\u53D1\u6A21\u5F0F\uFF1A\u9A8C\u8BC1\u7801\u4F1A\u76F4\u63A5\u663E\u793A\u5728\u63D0\u793A\u91CC\uFF09" }) : null
+        ] })
+      ]
+    }
   );
 };
 const SettingsSheet = ({ me, onClose, onChanged, onSignedOut }) => {
@@ -11719,82 +11937,108 @@ const SettingsSheet = ({ me, onClose, onChanged, onSignedOut }) => {
       setPwMsg({ t: String(e.message), k: "err" });
     }
   };
-  const row = (k, v) => /* @__PURE__ */ react.createElement("div", { style: {
+  const row = (k, v) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     display: "flex",
     justifyContent: "space-between",
     gap: 12,
     padding: "8px 0",
     borderTop: `1px solid ${C.line}`,
     fontSize: 13.5
-  } }, /* @__PURE__ */ react.createElement("span", { style: { color: C.soft } }, k), /* @__PURE__ */ react.createElement("b", { style: { color: C.ink, fontWeight: 600, textAlign: "right", wordBreak: "break-all" } }, v));
-  return /* @__PURE__ */ react.createElement(Sheet, { title: "\u8D26\u53F7\u8BBE\u7F6E", sub: "\u6362\u4E2A\u5934\u50CF\u548C\u540D\u5B57\uFF0C\u51FA\u7247\u62A5\u544A\u91CC\u8BA4\u5F97\u51FA\u662F\u4F60\u3002", width: 480, onClose }, /* @__PURE__ */ react.createElement("div", { style: { textAlign: "center", fontSize: 40, marginBottom: 8 }, "aria-hidden": true }, avatar), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", marginBottom: 18 } }, avs.map((a) => /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      key: a,
-      type: "button",
-      "aria-pressed": a === avatar,
-      title: "\u9009\u8FD9\u4E2A\u5934\u50CF",
-      onClick: () => setAvatar(a),
-      style: {
-        all: "unset",
-        cursor: "pointer",
-        fontSize: 19,
-        width: 38,
-        height: 38,
-        borderRadius: 10,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: a === avatar ? C.accentSoft : C.paper,
-        border: `1px solid ${a === avatar ? C.accent : C.line}`
+  }, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { color: C.soft }, children: k }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { style: { color: C.ink, fontWeight: 600, textAlign: "right", wordBreak: "break-all" }, children: v })
+  ] });
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)(Sheet, { title: "\u8D26\u53F7\u8BBE\u7F6E", sub: "\u6362\u4E2A\u5934\u50CF\u548C\u540D\u5B57\uFF0C\u51FA\u7247\u62A5\u544A\u91CC\u8BA4\u5F97\u51FA\u662F\u4F60\u3002", width: 480, onClose, children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { textAlign: "center", fontSize: 40, marginBottom: 8 }, "aria-hidden": true, children: avatar }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", marginBottom: 18 }, children: avs.map((a) => /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "button",
+      {
+        type: "button",
+        "aria-pressed": a === avatar,
+        title: "\u9009\u8FD9\u4E2A\u5934\u50CF",
+        onClick: () => setAvatar(a),
+        style: {
+          all: "unset",
+          cursor: "pointer",
+          fontSize: 19,
+          width: 38,
+          height: 38,
+          borderRadius: 10,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: a === avatar ? C.accentSoft : C.paper,
+          border: `1px solid ${a === avatar ? C.accent : C.line}`
+        },
+        children: a
+      },
+      a
+    )) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)(Field, { label: "\u6635\u79F0", children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "input",
+        {
+          style: inp,
+          maxLength: 16,
+          value: nick,
+          placeholder: "\u6700\u591A 16 \u4E2A\u5B57",
+          onChange: (e) => setNick(e.target.value)
+        }
+      ),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { fontSize: 12, color: C.soft, textAlign: "right", marginTop: 4 }, children: [
+        nick.length,
+        "/16"
+      ] })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(Msg, { ...msg }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { display: "flex", gap: 8, justifyContent: "flex-end", marginBottom: 22 }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "button",
+      {
+        style: { ...btnLine, background: "transparent" },
+        onClick: () => void save(),
+        disabled: busy,
+        children: busy ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58\u8D44\u6599"
       }
-    },
-    a
-  ))), /* @__PURE__ */ react.createElement(Field, { label: "\u6635\u79F0" }, /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      style: inp,
-      maxLength: 16,
-      value: nick,
-      placeholder: "\u6700\u591A 16 \u4E2A\u5B57",
-      onChange: (e) => setNick(e.target.value)
-    }
-  ), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 12, color: C.soft, textAlign: "right", marginTop: 4 } }, nick.length, "/16")), /* @__PURE__ */ react.createElement(Msg, { ...msg }), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "flex-end", marginBottom: 22 } }, /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: { ...btnLine, background: "transparent" },
-      onClick: () => void save(),
-      disabled: busy
-    },
-    busy ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58\u8D44\u6599"
-  )), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 2 } }, "\u8D26\u53F7\u4FE1\u606F"), row("\u767B\u5F55\u90AE\u7BB1", me.email), row("\u5F53\u524D\u6863\u4F4D", `${me.tier_label || "\u514D\u8D39\u7248"}${me.tier !== "free" ? " \xB7 \u6C38\u4E45\u6709\u6548" : ""}`), me.created ? row("\u6CE8\u518C\u65F6\u95F4", me.created) : null, typeof me.free_daily_builds === "number" ? row("\u4ECA\u65E5\u514D\u8D39\u989D\u5EA6", `\u5DF2\u7528 ${me.builds_today || 0} / ${me.free_daily_builds} \u6761`) : null, /* @__PURE__ */ react.createElement("div", { style: { fontSize: 14, fontWeight: 700, margin: "22px 0 10px" } }, "\u4FEE\u6539\u5BC6\u7801"), /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      style: { ...inp, marginBottom: 8 },
-      type: "password",
-      placeholder: "\u5F53\u524D\u5BC6\u7801",
-      autoComplete: "current-password",
-      value: pw.old,
-      onChange: (e) => setPw({ ...pw, old: e.target.value })
-    }
-  ), /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      style: inp,
-      type: "password",
-      placeholder: "\u65B0\u5BC6\u7801\uFF08\u81F3\u5C11 8 \u4F4D\uFF09",
-      autoComplete: "new-password",
-      value: pw.neu,
-      onChange: (e) => setPw({ ...pw, neu: e.target.value })
-    }
-  ), /* @__PURE__ */ react.createElement(Msg, { ...pwMsg }), /* @__PURE__ */ react.createElement("button", { style: btnSmLine, onClick: () => void chgPw() }, "\u66F4\u65B0\u5BC6\u7801"), /* @__PURE__ */ react.createElement("div", { style: { marginTop: 26, paddingTop: 16, borderTop: `1px solid ${C.line}` } }, /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: { ...btnLine, color: C.err, borderColor: C.err, background: "transparent" },
-      onClick: onSignedOut
-    },
-    "\u9000\u51FA\u767B\u5F55"
-  )));
+    ) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 2 }, children: "\u8D26\u53F7\u4FE1\u606F" }),
+    row("\u767B\u5F55\u90AE\u7BB1", me.email),
+    row("\u5F53\u524D\u6863\u4F4D", `${me.tier_label || "\u514D\u8D39\u7248"}${me.tier !== "free" ? " \xB7 \u6C38\u4E45\u6709\u6548" : ""}`),
+    me.created ? row("\u6CE8\u518C\u65F6\u95F4", me.created) : null,
+    typeof me.free_daily_builds === "number" ? row("\u4ECA\u65E5\u514D\u8D39\u989D\u5EA6", `\u5DF2\u7528 ${me.builds_today || 0} / ${me.free_daily_builds} \u6761`) : null,
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 14, fontWeight: 700, margin: "22px 0 10px" }, children: "\u4FEE\u6539\u5BC6\u7801" }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "input",
+      {
+        style: { ...inp, marginBottom: 8 },
+        type: "password",
+        placeholder: "\u5F53\u524D\u5BC6\u7801",
+        autoComplete: "current-password",
+        value: pw.old,
+        onChange: (e) => setPw({ ...pw, old: e.target.value })
+      }
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "input",
+      {
+        style: inp,
+        type: "password",
+        placeholder: "\u65B0\u5BC6\u7801\uFF08\u81F3\u5C11 8 \u4F4D\uFF09",
+        autoComplete: "new-password",
+        value: pw.neu,
+        onChange: (e) => setPw({ ...pw, neu: e.target.value })
+      }
+    ),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)(Msg, { ...pwMsg }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { style: btnSmLine, onClick: () => void chgPw(), children: "\u66F4\u65B0\u5BC6\u7801" }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 26, paddingTop: 16, borderTop: `1px solid ${C.line}` }, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      "button",
+      {
+        style: { ...btnLine, color: C.err, borderColor: C.err, background: "transparent" },
+        onClick: onSignedOut,
+        children: "\u9000\u51FA\u767B\u5F55"
+      }
+    ) })
+  ] });
 };
 const ContactSheet = ({ onClose, toast }) => {
   const [wx, setWx] = react.useState("");
@@ -11802,24 +12046,28 @@ const ContactSheet = ({ onClose, toast }) => {
     api("/api/pricing").then((d) => setWx(String(d.wechat_id || ""))).catch(() => {
     });
   }, []);
-  return /* @__PURE__ */ react.createElement(
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(
     Sheet,
     {
       title: "\u8054\u7CFB\u521B\u59CB\u4EBA",
       sub: "\u4ED8\u6B3E\u5F00\u901A\u3001\u5361\u5BC6\u6709\u95EE\u9898\u3001\u60F3\u63D0\u529F\u80FD\u5EFA\u8BAE\uFF0C\u76F4\u63A5\u52A0\u5FAE\u4FE1\uFF0C\u90FD\u5728\u3002",
       width: 400,
-      onClose
-    },
-    wx ? /* @__PURE__ */ react.createElement("div", { style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      padding: "12px 14px",
-      background: C.paper,
-      borderRadius: 10
-    } }, /* @__PURE__ */ react.createElement("span", { style: { fontSize: 12.5, color: C.soft } }, "\u5FAE\u4FE1\u53F7"), /* @__PURE__ */ react.createElement("b", { style: { flex: 1, fontSize: 15, fontWeight: 700 } }, wx), /* @__PURE__ */ react.createElement("button", { style: btnSm, onClick: () => {
-      navigator.clipboard.writeText(wx).then(() => toast("\u5DF2\u590D\u5236\uFF0C\u53BB\u5FAE\u4FE1\u7C98\u8D34\u5C31\u884C"), () => toast("\u590D\u5236\u5931\u8D25\uFF0C\u624B\u52A8\u8BB0\u4E00\u4E0B\u5FAE\u4FE1\u53F7"));
-    } }, "\u590D\u5236")) : /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13.5, color: C.soft } }, "\u5FAE\u4FE1\u53F7\u9A6C\u4E0A\u653E\u4E0A\u6765\uFF0C\u5148\u5728\u300C\u6743\u76CA\u4E0E\u5B9A\u4EF7\u300D\u9875\u7559\u610F\u3002")
+      onClose,
+      children: wx ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "12px 14px",
+        background: C.paper,
+        borderRadius: 10
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 12.5, color: C.soft }, children: "\u5FAE\u4FE1\u53F7" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { style: { flex: 1, fontSize: 15, fontWeight: 700 }, children: wx }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { style: btnSm, onClick: () => {
+          navigator.clipboard.writeText(wx).then(() => toast("\u5DF2\u590D\u5236\uFF0C\u53BB\u5FAE\u4FE1\u7C98\u8D34\u5C31\u884C"), () => toast("\u590D\u5236\u5931\u8D25\uFF0C\u624B\u52A8\u8BB0\u4E00\u4E0B\u5FAE\u4FE1\u53F7"));
+        }, children: "\u590D\u5236" })
+      ] }) : /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13.5, color: C.soft }, children: "\u5FAE\u4FE1\u53F7\u9A6C\u4E0A\u653E\u4E0A\u6765\uFF0C\u5148\u5728\u300C\u6743\u76CA\u4E0E\u5B9A\u4EF7\u300D\u9875\u7559\u610F\u3002" })
+    }
   );
 };
 const PricingSheet = ({ me, onClose, refresh, needAuth, toast }) => {
@@ -11900,163 +12148,261 @@ const PricingSheet = ({ me, onClose, refresh, needAuth, toast }) => {
     position: "relative"
   };
   if (loadErr) {
-    return /* @__PURE__ */ react.createElement(Sheet, { title: "\u6743\u76CA\u9875\u6682\u65F6\u6253\u4E0D\u5F00", onClose }, /* @__PURE__ */ react.createElement(Msg, { t: loadErr, k: "err" }));
+    return /* @__PURE__ */ (0,jsx_runtime.jsx)(Sheet, { title: "\u6743\u76CA\u9875\u6682\u65F6\u6253\u4E0D\u5F00", onClose, children: /* @__PURE__ */ (0,jsx_runtime.jsx)(Msg, { t: loadErr, k: "err" }) });
   }
-  return /* @__PURE__ */ react.createElement(Sheet, { title: "\u6743\u76CA\u4E0E\u5B9A\u4EF7", width: 620, onClose }, !p ? /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13.5, color: C.soft } }, "\u52A0\u8F7D\u4E2D\u2026") : /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement("span", { style: {
-    display: "inline-block",
-    fontSize: 12,
-    fontWeight: 700,
-    color: C.accent,
-    background: C.accentSoft,
-    borderRadius: 20,
-    padding: "4px 12px"
-  } }, "\u4E70\u65AD\u5236 \xB7 \u4E0D\u8BA2\u9605 \xB7 \u4E0D\u6DA8\u4EF7"), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 26, fontWeight: 800, lineHeight: 1.45, marginTop: 12 } }, "\u4E00\u6B21\u4ED8\u8D39\uFF0C", /* @__PURE__ */ react.createElement("span", { style: { color: C.accent } }, "\u6C38\u4E45\u662F\u4F60\u7684\u3002")), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13.5, color: C.soft, lineHeight: 1.8, marginTop: 8 } }, "\u6CA1\u6709\u6708\u8D39\uFF0C\u6CA1\u6709\u6309\u6761\u6536\u8D39\u3002\u4ECA\u5929\u4E70\u65AD\uFF0C\u4E4B\u540E\u51FA\u7684\u6BCF\u4E00\u6761\u7247\uFF0C\u90FD\u4E0D\u518D\u82B1\u4E00\u5206\u94B1\u3002"), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13.5, color: C.soft, marginTop: 12 } }, "\u4F60\u73B0\u5728\u7684\u6863\u4F4D\uFF1A", /* @__PURE__ */ react.createElement("b", { style: { color: C.ink, fontWeight: 700 } }, nowLine)), /* @__PURE__ */ react.createElement("div", { style: {
-    marginTop: 18,
-    border: `1.5px solid ${C.accent}`,
-    borderRadius: 14,
-    background: C.card,
-    padding: "20px 22px",
-    position: "relative",
-    overflow: "hidden"
-  } }, /* @__PURE__ */ react.createElement("span", { style: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    fontSize: 11.5,
-    fontWeight: 700,
-    background: C.accent,
-    color: C.onAcc,
-    padding: "5px 12px",
-    borderRadius: "0 12px 0 12px"
-  } }, "\u6C38\u4E45\u6709\u6548"), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ react.createElement("div", { style: { fontSize: 16, fontWeight: 800 } }, "\u9AD8\u7EA7\u7248 \xB7 \u552F\u4E00\u4E00\u6863"), premium ? /* @__PURE__ */ react.createElement(TierChip, { tier: "premium", label: "\u4F60\u5728\u8FD9\u6863" }) : null), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 4, marginTop: 10 } }, /* @__PURE__ */ react.createElement("span", { style: { fontSize: 16, fontWeight: 700 } }, "\xA5"), /* @__PURE__ */ react.createElement("span", { style: { fontSize: 40, fontWeight: 800, lineHeight: 1 } }, p.prices.premium), /* @__PURE__ */ react.createElement("span", { style: { fontSize: 13, color: C.soft, marginLeft: 8 } }, "\u4E00\u6B21\u4ED8\u8D39 \xB7 \u6C38\u4E45\u6709\u6548")), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13.5, color: C.soft, marginTop: 6 } }, "\u628A\u7247\u5B50\u505A\u6210\u300C\u4F60\u7684\u300D\uFF0C\u4E00\u6B21\u4E70\u65AD\uFF0C\u4E0D\u518D\u82B1\u4E00\u5206\u94B1\u3002"), /* @__PURE__ */ react.createElement("ul", { style: { margin: "14px 0 0", padding: 0, listStyle: "none" } }, [
-    ["\u51FA\u7247\u4E0D\u9650\u91CF", "\uFF1A\u62D6\u7D20\u6750\u5305 \u2192 \u81EA\u52A8\u5206\u955C \u2192 \u6210\u7247\uFF0C\u968F\u4FBF\u51FA"],
-    ["\u65E0 GetCut \u6C34\u5370", "\uFF1A\u53EF\u6362\u6210\u81EA\u5DF1\u7684 Logo / \u6587\u5B57\u6C34\u5370\uFF0C\u968F\u4FBF\u53D1"],
-    ["\u5168\u90E8\u6A21\u677F\u3001\u5168\u90E8\u97F3\u8272", "\u4EFB\u9009"],
-    ["\u6211\u7684\u58F0\u97F3", "\uFF1A\u5F55\u4E00\u5206\u949F\uFF0C\u4EE5\u540E\u6BCF\u6761\u7247\u90FD\u7528\u4F60\u81EA\u5DF1\u7684\u58F0\u97F3\u914D\u97F3"],
-    ["\u54C1\u724C\u5957\u4EF6", "\uFF1A\u81EA\u6709 Logo + \u6587\u5B57\u6C34\u5370\uFF0C\u6BCF\u6761\u7247\u81EA\u52A8\u5E26\u4E0A"],
-    ["\u526A\u6620\u8349\u7A3F\u5BFC\u51FA", "\uFF1A\u6210\u7247\u63A5\u7740\u7CBE\u526A\uFF0C\u5BFC\u8FDB\u53BB\u5C31\u662F\u5206\u597D\u955C\u7684"],
-    ["\u4F18\u5148\u51FA\u7247", "\uFF1A\u9AD8\u5CF0\u671F\u6392\u5728\u514D\u8D39\u4EFB\u52A1\u524D\u9762\u751F\u6210\uFF0C\u4E0D\u8DDF\u4EBA\u6324"]
-  ].map(([b, rest]) => /* @__PURE__ */ react.createElement("li", { key: b, style: feat }, /* @__PURE__ */ react.createElement("span", { style: {
-    position: "absolute",
-    left: 0,
-    color: C.accent,
-    fontWeight: 800
-  } }, "\u2713"), /* @__PURE__ */ react.createElement("b", null, b), rest))), /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: { ...btn, width: "100%", marginTop: 18, opacity: premium ? 0.55 : 1 },
-      disabled: premium,
-      onClick: copyWx
-    },
-    premium ? "\u5DF2\u5F00\u901A \xB7 \u5F53\u524D\u6863\u4F4D" : "\u52A0\u5FAE\u4FE1\uFF0C\u5F00\u901A\u9AD8\u7EA7\u7248"
-  ), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 12.5, color: C.soft, marginTop: 8, textAlign: "center" } }, "\u4ED8\u6B3E\u7531", /* @__PURE__ */ react.createElement("b", null, "\u521B\u59CB\u4EBA\u4E00\u5BF9\u4E00\u5BF9\u63A5"), "\uFF0C\u8F6C\u8D26\u540E 5 \u5206\u949F\u5185\u53D1\u5361\u5BC6")), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13, color: C.soft, marginTop: 14, lineHeight: 1.8 } }, "\u8FD8\u5728\u72B9\u8C6B\uFF1F\u6BCF\u5929 ", p.free_daily_builds, " \u6761\u514D\u8D39\u989D\u5EA6\uFF0C\u6210\u7247\u5E26 GetCut \u6C34\u5370\u2014\u2014\u5148\u770B\u6548\u679C\uFF0C\u518D\u51B3\u5B9A\u3002"), /* @__PURE__ */ react.createElement("div", { style: h2 }, "\u600E\u4E48\u5F00\u901A"), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13, color: C.soft } }, "\u4E09\u6B65\uFF0C\u4E94\u5206\u949F\u3002\u4ED8\u6B3E\u8D70\u5FAE\u4FE1\uFF0C\u7531\u521B\u59CB\u4EBA\u4EB2\u81EA\u5BF9\u63A5\u3002"), /* @__PURE__ */ react.createElement("div", { style: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))",
-    gap: 12,
-    marginTop: 12
-  } }, [
-    ["01", "\u52A0\u521B\u59CB\u4EBA\u5FAE\u4FE1", "\u590D\u5236\u5FAE\u4FE1\u53F7\uFF0C\u53BB\u5FAE\u4FE1\u641C\u7D22\u6DFB\u52A0\u3002"],
-    ["02", "\u5FAE\u4FE1\u8F6C\u8D26", "\u8BF4\u660E\u8981\u54EA\u4E00\u6863\u3002\u6709\u62FF\u4E0D\u51C6\u7684\uFF0C\u76F4\u63A5\u95EE\uFF0C\u4ED6\u672C\u4EBA\u56DE\u3002"],
-    ["03", "\u56DE\u6765\u8F93\u5361\u5BC6", "\u4ED8\u6B3E\u622A\u56FE\u53D1\u8FC7\u53BB\uFF0C\u9A6C\u4E0A\u62FF\u5361\u5BC6\u3002\u5728\u4E0B\u9762\u4E00\u8D34\uFF0C\u7ACB\u5373\u751F\u6548\u3002"]
-  ].map(([no, b, t]) => /* @__PURE__ */ react.createElement("div", { key: no, style: {
-    border: `1px solid ${C.line}`,
-    borderRadius: 12,
-    padding: 14,
-    background: C.paper
-  } }, /* @__PURE__ */ react.createElement("div", { style: { fontSize: 12, fontWeight: 800, color: C.accent } }, no), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 14, fontWeight: 700, marginTop: 4 } }, b), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 12.5, color: C.soft, lineHeight: 1.7, marginTop: 4 } }, t)))), /* @__PURE__ */ react.createElement("div", { style: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 12,
-    padding: "11px 14px",
-    background: C.paper,
-    borderRadius: 10
-  } }, /* @__PURE__ */ react.createElement("span", { style: { fontSize: 12.5, color: C.soft } }, "\u5FAE\u4FE1\u53F7"), /* @__PURE__ */ react.createElement("b", { style: { flex: 1, fontSize: 15 } }, p.wechat_id || "\u5373\u5C06\u516C\u5E03"), p.wechat_id ? /* @__PURE__ */ react.createElement("button", { style: btnSmLine, onClick: copyWx }, "\u590D\u5236") : null), /* @__PURE__ */ react.createElement("div", { style: {
-    fontSize: 12.5,
-    color: C.soft,
-    lineHeight: 1.9,
-    marginTop: 12,
-    padding: "11px 14px",
-    border: `1px dashed ${C.line}`,
-    borderRadius: 10
-  } }, /* @__PURE__ */ react.createElement("b", { style: { color: C.ink } }, "\u4E3A\u4EC0\u4E48\u662F\u4EBA\u5DE5\u6536\u6B3E\uFF1F"), "\u8D70\u81EA\u52A8\u652F\u4ED8\u8981\u8FC7\u652F\u4ED8\u901A\u9053\u3001\u88AB\u62BD\u624B\u7EED\u8D39\uFF0C \u8FD9\u7B14\u94B1\u6700\u540E\u8FD8\u662F\u644A\u8FDB\u5B9A\u4EF7\u3002\u73B0\u5728\u7531\u521B\u59CB\u4EBA\u4E00\u5BF9\u4E00\u6536\u6B3E\u53D1\u8D27\u2014\u2014\u4ED8\u6B3E\u540E\u6709\u4EFB\u4F55\u95EE\u9898\uFF0C\u4F60\u627E\u5F97\u5230\u4EBA\uFF0C \u4E0D\u7528\u8DDF\u673A\u5668\u4EBA\u5BA2\u670D\u7ED5\u5708\u5B50\u3002"), /* @__PURE__ */ react.createElement("div", { style: h2 }, "\u5361\u5BC6\u5151\u6362"), /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13, color: C.soft, marginBottom: 10 } }, "\u62FF\u5230\u5361\u5BC6\u540E\u5728\u8FD9\u91CC\u8F93\u5165\uFF0C\u7ACB\u5373\u751F\u6548\uFF0C\u4E0D\u7528\u7B49\u3002"), me ? /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr auto", gap: 8 } }, /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      style: inp,
-      placeholder: "GCP-XXXX-XXXX",
-      autoComplete: "off",
-      value: code,
-      onChange: (e) => setCode(e.target.value),
-      onKeyDown: (e) => {
-        if (e.key === "Enter") void redeem();
-      }
-    }
-  ), /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: { ...btn, opacity: busy ? 0.7 : 1 },
-      disabled: busy,
-      onClick: () => void redeem()
-    },
-    busy ? "\u5151\u6362\u4E2D\u2026" : "\u5151\u6362"
-  )), /* @__PURE__ */ react.createElement(Msg, { ...rMsg })) : /* @__PURE__ */ react.createElement("div", { style: { fontSize: 13.5, color: C.soft } }, "\u5148", /* @__PURE__ */ react.createElement("button", { style: lnkAcc, onClick: needAuth }, "\u767B\u5F55/\u6CE8\u518C"), "\uFF0C\u518D\u56DE\u6765\u8F93\u5361\u5BC6\u3002"), admin ? /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement("div", { style: h2 }, "\u7AD9\u957F\u9762\u677F\uFF08\u53EA\u6709\u4F60\u80FD\u770B\u5230\uFF09"), /* @__PURE__ */ react.createElement("div", { style: {
-    display: "flex",
-    gap: 8,
-    flexWrap: "wrap",
-    alignItems: "center",
-    marginTop: 10
-  } }, /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      style: { ...inp, width: 90 },
-      type: "number",
-      min: 1,
-      max: 200,
-      value: gen.n,
-      title: "\u4E00\u6B21\u751F\u6210\u51E0\u5F20\u5361\u5BC6",
-      onChange: (e) => setGen({ ...gen, n: e.target.value })
-    }
-  ), /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      style: { ...inp, flex: 1, minWidth: 150 },
-      placeholder: "\u5907\u6CE8\uFF08\u5982 9.20 \u76F4\u64AD\u573A\uFF09",
-      value: gen.note,
-      onChange: (e) => setGen({ ...gen, note: e.target.value })
-    }
-  ), /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: { ...btnSm, opacity: busy ? 0.7 : 1 },
-      disabled: busy,
-      onClick: () => void genCodesGo()
-    },
-    "\u751F\u6210\u5361\u5BC6"
-  )), genCodes.length ? /* @__PURE__ */ react.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ react.createElement("div", { style: {
-    fontFamily: "ui-monospace, Consolas, monospace",
-    fontSize: 13,
-    lineHeight: 1.8,
-    background: C.paper,
-    borderRadius: 10,
-    padding: "10px 12px",
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-all"
-  } }, genCodes.join("\n")), /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center", marginTop: 8 } }, /* @__PURE__ */ react.createElement("button", { style: btnSmLine, onClick: () => {
-    navigator.clipboard.writeText(genCodes.join("\n")).then(() => toast("\u5DF2\u590D\u5236"), () => toast("\u590D\u5236\u5931\u8D25\uFF0C\u624B\u52A8\u9009\u4E2D\u590D\u5236\u5427"));
-  } }, "\u590D\u5236\u5168\u90E8\uFF08", genCodes.length, " \u5F20\uFF09"), /* @__PURE__ */ react.createElement("span", { style: { fontSize: 12.5, color: C.soft } }, "\u660E\u6587\u53EA\u663E\u793A\u8FD9\u4E00\u6B21\uFF0C\u590D\u5236\u8D70\u518D\u5173"))) : null, /* @__PURE__ */ react.createElement("div", { style: {
-    marginTop: 12,
-    maxHeight: 190,
-    overflowY: "auto",
-    border: `1px solid ${C.line}`,
-    borderRadius: 10
-  } }, lics.length ? lics.map((c) => /* @__PURE__ */ react.createElement("div", { key: c.code, style: {
-    display: "flex",
-    gap: 10,
-    justifyContent: "space-between",
-    fontSize: 12.5,
-    padding: "7px 12px",
-    borderTop: `1px solid ${C.line}`
-  } }, /* @__PURE__ */ react.createElement("span", { style: { fontFamily: "ui-monospace, Consolas, monospace" } }, c.code), /* @__PURE__ */ react.createElement("span", { style: { color: C.soft } }, c.tier === "premium" ? "\u9AD8\u7EA7" : "\u57FA\u7840", " \xB7", " ", c.redeemed_by ? `\u5DF2\u5151\u6362 ${c.redeemed_by}` : "\u672A\u5151\u6362", c.note ? ` \xB7 ${c.note}` : ""))) : /* @__PURE__ */ react.createElement("div", { style: { padding: 12, fontSize: 13, color: C.soft } }, "\u8FD8\u6CA1\u751F\u6210\u8FC7\u5361\u5BC6"))) : null));
+  return /* @__PURE__ */ (0,jsx_runtime.jsx)(Sheet, { title: "\u6743\u76CA\u4E0E\u5B9A\u4EF7", width: 620, onClose, children: !p ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13.5, color: C.soft }, children: "\u52A0\u8F7D\u4E2D\u2026" }) : /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+      display: "inline-block",
+      fontSize: 12,
+      fontWeight: 700,
+      color: C.accent,
+      background: C.accentSoft,
+      borderRadius: 20,
+      padding: "4px 12px"
+    }, children: "\u4E70\u65AD\u5236 \xB7 \u4E0D\u8BA2\u9605 \xB7 \u4E0D\u6DA8\u4EF7" }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { fontSize: 26, fontWeight: 800, lineHeight: 1.45, marginTop: 12 }, children: [
+      "\u4E00\u6B21\u4ED8\u8D39\uFF0C",
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { color: C.accent }, children: "\u6C38\u4E45\u662F\u4F60\u7684\u3002" })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13.5, color: C.soft, lineHeight: 1.8, marginTop: 8 }, children: "\u6CA1\u6709\u6708\u8D39\uFF0C\u6CA1\u6709\u6309\u6761\u6536\u8D39\u3002\u4ECA\u5929\u4E70\u65AD\uFF0C\u4E4B\u540E\u51FA\u7684\u6BCF\u4E00\u6761\u7247\uFF0C\u90FD\u4E0D\u518D\u82B1\u4E00\u5206\u94B1\u3002" }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { fontSize: 13.5, color: C.soft, marginTop: 12 }, children: [
+      "\u4F60\u73B0\u5728\u7684\u6863\u4F4D\uFF1A",
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { style: { color: C.ink, fontWeight: 700 }, children: nowLine })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      marginTop: 18,
+      border: `1.5px solid ${C.accent}`,
+      borderRadius: 14,
+      background: C.card,
+      padding: "20px 22px",
+      position: "relative",
+      overflow: "hidden"
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        fontSize: 11.5,
+        fontWeight: 700,
+        background: C.accent,
+        color: C.onAcc,
+        padding: "5px 12px",
+        borderRadius: "0 12px 0 12px"
+      }, children: "\u6C38\u4E45\u6709\u6548" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 10 }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 16, fontWeight: 800 }, children: "\u9AD8\u7EA7\u7248 \xB7 \u552F\u4E00\u4E00\u6863" }),
+        premium ? /* @__PURE__ */ (0,jsx_runtime.jsx)(TierChip, { tier: "premium", label: "\u4F60\u5728\u8FD9\u6863" }) : null
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", alignItems: "baseline", gap: 4, marginTop: 10 }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 16, fontWeight: 700 }, children: "\xA5" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 40, fontWeight: 800, lineHeight: 1 }, children: p.prices.premium }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 13, color: C.soft, marginLeft: 8 }, children: "\u4E00\u6B21\u4ED8\u8D39 \xB7 \u6C38\u4E45\u6709\u6548" })
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13.5, color: C.soft, marginTop: 6 }, children: "\u628A\u7247\u5B50\u505A\u6210\u300C\u4F60\u7684\u300D\uFF0C\u4E00\u6B21\u4E70\u65AD\uFF0C\u4E0D\u518D\u82B1\u4E00\u5206\u94B1\u3002" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("ul", { style: { margin: "14px 0 0", padding: 0, listStyle: "none" }, children: [
+        ["\u51FA\u7247\u4E0D\u9650\u91CF", "\uFF1A\u62D6\u7D20\u6750\u5305 \u2192 \u81EA\u52A8\u5206\u955C \u2192 \u6210\u7247\uFF0C\u968F\u4FBF\u51FA"],
+        ["\u65E0 GetCut \u6C34\u5370", "\uFF1A\u53EF\u6362\u6210\u81EA\u5DF1\u7684 Logo / \u6587\u5B57\u6C34\u5370\uFF0C\u968F\u4FBF\u53D1"],
+        ["\u5168\u90E8\u6A21\u677F\u3001\u5168\u90E8\u97F3\u8272", "\u4EFB\u9009"],
+        ["\u6211\u7684\u58F0\u97F3", "\uFF1A\u5F55\u4E00\u5206\u949F\uFF0C\u4EE5\u540E\u6BCF\u6761\u7247\u90FD\u7528\u4F60\u81EA\u5DF1\u7684\u58F0\u97F3\u914D\u97F3"],
+        ["\u54C1\u724C\u5957\u4EF6", "\uFF1A\u81EA\u6709 Logo + \u6587\u5B57\u6C34\u5370\uFF0C\u6BCF\u6761\u7247\u81EA\u52A8\u5E26\u4E0A"],
+        ["\u526A\u6620\u8349\u7A3F\u5BFC\u51FA", "\uFF1A\u6210\u7247\u63A5\u7740\u7CBE\u526A\uFF0C\u5BFC\u8FDB\u53BB\u5C31\u662F\u5206\u597D\u955C\u7684"],
+        ["\u4F18\u5148\u51FA\u7247", "\uFF1A\u9AD8\u5CF0\u671F\u6392\u5728\u514D\u8D39\u4EFB\u52A1\u524D\u9762\u751F\u6210\uFF0C\u4E0D\u8DDF\u4EBA\u6324"]
+      ].map(([b, rest]) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("li", { style: feat, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+          position: "absolute",
+          left: 0,
+          color: C.accent,
+          fontWeight: 800
+        }, children: "\u2713" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: b }),
+        rest
+      ] }, b)) }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "button",
+        {
+          style: { ...btn, width: "100%", marginTop: 18, opacity: premium ? 0.55 : 1 },
+          disabled: premium,
+          onClick: copyWx,
+          children: premium ? "\u5DF2\u5F00\u901A \xB7 \u5F53\u524D\u6863\u4F4D" : "\u52A0\u5FAE\u4FE1\uFF0C\u5F00\u901A\u9AD8\u7EA7\u7248"
+        }
+      ),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { fontSize: 12.5, color: C.soft, marginTop: 8, textAlign: "center" }, children: [
+        "\u4ED8\u6B3E\u7531",
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: "\u521B\u59CB\u4EBA\u4E00\u5BF9\u4E00\u5BF9\u63A5" }),
+        "\uFF0C\u8F6C\u8D26\u540E 5 \u5206\u949F\u5185\u53D1\u5361\u5BC6"
+      ] })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { fontSize: 13, color: C.soft, marginTop: 14, lineHeight: 1.8 }, children: [
+      "\u8FD8\u5728\u72B9\u8C6B\uFF1F\u6BCF\u5929 ",
+      p.free_daily_builds,
+      " \u6761\u514D\u8D39\u989D\u5EA6\uFF0C\u6210\u7247\u5E26 GetCut \u6C34\u5370\u2014\u2014\u5148\u770B\u6548\u679C\uFF0C\u518D\u51B3\u5B9A\u3002"
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: h2, children: "\u600E\u4E48\u5F00\u901A" }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13, color: C.soft }, children: "\u4E09\u6B65\uFF0C\u4E94\u5206\u949F\u3002\u4ED8\u6B3E\u8D70\u5FAE\u4FE1\uFF0C\u7531\u521B\u59CB\u4EBA\u4EB2\u81EA\u5BF9\u63A5\u3002" }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))",
+      gap: 12,
+      marginTop: 12
+    }, children: [
+      ["01", "\u52A0\u521B\u59CB\u4EBA\u5FAE\u4FE1", "\u590D\u5236\u5FAE\u4FE1\u53F7\uFF0C\u53BB\u5FAE\u4FE1\u641C\u7D22\u6DFB\u52A0\u3002"],
+      ["02", "\u5FAE\u4FE1\u8F6C\u8D26", "\u8BF4\u660E\u8981\u54EA\u4E00\u6863\u3002\u6709\u62FF\u4E0D\u51C6\u7684\uFF0C\u76F4\u63A5\u95EE\uFF0C\u4ED6\u672C\u4EBA\u56DE\u3002"],
+      ["03", "\u56DE\u6765\u8F93\u5361\u5BC6", "\u4ED8\u6B3E\u622A\u56FE\u53D1\u8FC7\u53BB\uFF0C\u9A6C\u4E0A\u62FF\u5361\u5BC6\u3002\u5728\u4E0B\u9762\u4E00\u8D34\uFF0C\u7ACB\u5373\u751F\u6548\u3002"]
+    ].map(([no, b, t]) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      border: `1px solid ${C.line}`,
+      borderRadius: 12,
+      padding: 14,
+      background: C.paper
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 12, fontWeight: 800, color: C.accent }, children: no }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 14, fontWeight: 700, marginTop: 4 }, children: b }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 12.5, color: C.soft, lineHeight: 1.7, marginTop: 4 }, children: t })
+    ] }, no)) }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      marginTop: 12,
+      padding: "11px 14px",
+      background: C.paper,
+      borderRadius: 10
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 12.5, color: C.soft }, children: "\u5FAE\u4FE1\u53F7" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { style: { flex: 1, fontSize: 15 }, children: p.wechat_id || "\u5373\u5C06\u516C\u5E03" }),
+      p.wechat_id ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { style: btnSmLine, onClick: copyWx, children: "\u590D\u5236" }) : null
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+      fontSize: 12.5,
+      color: C.soft,
+      lineHeight: 1.9,
+      marginTop: 12,
+      padding: "11px 14px",
+      border: `1px dashed ${C.line}`,
+      borderRadius: 10
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { style: { color: C.ink }, children: "\u4E3A\u4EC0\u4E48\u662F\u4EBA\u5DE5\u6536\u6B3E\uFF1F" }),
+      "\u8D70\u81EA\u52A8\u652F\u4ED8\u8981\u8FC7\u652F\u4ED8\u901A\u9053\u3001\u88AB\u62BD\u624B\u7EED\u8D39\uFF0C \u8FD9\u7B14\u94B1\u6700\u540E\u8FD8\u662F\u644A\u8FDB\u5B9A\u4EF7\u3002\u73B0\u5728\u7531\u521B\u59CB\u4EBA\u4E00\u5BF9\u4E00\u6536\u6B3E\u53D1\u8D27\u2014\u2014\u4ED8\u6B3E\u540E\u6709\u4EFB\u4F55\u95EE\u9898\uFF0C\u4F60\u627E\u5F97\u5230\u4EBA\uFF0C \u4E0D\u7528\u8DDF\u673A\u5668\u4EBA\u5BA2\u670D\u7ED5\u5708\u5B50\u3002"
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: h2, children: "\u5361\u5BC6\u5151\u6362" }),
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 13, color: C.soft, marginBottom: 10 }, children: "\u62FF\u5230\u5361\u5BC6\u540E\u5728\u8FD9\u91CC\u8F93\u5165\uFF0C\u7ACB\u5373\u751F\u6548\uFF0C\u4E0D\u7528\u7B49\u3002" }),
+    me ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "input",
+          {
+            style: inp,
+            placeholder: "GCP-XXXX-XXXX",
+            autoComplete: "off",
+            value: code,
+            onChange: (e) => setCode(e.target.value),
+            onKeyDown: (e) => {
+              if (e.key === "Enter") void redeem();
+            }
+          }
+        ),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "button",
+          {
+            style: { ...btn, opacity: busy ? 0.7 : 1 },
+            disabled: busy,
+            onClick: () => void redeem(),
+            children: busy ? "\u5151\u6362\u4E2D\u2026" : "\u5151\u6362"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(Msg, { ...rMsg })
+    ] }) : /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { fontSize: 13.5, color: C.soft }, children: [
+      "\u5148",
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { style: lnkAcc, onClick: needAuth, children: "\u767B\u5F55/\u6CE8\u518C" }),
+      "\uFF0C\u518D\u56DE\u6765\u8F93\u5361\u5BC6\u3002"
+    ] }),
+    admin ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: h2, children: "\u7AD9\u957F\u9762\u677F\uFF08\u53EA\u6709\u4F60\u80FD\u770B\u5230\uFF09" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+        display: "flex",
+        gap: 8,
+        flexWrap: "wrap",
+        alignItems: "center",
+        marginTop: 10
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "input",
+          {
+            style: { ...inp, width: 90 },
+            type: "number",
+            min: 1,
+            max: 200,
+            value: gen.n,
+            title: "\u4E00\u6B21\u751F\u6210\u51E0\u5F20\u5361\u5BC6",
+            onChange: (e) => setGen({ ...gen, n: e.target.value })
+          }
+        ),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "input",
+          {
+            style: { ...inp, flex: 1, minWidth: 150 },
+            placeholder: "\u5907\u6CE8\uFF08\u5982 9.20 \u76F4\u64AD\u573A\uFF09",
+            value: gen.note,
+            onChange: (e) => setGen({ ...gen, note: e.target.value })
+          }
+        ),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "button",
+          {
+            style: { ...btnSm, opacity: busy ? 0.7 : 1 },
+            disabled: busy,
+            onClick: () => void genCodesGo(),
+            children: "\u751F\u6210\u5361\u5BC6"
+          }
+        )
+      ] }),
+      genCodes.length ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { marginTop: 10 }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+          fontFamily: "ui-monospace, Consolas, monospace",
+          fontSize: 13,
+          lineHeight: 1.8,
+          background: C.paper,
+          borderRadius: 10,
+          padding: "10px 12px",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-all"
+        }, children: genCodes.join("\n") }),
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", gap: 10, alignItems: "center", marginTop: 8 }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { style: btnSmLine, onClick: () => {
+            navigator.clipboard.writeText(genCodes.join("\n")).then(() => toast("\u5DF2\u590D\u5236"), () => toast("\u590D\u5236\u5931\u8D25\uFF0C\u624B\u52A8\u9009\u4E2D\u590D\u5236\u5427"));
+          }, children: [
+            "\u590D\u5236\u5168\u90E8\uFF08",
+            genCodes.length,
+            " \u5F20\uFF09"
+          ] }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 12.5, color: C.soft }, children: "\u660E\u6587\u53EA\u663E\u793A\u8FD9\u4E00\u6B21\uFF0C\u590D\u5236\u8D70\u518D\u5173" })
+        ] })
+      ] }) : null,
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: {
+        marginTop: 12,
+        maxHeight: 190,
+        overflowY: "auto",
+        border: `1px solid ${C.line}`,
+        borderRadius: 10
+      }, children: lics.length ? lics.map((c) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+        display: "flex",
+        gap: 10,
+        justifyContent: "space-between",
+        fontSize: 12.5,
+        padding: "7px 12px",
+        borderTop: `1px solid ${C.line}`
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontFamily: "ui-monospace, Consolas, monospace" }, children: c.code }),
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { style: { color: C.soft }, children: [
+          c.tier === "premium" ? "\u9AD8\u7EA7" : "\u57FA\u7840",
+          " \xB7",
+          " ",
+          c.redeemed_by ? `\u5DF2\u5151\u6362 ${c.redeemed_by}` : "\u672A\u5151\u6362",
+          c.note ? ` \xB7 ${c.note}` : ""
+        ] })
+      ] }, c.code)) : /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { padding: 12, fontSize: 13, color: C.soft }, children: "\u8FD8\u6CA1\u751F\u6210\u8FC7\u5361\u5BC6" }) })
+    ] }) : null
+  ] }) });
 };
 const Account = ({ me, authst, sheet, setSheet, refresh, onMe, onSignedIn, authNote, onBrandChanged, toast }) => {
   const [menu, setMenu] = react.useState(false);
@@ -12094,135 +12440,195 @@ const Account = ({ me, authst, sheet, setSheet, refresh, onMe, onSignedIn, authN
   };
   const tier = (me == null ? void 0 : me.tier) || "free";
   if (!me && !authst.locked && !authst.token_auth && !sheet) return null;
-  return /* @__PURE__ */ react.createElement("div", { style: {
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
     position: "relative",
     display: "flex",
     gap: 8,
     alignItems: "center",
     justifyContent: "flex-end"
-  } }, me ? /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      onClick: (e) => {
-        e.stopPropagation();
-        setMenu(!menu);
-      },
-      "aria-haspopup": "menu",
-      "aria-expanded": menu,
-      title: "\u8D26\u53F7\u4E0E\u6743\u76CA",
-      style: {
-        all: "unset",
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        gap: 7,
-        padding: "5px 10px 5px 6px",
-        borderRadius: 22,
-        background: menu ? C.accentSoft : C.paper,
-        border: `1px solid ${menu ? C.accent : C.line}`
+  }, children: [
+    me ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+      "button",
+      {
+        onClick: (e) => {
+          e.stopPropagation();
+          setMenu(!menu);
+        },
+        "aria-haspopup": "menu",
+        "aria-expanded": menu,
+        title: "\u8D26\u53F7\u4E0E\u6743\u76CA",
+        style: {
+          all: "unset",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          padding: "5px 10px 5px 6px",
+          borderRadius: 22,
+          background: menu ? C.accentSoft : C.paper,
+          border: `1px solid ${menu ? C.accent : C.line}`
+        },
+        children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 16 }, "aria-hidden": true, children: me.avatar || "\u{1F98A}" }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: {
+            fontSize: 13.5,
+            fontWeight: 700,
+            maxWidth: 96,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+          }, children: me.nickname || "\u521B\u4F5C\u8005" }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(TierChip, { tier, label: me.tier_label || "\u514D\u8D39\u7248" })
+        ]
       }
-    },
-    /* @__PURE__ */ react.createElement("span", { style: { fontSize: 16 }, "aria-hidden": true }, me.avatar || "\u{1F98A}"),
-    /* @__PURE__ */ react.createElement("span", { style: {
-      fontSize: 13.5,
-      fontWeight: 700,
-      maxWidth: 96,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    } }, me.nickname || "\u521B\u4F5C\u8005"),
-    /* @__PURE__ */ react.createElement(TierChip, { tier, label: me.tier_label || "\u514D\u8D39\u7248" })
-  ) : /* @__PURE__ */ react.createElement(react.Fragment, null, /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: { ...btnSmLine, background: "transparent" },
-      onClick: () => {
-        setAuthMode0("login");
-        setSheet("auth");
+    ) : /* @__PURE__ */ (0,jsx_runtime.jsxs)(jsx_runtime.Fragment, { children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "button",
+        {
+          style: { ...btnSmLine, background: "transparent" },
+          onClick: () => {
+            setAuthMode0("login");
+            setSheet("auth");
+          },
+          children: "\u767B\u5F55"
+        }
+      ),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "button",
+        {
+          style: { ...btnSm, padding: "8px 16px" },
+          onClick: () => {
+            setAuthMode0("register");
+            setSheet("auth");
+          },
+          children: "\u6CE8\u518C"
+        }
+      )
+    ] }),
+    menu && me ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { role: "menu", onClick: (e) => e.stopPropagation(), style: {
+      position: "absolute",
+      top: "calc(100% + 8px)",
+      right: 0,
+      zIndex: 30,
+      width: 302,
+      background: C.card,
+      border: `1px solid ${C.line}`,
+      borderRadius: 14,
+      boxShadow: "var(--sh-pop)",
+      padding: 8
+    }, children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", gap: 10, alignItems: "center", padding: "8px 10px 12px" }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { fontSize: 24 }, "aria-hidden": true, children: me.avatar || "\u{1F98A}" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { style: { minWidth: 0 }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { style: { fontSize: 14.5, display: "block" }, children: me.nickname || "\u521B\u4F5C\u8005" }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("small", { title: me.email, style: {
+            fontSize: 12,
+            color: C.soft,
+            display: "block",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            maxWidth: 210
+          }, children: me.email })
+        ] })
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { background: C.paper, borderRadius: 10, padding: "10px 12px", marginBottom: 6 }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: {
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontSize: 13
+        }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { color: C.soft }, children: "\u5F53\u524D\u6863\u4F4D" }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(TierChip, { tier, label: `${me.tier_label || "\u514D\u8D39\u7248"}${tier !== "free" ? " \xB7 \u6C38\u4E45" : ""}` })
+        ] }),
+        tier === "free" && typeof me.free_daily_builds === "number" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 7 }, children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { color: C.soft }, children: "\u4ECA\u65E5\u514D\u8D39\u989D\u5EA6" }),
+          /* @__PURE__ */ (0,jsx_runtime.jsxs)("b", { children: [
+            "\u5DF2\u7528 ",
+            me.builds_today || 0,
+            " / ",
+            me.free_daily_builds,
+            " \u6761"
+          ] })
+        ] }) : null,
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { fontSize: 12, color: C.soft, lineHeight: 1.7, marginTop: 8 }, children: benefitNote(tier) })
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { style: item, onClick: () => {
+        setMenu(false);
+        setSheet(tier === "premium" ? "brand" : "pricing");
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal", color: tier === "premium" ? C.accent : C.soft }, children: tier === "premium" ? "\u25C8" : "\u{1F512}" }),
+        "\u54C1\u724C\u5957\u88C5",
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal", marginLeft: "auto", fontSize: 12, color: C.soft }, children: tier === "premium" ? "Logo \xB7 \u58F0\u97F3 \xB7 \u6C34\u5370" : "\u9AD8\u7EA7\u7248" })
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { style: item, onClick: () => {
+        setMenu(false);
+        setSheet("settings");
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal" }, children: "\u2699" }),
+        "\u8D26\u53F7\u8BBE\u7F6E",
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal", marginLeft: "auto", fontSize: 12, color: C.soft }, children: "\u6635\u79F0 \xB7 \u5934\u50CF \xB7 \u5BC6\u7801" })
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { style: item, onClick: () => {
+        setMenu(false);
+        setSheet("pricing");
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal", color: C.accent }, children: tier === "premium" ? "\u25C6" : "\u26A1" }),
+        tier === "premium" ? "\u6211\u7684\u6743\u76CA" : "\u5347\u7EA7 / \u5151\u6362\u5361\u5BC6"
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { style: item, onClick: () => {
+        setMenu(false);
+        setSheet("contact");
+      }, children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal" }, children: "\u{1F4AC}" }),
+        "\u8054\u7CFB\u521B\u59CB\u4EBA"
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { style: { ...item, color: C.err }, onClick: () => void signOut(), children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { fontStyle: "normal" }, children: "\u238B" }),
+        "\u9000\u51FA\u767B\u5F55"
+      ] })
+    ] }) : null,
+    sheet === "auth" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      AuthSheet,
+      {
+        authst,
+        mode0: authMode0,
+        note: authNote,
+        onClose: () => setSheet(""),
+        onSignedIn: () => {
+          void refresh().then(() => {
+            setSheet("");
+            onSignedIn();
+          });
+        }
       }
-    },
-    "\u767B\u5F55"
-  ), /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      style: { ...btnSm, padding: "8px 16px" },
-      onClick: () => {
-        setAuthMode0("register");
-        setSheet("auth");
+    ) : null,
+    sheet === "pricing" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      PricingSheet,
+      {
+        me,
+        onClose: () => setSheet(""),
+        refresh,
+        needAuth: () => {
+          setAuthMode0("login");
+          setSheet("auth");
+        },
+        toast
       }
-    },
-    "\u6CE8\u518C"
-  )), menu && me ? /* @__PURE__ */ react.createElement("div", { role: "menu", onClick: (e) => e.stopPropagation(), style: {
-    position: "absolute",
-    top: "calc(100% + 8px)",
-    right: 0,
-    zIndex: 30,
-    width: 302,
-    background: C.card,
-    border: `1px solid ${C.line}`,
-    borderRadius: 14,
-    boxShadow: "var(--sh-pop)",
-    padding: 8
-  } }, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center", padding: "8px 10px 12px" } }, /* @__PURE__ */ react.createElement("span", { style: { fontSize: 24 }, "aria-hidden": true }, me.avatar || "\u{1F98A}"), /* @__PURE__ */ react.createElement("span", { style: { minWidth: 0 } }, /* @__PURE__ */ react.createElement("b", { style: { fontSize: 14.5, display: "block" } }, me.nickname || "\u521B\u4F5C\u8005"), /* @__PURE__ */ react.createElement("small", { title: me.email, style: {
-    fontSize: 12,
-    color: C.soft,
-    display: "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    maxWidth: 210
-  } }, me.email))), /* @__PURE__ */ react.createElement("div", { style: { background: C.paper, borderRadius: 10, padding: "10px 12px", marginBottom: 6 } }, /* @__PURE__ */ react.createElement("div", { style: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    fontSize: 13
-  } }, /* @__PURE__ */ react.createElement("span", { style: { color: C.soft } }, "\u5F53\u524D\u6863\u4F4D"), /* @__PURE__ */ react.createElement(TierChip, { tier, label: `${me.tier_label || "\u514D\u8D39\u7248"}${tier !== "free" ? " \xB7 \u6C38\u4E45" : ""}` })), tier === "free" && typeof me.free_daily_builds === "number" ? /* @__PURE__ */ react.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 7 } }, /* @__PURE__ */ react.createElement("span", { style: { color: C.soft } }, "\u4ECA\u65E5\u514D\u8D39\u989D\u5EA6"), /* @__PURE__ */ react.createElement("b", null, "\u5DF2\u7528 ", me.builds_today || 0, " / ", me.free_daily_builds, " \u6761")) : null, /* @__PURE__ */ react.createElement("div", { style: { fontSize: 12, color: C.soft, lineHeight: 1.7, marginTop: 8 } }, benefitNote(tier))), /* @__PURE__ */ react.createElement("button", { style: item, onClick: () => {
-    setMenu(false);
-    setSheet(tier === "premium" ? "brand" : "pricing");
-  } }, /* @__PURE__ */ react.createElement("i", { style: { fontStyle: "normal", color: tier === "premium" ? C.accent : C.soft } }, tier === "premium" ? "\u25C8" : "\u{1F512}"), "\u54C1\u724C\u5957\u88C5", /* @__PURE__ */ react.createElement("i", { style: { fontStyle: "normal", marginLeft: "auto", fontSize: 12, color: C.soft } }, tier === "premium" ? "Logo \xB7 \u58F0\u97F3 \xB7 \u6C34\u5370" : "\u9AD8\u7EA7\u7248")), /* @__PURE__ */ react.createElement("button", { style: item, onClick: () => {
-    setMenu(false);
-    setSheet("settings");
-  } }, /* @__PURE__ */ react.createElement("i", { style: { fontStyle: "normal" } }, "\u2699"), "\u8D26\u53F7\u8BBE\u7F6E", /* @__PURE__ */ react.createElement("i", { style: { fontStyle: "normal", marginLeft: "auto", fontSize: 12, color: C.soft } }, "\u6635\u79F0 \xB7 \u5934\u50CF \xB7 \u5BC6\u7801")), /* @__PURE__ */ react.createElement("button", { style: item, onClick: () => {
-    setMenu(false);
-    setSheet("pricing");
-  } }, /* @__PURE__ */ react.createElement("i", { style: { fontStyle: "normal", color: C.accent } }, tier === "premium" ? "\u25C6" : "\u26A1"), tier === "premium" ? "\u6211\u7684\u6743\u76CA" : "\u5347\u7EA7 / \u5151\u6362\u5361\u5BC6"), /* @__PURE__ */ react.createElement("button", { style: item, onClick: () => {
-    setMenu(false);
-    setSheet("contact");
-  } }, /* @__PURE__ */ react.createElement("i", { style: { fontStyle: "normal" } }, "\u{1F4AC}"), "\u8054\u7CFB\u521B\u59CB\u4EBA"), /* @__PURE__ */ react.createElement("button", { style: { ...item, color: C.err }, onClick: () => void signOut() }, /* @__PURE__ */ react.createElement("i", { style: { fontStyle: "normal" } }, "\u238B"), "\u9000\u51FA\u767B\u5F55")) : null, sheet === "auth" ? /* @__PURE__ */ react.createElement(
-    AuthSheet,
-    {
-      authst,
-      mode0: authMode0,
-      note: authNote,
-      onClose: () => setSheet(""),
-      onSignedIn: () => {
-        void refresh().then(() => {
-          setSheet("");
-          onSignedIn();
-        });
+    ) : null,
+    sheet === "settings" && me ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+      SettingsSheet,
+      {
+        me,
+        onClose: () => setSheet(""),
+        onChanged: (m) => onMe(m),
+        onSignedOut: () => void signOut()
       }
-    }
-  ) : null, sheet === "pricing" ? /* @__PURE__ */ react.createElement(
-    PricingSheet,
-    {
-      me,
-      onClose: () => setSheet(""),
-      refresh,
-      needAuth: () => {
-        setAuthMode0("login");
-        setSheet("auth");
-      },
-      toast
-    }
-  ) : null, sheet === "settings" && me ? /* @__PURE__ */ react.createElement(
-    SettingsSheet,
-    {
-      me,
-      onClose: () => setSheet(""),
-      onChanged: (m) => onMe(m),
-      onSignedOut: () => void signOut()
-    }
-  ) : null, sheet === "contact" ? /* @__PURE__ */ react.createElement(ContactSheet, { onClose: () => setSheet(""), toast }) : null, sheet === "brand" ? /* @__PURE__ */ react.createElement(BrandSheet, { onClose: () => setSheet(""), toast, onBrandChanged }) : null);
+    ) : null,
+    sheet === "contact" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(ContactSheet, { onClose: () => setSheet(""), toast }) : null,
+    sheet === "brand" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(BrandSheet, { onClose: () => setSheet(""), toast, onBrandChanged }) : null
+  ] });
 };
 
 // EXTERNAL MODULE: ./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js
@@ -12281,6 +12687,7 @@ var update = injectStylesIntoStyleTag_default()(ui/* default */.A, options);
 
 
 
+
 const qs = new URLSearchParams(location.search);
 const DEVICE = qs.get("device") || "\u7F51\u9875\u6210\u7247\u53F0";
 const FRAMES_LIMIT = Math.max(0, parseInt(qs.get("frames") || "0", 10) || 0);
@@ -12288,13 +12695,16 @@ const THEME_KEY = "vg-theme";
 const RESUME_KEY = "vg-resume";
 const NL = /\r?\n/;
 const THEMES = [
-  { id: "ziyu", name: "\u7D2B\u7389\u63CF\u91D1" },
+  { id: "ziyu", name: "\u77F3\u58A8\u91D1" },
   { id: "xuanqing", name: "\u7384\u9752" },
   { id: "shimo", name: "\u77F3\u58A8" },
   { id: "zhimu", name: "\u7EB8\u58A8" },
   { id: "daiqing", name: "\u9EDB\u9752" }
 ];
-const Mark = ({ size = 26 }) => /* @__PURE__ */ react.createElement("svg", { width: size, height: size, viewBox: "0 0 32 32", "aria-hidden": "true" }, /* @__PURE__ */ react.createElement("path", { d: "M9 0H23A9 9 0 0 1 32 9v9.5L18.5 32H9A9 9 0 0 1 0 23V9a9 9 0 0 1 9-9Z", fill: "var(--acc)" }), /* @__PURE__ */ react.createElement("path", { d: "M10.5 8.6 23.6 15.6 10.5 22.6Z", fill: "var(--acc-ink)" }));
+const Mark = ({ size = 26 }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("svg", { width: size, height: size, viewBox: "0 0 32 32", "aria-hidden": "true", children: [
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("path", { d: "M9 0H23A9 9 0 0 1 32 9v9.5L18.5 32H9A9 9 0 0 1 0 23V9a9 9 0 0 1 9-9Z", fill: "var(--acc)" }),
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("path", { d: "M10.5 8.6 23.6 15.6 10.5 22.6Z", fill: "var(--acc-ink)" })
+] });
 const layerHint = (e) => {
   const m = String(e.message || e);
   if (/404/.test(m)) return "\u8FD9\u53F0\u670D\u52A1\u5668\u7248\u672C\u65E7\u4E86\uFF0C\u91CD\u542F\u670D\u52A1\u518D\u51FA\u4E00\u6761\u5C31\u5168";
@@ -12329,8 +12739,15 @@ const draftStillsOf = (props) => {
     };
   });
 };
-const Step = ({ n, title, state, children, summary, open }) => /* @__PURE__ */ react.createElement("div", { className: `step${state === "active" ? " on" : ""}${state === "done" ? " ok" : ""}
-      ${state === "todo" ? " dim" : ""}` }, /* @__PURE__ */ react.createElement("div", { className: "no" }, state === "done" ? "\u2713" : n), /* @__PURE__ */ react.createElement("div", { className: "wrap" }, /* @__PURE__ */ react.createElement("div", { className: "t" }, title), (state === "done" || state === "active") && summary ? /* @__PURE__ */ react.createElement("div", { className: "m" }, summary) : null, (state === "active" || open) && children ? /* @__PURE__ */ react.createElement("div", { className: "c" }, children) : null));
+const Step = ({ n, title, state, children, summary, open }) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: `step${state === "active" ? " on" : ""}${state === "done" ? " ok" : ""}
+      ${state === "todo" ? " dim" : ""}`, children: [
+  /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "no", children: state === "done" ? "\u2713" : n }),
+  /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "wrap", children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "t", children: title }),
+    (state === "done" || state === "active") && summary ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "m", children: summary }) : null,
+    (state === "active" || open) && children ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "c", children }) : null
+  ] })
+] });
 const compositionOf = (durationInFrames) => ({
   id: "main",
   component: NiwoVideo,
@@ -13019,273 +13436,533 @@ const App = () => {
     e.preventDefault();
     setHot(true);
   };
-  return /* @__PURE__ */ react.createElement("div", { className: "shell" }, /* @__PURE__ */ react.createElement("header", { className: "topbar" }, /* @__PURE__ */ react.createElement("div", { className: "brand" }, /* @__PURE__ */ react.createElement(Mark, null), /* @__PURE__ */ react.createElement("span", { className: "wm" }, "GetCut"), /* @__PURE__ */ react.createElement("span", { className: "sub" }, "\u6210\u7247\u53F0")), /* @__PURE__ */ react.createElement("div", { className: "top-right" }, /* @__PURE__ */ react.createElement("span", { className: "selw" }, /* @__PURE__ */ react.createElement(
-    "select",
-    {
-      className: "chip sel-theme",
-      value: theme,
-      "aria-label": "\u914D\u8272\u4E3B\u9898",
-      onChange: (e) => setTheme(e.target.value)
-    },
-    THEMES.map((t) => /* @__PURE__ */ react.createElement("option", { key: t.id, value: t.id }, "\u914D\u8272 \xB7 ", t.name))
-  ), /* @__PURE__ */ react.createElement("span", { className: "car" }, "\u25BE")), !me ? /* @__PURE__ */ react.createElement("a", { className: "chip", href: "/studio", title: "\u8FD9\u4EA7\u54C1\u662F\u4EC0\u4E48\u3001\u600E\u4E48\u505A" }, "\u600E\u4E48\u7528") : null, !me ? /* @__PURE__ */ react.createElement("button", { className: "chip", onClick: () => setSheet("pricing"), title: "\u514D\u8D39\u7248\u4E0E\u9AD8\u7EA7\u7248" }, "\u5B9A\u4EF7") : null, me ? /* @__PURE__ */ react.createElement("button", { className: "chip", onClick: openLib, title: "\u5386\u53F2\u9879\u76EE\u4E0E\u6210\u7247" }, "\u4F5C\u54C1\u5E93") : null, /* @__PURE__ */ react.createElement(
-    Account,
-    {
-      me,
-      authst,
-      sheet,
-      setSheet,
-      refresh: refreshMe,
-      toast: say,
-      onMe: (m) => {
-        meRef.current = m;
-        setMe(m);
-      },
-      authNote,
-      onBrandChanged: () => {
-        void loadVoices();
-        void loadBrand();
-      },
-      onSignedIn: () => {
-        setAuthNote("");
-        setErr("");
-        const f = pendingZip.current;
-        pendingZip.current = null;
-        if (f) void importZip(f);
-      }
-    }
-  ))), /* @__PURE__ */ react.createElement("div", { className: "body" }, /* @__PURE__ */ react.createElement("div", { className: "pane left" }, /* @__PURE__ */ react.createElement("div", { className: "lede" }, "\u62D6\u5165\u7D20\u6750\u5305\uFF0C\u4E00\u6761\u597D\u7247\u5B50\u5728\u4F60\u8FD9\u53F0\u7535\u8111\u4E0A\u5B8C\u6210\u2014\u2014\u4E0D\u6392\u961F\u3001\u4E0D\u9650\u901F\u3002"), /* @__PURE__ */ react.createElement(
-    "input",
-    {
-      ref: fileInput,
-      type: "file",
-      accept: ".zip",
-      style: { display: "none" },
-      onChange: (e) => {
-        var _a2;
-        return void importZip((_a2 = e.target.files) == null ? void 0 : _a2[0]);
-      }
-    }
-  ), /* @__PURE__ */ react.createElement("div", { className: "steps" }, /* @__PURE__ */ react.createElement(
-    Step,
-    {
-      n: 1,
-      title: "\u5BFC\u5165\u7D20\u6750\u5305",
-      state: st(1),
-      summary: bundle ? `${bundle.name} \u5DF2\u5BFC\u5165` : void 0
-    },
-    phase === "importing" ? /* @__PURE__ */ react.createElement("div", null, /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        className: "bar",
-        role: "progressbar",
-        "aria-valuemin": 0,
-        "aria-valuemax": 100,
-        "aria-valuenow": Math.round(upPct),
-        "aria-label": "\u7D20\u6750\u5305\u4E0A\u4F20\u8FDB\u5EA6"
-      },
-      /* @__PURE__ */ react.createElement("i", { style: { width: `${Math.max(4, upPct)}%` }, "aria-hidden": "true" })
-    ), /* @__PURE__ */ react.createElement("div", { className: "pline" }, /* @__PURE__ */ react.createElement("span", { className: "st" }, "\u4E0A\u4F20\u4E2D"), /* @__PURE__ */ react.createElement("span", { className: "pc" }, upPct, "%"))) : bundle ? /* @__PURE__ */ react.createElement("button", { className: "btn ln sm", onClick: pick }, "\u6362\u4E00\u4E2A\u7D20\u6750\u5305") : /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        className: `drop${hot ? " hot" : ""}`,
-        role: "button",
-        tabIndex: 0,
-        "aria-label": "\u70B9\u8FD9\u91CC\u9009\u7D20\u6750\u5305 zip",
-        onClick: pick,
-        onKeyDown: (e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            pick();
+  return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "shell", children: [
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("header", { className: "topbar", children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "brand", children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(Mark, {}),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "wm", children: "GetCut" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "sub", children: "\u6210\u7247\u53F0" })
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "top-right", children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { className: "selw", children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            "select",
+            {
+              className: "chip sel-theme",
+              value: theme,
+              "aria-label": "\u914D\u8272\u4E3B\u9898",
+              onChange: (e) => setTheme(e.target.value),
+              children: THEMES.map((t) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("option", { value: t.id, children: [
+                "\u914D\u8272 \xB7 ",
+                t.name
+              ] }, t.id))
+            }
+          ),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "car", children: "\u25BE" })
+        ] }),
+        !me ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "chip", onClick: () => setSheet("pricing"), title: "\u514D\u8D39\u7248\u4E0E\u9AD8\u7EA7\u7248", children: "\u5B9A\u4EF7" }) : null,
+        me ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "chip", onClick: openLib, title: "\u5386\u53F2\u9879\u76EE\u4E0E\u6210\u7247", children: "\u4F5C\u54C1\u5E93" }) : null,
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          Account,
+          {
+            me,
+            authst,
+            sheet,
+            setSheet,
+            refresh: refreshMe,
+            toast: say,
+            onMe: (m) => {
+              meRef.current = m;
+              setMe(m);
+            },
+            authNote,
+            onBrandChanged: () => {
+              void loadVoices();
+              void loadBrand();
+            },
+            onSignedIn: () => {
+              setAuthNote("");
+              setErr("");
+              const f = pendingZip.current;
+              pendingZip.current = null;
+              if (f) void importZip(f);
+            }
           }
-        },
-        onDrop,
-        onDragOver,
-        onDragLeave: () => setHot(false)
-      },
-      /* @__PURE__ */ react.createElement("b", null, "\u70B9\u8FD9\u91CC\u9009\u7D20\u6750\u5305 zip"),
-      /* @__PURE__ */ react.createElement("span", null, "\u4E0D\u89E3\u538B\uFF0C\u6587\u6848\u4E0E\u7D20\u6750\u4E00\u8D77\u8BFB\u5165 \xB7 \u4E5F\u53EF\u4EE5\u76F4\u63A5\u62D6\u5230\u53F3\u8FB9\u90A3\u5757")
-    )
-  ), bundle ? /* @__PURE__ */ react.createElement(Step, { n: 2, title: "\u5185\u5BB9\u4E0E\u914D\u97F3", state: st(2) }, /* @__PURE__ */ react.createElement("div", { className: "meta" }, /* @__PURE__ */ react.createElement("span", null, nChars, " \u5B57\u53E3\u64AD"), /* @__PURE__ */ react.createElement("span", null, "\u7EA6 ", bundle.estSeconds, " \u79D2"), /* @__PURE__ */ react.createElement("span", null, nImg, " \u56FE / ", nVid, " \u89C6\u9891")), /* @__PURE__ */ react.createElement("div", { className: "togo" }, "\u53E3\u64AD\u6587\u6848\u5728\u53F3\u8FB9\u6574\u5C4F\u6838\u5BF9\uFF0C\u770B\u5B8C\u76F4\u63A5\u70B9\u751F\u6210"), /* @__PURE__ */ react.createElement("div", { className: "field", style: { marginTop: 16 } }, /* @__PURE__ */ react.createElement("div", { className: "lb" }, "\u914D\u97F3"), /* @__PURE__ */ react.createElement("div", { className: "row" }, /* @__PURE__ */ react.createElement(
-    "select",
-    {
-      className: "sel",
-      value: cfg.voice,
-      onChange: (e) => {
-        stopPreview();
-        setCfg({ ...cfg, voice: e.target.value });
-      }
-    },
-    groupVoices(voices).map(([g, vs]) => /* @__PURE__ */ react.createElement("optgroup", { key: g, label: g }, vs.map((v) => /* @__PURE__ */ react.createElement("option", { key: v.id, value: v.id }, v.label)))),
-    !voices.length ? /* @__PURE__ */ react.createElement("option", { value: "" }, "\u9ED8\u8BA4\u97F3\u8272") : null
-  ), /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      className: `btn ln sm${prevKey === "voice" ? " busy" : ""}`,
-      onClick: () => cfg.voice && playPreview(
-        "voice",
-        `/api/voice-preview?voice=${encodeURIComponent(cfg.voice)}`
-      )
-    },
-    prevKey === "voice" ? "\u505C\u6B62\u8BD5\u542C" : "\u8BD5\u542C"
-  ))), /* @__PURE__ */ react.createElement("div", { className: "field" }, /* @__PURE__ */ react.createElement("div", { className: "lb" }, "\u80CC\u666F\u97F3\u4E50"), /* @__PURE__ */ react.createElement("div", { className: "row" }, /* @__PURE__ */ react.createElement(
-    "select",
-    {
-      className: "sel",
-      value: cfg.bgm,
-      onChange: (e) => {
-        stopPreview();
-        setCfg({ ...cfg, bgm: e.target.value });
-      }
-    },
-    /* @__PURE__ */ react.createElement("option", { value: "" }, "\u4E0D\u7528\u80CC\u666F\u97F3\u4E50"),
-    music.map((m) => /* @__PURE__ */ react.createElement("option", { key: m.file, value: m.file }, m.name, m.mood ? ` \xB7 ${m.mood}` : ""))
-  ), /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      className: `btn ln sm${prevKey === "bgm" ? " busy" : ""}`,
-      onClick: () => cfg.bgm && playPreview(
-        "bgm",
-        `/api/bgm/${encodeURIComponent(cfg.bgm.split("/").pop())}`
-      )
-    },
-    prevKey === "bgm" ? "\u505C\u6B62\u8BD5\u542C" : "\u8BD5\u542C"
-  ))), /* @__PURE__ */ react.createElement("div", { className: "toggles" }, /* @__PURE__ */ react.createElement(Toggle, { label: "\u5B57\u5E55", on: cfg.subtitles, set: (v) => setCfg({ ...cfg, subtitles: v }) }), /* @__PURE__ */ react.createElement(Toggle, { label: "\u97F3\u6548", on: cfg.sfx, set: (v) => setCfg({ ...cfg, sfx: v }) }), /* @__PURE__ */ react.createElement(Toggle, { label: "\u8D44\u6599\u6765\u6E90", on: cfg.sources, set: (v) => setCfg({ ...cfg, sources: v }) })), /* @__PURE__ */ react.createElement("div", { style: { marginTop: 18 } }, /* @__PURE__ */ react.createElement("button", { className: "btn", onClick: () => void submit() }, "\u751F\u6210\u89C6\u9891", durS ? `\uFF08\u7EA6 ${estMin} \u5206\u949F\uFF09` : ""))) : null, pack || jobId || phase === "prepping" ? /* @__PURE__ */ react.createElement(Step, { n: 3, title: phase === "done" ? "\u89C6\u9891\u5DF2\u751F\u6210" : "\u6B63\u5728\u751F\u6210\u89C6\u9891", state: st(3) }, phase !== "error" && phase !== "done" ? /* @__PURE__ */ react.createElement("div", null, /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      className: "bar",
-      role: "progressbar",
-      "aria-valuemin": 0,
-      "aria-valuemax": 100,
-      "aria-valuenow": Math.round(bar),
-      "aria-label": "\u751F\u6210\u8FDB\u5EA6"
-    },
-    /* @__PURE__ */ react.createElement("i", { style: { width: `${bar}%` }, "aria-hidden": "true" })
-  ), /* @__PURE__ */ react.createElement("div", { className: "pline" }, /* @__PURE__ */ react.createElement("span", { className: "st" }, line), /* @__PURE__ */ react.createElement("span", { className: "pc" }, Math.round(bar), "%"))) : null, phase === "ready" ? /* @__PURE__ */ react.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => void startRender() }, "\u751F\u6210\u89C6\u9891\uFF08\u7EA6 ", estMin, " \u5206\u949F\uFF09") : null, phase === "error" ? /* @__PURE__ */ react.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => void startRender() }, "\u91CD\u8BD5\u8FD9\u4E00\u6B65") : null) : null, finalUrl ? /* @__PURE__ */ react.createElement(Step, { n: 4, title: "\u53D6\u8D70\u6210\u7247", state: "done", open: true }, /* @__PURE__ */ react.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, /* @__PURE__ */ react.createElement("a", { className: "btn", href: finalUrl, download: fileName }, "\u4E0B\u8F7D MP4 \u6210\u7247"), /* @__PURE__ */ react.createElement("div", { className: "note" }, "\u62FF\u5230 MP4 \u5C31\u80FD\u76F4\u63A5\u7528\uFF1A\u53D1\u6296\u97F3/\u89C6\u9891\u53F7\uFF0C\u6216\u526A\u6620\u91CC\u300C\u5BFC\u5165\u300D\u8FD9\u4E2A\u6587\u4EF6\u5F00\u526A\uFF0C\u4EC0\u4E48\u90FD\u4E0D\u7528\u88C5\u3002"), /* @__PURE__ */ react.createElement(
-    "button",
-    {
-      className: "btn ln",
-      style: {
-        alignSelf: "flex-start",
-        opacity: jyBusy || layerMsg ? 0.6 : 1
-      },
-      disabled: jyBusy || !!layerMsg,
-      onClick: () => void jianying()
-    },
-    "\u5BFC\u5165\u526A\u6620\uFF08\u5206\u8F68\u8349\u7A3F \xB7 \u53EF\u9010\u6761\u6539\u5B57\u5E55\uFF09"
-  ), layerMsg ? /* @__PURE__ */ react.createElement("div", { className: "note" }, layerMsg) : null, layersOk !== null && !layerMsg ? /* @__PURE__ */ react.createElement("div", { className: "note", style: { color: layersOk ? "var(--ok)" : void 0 } }, layersOk ? `\u526A\u6620\u5206\u8F68\u56FE\u5C42\u5DF2\u5907\u597D\uFF1A${layerNote || "\u5E95\u677F\u3001\u5361\u7247\u3001\u53EF\u6539\u6587\u5B57\u5404\u4E00\u6761\u8F68"}` : "\u5206\u8F68\u56FE\u5C42\u6CA1\u51FA\u5168" + (layerErr ? `\uFF08${layerErr}\uFF09` : "") + "\u3002\u7247\u5B50\u7167\u6837\u80FD\u5BFC\u5165\u526A\u6620\uFF0C\u53EA\u662F\u5361\u7247\u53EA\u80FD\u6574\u6761\u632A") : null, jy ? /* @__PURE__ */ react.createElement("div", { className: "note" }, jy) : null, /* @__PURE__ */ react.createElement("div", { className: "note" }, !me || me.tier === "free" ? "\u514D\u8D39\u7248\u6210\u7247\u5E26 GetCut \u6C34\u5370 \xB7 " : brandOn ? "\u53F3\u4E0A\u89D2\u5DF2\u5E26\u4E0A\u4F60\u7684\u54C1\u724C\u89D2\u6807 \xB7 " : "\u672C\u6761\u6309\u4F60\u7684\u6863\u4F4D\u5E72\u51C0\u51FA\u7247\uFF08\u65E0\u6C34\u5370\uFF09\xB7 ", !me || me.tier === "free" ? /* @__PURE__ */ react.createElement("button", { style: lnkAcc, onClick: () => setSheet("pricing") }, "\u770B\u6743\u76CA") : /* @__PURE__ */ react.createElement("button", { style: lnkAcc, onClick: () => setSheet("brand") }, "\u54C1\u724C\u5957\u88C5")), /* @__PURE__ */ react.createElement("div", { className: "note", style: { color: cloudOk ? "var(--ok)" : void 0 } }, cloudOk ? "\u5DF2\u540C\u6B65\u4E91\u7AEF\u4F5C\u54C1\u5E93 \xB7 " : "\u4EA4\u56DE\u4E91\u7AEF\u5931\u8D25\uFF0C\u4E0D\u5F71\u54CD\u672C\u673A\u4E0B\u8F7D \xB7 ", cloudOk && jobId ? /* @__PURE__ */ react.createElement("a", { href: `/studio#/project/${projectId}`, style: { color: "var(--acc)" } }, "\u53BB\u770B\u5386\u53F2") : null), /* @__PURE__ */ react.createElement("button", { className: "btn ln", style: { alignSelf: "flex-start" }, onClick: reset }, "\u518D\u505A\u4E00\u6761"))) : null), err ? /* @__PURE__ */ react.createElement("div", { className: "err" }, "\u51FA\u9519\uFF1A", err) : null, resumeJob && !pack && phase === "drop" ? /* @__PURE__ */ react.createElement("div", { className: "note", style: { color: "var(--acc)" } }, "\u521A\u624D\u90A3\u4E00\u6761\uFF08", resumeJob.slice(-6), "\uFF09\u5DF2\u4EA4\u8FD8\u961F\u5217\uFF0C\u6B63\u5728\u91CD\u65B0\u9886\u56DE\u6765\u2014\u2014\u4E0D\u7528\u91CD\u62D6\u7D20\u6750\u5305\u3002") : null, phase === "drop" && !bundle ? /* @__PURE__ */ react.createElement("div", { className: "note" }, "\u9700\u8981\u65B0\u7248 Chrome \u6216 Edge\uFF08\u51FA\u7247\u9760\u8FD9\u53F0\u7535\u8111\u81EA\u5DF1\u7B97\uFF09\u30025 \u5E74\u4EE5\u4E0A\u7684\u65E7\u673A\u5668\u4F1A\u6162\u4E00\u4E9B\u3002") : null), /* @__PURE__ */ react.createElement(
-    "div",
-    {
-      className: "pane right",
-      onDrop: bundle ? void 0 : onDrop,
-      onDragOver: bundle ? void 0 : onDragOver,
-      onDragLeave: bundle ? void 0 : () => setHot(false)
-    },
-    gen && !finalUrl ? (
-      /* 生成期这一屏就是「正在做什么」：动作词最大，进度不断档，口播文案折起来仍可细看 */
-      /* @__PURE__ */ react.createElement("div", { className: "genwrap" }, /* @__PURE__ */ react.createElement("article", { className: "gen" }, /* @__PURE__ */ react.createElement("div", { className: "g-top" }, /* @__PURE__ */ react.createElement("span", { className: "g-kicker" }, "\u7B2C 3 \u6B65 \xB7 \u5171 4 \u6B65"), /* @__PURE__ */ react.createElement("span", { className: "g-pct" }, Math.round(bar), "%")), /* @__PURE__ */ react.createElement("div", { className: "g-act" }, act), /* @__PURE__ */ react.createElement("div", { className: "g-detail" }, gdetail), /* @__PURE__ */ react.createElement("div", { className: "g-bar" }, /* @__PURE__ */ react.createElement("i", { style: { width: `${bar}%` } })), /* @__PURE__ */ react.createElement("div", { className: "rail" }, RAIL.map((t, i) => /* @__PURE__ */ react.createElement("span", { key: t, className: `rl${i < genIdx ? " ok" : i === genIdx ? " on" : ""}` }, /* @__PURE__ */ react.createElement("b", null, i < genIdx ? "\u2713" : i + 1), t))), /* @__PURE__ */ react.createElement("div", { className: "g-meta" }, /* @__PURE__ */ react.createElement("span", null, "\u5DF2\u7528 ", mmss), !stalled && leftSec >= 20 ? /* @__PURE__ */ react.createElement("span", null, "\u8FD8\u9700\u7EA6 ", mm(leftSec)) : null, !stalled ? /* @__PURE__ */ react.createElement("span", null, "\u6574\u6761\u9884\u8BA1 ", estMin, " \u5206\u949F") : null), stalled ? /* @__PURE__ */ react.createElement("div", { className: "g-warn" }, "\u8FD9\u4E00\u5355\u88AB\u53E6\u4E00\u4E2A\u6210\u7247\u53F0\u9875\u9762\u5360\u7740 \u2014\u2014 \u4F60\u53EF\u80FD\u5F00\u4E86\u4E24\u4E2A\u6807\u7B7E\u9875\uFF0C\u6216\u65E7\u6807\u7B7E\u9875\u521A\u88AB\u5173\u6389\u3002 \u5173\u6389\u53E6\u4E00\u4E2A\u9875\u9762\uFF1B\u4E0D\u7136\u7B49\u7EA6 4 \u5206\u949F\u4E91\u7AEF\u4F1A\u81EA\u5DF1\u6536\u56DE\uFF0C\u6536\u56DE\u540E\u8FD9\u4E00\u9875\u7ACB\u523B\u63A5\u7740\u8DD1\u3002", /* @__PURE__ */ react.createElement("div", null, /* @__PURE__ */ react.createElement(
-        "button",
-        {
-          className: "btn ln sm",
-          style: { marginTop: 10 },
-          onClick: () => {
-            setStalled(false);
-            void submit();
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "body", children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "pane left", children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "lede", children: "\u62D6\u5165\u7D20\u6750\u5305\uFF0C\u4E00\u6761\u597D\u7247\u5B50\u5728\u4F60\u8FD9\u53F0\u7535\u8111\u4E0A\u5B8C\u6210\u2014\u2014\u4E0D\u6392\u961F\u3001\u4E0D\u9650\u901F\u3002" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+          "input",
+          {
+            ref: fileInput,
+            type: "file",
+            accept: ".zip",
+            style: { display: "none" },
+            onChange: (e) => {
+              var _a2;
+              return void importZip((_a2 = e.target.files) == null ? void 0 : _a2[0]);
+            }
           }
-        },
-        "\u4E0D\u7B49\u4E86\uFF0C\u91CD\u5F00\u4E00\u6761"
-      ))) : /* @__PURE__ */ react.createElement("div", { className: "g-keep" }, "\u53EF\u4EE5\u5237\u65B0\u8FD9\u4E00\u9875\uFF1A\u4EFB\u52A1\u4F1A\u81EA\u52A8\u63A5\u56DE\u6765\u91CD\u8DD1\u3002\u5173\u6389\u6D4F\u89C8\u5668\u6216\u65AD\u7F51\uFF0C\u4E91\u7AEF\u8981\u7B49\u7EA6 4 \u5206\u949F\u624D\u56DE\u6536\u8FD9\u4E00\u5355\u3002")), pack ? /* @__PURE__ */ react.createElement("div", { className: "stage mini" }, phase === "rendering" ? (
-        /* 生成期卸载 Player：同一时刻只保留 web-renderer 那一份合成 */
-        /* @__PURE__ */ react.createElement("div", { className: "void" }, /* @__PURE__ */ react.createElement("div", { className: "bars3" }, /* @__PURE__ */ react.createElement("i", null), /* @__PURE__ */ react.createElement("i", null), /* @__PURE__ */ react.createElement("i", null), /* @__PURE__ */ react.createElement("i", null), /* @__PURE__ */ react.createElement("i", null)), /* @__PURE__ */ react.createElement("div", { className: "sm" }, "\u753B\u9762\u5DF2\u51FA ", Math.round(pct * durS / 100), " / ", Math.round(durS), " \u79D2"))
-      ) : /* @__PURE__ */ react.createElement(
-        esm/* Player */.ai,
+        ),
+        /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "steps", children: [
+          /* @__PURE__ */ (0,jsx_runtime.jsx)(
+            Step,
+            {
+              n: 1,
+              title: "\u5BFC\u5165\u7D20\u6750\u5305",
+              state: st(1),
+              summary: bundle ? `${bundle.name} \u5DF2\u5BFC\u5165` : void 0,
+              children: phase === "importing" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  "div",
+                  {
+                    className: "bar",
+                    role: "progressbar",
+                    "aria-valuemin": 0,
+                    "aria-valuemax": 100,
+                    "aria-valuenow": Math.round(upPct),
+                    "aria-label": "\u7D20\u6750\u5305\u4E0A\u4F20\u8FDB\u5EA6",
+                    children: /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { width: `${Math.max(4, upPct)}%` }, "aria-hidden": "true" })
+                  }
+                ),
+                /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "pline", children: [
+                  /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "st", children: "\u4E0A\u4F20\u4E2D" }),
+                  /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { className: "pc", children: [
+                    upPct,
+                    "%"
+                  ] })
+                ] })
+              ] }) : bundle ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn ln sm", onClick: pick, children: "\u6362\u4E00\u4E2A\u7D20\u6750\u5305" }) : /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+                "div",
+                {
+                  className: `drop${hot ? " hot" : ""}`,
+                  role: "button",
+                  tabIndex: 0,
+                  "aria-label": "\u70B9\u8FD9\u91CC\u9009\u7D20\u6750\u5305 zip",
+                  onClick: pick,
+                  onKeyDown: (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      pick();
+                    }
+                  },
+                  onDrop,
+                  onDragOver,
+                  onDragLeave: () => setHot(false),
+                  children: [
+                    /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: "\u70B9\u8FD9\u91CC\u9009\u7D20\u6750\u5305 zip" }),
+                    /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: "\u4E0D\u89E3\u538B\uFF0C\u6587\u6848\u4E0E\u7D20\u6750\u4E00\u8D77\u8BFB\u5165 \xB7 \u4E5F\u53EF\u4EE5\u76F4\u63A5\u62D6\u5230\u53F3\u8FB9\u90A3\u5757" })
+                  ]
+                }
+              )
+            }
+          ),
+          bundle ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(Step, { n: 2, title: "\u5185\u5BB9\u4E0E\u914D\u97F3", state: st(2), children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "meta", children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+                nChars,
+                " \u5B57\u53E3\u64AD"
+              ] }),
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+                "\u7EA6 ",
+                bundle.estSeconds,
+                " \u79D2"
+              ] }),
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+                nImg,
+                " \u56FE / ",
+                nVid,
+                " \u89C6\u9891"
+              ] })
+            ] }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "togo", children: "\u53E3\u64AD\u6587\u6848\u5728\u53F3\u8FB9\u6574\u5C4F\u6838\u5BF9\uFF0C\u770B\u5B8C\u76F4\u63A5\u70B9\u751F\u6210" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "field", style: { marginTop: 16 }, children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "lb", children: "\u914D\u97F3" }),
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "row", children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+                  "select",
+                  {
+                    className: "sel",
+                    value: cfg.voice,
+                    onChange: (e) => {
+                      stopPreview();
+                      setCfg({ ...cfg, voice: e.target.value });
+                    },
+                    children: [
+                      groupVoices(voices).map(([g, vs]) => /* @__PURE__ */ (0,jsx_runtime.jsx)("optgroup", { label: g, children: vs.map((v) => /* @__PURE__ */ (0,jsx_runtime.jsx)("option", { value: v.id, children: v.label }, v.id)) }, g)),
+                      !voices.length ? /* @__PURE__ */ (0,jsx_runtime.jsx)("option", { value: "", children: "\u9ED8\u8BA4\u97F3\u8272" }) : null
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  "button",
+                  {
+                    className: `btn ln sm${prevKey === "voice" ? " busy" : ""}`,
+                    onClick: () => cfg.voice && playPreview(
+                      "voice",
+                      `/api/voice-preview?voice=${encodeURIComponent(cfg.voice)}`
+                    ),
+                    children: prevKey === "voice" ? "\u505C\u6B62\u8BD5\u542C" : "\u8BD5\u542C"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "field", children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "lb", children: "\u80CC\u666F\u97F3\u4E50" }),
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "row", children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+                  "select",
+                  {
+                    className: "sel",
+                    value: cfg.bgm,
+                    onChange: (e) => {
+                      stopPreview();
+                      setCfg({ ...cfg, bgm: e.target.value });
+                    },
+                    children: [
+                      /* @__PURE__ */ (0,jsx_runtime.jsx)("option", { value: "", children: "\u4E0D\u7528\u80CC\u666F\u97F3\u4E50" }),
+                      music.map((m) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("option", { value: m.file, children: [
+                        m.name,
+                        m.mood ? ` \xB7 ${m.mood}` : ""
+                      ] }, m.file))
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  "button",
+                  {
+                    className: `btn ln sm${prevKey === "bgm" ? " busy" : ""}`,
+                    onClick: () => cfg.bgm && playPreview(
+                      "bgm",
+                      `/api/bgm/${encodeURIComponent(cfg.bgm.split("/").pop())}`
+                    ),
+                    children: prevKey === "bgm" ? "\u505C\u6B62\u8BD5\u542C" : "\u8BD5\u542C"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "toggles", children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)(Toggle, { label: "\u5B57\u5E55", on: cfg.subtitles, set: (v) => setCfg({ ...cfg, subtitles: v }) }),
+              /* @__PURE__ */ (0,jsx_runtime.jsx)(Toggle, { label: "\u97F3\u6548", on: cfg.sfx, set: (v) => setCfg({ ...cfg, sfx: v }) }),
+              /* @__PURE__ */ (0,jsx_runtime.jsx)(Toggle, { label: "\u8D44\u6599\u6765\u6E90", on: cfg.sources, set: (v) => setCfg({ ...cfg, sources: v }) })
+            ] }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 18 }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { className: "btn", onClick: () => void submit(), children: [
+              "\u751F\u6210\u89C6\u9891",
+              durS ? `\uFF08\u7EA6 ${estMin} \u5206\u949F\uFF09` : ""
+            ] }) })
+          ] }) : null,
+          pack || jobId || phase === "prepping" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(Step, { n: 3, title: phase === "done" ? "\u89C6\u9891\u5DF2\u751F\u6210" : "\u6B63\u5728\u751F\u6210\u89C6\u9891", state: st(3), children: [
+            phase !== "error" && phase !== "done" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                "div",
+                {
+                  className: "bar",
+                  role: "progressbar",
+                  "aria-valuemin": 0,
+                  "aria-valuemax": 100,
+                  "aria-valuenow": Math.round(bar),
+                  "aria-label": "\u751F\u6210\u8FDB\u5EA6",
+                  children: /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { width: `${bar}%` }, "aria-hidden": "true" })
+                }
+              ),
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "pline", children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "st", children: line }),
+                /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { className: "pc", children: [
+                  Math.round(bar),
+                  "%"
+                ] })
+              ] })
+            ] }) : null,
+            phase === "ready" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { className: "btn", style: { marginTop: 12 }, onClick: () => void startRender(), children: [
+              "\u751F\u6210\u89C6\u9891\uFF08\u7EA6 ",
+              estMin,
+              " \u5206\u949F\uFF09"
+            ] }) : null,
+            phase === "error" ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn", style: { marginTop: 12 }, onClick: () => void startRender(), children: "\u91CD\u8BD5\u8FD9\u4E00\u6B65" }) : null
+          ] }) : null,
+          finalUrl ? /* @__PURE__ */ (0,jsx_runtime.jsx)(Step, { n: 4, title: "\u53D6\u8D70\u6210\u7247", state: "done", open: true, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: 10 }, children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("a", { className: "btn", href: finalUrl, download: fileName, children: "\u4E0B\u8F7D MP4 \u6210\u7247" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: "\u62FF\u5230 MP4 \u5C31\u80FD\u76F4\u63A5\u7528\uFF1A\u53D1\u6296\u97F3/\u89C6\u9891\u53F7\uFF0C\u6216\u526A\u6620\u91CC\u300C\u5BFC\u5165\u300D\u8FD9\u4E2A\u6587\u4EF6\u5F00\u526A\uFF0C\u4EC0\u4E48\u90FD\u4E0D\u7528\u88C5\u3002" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)(
+              "button",
+              {
+                className: "btn ln",
+                style: {
+                  alignSelf: "flex-start",
+                  opacity: jyBusy || layerMsg ? 0.6 : 1
+                },
+                disabled: jyBusy || !!layerMsg,
+                onClick: () => void jianying(),
+                children: "\u5BFC\u5165\u526A\u6620\uFF08\u5206\u8F68\u8349\u7A3F \xB7 \u53EF\u9010\u6761\u6539\u5B57\u5E55\uFF09"
+              }
+            ),
+            layerMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: layerMsg }) : null,
+            layersOk !== null && !layerMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { color: layersOk ? "var(--ok)" : void 0 }, children: layersOk ? `\u526A\u6620\u5206\u8F68\u56FE\u5C42\u5DF2\u5907\u597D\uFF1A${layerNote || "\u5E95\u677F\u3001\u5361\u7247\u3001\u53EF\u6539\u6587\u5B57\u5404\u4E00\u6761\u8F68"}` : "\u5206\u8F68\u56FE\u5C42\u6CA1\u51FA\u5168" + (layerErr ? `\uFF08${layerErr}\uFF09` : "") + "\u3002\u7247\u5B50\u7167\u6837\u80FD\u5BFC\u5165\u526A\u6620\uFF0C\u53EA\u662F\u5361\u7247\u53EA\u80FD\u6574\u6761\u632A" }) : null,
+            jy ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: jy }) : null,
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "note", children: [
+              !me || me.tier === "free" ? "\u514D\u8D39\u7248\u6210\u7247\u5E26 GetCut \u6C34\u5370 \xB7 " : brandOn ? "\u53F3\u4E0A\u89D2\u5DF2\u5E26\u4E0A\u4F60\u7684\u54C1\u724C\u89D2\u6807 \xB7 " : "\u672C\u6761\u6309\u4F60\u7684\u6863\u4F4D\u5E72\u51C0\u51FA\u7247\uFF08\u65E0\u6C34\u5370\uFF09\xB7 ",
+              !me || me.tier === "free" ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { style: lnkAcc, onClick: () => setSheet("pricing"), children: "\u770B\u6743\u76CA" }) : /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { style: lnkAcc, onClick: () => setSheet("brand"), children: "\u54C1\u724C\u5957\u88C5" })
+            ] }),
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "note", style: { color: cloudOk ? "var(--ok)" : void 0 }, children: [
+              cloudOk ? "\u5DF2\u540C\u6B65\u4E91\u7AEF\u4F5C\u54C1\u5E93 \xB7 " : "\u4EA4\u56DE\u4E91\u7AEF\u5931\u8D25\uFF0C\u4E0D\u5F71\u54CD\u672C\u673A\u4E0B\u8F7D \xB7 ",
+              cloudOk && jobId ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { style: lnkAcc, onClick: openLib, children: "\u53BB\u770B\u5386\u53F2" }) : null
+            ] }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn ln", style: { alignSelf: "flex-start" }, onClick: reset, children: "\u518D\u505A\u4E00\u6761" })
+          ] }) }) : null
+        ] }),
+        err ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "err", children: [
+          "\u51FA\u9519\uFF1A",
+          err
+        ] }) : null,
+        resumeJob && !pack && phase === "drop" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "note", style: { color: "var(--acc)" }, children: [
+          "\u521A\u624D\u90A3\u4E00\u6761\uFF08",
+          resumeJob.slice(-6),
+          "\uFF09\u5DF2\u4EA4\u8FD8\u961F\u5217\uFF0C\u6B63\u5728\u91CD\u65B0\u9886\u56DE\u6765\u2014\u2014\u4E0D\u7528\u91CD\u62D6\u7D20\u6750\u5305\u3002"
+        ] }) : null,
+        phase === "drop" && !bundle ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: "\u9700\u8981\u65B0\u7248 Chrome \u6216 Edge\uFF08\u51FA\u7247\u9760\u8FD9\u53F0\u7535\u8111\u81EA\u5DF1\u7B97\uFF09\u30025 \u5E74\u4EE5\u4E0A\u7684\u65E7\u673A\u5668\u4F1A\u6162\u4E00\u4E9B\u3002" }) : null
+      ] }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        "div",
         {
-          ref: playerRef,
-          component: NiwoVideo,
-          inputProps: pack.props,
-          durationInFrames: pack.props.durationInFrames,
-          fps: 30,
-          compositionWidth: 1080,
-          compositionHeight: 1920,
-          style: { width: "100%", height: "100%" },
-          autoplay: true,
-          loop: true,
-          muted: true,
-          showControls: false,
-          acknowledgeRemotionLicense: true
+          className: "pane right",
+          onDrop: bundle ? void 0 : onDrop,
+          onDragOver: bundle ? void 0 : onDragOver,
+          onDragLeave: bundle ? void 0 : () => setHot(false),
+          children: gen && !finalUrl ? (
+            /* 生成期这一屏就是「正在做什么」：动作词最大，进度不断档，口播文案折起来仍可细看 */
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "genwrap", children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("article", { className: "gen", children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "g-top", children: [
+                  /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "g-kicker", children: "\u7B2C 3 \u6B65 \xB7 \u5171 4 \u6B65" }),
+                  /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { className: "g-pct", children: [
+                    Math.round(bar),
+                    "%"
+                  ] })
+                ] }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "g-act", children: act }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "g-detail", children: gdetail }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "g-bar", children: /* @__PURE__ */ (0,jsx_runtime.jsx)("i", { style: { width: `${bar}%` } }) }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "rail", children: RAIL.map((t, i) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { className: `rl${i < genIdx ? " ok" : i === genIdx ? " on" : ""}`, children: [
+                  /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: i < genIdx ? "\u2713" : i + 1 }),
+                  t
+                ] }, t)) }),
+                /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "g-meta", children: [
+                  /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+                    "\u5DF2\u7528 ",
+                    mmss
+                  ] }),
+                  !stalled && leftSec >= 20 ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+                    "\u8FD8\u9700\u7EA6 ",
+                    mm(leftSec)
+                  ] }) : null,
+                  !stalled ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+                    "\u6574\u6761\u9884\u8BA1 ",
+                    estMin,
+                    " \u5206\u949F"
+                  ] }) : null
+                ] }),
+                stalled ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "g-warn", children: [
+                  "\u8FD9\u4E00\u5355\u88AB\u53E6\u4E00\u4E2A\u6210\u7247\u53F0\u9875\u9762\u5360\u7740 \u2014\u2014 \u4F60\u53EF\u80FD\u5F00\u4E86\u4E24\u4E2A\u6807\u7B7E\u9875\uFF0C\u6216\u65E7\u6807\u7B7E\u9875\u521A\u88AB\u5173\u6389\u3002 \u5173\u6389\u53E6\u4E00\u4E2A\u9875\u9762\uFF1B\u4E0D\u7136\u7B49\u7EA6 4 \u5206\u949F\u4E91\u7AEF\u4F1A\u81EA\u5DF1\u6536\u56DE\uFF0C\u6536\u56DE\u540E\u8FD9\u4E00\u9875\u7ACB\u523B\u63A5\u7740\u8DD1\u3002",
+                  /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { children: /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                    "button",
+                    {
+                      className: "btn ln sm",
+                      style: { marginTop: 10 },
+                      onClick: () => {
+                        setStalled(false);
+                        void submit();
+                      },
+                      children: "\u4E0D\u7B49\u4E86\uFF0C\u91CD\u5F00\u4E00\u6761"
+                    }
+                  ) })
+                ] }) : /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "g-keep", children: "\u53EF\u4EE5\u5237\u65B0\u8FD9\u4E00\u9875\uFF1A\u4EFB\u52A1\u4F1A\u81EA\u52A8\u63A5\u56DE\u6765\u91CD\u8DD1\u3002\u5173\u6389\u6D4F\u89C8\u5668\u6216\u65AD\u7F51\uFF0C\u4E91\u7AEF\u8981\u7B49\u7EA6 4 \u5206\u949F\u624D\u56DE\u6536\u8FD9\u4E00\u5355\u3002" })
+              ] }),
+              pack ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "stage mini", children: [
+                phase === "rendering" ? (
+                  /* 生成期卸载 Player：同一时刻只保留 web-renderer 那一份合成 */
+                  /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "void", children: [
+                    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "bars3", children: [
+                      /* @__PURE__ */ (0,jsx_runtime.jsx)("i", {}),
+                      /* @__PURE__ */ (0,jsx_runtime.jsx)("i", {}),
+                      /* @__PURE__ */ (0,jsx_runtime.jsx)("i", {}),
+                      /* @__PURE__ */ (0,jsx_runtime.jsx)("i", {}),
+                      /* @__PURE__ */ (0,jsx_runtime.jsx)("i", {})
+                    ] }),
+                    /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "sm", children: [
+                      "\u753B\u9762\u5DF2\u51FA ",
+                      Math.round(pct * durS / 100),
+                      " / ",
+                      Math.round(durS),
+                      " \u79D2"
+                    ] })
+                  ] })
+                ) : /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  esm/* Player */.ai,
+                  {
+                    ref: playerRef,
+                    component: NiwoVideo,
+                    inputProps: pack.props,
+                    durationInFrames: pack.props.durationInFrames,
+                    fps: 30,
+                    compositionWidth: 1080,
+                    compositionHeight: 1920,
+                    style: { width: "100%", height: "100%" },
+                    autoplay: true,
+                    loop: true,
+                    muted: true,
+                    showControls: false,
+                    acknowledgeRemotionLicense: true
+                  }
+                ),
+                phase !== "rendering" ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "cap", children: "\u5B9E\u65F6\u9884\u89C8\uFF08\u9759\u97F3\uFF09 \xB7 \u6210\u7247\u5E26\u914D\u97F3\u4E0E\u97F3\u4E50" }) : null
+              ] }) : null,
+              bundle ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "foldbox", children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "foldb", onClick: () => setShowScript(!showScript), children: showScript ? "\u6536\u8D77\u53E3\u64AD\u6587\u6848" : `\u53E3\u64AD\u6587\u6848 ${nChars} \u5B57 \xB7 \u7EA6 ${bundle.estSeconds} \u79D2 \u2014\u2014 \u5C55\u5F00\u6838\u5BF9` }),
+                showScript ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "rd-body", children: (bundle.script || "").split(NL).filter(Boolean).map((para, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("p", { children: para }, i)) }) : null
+              ] }) : null
+            ] })
+          ) : finalUrl || pack ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "stagewrap", children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "stage", children: [
+              finalUrl ? /* @__PURE__ */ (0,jsx_runtime.jsx)("video", { src: finalUrl, controls: true, autoPlay: true }) : /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                esm/* Player */.ai,
+                {
+                  ref: playerRef,
+                  component: NiwoVideo,
+                  inputProps: pack.props,
+                  durationInFrames: pack.props.durationInFrames,
+                  fps: 30,
+                  compositionWidth: 1080,
+                  compositionHeight: 1920,
+                  style: { width: "100%", height: "100%" },
+                  autoplay: true,
+                  loop: true,
+                  muted: true,
+                  showControls: false,
+                  acknowledgeRemotionLicense: true
+                }
+              ),
+              pack && !finalUrl ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "cap", children: "\u5B9E\u65F6\u9884\u89C8\uFF08\u9759\u97F3\uFF09 \xB7 \u6210\u7247\u5E26\u914D\u97F3\u4E0E\u97F3\u4E50" }) : null
+            ] }),
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "stagecap", children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: title }),
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+                Math.round(durS),
+                " \u79D2 \xB7 1080\xD71920 \u7AD6\u5C4F \xB7 ",
+                phase === "done" ? "\u5DF2\u5B8C\u6210" : phase === "rendering" ? "\u751F\u6210\u4E2D" : "\u9884\u89C8\u4E2D"
+              ] })
+            ] })
+          ] }) : bundle ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("article", { className: "reader", children: [
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "rd-top", children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "rd-kicker", children: "\u53E3\u64AD\u6587\u6848 \xB7 \u6838\u5BF9" }),
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { className: "rd-meta", children: [
+                nChars,
+                " \u5B57 \xB7 \u7EA6 ",
+                bundle.estSeconds,
+                " \u79D2 \xB7 \u56FE ",
+                nImg,
+                " \u89C6\u9891 ",
+                nVid
+              ] })
+            ] }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("h2", { className: "rd-title", children: title }),
+            ((_e = (_d = bundle.hookLines) == null ? void 0 : _d[0]) == null ? void 0 : _e.text) ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "rd-hook", children: (_g = (_f = bundle.hookLines) == null ? void 0 : _f[0]) == null ? void 0 : _g.text }) : null,
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "rd-body", children: (bundle.script || "").split(NL).filter(Boolean).map((para, i) => /* @__PURE__ */ (0,jsx_runtime.jsx)("p", { children: para }, i)) })
+          ] }) : /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+            "div",
+            {
+              className: `stagedrop${hot ? " hot" : ""}`,
+              role: "button",
+              tabIndex: 0,
+              "aria-label": "\u628A\u7D20\u6750\u5305\u62D6\u5230\u8FD9\u91CC\uFF0C\u6216\u6309\u56DE\u8F66\u9009\u6587\u4EF6",
+              onClick: pick,
+              onKeyDown: (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  pick();
+                }
+              },
+              onDrop,
+              onDragOver,
+              onDragLeave: () => setHot(false),
+              children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsx)(Mark, { size: 44 }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "t", children: "\u7D20\u6750\u5305\u62D6\u5230\u8FD9\u91CC" }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "s", children: "\u6587\u6848\u3001\u56FE\u7247\u3001\u89C6\u9891\u4E00\u8D77\u8BFB\u5165\uFF0C\u6210\u7247\u5728\u8FD9\u91CC\u51FA\u73B0" }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "s dim", children: "\u4E5F\u53EF\u4EE5\u70B9\u5DE6\u8FB9\u7B2C 1 \u6B65\u9009\u6587\u4EF6 \xB7 zip \u4E0D\u89E3\u538B" })
+              ]
+            }
+          )
         }
-      ), phase !== "rendering" ? /* @__PURE__ */ react.createElement("div", { className: "cap" }, "\u5B9E\u65F6\u9884\u89C8\uFF08\u9759\u97F3\uFF09 \xB7 \u6210\u7247\u5E26\u914D\u97F3\u4E0E\u97F3\u4E50") : null) : null, bundle ? /* @__PURE__ */ react.createElement("div", { className: "foldbox" }, /* @__PURE__ */ react.createElement("button", { className: "foldb", onClick: () => setShowScript(!showScript) }, showScript ? "\u6536\u8D77\u53E3\u64AD\u6587\u6848" : `\u53E3\u64AD\u6587\u6848 ${nChars} \u5B57 \xB7 \u7EA6 ${bundle.estSeconds} \u79D2 \u2014\u2014 \u5C55\u5F00\u6838\u5BF9`), showScript ? /* @__PURE__ */ react.createElement("div", { className: "rd-body" }, (bundle.script || "").split(NL).filter(Boolean).map((para, i) => /* @__PURE__ */ react.createElement("p", { key: i }, para))) : null) : null)
-    ) : finalUrl || pack ? /* @__PURE__ */ react.createElement("div", { className: "stagewrap" }, /* @__PURE__ */ react.createElement("div", { className: "stage" }, finalUrl ? /* @__PURE__ */ react.createElement("video", { src: finalUrl, controls: true, autoPlay: true }) : /* @__PURE__ */ react.createElement(
-      esm/* Player */.ai,
+      )
+    ] }),
+    /* @__PURE__ */ (0,jsx_runtime.jsxs)("footer", { className: "footbar", children: [
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: DEVICE }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "sep" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { style: { color: codecOk ? void 0 : "var(--err)" }, children: codecOk ? "\u672C\u673A\u51FA\u7247\u80FD\u529B \u6B63\u5E38" : "\u6D4F\u89C8\u5668\u592A\u65E7\uFF0C\u8BF7\u6362\u65B0\u7248 Chrome / Edge" }),
+      /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "right", children: [
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("a", { href: "/privacy", target: "_blank", rel: "noopener", children: "\u9690\u79C1\u653F\u7B56" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("a", { href: "/terms", target: "_blank", rel: "noopener", children: "\u7528\u6237\u534F\u8BAE" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("a", { href: "/refund", target: "_blank", rel: "noopener", children: "\u9000\u6B3E\u8BF4\u660E" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "sep" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: "\u753B\u9762\u4E0E\u58F0\u97F3\u90FD\u5728\u8FD9\u53F0\u7535\u8111\u4E0A\u5B8C\u6210" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { className: "sep" }),
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: "\u670D\u52A1\u5668\u96F6\u6392\u961F" })
+      ] })
+    ] }),
+    lib !== null || libMsg ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+      Sheet,
       {
-        ref: playerRef,
-        component: NiwoVideo,
-        inputProps: pack.props,
-        durationInFrames: pack.props.durationInFrames,
-        fps: 30,
-        compositionWidth: 1080,
-        compositionHeight: 1920,
-        style: { width: "100%", height: "100%" },
-        autoplay: true,
-        loop: true,
-        muted: true,
-        showControls: false,
-        acknowledgeRemotionLicense: true
-      }
-    ), pack && !finalUrl ? /* @__PURE__ */ react.createElement("div", { className: "cap" }, "\u5B9E\u65F6\u9884\u89C8\uFF08\u9759\u97F3\uFF09 \xB7 \u6210\u7247\u5E26\u914D\u97F3\u4E0E\u97F3\u4E50") : null), /* @__PURE__ */ react.createElement("div", { className: "stagecap" }, /* @__PURE__ */ react.createElement("b", null, title), /* @__PURE__ */ react.createElement("span", null, Math.round(durS), " \u79D2 \xB7 1080\xD71920 \u7AD6\u5C4F \xB7 ", phase === "done" ? "\u5DF2\u5B8C\u6210" : phase === "rendering" ? "\u751F\u6210\u4E2D" : "\u9884\u89C8\u4E2D"))) : bundle ? /* @__PURE__ */ react.createElement("article", { className: "reader" }, /* @__PURE__ */ react.createElement("div", { className: "rd-top" }, /* @__PURE__ */ react.createElement("span", { className: "rd-kicker" }, "\u53E3\u64AD\u6587\u6848 \xB7 \u6838\u5BF9"), /* @__PURE__ */ react.createElement("span", { className: "rd-meta" }, nChars, " \u5B57 \xB7 \u7EA6 ", bundle.estSeconds, " \u79D2 \xB7 \u56FE ", nImg, " \u89C6\u9891 ", nVid)), /* @__PURE__ */ react.createElement("h2", { className: "rd-title" }, title), ((_e = (_d = bundle.hookLines) == null ? void 0 : _d[0]) == null ? void 0 : _e.text) ? /* @__PURE__ */ react.createElement("div", { className: "rd-hook" }, (_g = (_f = bundle.hookLines) == null ? void 0 : _f[0]) == null ? void 0 : _g.text) : null, /* @__PURE__ */ react.createElement("div", { className: "rd-body" }, (bundle.script || "").split(NL).filter(Boolean).map((para, i) => /* @__PURE__ */ react.createElement("p", { key: i }, para)))) : /* @__PURE__ */ react.createElement(
-      "div",
-      {
-        className: `stagedrop${hot ? " hot" : ""}`,
-        role: "button",
-        tabIndex: 0,
-        "aria-label": "\u628A\u7D20\u6750\u5305\u62D6\u5230\u8FD9\u91CC\uFF0C\u6216\u6309\u56DE\u8F66\u9009\u6587\u4EF6",
-        onClick: pick,
-        onKeyDown: (e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            pick();
-          }
+        title: "\u4F5C\u54C1\u5E93",
+        sub: "\u5386\u53F2\u9879\u76EE\u4E0E\u6210\u7247\uFF1B\u6253\u5F00\u53EF\u7EE7\u7EED\u7CBE\u4FEE",
+        width: 620,
+        onClose: () => {
+          setLib(null);
+          setLibMsg("");
         },
-        onDrop,
-        onDragOver,
-        onDragLeave: () => setHot(false)
-      },
-      /* @__PURE__ */ react.createElement(Mark, { size: 44 }),
-      /* @__PURE__ */ react.createElement("div", { className: "t" }, "\u7D20\u6750\u5305\u62D6\u5230\u8FD9\u91CC"),
-      /* @__PURE__ */ react.createElement("div", { className: "s" }, "\u6587\u6848\u3001\u56FE\u7247\u3001\u89C6\u9891\u4E00\u8D77\u8BFB\u5165\uFF0C\u6210\u7247\u5728\u8FD9\u91CC\u51FA\u73B0"),
-      /* @__PURE__ */ react.createElement("div", { className: "s dim" }, "\u4E5F\u53EF\u4EE5\u70B9\u5DE6\u8FB9\u7B2C 1 \u6B65\u9009\u6587\u4EF6 \xB7 zip \u4E0D\u89E3\u538B")
-    )
-  )), /* @__PURE__ */ react.createElement("footer", { className: "footbar" }, /* @__PURE__ */ react.createElement("span", null, DEVICE), /* @__PURE__ */ react.createElement("span", { className: "sep" }), /* @__PURE__ */ react.createElement("span", { style: { color: codecOk ? void 0 : "var(--err)" } }, codecOk ? "\u672C\u673A\u51FA\u7247\u80FD\u529B \u6B63\u5E38" : "\u6D4F\u89C8\u5668\u592A\u65E7\uFF0C\u8BF7\u6362\u65B0\u7248 Chrome / Edge"), /* @__PURE__ */ react.createElement("div", { className: "right" }, /* @__PURE__ */ react.createElement("a", { href: "/privacy", target: "_blank", rel: "noopener" }, "\u9690\u79C1\u653F\u7B56"), /* @__PURE__ */ react.createElement("a", { href: "/terms", target: "_blank", rel: "noopener" }, "\u7528\u6237\u534F\u8BAE"), /* @__PURE__ */ react.createElement("a", { href: "/refund", target: "_blank", rel: "noopener" }, "\u9000\u6B3E\u8BF4\u660E"), /* @__PURE__ */ react.createElement("span", { className: "sep" }), /* @__PURE__ */ react.createElement("span", null, "\u753B\u9762\u4E0E\u58F0\u97F3\u90FD\u5728\u8FD9\u53F0\u7535\u8111\u4E0A\u5B8C\u6210"), /* @__PURE__ */ react.createElement("span", { className: "sep" }), /* @__PURE__ */ react.createElement("span", null, "\u670D\u52A1\u5668\u96F6\u6392\u961F"))), lib !== null || libMsg ? /* @__PURE__ */ react.createElement(
-    Sheet,
-    {
-      title: "\u4F5C\u54C1\u5E93",
-      sub: "\u5386\u53F2\u9879\u76EE\u4E0E\u6210\u7247\uFF1B\u6253\u5F00\u53EF\u7EE7\u7EED\u7CBE\u4FEE",
-      width: 620,
-      onClose: () => {
-        setLib(null);
-        setLibMsg("");
+        children: [
+          libMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: libMsg }) : null,
+          lib && !lib.length ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: "\u8FD8\u6CA1\u6709\u9879\u76EE\uFF0C\u62D6\u4E00\u4E2A\u7D20\u6750\u5305\u8FDB\u6765\u5C31\u662F\u7B2C\u4E00\u6761\u3002" }) : null,
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "liblist", children: (lib || []).map((p) => {
+            const last = (p.renders || []).filter((r) => r.file).slice(-1)[0];
+            return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "librow", children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-t", children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: p.title || "\u672A\u547D\u540D" }),
+                /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
+                  p.created || "",
+                  " \xB7 ",
+                  p.assets_count ?? 0,
+                  " \u7D20\u6750 \xB7 ",
+                  p.renders_count ?? 0,
+                  " \u6210\u7247"
+                ] })
+              ] }),
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-a", children: [
+                last ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  "a",
+                  {
+                    className: "btn ln sm",
+                    href: `/video/${last.id}`,
+                    download: true,
+                    children: "\u4E0B\u6210\u7247"
+                  }
+                ) : null,
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("a", { className: "btn ln sm", href: `/studio#/project/${p.project_id}`, children: "\u6253\u5F00" })
+              ] })
+            ] }, p.project_id);
+          }) }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 14 }, children: "\u9700\u8981\u9010\u6761\u6539\u5B57\u5E55\u3001\u52A8\u5206\u8F68\uFF0C\u5C31\u5728\u300C\u6253\u5F00\u300D\u91CC\u8FDB\u5DE5\u4F5C\u53F0\uFF1B\u53EA\u51FA\u7247\u7684\u8BDD\uFF0C\u8FD9\u4E00\u9875\u5C31\u591F\u4E86\u3002" })
+        ]
       }
-    },
-    libMsg ? /* @__PURE__ */ react.createElement("div", { className: "note" }, libMsg) : null,
-    lib && !lib.length ? /* @__PURE__ */ react.createElement("div", { className: "note" }, "\u8FD8\u6CA1\u6709\u9879\u76EE\uFF0C\u62D6\u4E00\u4E2A\u7D20\u6750\u5305\u8FDB\u6765\u5C31\u662F\u7B2C\u4E00\u6761\u3002") : null,
-    /* @__PURE__ */ react.createElement("div", { className: "liblist" }, (lib || []).map((p) => {
-      const last = (p.renders || []).filter((r) => r.file).slice(-1)[0];
-      return /* @__PURE__ */ react.createElement("div", { className: "librow", key: p.project_id }, /* @__PURE__ */ react.createElement("div", { className: "li-t" }, /* @__PURE__ */ react.createElement("b", null, p.title || "\u672A\u547D\u540D"), /* @__PURE__ */ react.createElement("span", null, p.created || "", " \xB7 ", p.assets_count ?? 0, " \u7D20\u6750 \xB7 ", p.renders_count ?? 0, " \u6210\u7247")), /* @__PURE__ */ react.createElement("div", { className: "li-a" }, last ? /* @__PURE__ */ react.createElement(
-        "a",
-        {
-          className: "btn ln sm",
-          href: `/video/${last.id}`,
-          download: true
-        },
-        "\u4E0B\u6210\u7247"
-      ) : null, /* @__PURE__ */ react.createElement("a", { className: "btn ln sm", href: `/studio#/project/${p.project_id}` }, "\u6253\u5F00")));
-    })),
-    /* @__PURE__ */ react.createElement("div", { className: "note", style: { marginTop: 14 } }, "\u9700\u8981\u9010\u6761\u6539\u5B57\u5E55\u3001\u52A8\u5206\u8F68\uFF0C\u5C31\u5728\u300C\u6253\u5F00\u300D\u91CC\u8FDB\u5DE5\u4F5C\u53F0\uFF1B\u53EA\u51FA\u7247\u7684\u8BDD\uFF0C\u8FD9\u4E00\u9875\u5C31\u591F\u4E86\u3002")
-  ) : null, toast ? /* @__PURE__ */ react.createElement("div", { className: "toast" }, toast) : null);
+    ) : null,
+    toast ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "toast", children: toast }) : null
+  ] });
 };
 const el = document.getElementById("root") ?? Object.assign(document.createElement("div"), { id: "root" });
 document.body.appendChild(el);
-(0,client.createRoot)(el).render(/* @__PURE__ */ react.createElement(App, null));
+(0,client.createRoot)(el).render(/* @__PURE__ */ (0,jsx_runtime.jsx)(App, {}));
 
 
 /***/ },
@@ -13578,29 +14255,31 @@ if (typeof globalThis === 'undefined') {
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
 ___CSS_LOADER_EXPORT___.push([module.id, `/* GetCut 成片台 · 设计令牌与版式
-   主题名与工作台 index.html 共用：ziyu 紫玉描金 / xuanqing 玄青 / shimo 石墨 /
+   主题名与工作台 index.html 共用：ziyu 石墨金 / xuanqing 玄青 / shimo 石墨 /
    zhimu 纸墨 / daiqing 黛青。改一处两页都要改（两页打包链路不同，令牌各自内联一份）。 */
 
 :root {
-  --bg: #0d0b14;
-  --surface: #171422;
-  --surface2: #211d31;
-  --sunken: #131019;
-  --ink: #efecf6;
-  --ink-2: #a79fbd;
-  --ink-3: #8c85a3;
-  --line: #2e2942;
-  --line2: #3b3555;
-  --acc: #cbb88a;
-  --acc-ink: #241d0c;
-  --acc-soft: rgba(203, 184, 138, .10);
-  --ok: #5bd08a;
-  --ok-soft: rgba(91, 208, 138, .12);
+  --bg: #0e0e11;
+  --surface: #17171b;
+  --surface2: #1c1c21;
+  --sunken: #121216;
+  --ink: #f4f4f6;
+  --ink-2: #b6b6c0;
+  --ink-3: #85858d;
+  --line: #232329;
+  --line2: #2e2e36;
+  --acc: #d8b36a;
+  --acc-ink: #1c1508;
+  --acc-soft: rgba(216, 179, 106, .12);
+  --btn-bg: #f4f4f6;
+  --btn-ink: #101014;
+  --ok: #5fa97a;
+  --ok-soft: rgba(95, 169, 122, .12);
   --err: #ff6b6b;
   --err-soft: rgba(255, 107, 107, .10);
   --seal: #a44231;
-  --media: #080a0f;
-  --veil: rgba(6, 4, 12, .62);
+  --media: #0a0a0d;
+  --veil: rgba(8, 8, 10, .62);
   --sh-pop: 0 16px 44px rgba(0, 0, 0, .45);
   --r: 10px;
   --sans: "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
@@ -13614,6 +14293,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/* GetCut 成片台 · 设计令牌与
   --ink: #e6eef2; --ink-2: #93a8b3; --ink-3: #778e9a;
   --line: #1e2c34; --line2: #2b3d47;
   --acc: #9cc3d5; --acc-ink: #0b1a22; --acc-soft: rgba(156, 195, 213, .10);
+  --btn-bg: #9cc3d5; --btn-ink: #0b1a22;
   --ok: #6fd0a0; --ok-soft: rgba(111, 208, 160, .12);
   --err: #ff7d6b; --err-soft: rgba(255, 125, 107, .10);
   --seal: #b4553f; --media: #05090c;
@@ -13625,6 +14305,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/* GetCut 成片台 · 设计令牌与
   --ink: #f2f2f2; --ink-2: #a3a3a3; --ink-3: #8c8c8c;
   --line: #2e2e2e; --line2: #3d3d3d;
   --acc: #e8e4dc; --acc-ink: #17170f; --acc-soft: rgba(232, 228, 220, .10);
+  --btn-bg: #e8e4dc; --btn-ink: #17170f;
   --ok: #7fd6a0; --ok-soft: rgba(127, 214, 160, .12);
   --err: #ff8080; --err-soft: rgba(255, 128, 128, .10);
   --seal: #c0392b; --media: #000;
@@ -13636,6 +14317,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/* GetCut 成片台 · 设计令牌与
   --ink: #1a1817; --ink-2: #6b655c; --ink-3: #6c665e;
   --line: #ddd7cb; --line2: #c9c2b3;
   --acc: #a44231; --acc-ink: #fff; --acc-soft: rgba(164, 66, 49, .09);
+  --btn-bg: #a44231; --btn-ink: #fff;
   --ok: #166534; --ok-soft: rgba(22, 101, 52, .10);
   --err: #a44231; --err-soft: rgba(164, 66, 49, .10);
   --seal: #1a1817; --media: #14120f;
@@ -13648,6 +14330,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/* GetCut 成片台 · 设计令牌与
   --ink: #16211e; --ink-2: #5c6b66; --ink-3: #5f6965;
   --line: #d3ddd8; --line2: #b9c8c1;
   --acc: #14655a; --acc-ink: #fff; --acc-soft: rgba(20, 101, 90, .09);
+  --btn-bg: #14655a; --btn-ink: #fff;
   --ok: #14655a; --ok-soft: rgba(20, 101, 90, .10);
   --err: #a13c2c; --err-soft: rgba(161, 60, 44, .10);
   --seal: #a13c2c; --media: #101614;
@@ -13659,7 +14342,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/* GetCut 成片台 · 设计令牌与
 html, body { height: 100% }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--sans);
-  font-size: 14.5px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+  font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased;
 }
 button, input, select, textarea { font: inherit; color: inherit }
 button { cursor: pointer; background: none; border: 0; padding: 0 }
@@ -13675,7 +14358,6 @@ a { color: inherit; text-decoration: none }
 .topbar {
   display: flex; align-items: center; gap: 14px; padding: 0 22px; height: 58px;
   flex: none; background: var(--surface); border-bottom: 1px solid var(--line);
-  box-shadow: 0 3px 0 -2px var(--line);
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0 }
 .brand svg { display: block }
@@ -13751,8 +14433,8 @@ a { color: inherit; text-decoration: none }
   font-size: 11px; font-weight: 800; background: var(--surface2); color: var(--ink-3) }
 .rl.on { color: var(--ink); border-color: var(--acc) }
 .rl.on b { background: var(--acc); color: var(--acc-ink) }
-.rl.ok { color: var(--ok) }
-.rl.ok b { background: var(--ok-soft); color: var(--ok) }
+.rl.ok { color: var(--acc) }
+.rl.ok b { background: transparent; color: var(--acc); border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent) }
 .g-meta { display: flex; gap: 16px; margin-top: 14px; font-size: 13px; color: var(--ink-2);
   font-family: var(--mono); flex-wrap: wrap }
 .g-keep { font-size: 12.5px; color: var(--ink-3); margin-top: 12px; line-height: 1.7 }
@@ -13778,8 +14460,8 @@ a { color: inherit; text-decoration: none }
 
 .footbar {
   flex: none; display: flex; align-items: center; gap: 16px; padding: 0 22px; height: 40px;
-  background: var(--surface); border-top: 1px solid var(--line);
-  box-shadow: 0 -3px 0 -2px var(--line); font-size: 12.5px; color: var(--ink-3);
+  background: var(--bg); border-top: 1px solid var(--line);
+  font-size: 12.5px; color: var(--ink-3);
 }
 .footbar .sep { width: 1px; height: 13px; background: var(--line2) }
 .footbar .right { margin-left: auto; display: flex; align-items: center; gap: 14px }
@@ -13789,33 +14471,35 @@ a { color: inherit; text-decoration: none }
 .footbar .right a:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; border-radius: 3px }
 
 /* ── 步骤 ── */
-.lede { font-size: 13.5px; color: var(--ink-2); line-height: 1.7 }
+.lede { font-size: 14.5px; color: var(--ink-2); line-height: 1.7 }
 .steps { display: flex; flex-direction: column; gap: 6px }
 .step { display: flex; gap: 13px; padding: 13px 12px; border-radius: var(--r); border: 1px solid transparent }
 .step.on { background: var(--sunken); border-color: var(--line) }
 .step.dim { opacity: .42 }
 .step .no {
-  width: 26px; height: 26px; flex: none; margin-top: 1px; border-radius: 50%;
+  width: 26px; height: 26px; flex: none; margin-top: 1px; border-radius: 8px;
   border: 1.5px solid var(--line2); color: var(--ink-3);
   font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;
-  background: var(--surface);
+  background: var(--surface); font-family: var(--mono);
 }
 .step.on .no { border-color: var(--acc); color: var(--acc); background: var(--acc-soft) }
-.step.ok .no { border-color: var(--ok); background: var(--ok); color: var(--bg) }
+.step.ok .no { border-color: color-mix(in srgb, var(--acc) 45%, transparent); background: transparent; color: var(--acc) }
 .step .wrap { min-width: 0; flex: 1 }
-.step .t { font-size: 15.5px; font-weight: 750; letter-spacing: .01em }
-.step .m { font-size: 13px; color: var(--ink-2); margin-top: 3px }
+.step .t { font-size: 16px; font-weight: 750; letter-spacing: .01em }
+.step .m { font-size: 13.5px; color: var(--ink-2); margin-top: 3px }
 .step .c { margin-top: 12px }
 
-/* ── 控件 ── */
+/* ── 控件 ──
+   主按钮=D 方向的白底黑字：唯一的大色块，动作一眼可辨；金色退到细处点缀 */
 .btn {
-  display: block; width: 100%; text-align: center; padding: 13px 22px; border-radius: 9px;
-  background: var(--acc); color: var(--acc-ink); font-size: 16px; font-weight: 750;
+  display: block; width: 100%; text-align: center; padding: 14px 22px; border-radius: 11px;
+  background: var(--btn-bg); color: var(--btn-ink); font-size: 16px; font-weight: 800;
   letter-spacing: .02em; transition: transform .12s var(--ease), filter .15s var(--ease);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
 }
-.btn:hover { filter: brightness(1.07) }
+.btn:hover { filter: brightness(1.05) }
 .btn:active { transform: translateY(1px) }
-.btn[disabled] { background: var(--surface2); color: var(--ink-3); cursor: default }
+.btn[disabled] { background: var(--surface2); color: var(--ink-3); cursor: default; box-shadow: none }
 .btn.ln {
   background: transparent; color: var(--ink); border: 1px solid var(--line2);
   font-size: 14px; font-weight: 650; padding: 9px 16px; width: auto;
@@ -13947,7 +14631,7 @@ a { color: inherit; text-decoration: none }
   .pane.right { min-height: 62vh }
   .stage { height: 62vh }
 }
-`, "",{"version":3,"sources":["webpack://./src/tool/ui.css"],"names":[],"mappings":"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","sourcesContent":["/* GetCut 成片台 · 设计令牌与版式\n   主题名与工作台 index.html 共用：ziyu 紫玉描金 / xuanqing 玄青 / shimo 石墨 /\n   zhimu 纸墨 / daiqing 黛青。改一处两页都要改（两页打包链路不同，令牌各自内联一份）。 */\n\n:root {\n  --bg: #0d0b14;\n  --surface: #171422;\n  --surface2: #211d31;\n  --sunken: #131019;\n  --ink: #efecf6;\n  --ink-2: #a79fbd;\n  --ink-3: #8c85a3;\n  --line: #2e2942;\n  --line2: #3b3555;\n  --acc: #cbb88a;\n  --acc-ink: #241d0c;\n  --acc-soft: rgba(203, 184, 138, .10);\n  --ok: #5bd08a;\n  --ok-soft: rgba(91, 208, 138, .12);\n  --err: #ff6b6b;\n  --err-soft: rgba(255, 107, 107, .10);\n  --seal: #a44231;\n  --media: #080a0f;\n  --veil: rgba(6, 4, 12, .62);\n  --sh-pop: 0 16px 44px rgba(0, 0, 0, .45);\n  --r: 10px;\n  --sans: \"PingFang SC\", \"HarmonyOS Sans SC\", \"MiSans\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", system-ui, sans-serif;\n  --mono: ui-monospace, \"SF Mono\", Consolas, monospace;\n  --ease: cubic-bezier(.25, .6, .3, 1);\n  color-scheme: dark;\n}\n\n[data-theme='xuanqing'] {\n  --bg: #0a1014; --surface: #121b21; --surface2: #1a262d; --sunken: #0d1519;\n  --ink: #e6eef2; --ink-2: #93a8b3; --ink-3: #778e9a;\n  --line: #1e2c34; --line2: #2b3d47;\n  --acc: #9cc3d5; --acc-ink: #0b1a22; --acc-soft: rgba(156, 195, 213, .10);\n  --ok: #6fd0a0; --ok-soft: rgba(111, 208, 160, .12);\n  --err: #ff7d6b; --err-soft: rgba(255, 125, 107, .10);\n  --seal: #b4553f; --media: #05090c;\n  --veil: rgba(4, 8, 12, .62); --sh-pop: 0 16px 44px rgba(0, 0, 0, .45);\n}\n\n[data-theme='shimo'] {\n  --bg: #121212; --surface: #1b1b1b; --surface2: #242424; --sunken: #161616;\n  --ink: #f2f2f2; --ink-2: #a3a3a3; --ink-3: #8c8c8c;\n  --line: #2e2e2e; --line2: #3d3d3d;\n  --acc: #e8e4dc; --acc-ink: #17170f; --acc-soft: rgba(232, 228, 220, .10);\n  --ok: #7fd6a0; --ok-soft: rgba(127, 214, 160, .12);\n  --err: #ff8080; --err-soft: rgba(255, 128, 128, .10);\n  --seal: #c0392b; --media: #000;\n  --veil: rgba(0, 0, 0, .6); --sh-pop: 0 16px 44px rgba(0, 0, 0, .45);\n}\n\n[data-theme='zhimu'] {\n  --bg: #f4f1ea; --surface: #fff; --surface2: #ece7dc; --sunken: #e7e2d6;\n  --ink: #1a1817; --ink-2: #6b655c; --ink-3: #6c665e;\n  --line: #ddd7cb; --line2: #c9c2b3;\n  --acc: #a44231; --acc-ink: #fff; --acc-soft: rgba(164, 66, 49, .09);\n  --ok: #166534; --ok-soft: rgba(22, 101, 52, .10);\n  --err: #a44231; --err-soft: rgba(164, 66, 49, .10);\n  --seal: #1a1817; --media: #14120f;\n  --veil: rgba(26, 24, 23, .34); --sh-pop: 0 16px 44px rgba(26, 24, 23, .16);\n  color-scheme: light;\n}\n\n[data-theme='daiqing'] {\n  --bg: #eef2f0; --surface: #fff; --surface2: #e2eae6; --sunken: #dde6e1;\n  --ink: #16211e; --ink-2: #5c6b66; --ink-3: #5f6965;\n  --line: #d3ddd8; --line2: #b9c8c1;\n  --acc: #14655a; --acc-ink: #fff; --acc-soft: rgba(20, 101, 90, .09);\n  --ok: #14655a; --ok-soft: rgba(20, 101, 90, .10);\n  --err: #a13c2c; --err-soft: rgba(161, 60, 44, .10);\n  --seal: #a13c2c; --media: #101614;\n  --veil: rgba(16, 22, 20, .34); --sh-pop: 0 16px 44px rgba(16, 22, 20, .16);\n  color-scheme: light;\n}\n\n* { box-sizing: border-box; margin: 0 }\nhtml, body { height: 100% }\nbody {\n  background: var(--bg); color: var(--ink); font-family: var(--sans);\n  font-size: 14.5px; line-height: 1.65; -webkit-font-smoothing: antialiased;\n}\nbutton, input, select, textarea { font: inherit; color: inherit }\nbutton { cursor: pointer; background: none; border: 0; padding: 0 }\na { color: inherit; text-decoration: none }\n:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: 4px }\n::selection { background: var(--acc); color: var(--acc-ink) }\n::-webkit-scrollbar { width: 10px; height: 10px }\n::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box }\n::-webkit-scrollbar-track { background: transparent }\n\n/* ── 骨架 ── */\n.shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden }\n.topbar {\n  display: flex; align-items: center; gap: 14px; padding: 0 22px; height: 58px;\n  flex: none; background: var(--surface); border-bottom: 1px solid var(--line);\n  box-shadow: 0 3px 0 -2px var(--line);\n}\n.brand { display: flex; align-items: center; gap: 10px; min-width: 0 }\n.brand svg { display: block }\n.brand .wm { font-size: 17px; font-weight: 800; letter-spacing: .02em; white-space: nowrap }\n.brand .sub {\n  font-size: 12.5px; color: var(--ink-3); padding-left: 10px; margin-left: 2px;\n  border-left: 1px solid var(--line2); white-space: nowrap;\n}\n.top-right { margin-left: auto; display: flex; align-items: center; gap: 10px }\n.chip {\n  display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 8px;\n  border: 1px solid var(--line2); color: var(--ink-2); font-size: 13px; font-weight: 600;\n  transition: color .15s var(--ease), border-color .15s var(--ease), background .15s var(--ease);\n}\n.chip:hover { color: var(--ink); border-color: var(--acc); background: var(--acc-soft) }\n.chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acc); flex: none }\n\n.body { display: grid; grid-template-columns: minmax(400px, 452px) 1fr; flex: 1; min-height: 0 }\n.pane { overflow-y: auto; padding: 22px 24px 20px; display: flex; flex-direction: column; gap: 16px }\n.pane.left { background: var(--surface); border-right: 1px solid var(--line) }\n.pane.right { background: var(--bg); align-items: center; justify-content: center; padding: 20px; overflow: hidden }\n.stagewrap { display: flex; flex-direction: column; align-items: center; gap: 12px; min-height: 0; flex: 1;\n  justify-content: center; width: 100% }\n.stagecap { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center;\n  flex: none; max-width: 78% }\n.stagecap b { font-size: 15.5px; font-weight: 750; line-height: 1.5 }\n.stagecap span { font-size: 12.5px; color: var(--ink-3); font-family: var(--mono) }\n.stagedrop .dim { opacity: .62; font-size: 12.5px }\n\n/* 右栏在没画面可看时，用来整屏核对口播文案（原来挤在左栏 168px 的框里） */\n.reader { width: min(720px, 100%); max-height: 100%; overflow-y: auto; flex: 0 1 auto;\n  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;\n  padding: 22px 26px 26px; box-shadow: var(--sh-pop) }\n.rd-top { display: flex; align-items: baseline; justify-content: space-between; gap: 14px;\n  border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 14px }\n.rd-kicker { font-size: 12px; font-weight: 800; letter-spacing: .16em; color: var(--acc) }\n.rd-meta { font-size: 12px; color: var(--ink-3); font-family: var(--mono); white-space: nowrap }\n.rd-title { font-size: 25px; font-weight: 850; line-height: 1.5; letter-spacing: .01em }\n.rd-hook { font-size: 14.5px; color: var(--ink-2); margin-top: 8px; padding-left: 11px;\n  border-left: 2px solid var(--acc) }\n.rd-strip { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 9px 12px;\n  border-radius: 8px; background: var(--sunken); border: 1px solid var(--line);\n  font-size: 13px; color: var(--ink-2) }\n.rd-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acc); flex: none;\n  animation: pulse 1.2s ease-in-out infinite }\n@keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }\n.rd-body { margin-top: 16px; font-size: 15.5px; line-height: 2.05; color: var(--ink-2) }\n.rd-body p { margin-bottom: 14px; text-indent: 2em }\n.togo { margin-top: 10px; font-size: 12.5px; color: var(--ink-3) }\n\n/* ── 生成台 ──\n   等待期是这条流程的高光段：一屏只说「此刻在做什么」，四段轨道逐个打勾，\n   口播文案折起来（要看随时展开），不再和状态抢同一屏的字。 */\n.genwrap { display: flex; flex-direction: column; align-items: center; gap: 14px;\n  width: 100%; max-width: 760px; max-height: 100%; overflow-y: auto; padding: 4px 4px 18px }\n.gen { width: 100%; flex: none; background: var(--surface); border: 1px solid var(--line);\n  border-radius: 14px; padding: 20px 26px 18px; box-shadow: var(--sh-pop) }\n.g-top { display: flex; align-items: baseline; justify-content: space-between; gap: 14px }\n.g-kicker { font-size: 12px; font-weight: 800; letter-spacing: .16em; color: var(--ink-3) }\n.g-pct { font-size: 30px; font-weight: 900; color: var(--acc); line-height: 1;\n  font-variant-numeric: tabular-nums }\n.g-act { font-size: 40px; font-weight: 800; line-height: 1.35; margin-top: 8px; color: var(--ink) }\n.g-detail { font-size: 14px; color: var(--ink-2); margin-top: 2px; line-height: 1.7 }\n.g-bar { height: 12px; border-radius: 7px; background: var(--surface2); overflow: hidden;\n  margin-top: 18px }\n.g-bar > i { display: block; height: 100%; border-radius: 7px;\n  background: linear-gradient(90deg, color-mix(in srgb, var(--acc) 45%, var(--surface2)), var(--acc));\n  transition: width .5s var(--ease) }\n.rail { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap }\n.rl { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-3);\n  padding: 5px 11px 5px 6px; border-radius: 999px; border: 1px solid var(--line) }\n.rl b { width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center;\n  font-size: 11px; font-weight: 800; background: var(--surface2); color: var(--ink-3) }\n.rl.on { color: var(--ink); border-color: var(--acc) }\n.rl.on b { background: var(--acc); color: var(--acc-ink) }\n.rl.ok { color: var(--ok) }\n.rl.ok b { background: var(--ok-soft); color: var(--ok) }\n.g-meta { display: flex; gap: 16px; margin-top: 14px; font-size: 13px; color: var(--ink-2);\n  font-family: var(--mono); flex-wrap: wrap }\n.g-keep { font-size: 12.5px; color: var(--ink-3); margin-top: 12px; line-height: 1.7 }\n/* 单子被别的页面占着：这是要人动手的卡点，不能只写 console */\n.g-warn { margin-top: 12px; padding: 11px 13px; border-radius: 9px; font-size: 13px;\n  line-height: 1.75; color: var(--ink); background: var(--sunken);\n  border: 1px solid var(--line2); border-left: 2px solid var(--acc) }\n.stage.mini { height: min(38vh, 380px) }\n.foldbox { width: 100%; flex: none; background: var(--surface); border: 1px solid var(--line);\n  border-radius: 12px; padding: 13px 18px 15px }\n.foldb { all: unset; cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--acc) }\n.foldb:hover { text-decoration: underline }\n\n/* 作品库清单 */\n.liblist { display: flex; flex-direction: column; gap: 2px; max-height: 58vh; overflow-y: auto }\n.librow { display: flex; align-items: center; gap: 12px; padding: 11px 8px;\n  border-bottom: 1px solid var(--line) }\n.librow:hover { background: var(--sunken) }\n.li-t { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px }\n.li-t b { font-size: 14.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }\n.li-t span { font-size: 12.5px; color: var(--ink-3); font-family: var(--mono) }\n.li-a { display: flex; gap: 7px; flex: none }\n\n.footbar {\n  flex: none; display: flex; align-items: center; gap: 16px; padding: 0 22px; height: 40px;\n  background: var(--surface); border-top: 1px solid var(--line);\n  box-shadow: 0 -3px 0 -2px var(--line); font-size: 12.5px; color: var(--ink-3);\n}\n.footbar .sep { width: 1px; height: 13px; background: var(--line2) }\n.footbar .right { margin-left: auto; display: flex; align-items: center; gap: 14px }\n.footbar .right a { color: var(--ink-3); text-decoration: none; font-size: 12.5px;\n  border-bottom: 1px solid transparent }\n.footbar .right a:hover { color: var(--acc) }\n.footbar .right a:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; border-radius: 3px }\n\n/* ── 步骤 ── */\n.lede { font-size: 13.5px; color: var(--ink-2); line-height: 1.7 }\n.steps { display: flex; flex-direction: column; gap: 6px }\n.step { display: flex; gap: 13px; padding: 13px 12px; border-radius: var(--r); border: 1px solid transparent }\n.step.on { background: var(--sunken); border-color: var(--line) }\n.step.dim { opacity: .42 }\n.step .no {\n  width: 26px; height: 26px; flex: none; margin-top: 1px; border-radius: 50%;\n  border: 1.5px solid var(--line2); color: var(--ink-3);\n  font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;\n  background: var(--surface);\n}\n.step.on .no { border-color: var(--acc); color: var(--acc); background: var(--acc-soft) }\n.step.ok .no { border-color: var(--ok); background: var(--ok); color: var(--bg) }\n.step .wrap { min-width: 0; flex: 1 }\n.step .t { font-size: 15.5px; font-weight: 750; letter-spacing: .01em }\n.step .m { font-size: 13px; color: var(--ink-2); margin-top: 3px }\n.step .c { margin-top: 12px }\n\n/* ── 控件 ── */\n.btn {\n  display: block; width: 100%; text-align: center; padding: 13px 22px; border-radius: 9px;\n  background: var(--acc); color: var(--acc-ink); font-size: 16px; font-weight: 750;\n  letter-spacing: .02em; transition: transform .12s var(--ease), filter .15s var(--ease);\n}\n.btn:hover { filter: brightness(1.07) }\n.btn:active { transform: translateY(1px) }\n.btn[disabled] { background: var(--surface2); color: var(--ink-3); cursor: default }\n.btn.ln {\n  background: transparent; color: var(--ink); border: 1px solid var(--line2);\n  font-size: 14px; font-weight: 650; padding: 9px 16px; width: auto;\n}\n.btn.ln:hover { border-color: var(--acc); color: var(--acc) }\n.btn.sm { padding: 8px 13px; font-size: 13px; border-radius: 7px; width: auto }\n/* 正在试听：按钮本身就是那个「还在响」的记号，再点一下就停 */\n.btn.ln.busy { border-color: var(--acc); color: var(--acc); background: var(--acc-soft) }\n\n.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px }\n.field > .lb { font-size: 12.5px; color: var(--ink-3); letter-spacing: .06em }\n.row { display: flex; gap: 8px; align-items: stretch }\n.sel {\n  flex: 1; min-width: 0; padding: 10px 11px; border-radius: 8px; border: 1px solid var(--line2);\n  background: var(--bg); color: var(--ink); font-size: 14.5px;\n}\n.toggles { display: flex; gap: 6px 18px; margin-top: 4px; flex-wrap: wrap }\n.tg { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink) }\n.tg .sw {\n  width: 30px; height: 17px; border-radius: 9px; position: relative; flex: none;\n  background: var(--line2); transition: background .16s var(--ease);\n}\n.tg .sw i {\n  position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%;\n  background: var(--surface); transition: left .16s var(--ease);\n}\n.tg.on .sw { background: var(--acc) }\n.tg.on .sw i { left: 15px; background: var(--acc-ink) }\n\n.drop {\n  display: flex; flex-direction: column; gap: 7px; padding: 14px 15px; border-radius: var(--r);\n  border: 1px solid var(--line); background: var(--sunken); color: var(--ink-2);\n  font-size: 13px; line-height: 1.7; cursor: pointer;\n  transition: border-color .15s var(--ease), background .15s var(--ease);\n}\n.drop:hover, .drop.hot { border-color: var(--acc); background: var(--acc-soft); color: var(--ink) }\n.drop b { font-size: 14.5px; color: var(--ink); font-weight: 700 }\n\n/* ── 内容核对 ── */\n.script {\n  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);\n  padding: 12px 13px; max-height: 168px; overflow-y: auto;\n  font-size: 14px; line-height: 1.85; color: var(--ink-2); white-space: pre-wrap;\n}\n.meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px }\n.meta span {\n  font-size: 12px; color: var(--ink-3); padding: 2px 8px; border-radius: 5px;\n  border: 1px solid var(--line); background: var(--sunken); font-family: var(--mono);\n}\n.fold { font-size: 13px; color: var(--acc); font-weight: 650; margin-top: 8px; display: inline-block }\n\n/* ── 进度 ── */\n.bar { height: 8px; border-radius: 5px; background: var(--surface2); overflow: hidden }\n.bar > i {\n  display: block; height: 100%; border-radius: 5px; background: var(--acc);\n  transition: width .45s var(--ease);\n}\n.pline { display: flex; align-items: baseline; gap: 10px; margin-top: 9px; flex-wrap: wrap }\n.pline .st { font-size: 14px; font-weight: 600; color: var(--ink-2) }\n.pline .pc { margin-left: auto; font-size: 17px; font-weight: 800; color: var(--acc);\n  font-variant-numeric: tabular-nums; white-space: nowrap }\n\n/* ── 预览台 ── */\n.stage { position: relative; height: min(66vh, 700px); max-height: 100%; flex: none; aspect-ratio: 9 / 16; background: var(--media);\n  border-radius: 14px; overflow: hidden; box-shadow: 0 24px 70px rgba(0, 0, 0, .45), 0 0 0 1px var(--line) }\n.stage video, .stage img.poster { width: 100%; height: 100%; object-fit: contain; display: block }\n.stage .cap {\n  position: absolute; left: 0; right: 0; bottom: 0; padding: 34px 16px 12px; text-align: center;\n  font-size: 12.5px; color: #b5afa6; background: linear-gradient(transparent, rgba(0, 0, 0, .6)) }\n.void {\n  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;\n  justify-content: center; gap: 14px; padding: 34px; text-align: center; color: #8a857d;\n}\n.void .big { font-size: 26px; font-weight: 800; color: #efece7; line-height: 1.55; max-width: 88% }\n.void .sm { font-size: 13.5px; line-height: 1.9 }\n.void .pct { font-size: 54px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; line-height: 1 }\n.bars3 { display: flex; gap: 5px; align-items: flex-end; height: 26px }\n.bars3 i { width: 4px; background: var(--acc); border-radius: 2px; animation: eq 1.1s ease-in-out infinite }\n.bars3 i:nth-child(2) { animation-delay: .18s } .bars3 i:nth-child(3) { animation-delay: .36s }\n.bars3 i:nth-child(4) { animation-delay: .54s } .bars3 i:nth-child(5) { animation-delay: .72s }\n@keyframes eq { 0%, 100% { height: 6px; opacity: .5 } 50% { height: 26px; opacity: 1 } }\n\n/* 空态：整块右栏即拖放区 */\n.stagedrop {\n  position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center;\n  justify-content: center; gap: 12px; padding: 30px; text-align: center; cursor: pointer;\n  border: 1.5px dashed rgba(255, 255, 255, .16); border-radius: 14px;\n  color: #8a857d; background: var(--media);\n  transition: border-color .15s var(--ease), background .15s var(--ease);\n}\n.stagedrop:hover, .stagedrop.hot { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 7%, var(--media)) }\n.stagedrop .t { font-size: 19px; font-weight: 800; color: #efece7 }\n.stagedrop .s { font-size: 13.5px; line-height: 1.9 }\n\n.err { font-size: 13.5px; color: var(--err); line-height: 1.7; padding: 10px 12px;\n  border-radius: 8px; background: var(--err-soft); border: 1px solid var(--err-soft) }\n.note { font-size: 12.5px; color: var(--ink-3); line-height: 1.8 }\n.seal {\n  display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px;\n  border: 1.5px solid var(--seal); color: var(--seal); border-radius: 4px; font-size: 15px;\n  font-weight: 900; letter-spacing: .04em; transform: rotate(-4deg); line-height: 1.1; text-align: center;\n}\n\n/* 顶栏里的配色选择器：长得像一枚小章，不像表单 */\n.sel-theme { -webkit-appearance: none; appearance: none; background: transparent;\n  border: 1px solid var(--line2); color: var(--ink-2); font-size: 13px; font-weight: 600;\n  padding: 6px 10px; border-radius: 8px; cursor: pointer }\n.sel-theme:hover { color: var(--acc); border-color: var(--acc) }\n.sel-theme option { background: var(--surface); color: var(--ink) }\n.selw { position: relative; display: inline-flex; align-items: center }\n.selw .car { position: absolute; right: 9px; font-size: 9px; color: var(--ink-3); pointer-events: none }\n\n.script { margin-top: 8px }\n\n/* 就地反馈：底部一条，不打断操作 */\n.toast {\n  position: fixed; left: 50%; bottom: 56px; transform: translateX(-50%); z-index: 60;\n  background: var(--surface2); color: var(--ink); border: 1px solid var(--line2);\n  font-size: 13.5px; padding: 10px 18px; border-radius: 8px; box-shadow: var(--sh-pop);\n}\n\n/* 晕动/前庭敏感的访客：进度脉冲与均衡器条不要自己动（与工作台 index.html 同一条） */\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after { animation: none !important; transition: none !important }\n}\n\n@media (max-width: 900px) {\n  .body { grid-template-columns: 1fr; overflow-y: auto }\n  .pane.right { min-height: 62vh }\n  .stage { height: 62vh }\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./src/tool/ui.css"],"names":[],"mappings":"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","sourcesContent":["/* GetCut 成片台 · 设计令牌与版式\n   主题名与工作台 index.html 共用：ziyu 石墨金 / xuanqing 玄青 / shimo 石墨 /\n   zhimu 纸墨 / daiqing 黛青。改一处两页都要改（两页打包链路不同，令牌各自内联一份）。 */\n\n:root {\n  --bg: #0e0e11;\n  --surface: #17171b;\n  --surface2: #1c1c21;\n  --sunken: #121216;\n  --ink: #f4f4f6;\n  --ink-2: #b6b6c0;\n  --ink-3: #85858d;\n  --line: #232329;\n  --line2: #2e2e36;\n  --acc: #d8b36a;\n  --acc-ink: #1c1508;\n  --acc-soft: rgba(216, 179, 106, .12);\n  --btn-bg: #f4f4f6;\n  --btn-ink: #101014;\n  --ok: #5fa97a;\n  --ok-soft: rgba(95, 169, 122, .12);\n  --err: #ff6b6b;\n  --err-soft: rgba(255, 107, 107, .10);\n  --seal: #a44231;\n  --media: #0a0a0d;\n  --veil: rgba(8, 8, 10, .62);\n  --sh-pop: 0 16px 44px rgba(0, 0, 0, .45);\n  --r: 10px;\n  --sans: \"PingFang SC\", \"HarmonyOS Sans SC\", \"MiSans\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", system-ui, sans-serif;\n  --mono: ui-monospace, \"SF Mono\", Consolas, monospace;\n  --ease: cubic-bezier(.25, .6, .3, 1);\n  color-scheme: dark;\n}\n\n[data-theme='xuanqing'] {\n  --bg: #0a1014; --surface: #121b21; --surface2: #1a262d; --sunken: #0d1519;\n  --ink: #e6eef2; --ink-2: #93a8b3; --ink-3: #778e9a;\n  --line: #1e2c34; --line2: #2b3d47;\n  --acc: #9cc3d5; --acc-ink: #0b1a22; --acc-soft: rgba(156, 195, 213, .10);\n  --btn-bg: #9cc3d5; --btn-ink: #0b1a22;\n  --ok: #6fd0a0; --ok-soft: rgba(111, 208, 160, .12);\n  --err: #ff7d6b; --err-soft: rgba(255, 125, 107, .10);\n  --seal: #b4553f; --media: #05090c;\n  --veil: rgba(4, 8, 12, .62); --sh-pop: 0 16px 44px rgba(0, 0, 0, .45);\n}\n\n[data-theme='shimo'] {\n  --bg: #121212; --surface: #1b1b1b; --surface2: #242424; --sunken: #161616;\n  --ink: #f2f2f2; --ink-2: #a3a3a3; --ink-3: #8c8c8c;\n  --line: #2e2e2e; --line2: #3d3d3d;\n  --acc: #e8e4dc; --acc-ink: #17170f; --acc-soft: rgba(232, 228, 220, .10);\n  --btn-bg: #e8e4dc; --btn-ink: #17170f;\n  --ok: #7fd6a0; --ok-soft: rgba(127, 214, 160, .12);\n  --err: #ff8080; --err-soft: rgba(255, 128, 128, .10);\n  --seal: #c0392b; --media: #000;\n  --veil: rgba(0, 0, 0, .6); --sh-pop: 0 16px 44px rgba(0, 0, 0, .45);\n}\n\n[data-theme='zhimu'] {\n  --bg: #f4f1ea; --surface: #fff; --surface2: #ece7dc; --sunken: #e7e2d6;\n  --ink: #1a1817; --ink-2: #6b655c; --ink-3: #6c665e;\n  --line: #ddd7cb; --line2: #c9c2b3;\n  --acc: #a44231; --acc-ink: #fff; --acc-soft: rgba(164, 66, 49, .09);\n  --btn-bg: #a44231; --btn-ink: #fff;\n  --ok: #166534; --ok-soft: rgba(22, 101, 52, .10);\n  --err: #a44231; --err-soft: rgba(164, 66, 49, .10);\n  --seal: #1a1817; --media: #14120f;\n  --veil: rgba(26, 24, 23, .34); --sh-pop: 0 16px 44px rgba(26, 24, 23, .16);\n  color-scheme: light;\n}\n\n[data-theme='daiqing'] {\n  --bg: #eef2f0; --surface: #fff; --surface2: #e2eae6; --sunken: #dde6e1;\n  --ink: #16211e; --ink-2: #5c6b66; --ink-3: #5f6965;\n  --line: #d3ddd8; --line2: #b9c8c1;\n  --acc: #14655a; --acc-ink: #fff; --acc-soft: rgba(20, 101, 90, .09);\n  --btn-bg: #14655a; --btn-ink: #fff;\n  --ok: #14655a; --ok-soft: rgba(20, 101, 90, .10);\n  --err: #a13c2c; --err-soft: rgba(161, 60, 44, .10);\n  --seal: #a13c2c; --media: #101614;\n  --veil: rgba(16, 22, 20, .34); --sh-pop: 0 16px 44px rgba(16, 22, 20, .16);\n  color-scheme: light;\n}\n\n* { box-sizing: border-box; margin: 0 }\nhtml, body { height: 100% }\nbody {\n  background: var(--bg); color: var(--ink); font-family: var(--sans);\n  font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased;\n}\nbutton, input, select, textarea { font: inherit; color: inherit }\nbutton { cursor: pointer; background: none; border: 0; padding: 0 }\na { color: inherit; text-decoration: none }\n:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: 4px }\n::selection { background: var(--acc); color: var(--acc-ink) }\n::-webkit-scrollbar { width: 10px; height: 10px }\n::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box }\n::-webkit-scrollbar-track { background: transparent }\n\n/* ── 骨架 ── */\n.shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden }\n.topbar {\n  display: flex; align-items: center; gap: 14px; padding: 0 22px; height: 58px;\n  flex: none; background: var(--surface); border-bottom: 1px solid var(--line);\n}\n.brand { display: flex; align-items: center; gap: 10px; min-width: 0 }\n.brand svg { display: block }\n.brand .wm { font-size: 17px; font-weight: 800; letter-spacing: .02em; white-space: nowrap }\n.brand .sub {\n  font-size: 12.5px; color: var(--ink-3); padding-left: 10px; margin-left: 2px;\n  border-left: 1px solid var(--line2); white-space: nowrap;\n}\n.top-right { margin-left: auto; display: flex; align-items: center; gap: 10px }\n.chip {\n  display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 8px;\n  border: 1px solid var(--line2); color: var(--ink-2); font-size: 13px; font-weight: 600;\n  transition: color .15s var(--ease), border-color .15s var(--ease), background .15s var(--ease);\n}\n.chip:hover { color: var(--ink); border-color: var(--acc); background: var(--acc-soft) }\n.chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acc); flex: none }\n\n.body { display: grid; grid-template-columns: minmax(400px, 452px) 1fr; flex: 1; min-height: 0 }\n.pane { overflow-y: auto; padding: 22px 24px 20px; display: flex; flex-direction: column; gap: 16px }\n.pane.left { background: var(--surface); border-right: 1px solid var(--line) }\n.pane.right { background: var(--bg); align-items: center; justify-content: center; padding: 20px; overflow: hidden }\n.stagewrap { display: flex; flex-direction: column; align-items: center; gap: 12px; min-height: 0; flex: 1;\n  justify-content: center; width: 100% }\n.stagecap { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center;\n  flex: none; max-width: 78% }\n.stagecap b { font-size: 15.5px; font-weight: 750; line-height: 1.5 }\n.stagecap span { font-size: 12.5px; color: var(--ink-3); font-family: var(--mono) }\n.stagedrop .dim { opacity: .62; font-size: 12.5px }\n\n/* 右栏在没画面可看时，用来整屏核对口播文案（原来挤在左栏 168px 的框里） */\n.reader { width: min(720px, 100%); max-height: 100%; overflow-y: auto; flex: 0 1 auto;\n  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;\n  padding: 22px 26px 26px; box-shadow: var(--sh-pop) }\n.rd-top { display: flex; align-items: baseline; justify-content: space-between; gap: 14px;\n  border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 14px }\n.rd-kicker { font-size: 12px; font-weight: 800; letter-spacing: .16em; color: var(--acc) }\n.rd-meta { font-size: 12px; color: var(--ink-3); font-family: var(--mono); white-space: nowrap }\n.rd-title { font-size: 25px; font-weight: 850; line-height: 1.5; letter-spacing: .01em }\n.rd-hook { font-size: 14.5px; color: var(--ink-2); margin-top: 8px; padding-left: 11px;\n  border-left: 2px solid var(--acc) }\n.rd-strip { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 9px 12px;\n  border-radius: 8px; background: var(--sunken); border: 1px solid var(--line);\n  font-size: 13px; color: var(--ink-2) }\n.rd-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acc); flex: none;\n  animation: pulse 1.2s ease-in-out infinite }\n@keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }\n.rd-body { margin-top: 16px; font-size: 15.5px; line-height: 2.05; color: var(--ink-2) }\n.rd-body p { margin-bottom: 14px; text-indent: 2em }\n.togo { margin-top: 10px; font-size: 12.5px; color: var(--ink-3) }\n\n/* ── 生成台 ──\n   等待期是这条流程的高光段：一屏只说「此刻在做什么」，四段轨道逐个打勾，\n   口播文案折起来（要看随时展开），不再和状态抢同一屏的字。 */\n.genwrap { display: flex; flex-direction: column; align-items: center; gap: 14px;\n  width: 100%; max-width: 760px; max-height: 100%; overflow-y: auto; padding: 4px 4px 18px }\n.gen { width: 100%; flex: none; background: var(--surface); border: 1px solid var(--line);\n  border-radius: 14px; padding: 20px 26px 18px; box-shadow: var(--sh-pop) }\n.g-top { display: flex; align-items: baseline; justify-content: space-between; gap: 14px }\n.g-kicker { font-size: 12px; font-weight: 800; letter-spacing: .16em; color: var(--ink-3) }\n.g-pct { font-size: 30px; font-weight: 900; color: var(--acc); line-height: 1;\n  font-variant-numeric: tabular-nums }\n.g-act { font-size: 40px; font-weight: 800; line-height: 1.35; margin-top: 8px; color: var(--ink) }\n.g-detail { font-size: 14px; color: var(--ink-2); margin-top: 2px; line-height: 1.7 }\n.g-bar { height: 12px; border-radius: 7px; background: var(--surface2); overflow: hidden;\n  margin-top: 18px }\n.g-bar > i { display: block; height: 100%; border-radius: 7px;\n  background: linear-gradient(90deg, color-mix(in srgb, var(--acc) 45%, var(--surface2)), var(--acc));\n  transition: width .5s var(--ease) }\n.rail { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap }\n.rl { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-3);\n  padding: 5px 11px 5px 6px; border-radius: 999px; border: 1px solid var(--line) }\n.rl b { width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center;\n  font-size: 11px; font-weight: 800; background: var(--surface2); color: var(--ink-3) }\n.rl.on { color: var(--ink); border-color: var(--acc) }\n.rl.on b { background: var(--acc); color: var(--acc-ink) }\n.rl.ok { color: var(--acc) }\n.rl.ok b { background: transparent; color: var(--acc); border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent) }\n.g-meta { display: flex; gap: 16px; margin-top: 14px; font-size: 13px; color: var(--ink-2);\n  font-family: var(--mono); flex-wrap: wrap }\n.g-keep { font-size: 12.5px; color: var(--ink-3); margin-top: 12px; line-height: 1.7 }\n/* 单子被别的页面占着：这是要人动手的卡点，不能只写 console */\n.g-warn { margin-top: 12px; padding: 11px 13px; border-radius: 9px; font-size: 13px;\n  line-height: 1.75; color: var(--ink); background: var(--sunken);\n  border: 1px solid var(--line2); border-left: 2px solid var(--acc) }\n.stage.mini { height: min(38vh, 380px) }\n.foldbox { width: 100%; flex: none; background: var(--surface); border: 1px solid var(--line);\n  border-radius: 12px; padding: 13px 18px 15px }\n.foldb { all: unset; cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--acc) }\n.foldb:hover { text-decoration: underline }\n\n/* 作品库清单 */\n.liblist { display: flex; flex-direction: column; gap: 2px; max-height: 58vh; overflow-y: auto }\n.librow { display: flex; align-items: center; gap: 12px; padding: 11px 8px;\n  border-bottom: 1px solid var(--line) }\n.librow:hover { background: var(--sunken) }\n.li-t { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px }\n.li-t b { font-size: 14.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }\n.li-t span { font-size: 12.5px; color: var(--ink-3); font-family: var(--mono) }\n.li-a { display: flex; gap: 7px; flex: none }\n\n.footbar {\n  flex: none; display: flex; align-items: center; gap: 16px; padding: 0 22px; height: 40px;\n  background: var(--bg); border-top: 1px solid var(--line);\n  font-size: 12.5px; color: var(--ink-3);\n}\n.footbar .sep { width: 1px; height: 13px; background: var(--line2) }\n.footbar .right { margin-left: auto; display: flex; align-items: center; gap: 14px }\n.footbar .right a { color: var(--ink-3); text-decoration: none; font-size: 12.5px;\n  border-bottom: 1px solid transparent }\n.footbar .right a:hover { color: var(--acc) }\n.footbar .right a:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; border-radius: 3px }\n\n/* ── 步骤 ── */\n.lede { font-size: 14.5px; color: var(--ink-2); line-height: 1.7 }\n.steps { display: flex; flex-direction: column; gap: 6px }\n.step { display: flex; gap: 13px; padding: 13px 12px; border-radius: var(--r); border: 1px solid transparent }\n.step.on { background: var(--sunken); border-color: var(--line) }\n.step.dim { opacity: .42 }\n.step .no {\n  width: 26px; height: 26px; flex: none; margin-top: 1px; border-radius: 8px;\n  border: 1.5px solid var(--line2); color: var(--ink-3);\n  font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;\n  background: var(--surface); font-family: var(--mono);\n}\n.step.on .no { border-color: var(--acc); color: var(--acc); background: var(--acc-soft) }\n.step.ok .no { border-color: color-mix(in srgb, var(--acc) 45%, transparent); background: transparent; color: var(--acc) }\n.step .wrap { min-width: 0; flex: 1 }\n.step .t { font-size: 16px; font-weight: 750; letter-spacing: .01em }\n.step .m { font-size: 13.5px; color: var(--ink-2); margin-top: 3px }\n.step .c { margin-top: 12px }\n\n/* ── 控件 ──\n   主按钮=D 方向的白底黑字：唯一的大色块，动作一眼可辨；金色退到细处点缀 */\n.btn {\n  display: block; width: 100%; text-align: center; padding: 14px 22px; border-radius: 11px;\n  background: var(--btn-bg); color: var(--btn-ink); font-size: 16px; font-weight: 800;\n  letter-spacing: .02em; transition: transform .12s var(--ease), filter .15s var(--ease);\n  box-shadow: 0 12px 32px rgba(0, 0, 0, .35);\n}\n.btn:hover { filter: brightness(1.05) }\n.btn:active { transform: translateY(1px) }\n.btn[disabled] { background: var(--surface2); color: var(--ink-3); cursor: default; box-shadow: none }\n.btn.ln {\n  background: transparent; color: var(--ink); border: 1px solid var(--line2);\n  font-size: 14px; font-weight: 650; padding: 9px 16px; width: auto;\n}\n.btn.ln:hover { border-color: var(--acc); color: var(--acc) }\n.btn.sm { padding: 8px 13px; font-size: 13px; border-radius: 7px; width: auto }\n/* 正在试听：按钮本身就是那个「还在响」的记号，再点一下就停 */\n.btn.ln.busy { border-color: var(--acc); color: var(--acc); background: var(--acc-soft) }\n\n.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px }\n.field > .lb { font-size: 12.5px; color: var(--ink-3); letter-spacing: .06em }\n.row { display: flex; gap: 8px; align-items: stretch }\n.sel {\n  flex: 1; min-width: 0; padding: 10px 11px; border-radius: 8px; border: 1px solid var(--line2);\n  background: var(--bg); color: var(--ink); font-size: 14.5px;\n}\n.toggles { display: flex; gap: 6px 18px; margin-top: 4px; flex-wrap: wrap }\n.tg { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink) }\n.tg .sw {\n  width: 30px; height: 17px; border-radius: 9px; position: relative; flex: none;\n  background: var(--line2); transition: background .16s var(--ease);\n}\n.tg .sw i {\n  position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%;\n  background: var(--surface); transition: left .16s var(--ease);\n}\n.tg.on .sw { background: var(--acc) }\n.tg.on .sw i { left: 15px; background: var(--acc-ink) }\n\n.drop {\n  display: flex; flex-direction: column; gap: 7px; padding: 14px 15px; border-radius: var(--r);\n  border: 1px solid var(--line); background: var(--sunken); color: var(--ink-2);\n  font-size: 13px; line-height: 1.7; cursor: pointer;\n  transition: border-color .15s var(--ease), background .15s var(--ease);\n}\n.drop:hover, .drop.hot { border-color: var(--acc); background: var(--acc-soft); color: var(--ink) }\n.drop b { font-size: 14.5px; color: var(--ink); font-weight: 700 }\n\n/* ── 内容核对 ── */\n.script {\n  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);\n  padding: 12px 13px; max-height: 168px; overflow-y: auto;\n  font-size: 14px; line-height: 1.85; color: var(--ink-2); white-space: pre-wrap;\n}\n.meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px }\n.meta span {\n  font-size: 12px; color: var(--ink-3); padding: 2px 8px; border-radius: 5px;\n  border: 1px solid var(--line); background: var(--sunken); font-family: var(--mono);\n}\n.fold { font-size: 13px; color: var(--acc); font-weight: 650; margin-top: 8px; display: inline-block }\n\n/* ── 进度 ── */\n.bar { height: 8px; border-radius: 5px; background: var(--surface2); overflow: hidden }\n.bar > i {\n  display: block; height: 100%; border-radius: 5px; background: var(--acc);\n  transition: width .45s var(--ease);\n}\n.pline { display: flex; align-items: baseline; gap: 10px; margin-top: 9px; flex-wrap: wrap }\n.pline .st { font-size: 14px; font-weight: 600; color: var(--ink-2) }\n.pline .pc { margin-left: auto; font-size: 17px; font-weight: 800; color: var(--acc);\n  font-variant-numeric: tabular-nums; white-space: nowrap }\n\n/* ── 预览台 ── */\n.stage { position: relative; height: min(66vh, 700px); max-height: 100%; flex: none; aspect-ratio: 9 / 16; background: var(--media);\n  border-radius: 14px; overflow: hidden; box-shadow: 0 24px 70px rgba(0, 0, 0, .45), 0 0 0 1px var(--line) }\n.stage video, .stage img.poster { width: 100%; height: 100%; object-fit: contain; display: block }\n.stage .cap {\n  position: absolute; left: 0; right: 0; bottom: 0; padding: 34px 16px 12px; text-align: center;\n  font-size: 12.5px; color: #b5afa6; background: linear-gradient(transparent, rgba(0, 0, 0, .6)) }\n.void {\n  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;\n  justify-content: center; gap: 14px; padding: 34px; text-align: center; color: #8a857d;\n}\n.void .big { font-size: 26px; font-weight: 800; color: #efece7; line-height: 1.55; max-width: 88% }\n.void .sm { font-size: 13.5px; line-height: 1.9 }\n.void .pct { font-size: 54px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; line-height: 1 }\n.bars3 { display: flex; gap: 5px; align-items: flex-end; height: 26px }\n.bars3 i { width: 4px; background: var(--acc); border-radius: 2px; animation: eq 1.1s ease-in-out infinite }\n.bars3 i:nth-child(2) { animation-delay: .18s } .bars3 i:nth-child(3) { animation-delay: .36s }\n.bars3 i:nth-child(4) { animation-delay: .54s } .bars3 i:nth-child(5) { animation-delay: .72s }\n@keyframes eq { 0%, 100% { height: 6px; opacity: .5 } 50% { height: 26px; opacity: 1 } }\n\n/* 空态：整块右栏即拖放区 */\n.stagedrop {\n  position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center;\n  justify-content: center; gap: 12px; padding: 30px; text-align: center; cursor: pointer;\n  border: 1.5px dashed rgba(255, 255, 255, .16); border-radius: 14px;\n  color: #8a857d; background: var(--media);\n  transition: border-color .15s var(--ease), background .15s var(--ease);\n}\n.stagedrop:hover, .stagedrop.hot { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 7%, var(--media)) }\n.stagedrop .t { font-size: 19px; font-weight: 800; color: #efece7 }\n.stagedrop .s { font-size: 13.5px; line-height: 1.9 }\n\n.err { font-size: 13.5px; color: var(--err); line-height: 1.7; padding: 10px 12px;\n  border-radius: 8px; background: var(--err-soft); border: 1px solid var(--err-soft) }\n.note { font-size: 12.5px; color: var(--ink-3); line-height: 1.8 }\n.seal {\n  display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px;\n  border: 1.5px solid var(--seal); color: var(--seal); border-radius: 4px; font-size: 15px;\n  font-weight: 900; letter-spacing: .04em; transform: rotate(-4deg); line-height: 1.1; text-align: center;\n}\n\n/* 顶栏里的配色选择器：长得像一枚小章，不像表单 */\n.sel-theme { -webkit-appearance: none; appearance: none; background: transparent;\n  border: 1px solid var(--line2); color: var(--ink-2); font-size: 13px; font-weight: 600;\n  padding: 6px 10px; border-radius: 8px; cursor: pointer }\n.sel-theme:hover { color: var(--acc); border-color: var(--acc) }\n.sel-theme option { background: var(--surface); color: var(--ink) }\n.selw { position: relative; display: inline-flex; align-items: center }\n.selw .car { position: absolute; right: 9px; font-size: 9px; color: var(--ink-3); pointer-events: none }\n\n.script { margin-top: 8px }\n\n/* 就地反馈：底部一条，不打断操作 */\n.toast {\n  position: fixed; left: 50%; bottom: 56px; transform: translateX(-50%); z-index: 60;\n  background: var(--surface2); color: var(--ink); border: 1px solid var(--line2);\n  font-size: 13.5px; padding: 10px 18px; border-radius: 8px; box-shadow: var(--sh-pop);\n}\n\n/* 晕动/前庭敏感的访客：进度脉冲与均衡器条不要自己动（与工作台 index.html 同一条） */\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after { animation: none !important; transition: none !important }\n}\n\n@media (max-width: 900px) {\n  .body { grid-template-columns: 1fr; overflow-y: auto }\n  .pane.right { min-height: 62vh }\n  .stage { height: 62vh }\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 

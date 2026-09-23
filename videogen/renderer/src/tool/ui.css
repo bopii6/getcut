@@ -1,27 +1,29 @@
 /* GetCut 成片台 · 设计令牌与版式
-   主题名与工作台 index.html 共用：ziyu 紫玉描金 / xuanqing 玄青 / shimo 石墨 /
+   主题名与工作台 index.html 共用：ziyu 石墨金 / xuanqing 玄青 / shimo 石墨 /
    zhimu 纸墨 / daiqing 黛青。改一处两页都要改（两页打包链路不同，令牌各自内联一份）。 */
 
 :root {
-  --bg: #0d0b14;
-  --surface: #171422;
-  --surface2: #211d31;
-  --sunken: #131019;
-  --ink: #efecf6;
-  --ink-2: #a79fbd;
-  --ink-3: #8c85a3;
-  --line: #2e2942;
-  --line2: #3b3555;
-  --acc: #cbb88a;
-  --acc-ink: #241d0c;
-  --acc-soft: rgba(203, 184, 138, .10);
-  --ok: #5bd08a;
-  --ok-soft: rgba(91, 208, 138, .12);
+  --bg: #0e0e11;
+  --surface: #17171b;
+  --surface2: #1c1c21;
+  --sunken: #121216;
+  --ink: #f4f4f6;
+  --ink-2: #b6b6c0;
+  --ink-3: #85858d;
+  --line: #232329;
+  --line2: #2e2e36;
+  --acc: #d8b36a;
+  --acc-ink: #1c1508;
+  --acc-soft: rgba(216, 179, 106, .12);
+  --btn-bg: #f4f4f6;
+  --btn-ink: #101014;
+  --ok: #5fa97a;
+  --ok-soft: rgba(95, 169, 122, .12);
   --err: #ff6b6b;
   --err-soft: rgba(255, 107, 107, .10);
   --seal: #a44231;
-  --media: #080a0f;
-  --veil: rgba(6, 4, 12, .62);
+  --media: #0a0a0d;
+  --veil: rgba(8, 8, 10, .62);
   --sh-pop: 0 16px 44px rgba(0, 0, 0, .45);
   --r: 10px;
   --sans: "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
@@ -35,6 +37,7 @@
   --ink: #e6eef2; --ink-2: #93a8b3; --ink-3: #778e9a;
   --line: #1e2c34; --line2: #2b3d47;
   --acc: #9cc3d5; --acc-ink: #0b1a22; --acc-soft: rgba(156, 195, 213, .10);
+  --btn-bg: #9cc3d5; --btn-ink: #0b1a22;
   --ok: #6fd0a0; --ok-soft: rgba(111, 208, 160, .12);
   --err: #ff7d6b; --err-soft: rgba(255, 125, 107, .10);
   --seal: #b4553f; --media: #05090c;
@@ -46,6 +49,7 @@
   --ink: #f2f2f2; --ink-2: #a3a3a3; --ink-3: #8c8c8c;
   --line: #2e2e2e; --line2: #3d3d3d;
   --acc: #e8e4dc; --acc-ink: #17170f; --acc-soft: rgba(232, 228, 220, .10);
+  --btn-bg: #e8e4dc; --btn-ink: #17170f;
   --ok: #7fd6a0; --ok-soft: rgba(127, 214, 160, .12);
   --err: #ff8080; --err-soft: rgba(255, 128, 128, .10);
   --seal: #c0392b; --media: #000;
@@ -57,6 +61,7 @@
   --ink: #1a1817; --ink-2: #6b655c; --ink-3: #6c665e;
   --line: #ddd7cb; --line2: #c9c2b3;
   --acc: #a44231; --acc-ink: #fff; --acc-soft: rgba(164, 66, 49, .09);
+  --btn-bg: #a44231; --btn-ink: #fff;
   --ok: #166534; --ok-soft: rgba(22, 101, 52, .10);
   --err: #a44231; --err-soft: rgba(164, 66, 49, .10);
   --seal: #1a1817; --media: #14120f;
@@ -69,6 +74,7 @@
   --ink: #16211e; --ink-2: #5c6b66; --ink-3: #5f6965;
   --line: #d3ddd8; --line2: #b9c8c1;
   --acc: #14655a; --acc-ink: #fff; --acc-soft: rgba(20, 101, 90, .09);
+  --btn-bg: #14655a; --btn-ink: #fff;
   --ok: #14655a; --ok-soft: rgba(20, 101, 90, .10);
   --err: #a13c2c; --err-soft: rgba(161, 60, 44, .10);
   --seal: #a13c2c; --media: #101614;
@@ -80,7 +86,7 @@
 html, body { height: 100% }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--sans);
-  font-size: 14.5px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+  font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased;
 }
 button, input, select, textarea { font: inherit; color: inherit }
 button { cursor: pointer; background: none; border: 0; padding: 0 }
@@ -96,7 +102,6 @@ a { color: inherit; text-decoration: none }
 .topbar {
   display: flex; align-items: center; gap: 14px; padding: 0 22px; height: 58px;
   flex: none; background: var(--surface); border-bottom: 1px solid var(--line);
-  box-shadow: 0 3px 0 -2px var(--line);
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0 }
 .brand svg { display: block }
@@ -172,8 +177,8 @@ a { color: inherit; text-decoration: none }
   font-size: 11px; font-weight: 800; background: var(--surface2); color: var(--ink-3) }
 .rl.on { color: var(--ink); border-color: var(--acc) }
 .rl.on b { background: var(--acc); color: var(--acc-ink) }
-.rl.ok { color: var(--ok) }
-.rl.ok b { background: var(--ok-soft); color: var(--ok) }
+.rl.ok { color: var(--acc) }
+.rl.ok b { background: transparent; color: var(--acc); border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent) }
 .g-meta { display: flex; gap: 16px; margin-top: 14px; font-size: 13px; color: var(--ink-2);
   font-family: var(--mono); flex-wrap: wrap }
 .g-keep { font-size: 12.5px; color: var(--ink-3); margin-top: 12px; line-height: 1.7 }
@@ -199,8 +204,8 @@ a { color: inherit; text-decoration: none }
 
 .footbar {
   flex: none; display: flex; align-items: center; gap: 16px; padding: 0 22px; height: 40px;
-  background: var(--surface); border-top: 1px solid var(--line);
-  box-shadow: 0 -3px 0 -2px var(--line); font-size: 12.5px; color: var(--ink-3);
+  background: var(--bg); border-top: 1px solid var(--line);
+  font-size: 12.5px; color: var(--ink-3);
 }
 .footbar .sep { width: 1px; height: 13px; background: var(--line2) }
 .footbar .right { margin-left: auto; display: flex; align-items: center; gap: 14px }
@@ -210,33 +215,35 @@ a { color: inherit; text-decoration: none }
 .footbar .right a:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; border-radius: 3px }
 
 /* ── 步骤 ── */
-.lede { font-size: 13.5px; color: var(--ink-2); line-height: 1.7 }
+.lede { font-size: 14.5px; color: var(--ink-2); line-height: 1.7 }
 .steps { display: flex; flex-direction: column; gap: 6px }
 .step { display: flex; gap: 13px; padding: 13px 12px; border-radius: var(--r); border: 1px solid transparent }
 .step.on { background: var(--sunken); border-color: var(--line) }
 .step.dim { opacity: .42 }
 .step .no {
-  width: 26px; height: 26px; flex: none; margin-top: 1px; border-radius: 50%;
+  width: 26px; height: 26px; flex: none; margin-top: 1px; border-radius: 8px;
   border: 1.5px solid var(--line2); color: var(--ink-3);
   font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;
-  background: var(--surface);
+  background: var(--surface); font-family: var(--mono);
 }
 .step.on .no { border-color: var(--acc); color: var(--acc); background: var(--acc-soft) }
-.step.ok .no { border-color: var(--ok); background: var(--ok); color: var(--bg) }
+.step.ok .no { border-color: color-mix(in srgb, var(--acc) 45%, transparent); background: transparent; color: var(--acc) }
 .step .wrap { min-width: 0; flex: 1 }
-.step .t { font-size: 15.5px; font-weight: 750; letter-spacing: .01em }
-.step .m { font-size: 13px; color: var(--ink-2); margin-top: 3px }
+.step .t { font-size: 16px; font-weight: 750; letter-spacing: .01em }
+.step .m { font-size: 13.5px; color: var(--ink-2); margin-top: 3px }
 .step .c { margin-top: 12px }
 
-/* ── 控件 ── */
+/* ── 控件 ──
+   主按钮=D 方向的白底黑字：唯一的大色块，动作一眼可辨；金色退到细处点缀 */
 .btn {
-  display: block; width: 100%; text-align: center; padding: 13px 22px; border-radius: 9px;
-  background: var(--acc); color: var(--acc-ink); font-size: 16px; font-weight: 750;
+  display: block; width: 100%; text-align: center; padding: 14px 22px; border-radius: 11px;
+  background: var(--btn-bg); color: var(--btn-ink); font-size: 16px; font-weight: 800;
   letter-spacing: .02em; transition: transform .12s var(--ease), filter .15s var(--ease);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
 }
-.btn:hover { filter: brightness(1.07) }
+.btn:hover { filter: brightness(1.05) }
 .btn:active { transform: translateY(1px) }
-.btn[disabled] { background: var(--surface2); color: var(--ink-3); cursor: default }
+.btn[disabled] { background: var(--surface2); color: var(--ink-3); cursor: default; box-shadow: none }
 .btn.ln {
   background: transparent; color: var(--ink); border: 1px solid var(--line2);
   font-size: 14px; font-weight: 650; padding: 9px 16px; width: auto;
