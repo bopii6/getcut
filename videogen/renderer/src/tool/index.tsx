@@ -66,12 +66,12 @@ const THEMES = [
 // 缩略图与样片是 tools/make_template_previews.py 产的，模板改了要重跑那条命令。
 interface Tpl {id: string; name: string}
 const TPL_HINT: Record<string, string> = {
-  editorial: '纸卡 + 标题带 + 信息卡，信息量最足',
+  editorial: '暖灰纸卡 + 印章朱红，信息量最足',
   news: '深蓝正红 + 底部信息条，适合时政、突发',
-  data: '浅色仪表盘：左边数据右边素材',
+  data: '浅色仪表盘 + 方格纸：左边数据右边素材',
   poster: '黑底荧光黄、一句一屏，冲击力优先',
-  bleed: '素材铺满全屏，沉浸感强',
-  zhigu: '三段式：顶带标题 / 中间舞台动作 / 底带字幕',
+  bleed: '素材铺满全屏，全片只用黑白，纪录片感',
+  zhigu: '三段式 + 紫玉描金：顶带标题 / 中间舞台动作 / 底带字幕',
   macro: '深色章节式：大数字与图形块',
 };
 const TPL_IMG = (id: string) => `/templates/tpl-${id}.png`;

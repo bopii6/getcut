@@ -121,7 +121,7 @@ const SERIF = "'SSHSerif','Noto Serif SC','Source Han Serif SC','Songti SC',seri
 const LIGHT = "'SSHLight','Noto Sans SC','Source Han Sans CN',sans-serif";
 const MONO = "'Consolas','DejaVu Sans Mono','Liberation Mono',monospace";
 
-/** 杂志编辑：现有基线，暖灰纸卡 + 锈红 */
+/** 杂志编辑：现有基线，暖灰纸卡 + 印章朱红（与 news 的冷正红分开族） */
 const editorial: Omit<Skin, 'geo'> = {
   name: '杂志编辑版',
   layout: 'editorial',
@@ -144,8 +144,8 @@ const editorial: Omit<Skin, 'geo'> = {
   white: '#f5f3f0',
   gray: '#999590',
   grayDim: '#76706a',
-  accent: '#a44231',
-  accentSoft: '#c14f35',
+  accent: '#b3311f',
+  accentSoft: '#d2452c',
   onAccent: '#f7f2ec',
   teal: '#7fd4c9',
   cardWhite: '#eee9e2',
@@ -253,14 +253,16 @@ const minimal: Omit<Skin, 'geo'> = {
   motionFrames: 9,
 };
 
-/** 全出血沉浸：素材铺满，只有一层渐变压字 */
+/** 全出血沉浸：素材铺满，只有一层渐变压字。
+ *  7 套里唯一「零彩色」的一套——强调色也收成银白，配细黑体 + 暗角 + 直角，
+ *  刻意与同走黑底的 poster（荧光黄特粗）、macro（描金章节）对立。 */
 const bleed: Omit<Skin, 'geo'> = {
   name: '全出血沉浸版',
   layout: 'bleed',
   bgTop: '#000000',
   bgBottom: '#000000',
   decor: 'none',
-  vignette: false,
+  vignette: true,
   paperTop: '#111111',
   paper: '#0d0d0d',
   paperBottom: '#080808',
@@ -268,7 +270,7 @@ const bleed: Omit<Skin, 'geo'> = {
   paperShadow: 'none',
   panel: '#0d0d0d',
   panelRadius: 0,
-  cardRadius: 12,
+  cardRadius: 0,
   ink: '#ffffff',
   onMedia: '#ffffff',
   mutedInk: 'rgba(255,255,255,0.76)',
@@ -276,24 +278,24 @@ const bleed: Omit<Skin, 'geo'> = {
   white: '#ffffff',
   gray: 'rgba(255,255,255,0.62)',
   grayDim: 'rgba(255,255,255,0.42)',
-  accent: '#f0b429',
-  accentSoft: '#ffd166',
-  onAccent: '#1a1206',
-  teal: '#7fd4c9',
+  accent: '#ededea',
+  accentSoft: '#ffffff',
+  onAccent: '#0b0b0b',
+  teal: '#cfcfcb',
   cardWhite: 'rgba(10,10,10,0.82)',
   cardInk: '#f7f4ef',
   cardMuted: '#c9c3bc',
   cardLine: 'rgba(255,255,255,0.28)',
-  chipBg: 'rgba(190,130,20,0.85)',
-  timelineBg: 'rgba(20,16,8,0.9)',
-  slotBg: 'rgba(12,10,6,0.88)',
+  chipBg: 'rgba(238,238,235,0.9)',
+  timelineBg: 'rgba(18,18,18,0.9)',
+  slotBg: 'rgba(12,12,12,0.88)',
   scrim:
     'linear-gradient(180deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.10) 28%, rgba(0,0,0,0.16) 56%, rgba(0,0,0,0.88) 100%)',
   calloutScrim:
     'linear-gradient(to left, rgba(0,0,0,0.9) 55%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)',
-  highlightBg: '#f0b429',
-  highlightInk: '#1a1206',
-  font: SANS,
+  highlightBg: '#ffffff',
+  highlightInk: '#0b0b0b',
+  font: LIGHT,
   fontMono: MONO,
   motionFrames: 9,
 };
@@ -424,21 +426,21 @@ const zhigu: Omit<Skin, 'geo'> = {
   white: '#ffffff',
   gray: '#aab2bd',
   grayDim: '#6d7684',
-  accent: '#ffd93d',
-  accentSoft: '#ffe680',
-  onAccent: '#171a20',
-  teal: '#34d399',
+  accent: '#6e5fa8',
+  accentSoft: '#8c7dc4',
+  onAccent: '#ffffff',
+  teal: '#c9a96a',
   cardWhite: '#ffffff',
   cardInk: '#171a20',
   cardMuted: '#5c6470',
   cardLine: '#e7e5dd',
-  chipBg: 'rgba(255,217,61,0.92)',
+  chipBg: 'rgba(110,95,168,0.92)',
   timelineBg: '#171a20',
   slotBg: '#f0efe9',
   scrim: 'linear-gradient(180deg, rgba(6,8,12,0.55), rgba(6,8,12,0.15) 40%, rgba(6,8,12,0.75))',
   calloutScrim: 'linear-gradient(180deg, rgba(6,8,12,0.7), rgba(6,8,12,0.2))',
-  highlightBg: '#ffd93d',
-  highlightInk: '#171a20',
+  highlightBg: '#6e5fa8',
+  highlightInk: '#ffffff',
   font: SANS,
   fontMono: MONO,
   motionFrames: 5,
@@ -486,7 +488,7 @@ const poster: Omit<Skin, 'geo'> = {
   highlightInk: '#101014',
   font: SANS,
   fontMono: MONO,
-  motionFrames: 5,
+  motionFrames: 4,
 };
 
 /** 数据面板：浅色仪表盘 + 左数据右素材的双栏，全是深色/细节版式里唯一的亮底 */
@@ -495,7 +497,7 @@ const data: Omit<Skin, 'geo'> = {
   layout: 'data',
   bgTop: '#eceff4',
   bgBottom: '#e4e8ef',
-  decor: 'none',
+  decor: 'grid',
   vignette: false,
   pageBg: '#e9edf3',
   barBg: 'rgba(20,24,31,0.90)',
@@ -503,7 +505,7 @@ const data: Omit<Skin, 'geo'> = {
   paperTop: '#ffffff',
   paper: '#f7f8fa',
   paperBottom: '#eef1f5',
-  paperTexture: 'none',
+  paperTexture: 'grid',
   paperShadow: '0 8px 26px rgba(24,32,48,0.10)',
   panel: '#ffffff',
   panelRadius: 20,

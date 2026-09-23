@@ -7090,7 +7090,7 @@ var experimental_Video = (/* unused pure expression or super */ null && (Video))
 const ShotVideo = ({ src, style, muted = true }) => /* @__PURE__ */ (0,jsx_runtime.jsx)(Video, { src, muted: muted || void 0, style });
 
 ;// ./src/layouts.json
-const layouts_namespaceObject = /*#__PURE__*/JSON.parse('{"_comment":"版式几何：每套模板自己的尺寸参数。TS 渲染器（skin.ts）与 Python 剪映草稿（draft_build.py）读同一份，避免两边各写一套漂移。改这里 = 画面与草稿一起改。layout 字段决定用哪套骨架代码（editorial/bleed/lower/poster/data/zhigu）。","editorial":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"bottom":532,"size":56,"side":143,"maxWidth":793},"footer":{"top":1600,"size":27,"width":1010}},"finance":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"minimal":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"retro":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"bleed":{"layout":"bleed","headline":{"top":150,"size":76,"lineGap":12},"subtitle":{"bottom":330,"size":62,"side":80},"sectionLabel":{"left":64,"top":84,"size":28},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1690,"size":24,"width":980}},"portrait":{"layout":"bleed","headline":{"top":150,"size":76,"lineGap":12},"subtitle":{"bottom":330,"size":62,"side":80},"sectionLabel":{"left":64,"top":84,"size":28},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1690,"size":24,"width":980}},"news":{"layout":"lower","headline":{"top":1160,"size":68,"size2":60,"padLeft":64,"padTop":26,"padBottom":30,"borderTop":6},"subtitle":{"bottom":800,"size":58,"side":70},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1600,"size":27,"width":1010},"contentCenterY":560},"zhigu":{"layout":"zhigu","headline":{"top":90,"size":92,"lineGap":18},"subtitle":{"bottom":96,"size":66,"side":70},"footer":{"top":1640,"size":26,"width":1010}},"poster":{"layout":"poster","headline":{"top":190,"size":104,"lineGap":18},"subtitle":{"bottom":250,"size":74,"side":90},"bigText":{"size":168,"subSize":40,"side":90},"card":{"side":80,"topPct":34,"size":72,"titleSize":32,"subSize":36},"footer":{"top":1710,"size":26,"width":1010}},"data":{"layout":"data","headline":{"top":150,"size":74,"lineGap":12},"subtitle":{"bottom":300,"size":60,"side":80},"panel":{"left":60,"top":470,"width":960,"height":800,"radius":20},"mediaWin":{"left":490,"top":56,"width":430,"height":620},"bigText":{"size":128,"subSize":36,"side":100},"card":{"side":80,"topPct":36,"size":62,"titleSize":28,"subSize":32},"footer":{"top":1660,"size":26,"width":1010}}}');
+const layouts_namespaceObject = /*#__PURE__*/JSON.parse('{"_comment":"版式几何：每套模板自己的尺寸参数。TS 渲染器（skin.ts）与 Python 剪映草稿（draft_build.py）读同一份，避免两边各写一套漂移。改这里 = 画面与草稿一起改。layout 字段决定用哪套骨架代码（editorial/bleed/lower/poster/data/zhigu）。","editorial":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"bottom":532,"size":56,"side":143,"maxWidth":793},"footer":{"top":1600,"size":27,"width":1010}},"finance":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"minimal":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"retro":{"layout":"editorial","paper":{"left":91,"top":124,"width":892,"height":1432,"radius":26},"panel":{"left":115,"top":596,"width":849,"height":844},"mediaWin":{"left":36,"top":71,"width":778,"height":440},"headline":{"top":210,"size":88,"lineGap":14,"highlightHeight":104,"budget":840},"subtitle":{"top":1282,"size":70,"side":60},"footer":{"top":1600,"size":27,"width":1010}},"bleed":{"layout":"bleed","headline":{"top":150,"size":76,"lineGap":12},"subtitle":{"bottom":330,"size":62,"side":80},"sectionLabel":{"left":64,"top":84,"size":28},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1690,"size":24,"width":980}},"portrait":{"layout":"bleed","headline":{"top":150,"size":76,"lineGap":12},"subtitle":{"bottom":330,"size":62,"side":80},"sectionLabel":{"left":64,"top":84,"size":28},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1690,"size":24,"width":980}},"news":{"layout":"lower","headline":{"top":1160,"size":68,"size2":60,"padLeft":64,"padTop":26,"padBottom":30,"borderTop":6},"subtitle":{"bottom":800,"size":58,"side":70},"bigText":{"size":108,"subSize":34,"side":110},"card":{"side":110,"topPct":40,"size":54,"titleSize":26,"subSize":30},"footer":{"top":1600,"size":27,"width":1010},"contentCenterY":560},"zhigu":{"layout":"zhigu","headline":{"top":90,"size":92,"lineGap":18},"subtitle":{"bottom":96,"size":66,"side":70},"footer":{"top":1640,"size":26,"width":1010}},"poster":{"layout":"poster","headline":{"top":190,"size":104,"lineGap":18},"subtitle":{"bottom":250,"size":74,"side":90},"bigText":{"size":168,"subSize":40,"side":90},"card":{"side":80,"topPct":34,"size":72,"titleSize":32,"subSize":36},"footer":{"top":1710,"size":26,"width":1010}},"data":{"layout":"data","headline":{"top":150,"size":74,"lineGap":12},"subtitle":{"bottom":300,"size":60,"side":80},"panel":{"left":60,"top":470,"width":960,"height":800,"radius":20},"mediaWin":{"left":490,"top":56,"width":430,"height":620},"bigText":{"size":128,"subSize":36,"side":100},"card":{"side":80,"topPct":36,"size":62,"titleSize":28,"subSize":32},"footer":{"top":1660,"size":26,"width":1010}},"macro":{"_comment":"宏观棱镜：满屏图形叙述，没有纸卡也没有内嵌媒体窗。缺了这一条时 skin.ts 的 buildGeo() 与 draft_build.py 的 layout_of() 会双双回落成 editorial，剪映草稿就会照着 editorial 的形状在满屏画面上挖洞。不写 panel/mediaWin = 素材铺满整帧、不做推镜。","layout":"macro","headline":{"top":150,"size":84,"lineGap":14},"subtitle":{"bottom":120,"size":62,"side":90},"footer":{"top":1700,"size":24,"width":980}}}');
 ;// ./src/skin.ts
 
 const SANS = "'SSH','Source Han Sans CN','Microsoft YaHei',sans-serif";
@@ -7119,8 +7119,8 @@ const editorial = {
   white: "#f5f3f0",
   gray: "#999590",
   grayDim: "#76706a",
-  accent: "#a44231",
-  accentSoft: "#c14f35",
+  accent: "#b3311f",
+  accentSoft: "#d2452c",
   onAccent: "#f7f2ec",
   teal: "#7fd4c9",
   cardWhite: "#eee9e2",
@@ -7226,7 +7226,7 @@ const bleed = {
   bgTop: "#000000",
   bgBottom: "#000000",
   decor: "none",
-  vignette: false,
+  vignette: true,
   paperTop: "#111111",
   paper: "#0d0d0d",
   paperBottom: "#080808",
@@ -7234,7 +7234,7 @@ const bleed = {
   paperShadow: "none",
   panel: "#0d0d0d",
   panelRadius: 0,
-  cardRadius: 12,
+  cardRadius: 0,
   ink: "#ffffff",
   onMedia: "#ffffff",
   mutedInk: "rgba(255,255,255,0.76)",
@@ -7242,22 +7242,22 @@ const bleed = {
   white: "#ffffff",
   gray: "rgba(255,255,255,0.62)",
   grayDim: "rgba(255,255,255,0.42)",
-  accent: "#f0b429",
-  accentSoft: "#ffd166",
-  onAccent: "#1a1206",
-  teal: "#7fd4c9",
+  accent: "#ededea",
+  accentSoft: "#ffffff",
+  onAccent: "#0b0b0b",
+  teal: "#cfcfcb",
   cardWhite: "rgba(10,10,10,0.82)",
   cardInk: "#f7f4ef",
   cardMuted: "#c9c3bc",
   cardLine: "rgba(255,255,255,0.28)",
-  chipBg: "rgba(190,130,20,0.85)",
-  timelineBg: "rgba(20,16,8,0.9)",
-  slotBg: "rgba(12,10,6,0.88)",
+  chipBg: "rgba(238,238,235,0.9)",
+  timelineBg: "rgba(18,18,18,0.9)",
+  slotBg: "rgba(12,12,12,0.88)",
   scrim: "linear-gradient(180deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.10) 28%, rgba(0,0,0,0.16) 56%, rgba(0,0,0,0.88) 100%)",
   calloutScrim: "linear-gradient(to left, rgba(0,0,0,0.9) 55%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%)",
-  highlightBg: "#f0b429",
-  highlightInk: "#1a1206",
-  font: SANS,
+  highlightBg: "#ffffff",
+  highlightInk: "#0b0b0b",
+  font: LIGHT,
   fontMono: MONO,
   motionFrames: 9
 };
@@ -7377,21 +7377,21 @@ const zhigu = {
   white: "#ffffff",
   gray: "#aab2bd",
   grayDim: "#6d7684",
-  accent: "#ffd93d",
-  accentSoft: "#ffe680",
-  onAccent: "#171a20",
-  teal: "#34d399",
+  accent: "#6e5fa8",
+  accentSoft: "#8c7dc4",
+  onAccent: "#ffffff",
+  teal: "#c9a96a",
   cardWhite: "#ffffff",
   cardInk: "#171a20",
   cardMuted: "#5c6470",
   cardLine: "#e7e5dd",
-  chipBg: "rgba(255,217,61,0.92)",
+  chipBg: "rgba(110,95,168,0.92)",
   timelineBg: "#171a20",
   slotBg: "#f0efe9",
   scrim: "linear-gradient(180deg, rgba(6,8,12,0.55), rgba(6,8,12,0.15) 40%, rgba(6,8,12,0.75))",
   calloutScrim: "linear-gradient(180deg, rgba(6,8,12,0.7), rgba(6,8,12,0.2))",
-  highlightBg: "#ffd93d",
-  highlightInk: "#171a20",
+  highlightBg: "#6e5fa8",
+  highlightInk: "#ffffff",
   font: SANS,
   fontMono: MONO,
   motionFrames: 5
@@ -7437,14 +7437,14 @@ const poster = {
   highlightInk: "#101014",
   font: SANS,
   fontMono: MONO,
-  motionFrames: 5
+  motionFrames: 4
 };
 const data = {
   name: "\u6570\u636E\u9762\u677F\u7248",
   layout: "data",
   bgTop: "#eceff4",
   bgBottom: "#e4e8ef",
-  decor: "none",
+  decor: "grid",
   vignette: false,
   pageBg: "#e9edf3",
   barBg: "rgba(20,24,31,0.90)",
@@ -7452,7 +7452,7 @@ const data = {
   paperTop: "#ffffff",
   paper: "#f7f8fa",
   paperBottom: "#eef1f5",
-  paperTexture: "none",
+  paperTexture: "grid",
   paperShadow: "0 8px 26px rgba(24,32,48,0.10)",
   panel: "#ffffff",
   panelRadius: 20,
@@ -12735,12 +12735,12 @@ const THEMES = [
   { id: "daiqing", name: "\u9EDB\u9752" }
 ];
 const TPL_HINT = {
-  editorial: "\u7EB8\u5361 + \u6807\u9898\u5E26 + \u4FE1\u606F\u5361\uFF0C\u4FE1\u606F\u91CF\u6700\u8DB3",
+  editorial: "\u6696\u7070\u7EB8\u5361 + \u5370\u7AE0\u6731\u7EA2\uFF0C\u4FE1\u606F\u91CF\u6700\u8DB3",
   news: "\u6DF1\u84DD\u6B63\u7EA2 + \u5E95\u90E8\u4FE1\u606F\u6761\uFF0C\u9002\u5408\u65F6\u653F\u3001\u7A81\u53D1",
-  data: "\u6D45\u8272\u4EEA\u8868\u76D8\uFF1A\u5DE6\u8FB9\u6570\u636E\u53F3\u8FB9\u7D20\u6750",
+  data: "\u6D45\u8272\u4EEA\u8868\u76D8 + \u65B9\u683C\u7EB8\uFF1A\u5DE6\u8FB9\u6570\u636E\u53F3\u8FB9\u7D20\u6750",
   poster: "\u9ED1\u5E95\u8367\u5149\u9EC4\u3001\u4E00\u53E5\u4E00\u5C4F\uFF0C\u51B2\u51FB\u529B\u4F18\u5148",
-  bleed: "\u7D20\u6750\u94FA\u6EE1\u5168\u5C4F\uFF0C\u6C89\u6D78\u611F\u5F3A",
-  zhigu: "\u4E09\u6BB5\u5F0F\uFF1A\u9876\u5E26\u6807\u9898 / \u4E2D\u95F4\u821E\u53F0\u52A8\u4F5C / \u5E95\u5E26\u5B57\u5E55",
+  bleed: "\u7D20\u6750\u94FA\u6EE1\u5168\u5C4F\uFF0C\u5168\u7247\u53EA\u7528\u9ED1\u767D\uFF0C\u7EAA\u5F55\u7247\u611F",
+  zhigu: "\u4E09\u6BB5\u5F0F + \u7D2B\u7389\u63CF\u91D1\uFF1A\u9876\u5E26\u6807\u9898 / \u4E2D\u95F4\u821E\u53F0\u52A8\u4F5C / \u5E95\u5E26\u5B57\u5E55",
   macro: "\u6DF1\u8272\u7AE0\u8282\u5F0F\uFF1A\u5927\u6570\u5B57\u4E0E\u56FE\u5F62\u5757"
 };
 const TPL_IMG = (id) => `/templates/tpl-${id}.png`;

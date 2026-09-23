@@ -352,5 +352,24 @@
    "size": 26,
    "width": 1010
   }
+ },
+ "macro": {
+  "_comment": "宏观棱镜：满屏图形叙述，没有纸卡也没有内嵌媒体窗。缺了这一条时 skin.ts 的 buildGeo() 与 draft_build.py 的 layout_of() 会双双回落成 editorial，剪映草稿就会照着 editorial 的形状在满屏画面上挖洞。不写 panel/mediaWin = 素材铺满整帧、不做推镜。",
+  "layout": "macro",
+  "headline": {
+   "top": 150,
+   "size": 84,
+   "lineGap": 14
+  },
+  "subtitle": {
+   "bottom": 120,
+   "size": 62,
+   "side": 90
+  },
+  "footer": {
+   "top": 1700,
+   "size": 24,
+   "width": 980
+  }
  }
 }

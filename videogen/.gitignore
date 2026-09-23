@@ -52,3 +52,4 @@ server_static/poc_webm_bak/
 server_static/poc/public/
 server_static/poc/*.map
 *.log
+renderer/.still-dist/
