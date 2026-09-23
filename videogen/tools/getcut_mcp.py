@@ -7,8 +7,11 @@ Agent 全流程（不再开浏览器、不再碰网站 UI）：
 
 配置（优先级：环境变量 > videogen/.env）：
     GETCUT_BASE   工作台地址，默认 https://gc.hellojoy.top
-    GETCUT_TOKEN  访问令牌（服务器 .env 的 VIDEOGEN_TOKEN，主钥匙）
-    GETCUT_EMAIL  以哪个账号行事（品牌套件/「我的声音」跟着这个账号走）
+    GETCUT_TOKEN  **这个账号自己的**设备令牌（不是服务器 .env 里那把站点主钥匙：
+                  主钥匙能领走并看见全站任何客户的素材与成片，不该出现在客户机器上）。
+                  要一张：在登录了的浏览器里 POST /api/agent/login（邮箱+密码），
+                  或让站长在「登录设备」里发一张；它随时可以在页面上单独踢掉。
+    GETCUT_EMAIL  以哪个账号行事（只有主钥匙能代填，普通账号令牌忽略它）
 
 宿主接入（ZCode 等）：项目根 .mcp.json
     {"mcpServers": {"getcut": {"command": "python",
@@ -61,7 +64,11 @@ mcp = MCPServer(
 
 def _session() -> requests.Session:
     s = requests.Session()
+    # 两张头都带：x-auth-token 是主钥匙通道（站长自己用），x-agent-token 是
+    # **账号自己的设备令牌** —— 客户机器上只该填后者：在「登录设备」里看得见、
+    # 能单独踢掉，泄露了也只波及那一个账号，而不是整站所有人的片子。
     s.headers["x-auth-token"] = TOKEN
+    s.headers["x-agent-token"] = TOKEN
     return s
 
 
@@ -78,23 +85,31 @@ def _api(method: str, path: str, **kw) -> dict:
 
 @mcp.tool()
 def feed_bundle(zip_path: str) -> dict:
-    """上传素材包 zip 并认领建项目。返回 project_id / bundle 名 / 网页短链。
+    """领一张收件地址 → 把素材包 PUT 上去 → 认领成自己的项目。
 
     zip 是 getcut-bundle 技能产出的素材包（content.json 在根目录），
-    路径是本机绝对路径。认领后项目挂好包，随时可以 submit_render。
+    路径是本机绝对路径。凭据只有配置里那一张**账号设备令牌**（GETCUT_TOKEN），
+    不再要站点主钥匙。认领后项目挂好包，随时可以 submit_render；
+    返回的 intake_url 就是 /i/<码>，同一账号在手机打开它也能接着往下走。
     """
     p = Path(zip_path)
     if not p.is_file():
         raise RuntimeError(f"找不到文件：{zip_path}")
+    tk = _api("POST", "/api/intake/ticket",
+              json={"email": EMAIL} if EMAIL else {})
     with open(p, "rb") as f:
-        r = _session().post(BASE + "/api/intake",
-                            files={"file": (p.name, f)}, timeout=600)
-    d = _unwrap(r, "/api/intake")
-    code = d["code"]
-    claim = _api("POST", f"/api/intake/{code}/claim",
+        r = _session().put(tk["put_url"], data=f, params={"name": p.name}, timeout=600)
+    try:
+        sent = r.json()
+    except ValueError:
+        raise RuntimeError(f"上传收件地址 HTTP {r.status_code}（非 JSON 响应）") from None
+    if r.status_code >= 400:
+        raise RuntimeError(f"上传失败 HTTP {r.status_code}: {sent.get('error') or sent}")
+    claim = _api("POST", f"/api/intake/{tk['code']}/claim",
                  json={"email": EMAIL} if EMAIL else {})
     return {"project_id": claim["project_id"], "bundle": claim["name"],
-            "title": claim["title"], "intake_url": d.get("url")}
+            "title": claim["title"], "intake_url": tk.get("url"),
+            "expires_at": tk.get("expiresAt")}
 
 
 @mcp.tool()

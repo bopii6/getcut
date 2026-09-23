@@ -9,8 +9,9 @@ from __future__ import annotations
 import io
 import json
 import math
-import shutil
 import re
+import secrets
+import shutil
 import stat
 import threading
 import time
@@ -31,12 +32,25 @@ router = APIRouter()
 MAX_UPLOAD_BYTES = 512 * 1024 * 1024          # 单个 zip 上限 512MB
 MAX_EXTRACT_BYTES = 2 * 1024 * 1024 * 1024    # 解压后总上限 2GB（防 zip 炸弹）
 INTAKE_CODE_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
+# 收件口（一次性票 → PUT）的四道判据。系统盘只剩十几 G，而账号/密钥/备份/日志
+# 都在同一块盘上 —— 上限与水位都是照着"绝不能把盘写满"定的，不是照着方便定的。
+MAX_INTAKE_BYTES = 200 * 1024 * 1024          # 一张票最多收 200MB（素材包实测 30~80MB）
+_INTAKE_TICKETS_PER_HOUR = 10                 # 同一地址每小时最多领 10 张票
+_INTAKE_OPEN_TICKETS = 5                      # 一个账号手上最多攒 5 张没用掉的票
+_INTAKE_WATERLINE_BYTES = 2 * 1024 ** 3       # 收件区堆到 2GB 就先拒收
 def _effective_email(request: Request, body_email=None) -> str | None:
-    """会话优先；访问令牌是主钥匙，可代 body.email 指定的账号行事（脚本/MCP 通道）。
+    """会话优先；其次认「账号自己的设备令牌」；主钥匙可代 body.email 行事。
 
-    令牌持有者本就 adminish（可见一切），这里只是把品牌套件/声音克隆/档位
-    这些「跟账号走」的逻辑对脚本侧放开——没有令牌的光 body.email 一律无效。"""
+    为什么要单独认设备令牌：客户端工具（技能 / MCP）以前得拿**站点主钥匙**，
+    而那张钥匙能领走并看见全站任何客户的素材与成片 —— 把它发给客户等于把
+    整站交出去。现在客户机器上只需要一张**自己账号**的令牌：在「登录设备」里
+    看得见、能单独踢掉，泄露了也只波及它自己那一个账号。
+    令牌持有者本就 adminish（可见一切）这条不变：body.email 仍然只对主钥匙有效。"""
     email = ctx._session_email(request)
+    if not email:
+        tok = (request.headers.get("x-agent-token") or "").strip()
+        if tok:
+            email = auth.read_session(tok)
     if not email and body_email and ctx._token_ok(request):
         return str(body_email).strip().lower()
     return email
@@ -153,19 +167,88 @@ def _intake_sidecar(code: str) -> dict:
         except Exception:  # noqa: BLE001 - 登记坏了按没有处理
             return {}
     return {}
-@router.post("/api/intake")
-async def intake_create(file: UploadFile, request: Request):
+def _intake_sidecar_save(code: str, data: dict) -> None:
+    """写收件登记（几 KB 的 json）：领票时就写，包还没到也有一条记录。"""
+    ctx.INTAKES.mkdir(parents=True, exist_ok=True)
+    _, side = _intake_paths(code)
+    side.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+
+def _intake_stored_bytes() -> int:
+    if not ctx.INTAKES.is_dir():
+        return 0
+    return sum(f.stat().st_size for f in ctx.INTAKES.glob("*.zip") if f.is_file())
+
+
+async def _raw_body(request: Request, cap: int) -> bytes | None:
+    """收整个请求体，超过 cap 当场丢手返回 None（先收完再判大小等于没限）。"""
+    buf = bytearray()
+    async for chunk in request.stream():
+        buf += chunk
+        if len(buf) > cap:
+            return None
+    return bytes(buf)
+@router.post("/api/intake/ticket")
+def intake_ticket(request: Request, body: dict = None):
+    """领一张收件票：客户在自己登录的网页上点一下，拿到一条一次性的上传地址。
+
+    为什么不再像以前那样"谁都能 POST /api/intake"：那条口匿名、单包 512MB、
+    同一 IP 一小时 10 次 —— 一小时能塞进 5GB，而线上那块 40G 系统盘只剩十几 G，
+    约 3 小时就能把整台机器写崩（账号、密钥、备份、日志都在同一块盘上）。
+    更要紧的是：客户端工具以前要拿**站点主钥匙**才能上传，那张钥匙能领走并看见
+    全站任何客户的素材与成片 —— 正好是"一条片子只有本人能经手"这条红线不能容忍的。
+    现在票一次一用、认领人写死在票上，客户机器上不需要任何账号或密钥。
+    """
+    email = _effective_email(request, (body or {}).get("email"))
+    if not email and not ctx._open_mode():
+        return JSONResponse({"error": "先登录，再领收件地址"}, status_code=401)
     ip = ctx._client_ip(request)
     now = time.time()
     hits = [t for t in _INTAKE_RATE.get(ip, []) if now - t < 3600]
-    if len(hits) >= 10:
-        return JSONResponse({"error": "这个地址上传太频繁了，一小时后再试"}, status_code=429)
+    if len(hits) >= _INTAKE_TICKETS_PER_HOUR:
+        return JSONResponse({"error": "领收件地址太频繁了，一小时后再试"}, status_code=429)
+    ctx.INTAKES.mkdir(parents=True, exist_ok=True)
+    ctx._sweep_intakes()
+    # 过期清扫只在"有人来"时才动手，所以没人上传时包会一直躺着 —— 水位这道判
+    # 是另一只保险：收件区堆到线上限就先拒，不给它写满整块盘的机会
+    if _intake_stored_bytes() > _INTAKE_WATERLINE_BYTES:
+        return JSONResponse({"error": "收件区暂时满了，请稍后再试"}, status_code=503)
+    open_n = sum(1 for f in ctx.INTAKES.glob("*.json")
+                 if _intake_sidecar(f.stem).get("owner") == email
+                 and not (ctx.INTAKES / f"{f.stem}.zip").is_file())
+    if open_n >= _INTAKE_OPEN_TICKETS:
+        return JSONResponse({"error": f"你还有 {open_n} 个收件地址没用掉，先拿去上传"},
+                            status_code=429)
+    code = uuid.uuid4().hex[:12]
+    secret = uuid.uuid4().hex + uuid.uuid4().hex[:8]
+    _intake_sidecar_save(code, {"owner": email, "secret": secret, "created": now})
     hits.append(now)
     _INTAKE_RATE[ip] = hits
-    try:
-        data = await _read_capped(file, MAX_UPLOAD_BYTES)
-    except ValueError:
-        return JSONResponse({"error": "zip 超过 512MB 上限"}, status_code=413)
+    base = str(request.base_url).rstrip("/")
+    return {"code": code, "url": f"{base}/i/{code}",
+            "expiresAt": now + ctx.INTAKE_TTL_SECONDS,
+            "maxBytes": MAX_INTAKE_BYTES,
+            "put_url": f"{base}/api/intake/{code}?t={secret}"}
+@router.put("/api/intake/{code}")
+async def intake_put(code: str, request: Request):
+    """凭票上传：一条 PUT。票本身就是一次性凭证，不要账号、不要任何钥匙。"""
+    if not INTAKE_CODE_RE.match(code):
+        return JSONResponse({"error": "链接无效"}, status_code=404)
+    zf_path, _ = _intake_paths(code)
+    side = _intake_sidecar(code)
+    got = (request.query_params.get("t") or "")[:64]
+    # 不区分"没有这张票"与"票不对"：这条地址会被抄来抄去，别替人探路
+    if not side.get("secret") or not secrets.compare_digest(str(side["secret"]), got):
+        return JSONResponse({"error": "收件地址无效或已过期"}, status_code=403)
+    if zf_path.is_file():
+        return JSONResponse({"error": "这个收件地址已经收过包了"}, status_code=409)
+    ctx._sweep_intakes()
+    if _intake_stored_bytes() > _INTAKE_WATERLINE_BYTES:
+        return JSONResponse({"error": "收件区暂时满了，请稍后再试"}, status_code=503)
+    data = await _raw_body(request, MAX_INTAKE_BYTES)
+    if data is None:
+        return JSONResponse({"error": f"素材包超过 {MAX_INTAKE_BYTES // 1048576}MB 上限"},
+                            status_code=413)
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             if "content.json" not in zf.namelist():
@@ -173,15 +256,14 @@ async def intake_create(file: UploadFile, request: Request):
     except zipfile.BadZipFile:
         return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
     ctx.INTAKES.mkdir(parents=True, exist_ok=True)
-    ctx._sweep_intakes()
-    code = uuid.uuid4().hex[:12]
-    zf_path, side = _intake_paths(code)
     zf_path.write_bytes(data)
-    side.write_text(json.dumps({"file": _fix_mojibake_name(file.filename or "bundle.zip"),
-                                "created": now, "ip": ip}, ensure_ascii=False),
-                    encoding="utf-8")
-    base = config.PUBLIC_BASE_URL or f"{request.url.scheme}://{request.url.netloc}"
-    return {"code": code, "url": f"{base}/i/{code}"}
+    # 24 小时从"包真到了"这一刻算。文件名走 query（HTTP 头只许 ASCII，而客户
+    # 就是把选题写进 zip 名的人）；名字只用于导入后给项目起名
+    side["created"] = time.time()
+    side["file"] = _fix_mojibake_name(request.query_params.get("name") or "bundle.zip")[:160]
+    _intake_sidecar_save(code, side)
+    base = str(request.base_url).rstrip("/")
+    return {"ok": True, "bytes": len(data), "url": f"{base}/i/{code}"}
 @router.get("/api/intake/{code}/meta")
 def intake_meta(code: str, request: Request):
     """落地页概要：**只说"有个包在等你"，不说包里写了什么**。
@@ -224,17 +306,26 @@ def intake_claim(code: str, request: Request, body: dict = None):
     """
     if not INTAKE_CODE_RE.match(code):
         return JSONResponse({"error": "链接无效"}, status_code=404)
-    zf_path, side_path = _intake_paths(code)
-    if not zf_path.is_file():
-        side = _intake_sidecar(code)
-        if side.get("project_id"):
-            return JSONResponse({"error": "这个素材包已被导入过了", "projectId": side["project_id"]},
-                                status_code=409)
-        return JSONResponse({"error": "链接已失效（素材包 24 小时内有效）"}, status_code=404)
     email = _effective_email(request, (body or {}).get("email"))
     if not email and not ctx._open_mode():
         return JSONResponse({"error": "先登录或注册，再导入素材包"}, status_code=401)
     side = _intake_sidecar(code)
+    owner = side.get("owner")
+    admin = ctx._is_adminish(request) or ctx._open_mode()
+    if owner and email != owner and not admin:
+        # 票是谁领的，包就只能谁导：把收件地址转给别人，别人也导不走这条稿子
+        return JSONResponse({"error": "这条收件地址是给别的账号领的，换本人账号再来"},
+                            status_code=403)
+    zf_path, side_path = _intake_paths(code)
+    if not zf_path.is_file():
+        if side.get("project_id"):
+            # 已导入：项目号只给正主，别人只知道"这条用过了"
+            if admin or email == owner:
+                return JSONResponse({"error": "这个素材包已被导入过了",
+                                     "projectId": side["project_id"]}, status_code=409)
+            return JSONResponse({"error": "这个素材包已经被导入过了"}, status_code=409)
+        return JSONResponse({"error": "包还没到，或这条地址已过期（24 小时内有效）"},
+                            status_code=404)
     orig_name = Path(_fix_mojibake_name(side.get("file") or "bundle.zip")).stem or "bundle"
     name = re.sub(r'[\\/:*?"<>|]', "", orig_name).strip() or "bundle"
     dest = ctx.WORKSPACES / name

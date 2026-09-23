@@ -66,7 +66,7 @@ _API_HOME = {
     "media": frozenset(('agent_media', 'media', 'video')),
     "pages": frozenset(('_BROWSER_EXPORT_WIDGET', '_inject_browser_export', 'api_version', 'healthz', 'index', 'intake_page', 'studio')),
     "projects": frozenset(('_JY_PULL_TOKENS', '_bundle_meta', '_drop_staged', '_film_or_fetch', '_preview_auth_ok', '_preview_render_body', '_render_or_404', '_require_premium', 'create_project', 'delete_project', 'jianying_draft_zip', 'jianying_import', 'jianying_pull', 'jianying_status', 'list_projects', 'mount_bundle', 'preview_invalidate', 'preview_plan', 'preview_shots', 'preview_status')),
-    "transfer": frozenset(('INTAKE_CODE_RE', 'MAX_EXTRACT_BYTES', 'MAX_UPLOAD_BYTES', '_INTAKE_RATE', '_STAGE_SPAN', '_TICK_TAU', '_effective_email', '_fix_mojibake_name', '_free_quota_check', '_intake_paths', '_intake_sidecar', '_read_capped', '_safe_extract', '_usage_bump', '_usage_today', 'cancel_job', 'intake_claim', 'intake_create', 'intake_meta', 'job_status', 'my_jobs', 'start_build', 'upload')),
+    "transfer": frozenset(('INTAKE_CODE_RE', 'MAX_EXTRACT_BYTES', 'MAX_INTAKE_BYTES', 'MAX_UPLOAD_BYTES', '_INTAKE_OPEN_TICKETS', '_INTAKE_RATE', '_INTAKE_TICKETS_PER_HOUR', '_INTAKE_WATERLINE_BYTES', '_STAGE_SPAN', '_TICK_TAU', '_effective_email', '_fix_mojibake_name', '_free_quota_check', '_intake_paths', '_intake_sidecar', '_intake_sidecar_save', '_intake_stored_bytes', '_raw_body', '_read_capped', '_safe_extract', '_usage_bump', '_usage_today', 'cancel_job', 'intake_claim', 'intake_meta', 'intake_put', 'intake_ticket', 'job_status', 'my_jobs', 'start_build', 'upload')),
     "try_api": frozenset(('sample_bundle', 'try_render', 'try_status', 'try_topics_list', 'try_video')),
 }
 
@@ -100,6 +100,20 @@ UPLOADS = config.UPLOADS
 
 MAX_JOBS_KEPT = 80                            # jobs.json 只留最近这么多条，防无限膨胀
 
+
+def _intake_sweeper(every: float = 600.0) -> None:
+    """每 10 分钟清一次收件区（过期包与没用完的票）。
+
+    以前 `_sweep_intakes()` 只挂在"有人来上传/认领"那一刻 —— 没人来的时候，
+    过期的包就一直躺在盘上（系统盘只剩十几 G，而账号、密钥、备份都在同一块盘）。
+    """
+    while True:
+        try:
+            ctx._sweep_intakes()
+        except Exception:  # noqa: BLE001 - 扫不动就下轮再来，别把线程弄死
+            log.warning("intake sweep failed", exc_info=True)
+        time.sleep(every)
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     """开机一次性收尾：清掉老客户手上遗留的原始录音（`brand/sample.mp3`）。
@@ -115,6 +129,7 @@ async def _lifespan(_app: FastAPI):
     n = brand_kit.purge_recordings()
     if n:
         log.info("startup purged legacy customer recording(s)", extra={"count": n})
+    threading.Thread(target=_intake_sweeper, name="intake-sweep", daemon=True).start()
     yield
 
 
