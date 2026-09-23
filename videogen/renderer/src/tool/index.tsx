@@ -1460,7 +1460,9 @@ const App: React.FC = () => {
                  poster={TPL_IMG(tplSample)} src={TPL_SAMPLE(tplSample)}
                  onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           <div className="note" style={{marginTop: 12}}>
-            同一段演示内容在这套样式下出的真片，约 17 秒。样片播不出来？说明这套的样片还没生成。
+            同一段演示内容在这套样式下出的真片，约 17 秒，看的是版式与节奏。
+            样片是 9 月 18 日录的，<b>颜色以上面那张封面为准</b>——重录样片得在成片台里各跑一遍。
+            样片播不出来？说明这套的样片还没生成。
           </div>
         </Sheet>
       ) : null}
