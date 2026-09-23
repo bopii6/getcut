@@ -81,7 +81,9 @@ try {
   $tmp = Join-Path $env:TEMP ("getcut-draft-{0}.zip" -f [guid]::NewGuid().ToString('N').Substring(0, 8))
   $curlErr = Join-Path $env:TEMP ("getcut-curl-{0}.txt" -f [guid]::NewGuid().ToString('N').Substring(0, 8))
   $ok = $false
-  SetTip '正在下载草稿包… 0%'
+  # 服务器要先打包草稿（约半分钟）才有字节流过来——这期间不写 0%，
+  # 免得用户以为卡死（2026-09-23 用户实测反馈）；百分比出现了才算在下载
+  SetTip '正在准备草稿包…（首次约需半分钟，不是卡住）'
   try {
     # -s 会吞掉进度条，这里要 -fSL + -# 才有百分比可读
     $proc = Start-Process -FilePath 'curl.exe' `

@@ -141,6 +141,41 @@ const App: React.FC = () => {
   const [jy, setJy] = React.useState('');
   const [jyBusy, setJyBusy] = React.useState(false);
   const [libJyKey, setLibJyKey] = React.useState('');   // 作品库里正在打包剪映草稿的项目
+  // 本机环境自检：出片靠这台电脑的浏览器算，行不行、慢不慢，进门就亮出来
+  const [env, setEnv] = React.useState<{hasVE: boolean; hw: boolean; cores: number; mem: number; online: boolean} | null>(null);
+  React.useEffect(() => {
+    let dead = false;
+    const probe = async () => {
+      const nav = navigator as Navigator & {hardwareConcurrency?: number; deviceMemory?: number};
+      const hasVE = typeof (window as unknown as {VideoEncoder?: unknown}).VideoEncoder !== 'undefined';
+      let hw = false;
+      if (hasVE) {
+        try {
+          const VE = (window as unknown as {
+            VideoEncoder: {isConfigSupported: (c: Record<string, unknown>) => Promise<{supported?: boolean}>};
+          }).VideoEncoder;
+          const r = await VE.isConfigSupported({
+            codec: 'avc1.42001f', width: 1080, height: 1920, framerate: 30,
+            bitrate: 8_000_000, hardwareAcceleration: 'prefer-hardware',
+          });
+          hw = r.supported === true;
+        } catch { /* 老浏览器没有这个 API */ }
+      }
+      if (!dead) {
+        setEnv({hasVE, hw, cores: nav.hardwareConcurrency || 0,
+                mem: nav.deviceMemory || 0, online: navigator.onLine});
+      }
+    };
+    void probe();
+    const onNet = () => setEnv((e) => (e ? {...e, online: navigator.onLine} : e));
+    window.addEventListener('online', onNet);
+    window.addEventListener('offline', onNet);
+    return () => {
+      dead = true;
+      window.removeEventListener('online', onNet);
+      window.removeEventListener('offline', onNet);
+    };
+  }, []);
   const [voices, setVoices] = React.useState<Voice[]>([]);
   const [music, setMusic] = React.useState<{file: string; name: string; mood?: string}[]>([]);
   const [cfg, setCfg] = React.useState({voice: '', bgm: '', subtitles: true, sfx: true, sources: true});
@@ -507,8 +542,7 @@ const App: React.FC = () => {
         body: JSON.stringify({project_id: projectId, bundle: bundle.name,
           voice: cfg.voice, bgm: cfg.bgm, sfx: cfg.sfx, sfxMode: cfg.sfx ? 'full' : 'off',
           subtitles: cfg.subtitles, sources: cfg.sources,
-          // 免费档带 GetCut 水印（服务端也强制）；付费档设了品牌才出那一格
-          watermark: !me || me.tier === 'free' || brandOn,
+          watermark: true,   // 右上角水印常开：留空显示「Powered by GetCut」，设了品牌则出品牌水印
           useLlm: true})});
       const jid = String(r.job || '');
       if (!jid) throw new Error(String(r.error || '启动失败'));
@@ -919,6 +953,36 @@ const App: React.FC = () => {
         <div className="pane left">
           <div className="lede">拖入素材包，一条好片子在你这台电脑上完成——不排队、不限速。</div>
 
+      {/* 本机环境自检：行不行、慢不慢，进门就亮出来，别等用户导完包才发现导不了 */}
+      <div className="envchk">
+        <span className="ect">本机环境</span>
+        {!env ? <span className="ei">检测中…</span> : (
+          <>
+            <span className={env.hasVE ? 'ei' : 'ei bad'}
+                  title={env.hasVE ? 'WebCodecs 可用，能在这台电脑上出片' : '这个浏览器导不了片：请换新版 Chrome 或 Edge'}>
+              {env.hasVE ? '✓ 支持出片' : '✗ 浏览器太旧'}
+            </span>
+            <span className={env.hw ? 'ei' : 'ei warn'}
+                  title={env.hw ? '硬件加速编码可用，出片快' : '没走到硬件加速：能出片但更慢。Chrome 设置 → 系统 → 打开「使用硬件加速」后重启浏览器'}>
+              {env.hw ? '✓ 硬件加速' : '⚠ 未开硬件加速'}
+            </span>
+            <span className={(env.cores || 0) >= 8 ? 'ei' : (env.cores || 0) >= 4 ? 'ei warn' : 'ei bad'}
+                  title="CPU 核心越多，出片越快">
+              {env.cores ? `${env.cores} 核 CPU${env.cores >= 8 ? '' : env.cores >= 4 ? '（偏慢）' : '（会很慢）'}` : 'CPU 未知'}
+            </span>
+            {env.mem ? (
+              <span className={env.mem >= 8 ? 'ei' : 'ei warn'} title="内存越大越稳">
+                {env.mem} GB 内存{env.mem >= 8 ? '' : '（偏小）'}
+              </span>
+            ) : null}
+            <span className={env.online ? 'ei' : 'ei warn'}
+                  title="上传素材包需要网络；渲染和下载成片不用网">
+              {env.online ? '✓ 网络正常' : '⚠ 已离线'}
+            </span>
+          </>
+        )}
+      </div>
+
           <input ref={fileInput} type="file" accept=".zip" style={{display: 'none'}}
                  onChange={(e) => void importZip(e.target.files?.[0])} />
 
@@ -1050,7 +1114,8 @@ const App: React.FC = () => {
                   {jy ? <div className="note">{jy}</div> : null}
                   <div className="note">
                     {!me || me.tier === 'free' ? '免费版成片带 GetCut 水印 · '
-                      : brandOn ? '右上角已带上你的品牌角标 · ' : '本条按你的档位干净出片（无水印）· '}
+                      : brandOn ? '右上角已带上你的品牌角标 · '
+                      : '右上角带 Powered by GetCut 水印 · '}
                     {!me || me.tier === 'free' ? (
                       <button style={lnkAcc} onClick={() => setSheet('pricing')}>看权益</button>
                     ) : (
@@ -1072,9 +1137,6 @@ const App: React.FC = () => {
             <div className="note" style={{color: 'var(--acc)'}}>
               刚才那一条（{resumeJob.slice(-6)}）已交还队列，正在重新领回来——不用重拖素材包。
             </div>
-          ) : null}
-          {phase === 'drop' && !bundle ? (
-            <div className="note">需要新版 Chrome 或 Edge（出片靠这台电脑自己算）。5 年以上的旧机器会慢一些。</div>
           ) : null}
         </div>
 
@@ -1224,8 +1286,6 @@ const App: React.FC = () => {
       </div>
 
       <footer className="footbar">
-        <span>{DEVICE}</span>
-        <span className="sep" />
         <span style={{color: codecOk ? undefined : 'var(--err)'}}>
           {codecOk ? '本机出片能力 正常' : '浏览器太旧，请换新版 Chrome / Edge'}
         </span>
@@ -1233,10 +1293,6 @@ const App: React.FC = () => {
           <a href="/privacy" target="_blank" rel="noopener">隐私政策</a>
           <a href="/terms" target="_blank" rel="noopener">用户协议</a>
           <a href="/refund" target="_blank" rel="noopener">退款说明</a>
-          <span className="sep" />
-          <span>画面与声音都在这台电脑上完成</span>
-          <span className="sep" />
-          <span>服务器零排队</span>
         </div>
       </footer>
 
