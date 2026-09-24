@@ -6,7 +6,6 @@
 """
 from __future__ import annotations
 
-import io
 import json
 import math
 import re
@@ -38,6 +37,14 @@ MAX_INTAKE_BYTES = 200 * 1024 * 1024          # 一张票最多收 200MB（素�
 _INTAKE_TICKETS_PER_HOUR = 10                 # 同一地址每小时最多领 10 张票
 _INTAKE_OPEN_TICKETS = 5                      # 一个账号手上最多攒 5 张没用掉的票
 _INTAKE_WATERLINE_BYTES = 2 * 1024 ** 3       # 收件区堆到 2GB 就先拒收
+# 整包上传口（/api/upload）与收件口同源的四道闸。2026-09-24 补齐 —— 在这之前
+# 这条口只有单包 512MB 上限，限流/水位/配额一道都没有，而它是登录即可达的：
+# 免费注册个号就能循环塞 512MB 的包（重名自动 -1/-2 永不覆盖），照收件口那起
+# 事故的写法，几小时就能把盘写满。水位照 40G 盘、成片+备份还要占的现实定。
+_UPLOAD_RATE: dict[str, list[float]] = {}     # ip -> 最近整包上传时间戳（滑窗限流）
+_UPLOADS_PER_HOUR = 20                        # 同一地址每小时最多传 20 个包
+_USER_BUNDLE_CAP = 100                        # 一个账号名下最多 100 个素材包（目前没有删包口）
+_WORKSPACES_WATERLINE_BYTES = 6 * 1024 ** 3   # 素材库堆到 6GB 先拒收（现占 2.5G，盘剩 14G）
 def _effective_email(request: Request, body_email=None) -> str | None:
     """会话优先；其次认「账号自己的设备令牌」；主钥匙可代 body.email 行事。
 
@@ -124,37 +131,95 @@ async def _read_capped(file, cap: int) -> bytes:
         if len(buf) > cap:
             raise ValueError("upload too large")
     return bytes(buf)
+
+
+async def _save_capped(file, cap: int, tmp: Path) -> None:
+    """边收边落盘，超 cap 当场断（临时文件由调用方清）。
+
+    为什么不整包读进内存再写：512MB 一条、线程池并发几条，3G 内存的小机
+    直接进 OOM killer 的射程 —— 落盘同样是流式的，内存里永远只过 1MB 一块。"""
+    left = cap
+    with tmp.open("wb") as out:
+        while True:
+            chunk = await file.read(1 << 20)
+            if not chunk:
+                return
+            left -= len(chunk)
+            if left < 0:
+                raise ValueError("upload too large")
+            out.write(chunk)
+
+
+def _workspaces_stored_bytes() -> int:
+    """素材库（WORKSPACES，不含收件区）现占字节：整包上传的水位判据用。
+
+    要走整棵树，慢；但上传是低频动作，每次多花一秒换"盘不会被写满"值得。
+    收件区不算进来：它有自己的 2GB 水位，两本账分开记。"""
+    root = ctx.WORKSPACES
+    if not root.is_dir():
+        return 0
+    skip = ctx.INTAKES
+    total = 0
+    for d in root.iterdir():
+        if d == skip or not d.is_dir():
+            continue
+        for f in d.rglob("*"):
+            if f.is_file():
+                try:
+                    total += f.stat().st_size
+                except OSError:
+                    pass
+    return total
+
+
 @router.post("/api/upload")
 async def upload(file: UploadFile, request: Request):
+    ip = ctx._client_ip(request)
+    now = time.time()
+    hits = [t for t in _UPLOAD_RATE.get(ip, []) if now - t < 3600]
+    if len(hits) >= _UPLOADS_PER_HOUR:
+        return JSONResponse({"error": "传得太频繁了，一小时后再试"}, status_code=429)
+    meta = ctx._bundles_meta()
+    email = _effective_email(request)
+    if email:
+        mine = sum(1 for m in meta.values() if m.get("owner") == email)
+        if mine >= _USER_BUNDLE_CAP:
+            return JSONResponse(
+                {"error": f"你名下已有 {mine} 个素材包，装不下了，联系客服清理"},
+                status_code=429)
+    if _workspaces_stored_bytes() > _WORKSPACES_WATERLINE_BYTES:
+        return JSONResponse({"error": "素材库暂时满了，请稍后再试"}, status_code=503)
     name = Path(_fix_mojibake_name(file.filename or "bundle.zip")).stem or f"bundle-{int(time.time())}"
-    try:
-        data = await _read_capped(file, MAX_UPLOAD_BYTES)
-    except ValueError:
-        return JSONResponse({"error": "zip 超过 512MB 上限"}, status_code=413)
     dest = ctx.WORKSPACES / name
     i = 1
     while dest.exists():
         dest = ctx.WORKSPACES / f"{name}-{i}"
         i += 1
     dest.mkdir(parents=True)
-    tmp = dest.parent / f"upload-{uuid.uuid4().hex}.zip"
-    tmp.write_bytes(data)
+    tmp = ctx.WORKSPACES / f".upload-{uuid.uuid4().hex}.zip"
     try:
-        with zipfile.ZipFile(tmp) as zf:
-            _safe_extract(zf, dest)
-    except (zipfile.BadZipFile, ValueError) as e:
-        import shutil as _sh
-        _sh.rmtree(dest, ignore_errors=True)
-        return JSONResponse({"error": f"素材包无效：{e}"}, status_code=400)
+        try:
+            await _save_capped(file, MAX_UPLOAD_BYTES, tmp)
+        except ValueError:
+            shutil.rmtree(dest, ignore_errors=True)
+            return JSONResponse({"error": "zip 超过 512MB 上限"}, status_code=413)
+        try:
+            with zipfile.ZipFile(tmp) as zf:
+                _safe_extract(zf, dest)
+        except (zipfile.BadZipFile, ValueError) as e:
+            shutil.rmtree(dest, ignore_errors=True)
+            return JSONResponse({"error": f"素材包无效：{e}"}, status_code=400)
     finally:
         tmp.unlink(missing_ok=True)
     if not (dest / "content.json").is_file():
-        import shutil as _sh
-        _sh.rmtree(dest, ignore_errors=True)
+        shutil.rmtree(dest, ignore_errors=True)
         return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
-    meta = ctx._bundles_meta()
-    meta[dest.name] = {"owner": ctx._session_email(request), "created": time.strftime("%Y/%m/%d %H:%M")}
+    # owner 用 _effective_email：设备令牌（技能/MCP）传的包也记到账号头上，
+    # 以前只认会话，工具端传的包 owner 落 None，成了无主数据
+    meta[dest.name] = {"owner": email, "created": time.strftime("%Y/%m/%d %H:%M")}
     ctx._bundles_meta_save(meta)
+    hits.append(now)
+    _UPLOAD_RATE[ip] = hits
     return {"name": dest.name}
 _INTAKE_RATE: dict[str, list[float]] = {}    # ip -> 最近上传时间戳（滑窗限流）
 def _intake_paths(code: str) -> tuple[Path, Path]:
@@ -178,16 +243,6 @@ def _intake_stored_bytes() -> int:
     if not ctx.INTAKES.is_dir():
         return 0
     return sum(f.stat().st_size for f in ctx.INTAKES.glob("*.zip") if f.is_file())
-
-
-async def _raw_body(request: Request, cap: int) -> bytes | None:
-    """收整个请求体，超过 cap 当场丢手返回 None（先收完再判大小等于没限）。"""
-    buf = bytearray()
-    async for chunk in request.stream():
-        buf += chunk
-        if len(buf) > cap:
-            return None
-    return bytes(buf)
 @router.get("/api/intake")
 def intake_list(request: Request):
     """我的收件箱：这个账号领过、还没导入的包。手机端「素材」入口读的就是这里。
@@ -269,25 +324,39 @@ async def intake_put(code: str, request: Request):
     ctx._sweep_intakes()
     if _intake_stored_bytes() > _INTAKE_WATERLINE_BYTES:
         return JSONResponse({"error": "收件区暂时满了，请稍后再试"}, status_code=503)
-    data = await _raw_body(request, MAX_INTAKE_BYTES)
-    if data is None:
-        return JSONResponse({"error": f"素材包超过 {MAX_INTAKE_BYTES // 1048576}MB 上限"},
-                            status_code=413)
-    try:
-        with zipfile.ZipFile(io.BytesIO(data)) as zf:
-            if "content.json" not in zf.namelist():
-                raise zipfile.BadZipFile("no content.json")
-    except zipfile.BadZipFile:
-        return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
+    # 包体边收边落盘（临时文件、验完原子转正）：整包憋内存的老写法，
+    # 几条并发的 200MB PUT 就能把 3G 内存的小机顶进 OOM
     ctx.INTAKES.mkdir(parents=True, exist_ok=True)
-    zf_path.write_bytes(data)
+    tmp = ctx.INTAKES / f".put-{uuid.uuid4().hex}.part"
+    try:
+        over = False
+        with tmp.open("wb") as out:
+            left = MAX_INTAKE_BYTES
+            async for chunk in request.stream():
+                left -= len(chunk)
+                if left < 0:
+                    over = True
+                    break
+                out.write(chunk)
+        if over:
+            return JSONResponse({"error": f"素材包超过 {MAX_INTAKE_BYTES // 1048576}MB 上限"},
+                                status_code=413)
+        try:
+            with zipfile.ZipFile(tmp) as zf:
+                if "content.json" not in zf.namelist():
+                    raise zipfile.BadZipFile("no content.json")
+        except zipfile.BadZipFile:
+            return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
+        tmp.replace(zf_path)
+    finally:
+        tmp.unlink(missing_ok=True)
     # 24 小时从"包真到了"这一刻算。文件名走 query（HTTP 头只许 ASCII，而客户
     # 就是把选题写进 zip 名的人）；名字只用于导入后给项目起名
     side["created"] = time.time()
     side["file"] = _fix_mojibake_name(request.query_params.get("name") or "bundle.zip")[:160]
     _intake_sidecar_save(code, side)
     base = str(request.base_url).rstrip("/")
-    return {"ok": True, "bytes": len(data), "url": f"{base}/i/{code}"}
+    return {"ok": True, "bytes": zf_path.stat().st_size, "url": f"{base}/i/{code}"}
 @router.get("/api/intake/{code}/meta")
 def intake_meta(code: str, request: Request):
     """落地页概要：**只说"有个包在等你"，不说包里写了什么**。
