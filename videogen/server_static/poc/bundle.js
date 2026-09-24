@@ -12767,6 +12767,12 @@ const renderHint = (e) => {
   }
   return m.slice(0, 120);
 };
+const prepFailHint = (raw) => {
+  const m = String(raw || "").trim();
+  if (!m) return "\u4E91\u7AEF\u5907\u6599\u5931\u8D25\uFF0C\u91CD\u65B0\u70B9\u300C\u751F\u6210\u89C6\u9891\u300D\u518D\u8BD5\u4E00\u6B21";
+  if (/[\u4e00-\u9fff]/.test(m)) return m.slice(0, 160);
+  return "\u4E91\u7AEF\u5907\u6599\u5931\u8D25\uFF08" + m.slice(0, 60) + "\uFF09\uFF0C\u91CD\u65B0\u70B9\u300C\u751F\u6210\u89C6\u9891\u300D\u518D\u8BD5\u4E00\u6B21";
+};
 const groupVoices = (list) => {
   const g = { \u6C89\u7A33\u64AD\u62A5: [], \u6E05\u723D\u7537\u58F0: [], \u5973\u58F0: [], \u7279\u8272\u53E3\u97F3: [], \u5176\u4ED6: [] };
   for (const v of list) {
@@ -13219,6 +13225,7 @@ const App = () => {
       setJobId(jid);
       jobIdRef.current = jid;
       const tick = async () => {
+        let fails = 0;
         for (; ; ) {
           await new Promise((res) => setTimeout(res, 2e3));
           if (jobIdRef.current !== jid) return;
@@ -13226,17 +13233,38 @@ const App = () => {
           try {
             j = await api(`/api/job/${jid}`);
           } catch (_) {
+            fails += 1;
+            if (fails === 5) setPrepMsg("\u8FDE\u4E0D\u4E0A\u670D\u52A1\u5668\uFF0C\u8FD8\u5728\u91CD\u8BD5\u2026");
+            if (fails >= 60) {
+              setErr("\u8FDE\u4E0D\u4E0A\u670D\u52A1\u5668\uFF0C\u8FD9\u4E00\u5355\u505C\u5728\u4E86\u534A\u8DEF\u3002\u7A0D\u540E\u91CD\u65B0\u70B9\u300C\u751F\u6210\u89C6\u9891\u300D\uFF1B\u82E5\u63D0\u793A\u5DF2\u6709\u4EFB\u52A1\u5728\u6392\u961F\uFF0C\u8BF4\u660E\u5B83\u8FD8\u5728\u4E91\u4E0A\u8DD1\uFF0C\u7B49\u51E0\u5206\u949F\u5C31\u884C");
+              jobIdRef.current = "";
+              setPhase("config");
+              return;
+            }
             continue;
           }
+          fails = 0;
           const stage = String(j.stage || "");
-          if (stage === "error") {
-            setErr(String(j.detail || "\u4E91\u7AEF\u5907\u6599\u5931\u8D25"));
+          if (stage === "error" || stage === "failed") {
+            setErr(prepFailHint(String(j.detail || "")));
             jobIdRef.current = "";
             setPhase("config");
             return;
           }
-          if (stage === "done" || stage === "cancelled") {
-            if (IS_HANDHELD && stage === "done" && !packRef.current) {
+          if (stage === "unknown") {
+            setErr("\u8FD9\u4E00\u5355\u7684\u8BB0\u5F55\u4E0D\u5728\u4E86\uFF08\u670D\u52A1\u91CD\u542F\u6216\u5DF2\u6E05\u7406\uFF09\uFF0C\u91CD\u65B0\u70B9\u300C\u751F\u6210\u89C6\u9891\u300D\u518D\u6765\u4E00\u6B21");
+            jobIdRef.current = "";
+            setPhase("config");
+            return;
+          }
+          if (stage === "cancelled") {
+            jobIdRef.current = "";
+            setPhase("config");
+            setErr("\u8FD9\u4E00\u5355\u5DF2\u53D6\u6D88");
+            return;
+          }
+          if (stage === "done") {
+            if (IS_HANDHELD && !packRef.current) {
               setFinalUrl(`/video/${jid}`);
               setCloudOk(true);
             }

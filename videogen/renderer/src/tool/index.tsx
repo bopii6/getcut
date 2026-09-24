@@ -114,6 +114,14 @@ const renderHint = (e: unknown) => {
   return m.slice(0, 120);
 };
 
+/** 备料失败的 detail 常是异常英文尾巴：服务端写了人话就照抄，全是英文就包一层说明 */
+const prepFailHint = (raw: string) => {
+  const m = String(raw || '').trim();
+  if (!m) return '云端备料失败，重新点「生成视频」再试一次';
+  if (/[\u4e00-\u9fff]/.test(m)) return m.slice(0, 160);
+  return '云端备料失败（' + m.slice(0, 60) + '），重新点「生成视频」再试一次';
+};
+
 const groupVoices = (list: Voice[]) => {
   const g: Record<string, Voice[]> = {沉稳播报: [], 清爽男声: [], 女声: [], 特色口音: [], 其他: []};
   for (const v of list) {
@@ -632,6 +640,7 @@ const App: React.FC = () => {
       setJobId(jid);
       jobIdRef.current = jid;
       const tick = async () => {
+        let fails = 0;   // 连续网络失败计数：连不上要说出来，不能无声永转
         for (;;) {
           await new Promise((res) => setTimeout(res, 2000));
           if (jobIdRef.current !== jid) return;
@@ -639,20 +648,44 @@ const App: React.FC = () => {
           try {
             j = await api(`/api/job/${jid}`) as Record<string, unknown>;
           } catch (_) {
+            fails += 1;
+            if (fails === 5) setPrepMsg('连不上服务器，还在重试…');
+            if (fails >= 60) {   // 约 2 分钟都没连上：按失败收口，别无限转
+              setErr('连不上服务器，这一单停在了半路。稍后重新点「生成视频」；若提示已有任务在排队，说明它还在云上跑，等几分钟就行');
+              jobIdRef.current = '';
+              setPhase('config');
+              return;
+            }
             continue;
           }
+          fails = 0;
           const stage = String(j.stage || '');
-          if (stage === 'error') {
-            setErr(String(j.detail || '云端备料失败'));
+          // 服务端终态写的是 failed（_mark_failed），不是 error：以前只认
+          // error，备料一失败这里就永远转圈。两个名字都认。
+          if (stage === 'error' || stage === 'failed') {
+            setErr(prepFailHint(String(j.detail || '')));
             jobIdRef.current = '';
             setPhase('config');
             return;
           }
-          if (stage === 'done' || stage === 'cancelled') {
+          if (stage === 'unknown') {
+            // 任务记录没了（服务重启清了/记录被清）：也按终局收口
+            setErr('这一单的记录不在了（服务重启或已清理），重新点「生成视频」再来一次');
+            jobIdRef.current = '';
+            setPhase('config');
+            return;
+          }
+          if (stage === 'cancelled') {
+            jobIdRef.current = '';
+            setPhase('config');
+            setErr('这一单已取消');
+            return;
+          }
+          if (stage === 'done') {
             // 手机端不当出片的机器：这一条是在他自己那台电脑上渲好交回云端的。
             // 把云端那份挂到第 4 步上，手机上点开就能播/能存（限时签名链接，
             // 而且 /video/<id> 查归属，别人要不到这一条）
-            if (IS_HANDHELD && stage === 'done' && !packRef.current) {
+            if (IS_HANDHELD && !packRef.current) {
               setFinalUrl(`/video/${jid}`);
               setCloudOk(true);
             }
