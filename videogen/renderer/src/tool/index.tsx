@@ -1277,7 +1277,7 @@ const App: React.FC = () => {
     prepped: '打包交给你', render: '等你这台电脑开工',
   };
   const waitingForAgent = !pack && prepStage === 'render';
-  const agentHasClaimed = waitingForAgent && /已领取|正在本机|正在生成|渲染/.test(prepMsg);
+  const agentHasClaimed = waitingForAgent;
   const act = phase === 'done' ? '已完成'
     : phase === 'rendering' ? '本机生成画面'
     : phase === 'uploading' ? '交回云端'

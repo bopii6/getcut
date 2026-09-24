@@ -13861,7 +13861,7 @@ const App = () => {
     render: "\u7B49\u4F60\u8FD9\u53F0\u7535\u8111\u5F00\u5DE5"
   };
   const waitingForAgent = !pack && prepStage === "render";
-  const agentHasClaimed = waitingForAgent && /已领取|正在本机|正在生成|渲染/.test(prepMsg);
+  const agentHasClaimed = waitingForAgent;
   const act = phase === "done" ? "\u5DF2\u5B8C\u6210" : phase === "rendering" ? "\u672C\u673A\u751F\u6210\u753B\u9762" : phase === "uploading" ? "\u4EA4\u56DE\u4E91\u7AEF" : phase === "ready" ? "\u7B49\u4F60\u8FD9\u53F0\u7535\u8111\u5F00\u5DE5" : pack ? "\u7F13\u5B58\u7D20\u6750" : agentHasClaimed ? "\u7535\u8111\u5DF2\u9886\u53D6\uFF0C\u6B63\u5728\u751F\u6210" : ACT[prepStage] || "\u4E91\u7AEF\u5907\u6599";
   const RAIL = ["\u4E91\u7AEF\u5907\u6599", "\u7F13\u5B58\u7D20\u6750", "\u672C\u673A\u751F\u6210", "\u4EA4\u56DE\u4E91\u7AEF"];
   const genIdx = phase === "done" ? 4 : phase === "uploading" ? 3 : phase === "rendering" ? 2 : pack ? 1 : 0;
