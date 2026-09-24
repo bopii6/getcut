@@ -6,6 +6,8 @@
 """
 from __future__ import annotations
 
+from html import escape
+
 from fastapi import Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from .. import version
@@ -33,6 +35,50 @@ def studio(request: Request) -> Response:
     「导入剪映（分轨草稿）」与作品库承接，不再有独立页面。
     """
     return RedirectResponse("/", status_code=302)
+@router.get("/agent/authorize", response_class=HTMLResponse)
+def agent_authorize_page(request: Request, request_id: str = "") -> Response:
+    """客户可见的 Agent 授权页：只确认账号，不展示令牌。"""
+    rid = escape(str(request_id or ""), quote=True)
+    return HTMLResponse(f"""<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>授权电脑 Agent · GetCut</title>
+<style>
+*{{box-sizing:border-box}} body{{margin:0;background:#f5f5f7;color:#16181d;font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}}
+main{{max-width:460px;margin:9vh auto;padding:0 18px}} .card{{background:#fff;border:1px solid #e3e5e9;border-radius:16px;padding:28px;box-shadow:0 16px 50px #00000012}}
+h1{{font-size:23px;margin:0 0 8px}} p{{color:#626873;margin:8px 0 20px}} .account{{background:#f5f5f7;border-radius:10px;padding:13px;margin:18px 0}}
+button,a{{font:inherit}} button{{width:100%;border:0;border-radius:10px;padding:13px 18px;background:#6d43d6;color:#fff;font-weight:700;cursor:pointer}} a{{display:block;text-align:center;color:#6d43d6;text-decoration:none;margin-top:12px;padding:10px}}
+#msg{{min-height:24px;color:#626873;margin-top:16px}} .ok{{color:#16845b}} .err{{color:#c33}}
+</style></head><body><main><div class="card">
+<h1>授权电脑 Agent</h1>
+<p>确认后，这台电脑上的 Agent 才能把素材包上传到你的 GetCut 账号。</p>
+<div id="device" class="account">正在读取设备信息…</div>
+<button id="approve" disabled>授权这台电脑</button>
+<a href="/">返回 GetCut 登录或注册</a>
+<div id="msg"></div>
+</div></main><script>
+const rid={rid!r}; const $=id=>document.getElementById(id); let ready=false;
+async function boot(){{
+  if(!rid){{$('device').textContent='授权链接无效';return;}}
+  let info=await fetch('/api/agent/authorize/info?request_id='+encodeURIComponent(rid),{{credentials:'same-origin'}}).then(r=>r.json());
+  if(info.error||$('device')===null){{$('device').textContent=info.error||'授权链接无效';return;}}
+  $('device').textContent='要授权的设备：'+(info.device||'电脑 Agent')+' · 请求 '+(info.user_code||'');
+  if(info.status!=='pending'){{$('msg').textContent=info.status==='approved'?'这台电脑已经授权过了。':info.status==='expired'?'授权链接已过期，请回到 Agent 重新发起。':'授权请求已结束。';return;}}
+  let me=await fetch('/api/me',{{credentials:'same-origin'}}).then(r=>r.ok?r.json():null);
+  if(!me){{$('device').textContent='当前浏览器还没有登录 GetCut。请先登录或注册，再重新打开这个授权链接。';return;}}
+  $('device').innerHTML='当前账号：<b>'+me.email+'</b><br>要授权的设备：'+(info.device||'电脑 Agent');
+  ready=true; $('approve').disabled=false;
+}}
+$('approve').onclick=async()=>{{
+  if(!ready)return; $('approve').disabled=true; $('msg').textContent='正在授权…';
+  let r=await fetch('/api/agent/authorize/approve',{{method:'POST',headers:{{'content-type':'application/json'}},credentials:'same-origin',body:JSON.stringify({{request_id:rid}})}});
+  let d=await r.json().catch(()=>({{}}));
+  if(r.ok){{$('msg').className='ok';$('msg').textContent='已授权，电脑 Agent 现在可以使用这个账号。回到 Agent 继续即可。';}}
+  else{{$('msg').className='err';$('msg').textContent=d.error||'授权失败';$('approve').disabled=false;}}
+}};
+boot();
+</script></body></html>""")
+
+
 @router.get("/i/{code}", response_class=HTMLResponse)
 def intake_page(code: str, request: Request) -> Response:
     """Agent 直投短链：与 / 同一份 SPA，前端按路径进入「素材包已送达」落地页。"""

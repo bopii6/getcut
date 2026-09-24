@@ -109,6 +109,13 @@ class AuthGateTest(unittest.TestCase):
         r = self.client.get("/api/me", cookies={server.SESSION_COOKIE: "not-a-real-session"})
         self.assertEqual(r.status_code, 401)
 
+    def test_agent_whoami_only_accepts_a_real_account_token(self):
+        session = auth.make_session(PROBE_USER, auth.SESSION_TTL_SHORT)
+        r = self.client.get("/api/agent/whoami", headers={"x-agent-token": session})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["email"], PROBE_USER)
+        self.assertEqual(self.client.get("/api/agent/whoami").status_code, 401)
+
 
 class SafeStoreTest(unittest.TestCase):
     def setUp(self):

@@ -254,6 +254,8 @@ _PUBLIC_PATHS = {"/", "/index.html", "/studio", "/studio/", "/healthz", "/api/te
                  "/api/auth/status", "/api/auth/login", "/api/auth/register",
                  "/api/auth/send-code", "/api/auth/reset-code", "/api/auth/reset",
                  "/api/pricing", "/api/sample-bundle",
+                 # Agent 授权：申请/轮询/授权页本身不要求旧令牌，批准动作仍由路由检查网页账号。
+                 "/agent/authorize",
                  # 三页法定文本必须匿名可读：客户在付款前就要能看到，
                  # 而且支付通道/应用市场抽查时"登录后可见"不算提供
                  "/privacy", "/terms", "/refund"}
@@ -269,6 +271,7 @@ def _is_public(path: str) -> bool:
             # Agent 直投：getcut-bundle 技能打包完自动 POST 上来，浏览器打开 /i/<code>
             # 认领导入。公开但按 IP 限流，码本身是随机能力凭证，包 24 小时无人认领即清。
             or path.startswith("/api/intake") or path.startswith("/i/")
+            or path.startswith("/api/agent/authorize")
             # 剪映导入助手：安装器是公开脚本；pull 靠一次性 token 自证（见 _JY_PULL_TOKENS）
             or path.startswith("/assistant/")
             or path.startswith("/api/jianying/pull")

@@ -261,11 +261,10 @@ const App: React.FC = () => {
   const [libMsg, setLibMsg] = React.useState('');
   // 「素材」面板：电脑寄上来的包（收件箱）+ 一条一次性的收件地址
   type Inbox = {code: string; ready: boolean; claimed?: boolean;
-    state?: 'waiting_upload' | 'importing' | 'ready' | 'imported' | 'expired';
+    state?: 'importing' | 'ready' | 'imported' | 'expired';
     file: string; bundle?: string | null; expiresAt: number; projectId?: string};
   const [inbox, setInbox] = React.useState<Inbox[] | null>(null);
   const [inboxMsg, setInboxMsg] = React.useState('');
-  const [ticket, setTicket] = React.useState('');
   const playerRef = React.useRef<PlayerRef>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
@@ -1067,16 +1066,6 @@ const App: React.FC = () => {
     void refreshInbox(true);
   };
 
-  const newTicket = async () => {
-    setInboxMsg('正在生成收件地址…');
-    try {
-      const d = await api('/api/intake/ticket', {method: 'POST',
-        headers: {'content-type': 'application/json'}, body: '{}'}) as Record<string, unknown>;
-      setTicket(String(d.put_url || ''));
-      setInboxMsg('');
-    } catch (e) { setInboxMsg(String((e as Error).message || e)); }
-  };
-
   const importCode = async (code: string) => {
     setInboxMsg('正在导入…');
     try {
@@ -1339,7 +1328,7 @@ const App: React.FC = () => {
           </span>
           {!me ? <button className="chip" onClick={() => setSheet('pricing')} title="免费版与高级版">定价</button> : null}
           {me ? <button className="chip" onClick={openLib} title="历史项目与成片">作品库</button> : null}
-          {me ? <button className="chip" onClick={openInbox} title="电脑寄来的素材包 / 生成收件地址">素材</button> : null}
+          {me ? <button className="chip" onClick={openInbox} title="查看电脑 Agent 上传的素材包">素材</button> : null}
           <Account me={me} authst={authst} sheet={sheet} setSheet={setSheet}
                    refresh={refreshMe} toast={say}
                    onMe={(m) => { meRef.current = m; setMe(m); }}
@@ -1819,34 +1808,20 @@ const App: React.FC = () => {
               ? '电脑 Agent 上传完成后，这里会自动出现素材包；看到“已送达”后点“导入”。'
               : '这里显示电脑 Agent 寄来的素材包。手机负责确认内容，电脑负责后台生成。'}
           </div>
-          <button className="btn" style={{alignSelf: 'flex-start', marginTop: 10}}
-                  onClick={() => void newTicket()}>
-            {ticket ? '再生成一条收件地址' : '生成收件地址'}
-          </button>
-          {ticket ? (
-            <div style={{display: 'flex', gap: 8, marginTop: 10}}>
-              <input readOnly value={ticket} onFocus={(e) => e.currentTarget.select()}
-                     style={{flex: 1, fontSize: 12, padding: '6px 8px'}} />
-              <button className="btn ln sm" onClick={() => {
-                navigator.clipboard?.writeText(ticket).then(() => say('已复制'),
-                  () => say('复制不了：长按那行字选中复制'));
-              }}>复制</button>
-            </div>
-          ) : null}
           {inboxMsg ? <div className="note">{inboxMsg}</div> : null}
           {!inbox.length && !inboxMsg ? (
             <div className="note">电脑 Agent 上传完成后，素材包会自动出现在这里。</div>
           ) : null}
           <div className="liblist">
             {inbox.map((it) => {
-              const state = it.state || (it.ready ? 'ready' : 'waiting_upload');
+              const state = it.state || (it.ready ? 'ready' : 'imported');
               return (
                 <div className="librow" key={it.code}>
                   <div className="li-t">
                     <b>{it.file || it.code}</b>
                     <span>{state === 'ready' ? '已送达 · 可以导入'
                       : state === 'imported' ? '已导入 · 去项目里继续'
-                      : '电脑 Agent 正在上传…'}</span>
+                      : '正在导入…'}</span>
                   </div>
                   <div className="li-a">
                     {state === 'ready' ? (

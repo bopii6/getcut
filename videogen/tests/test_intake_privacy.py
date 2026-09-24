@@ -159,12 +159,10 @@ class IntakeTicketTest(Base):
         self.assertEqual(item["projectId"], claim.json()["project_id"])
         self.assertEqual(item["bundle"], claim.json()["name"])
 
-    def test_inbox_shows_ticket_waiting_for_upload(self):
+    def test_inbox_does_not_show_empty_upload_ticket(self):
         self.new_ticket()
-        item = self.client.get("/api/intake", cookies=self.ck_a).json()["intakes"][0]
-        self.assertEqual(item["state"], "waiting_upload")
-        self.assertFalse(item["ready"])
-        self.assertFalse(item["claimed"])
+        items = self.client.get("/api/intake", cookies=self.ck_a).json()["intakes"]
+        self.assertEqual(items, [], "没上传的空白收件单不应出现在客户手机里")
 
     def test_ticket_is_single_use(self):
         tk = self.new_ticket()

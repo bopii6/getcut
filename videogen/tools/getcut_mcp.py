@@ -7,11 +7,9 @@
 
 配置（优先级：环境变量 > videogen/.env）：
     GETCUT_BASE   工作台地址，默认 https://gc.hellojoy.top
-    GETCUT_TOKEN  **这个账号自己的**设备令牌（不是服务器 .env 里那把站点主钥匙：
-                  主钥匙能领走并看见全站任何客户的素材与成片，不该出现在客户机器上）。
-                  要一张：在登录了的浏览器里 POST /api/agent/login（邮箱+密码），
-                  或让站长在「登录设备」里发一张；它随时可以在页面上单独踢掉。
-    GETCUT_EMAIL  以哪个账号行事（只有主钥匙能代填，普通账号令牌忽略它）
+    GETCUT_TOKEN  兼容旧配置：已有设备令牌或管理员主钥匙。新客户优先使用
+                  authorize_getcut() 授权，授权令牌会安全写入本地授权文件。
+    GETCUT_EMAIL  兼容旧配置：仅主钥匙通道可代填；普通账号令牌忽略它
 
 宿主接入（ZCode 等）：项目根 .mcp.json
     {"mcpServers": {"getcut": {"command": "python",
@@ -21,6 +19,7 @@
 """
 from __future__ import annotations
 
+import json
 import os
 import time
 from pathlib import Path
@@ -48,27 +47,119 @@ def _load_env_file() -> None:
 _load_env_file()
 
 BASE = (os.environ.get("GETCUT_BASE") or "https://gc.hellojoy.top").rstrip("/")
-TOKEN = os.environ.get("GETCUT_TOKEN") or ""
+ENV_TOKEN = os.environ.get("GETCUT_TOKEN") or ""
 EMAIL = (os.environ.get("GETCUT_EMAIL") or "").strip().lower()
+AUTH_FILE = Path(os.environ.get("GETCUT_AUTH_FILE")
+                 or (Path.home() / ".getcut" / "agent-auth.json"))
+PENDING_FILE = AUTH_FILE.with_name(AUTH_FILE.stem + "-pending.json")
+
+
+def _read_local(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (FileNotFoundError, OSError, ValueError):
+        return {}
+
+
+def _write_local(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, path)
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+
+
+def _saved_token() -> str:
+    return str(_read_local(AUTH_FILE).get("token") or "").strip()
+
+
+def _current_token() -> str:
+    return ENV_TOKEN.strip() or _saved_token()
+
+
+def _clear_pending() -> None:
+    try:
+        PENDING_FILE.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 mcp = MCPServer(
     name="getcut",
     instructions=(
-        "GetCut 短视频工作台：方案 1 中电脑 Agent 只负责把 getcut-bundle 做好的 zip "
-        "自动上传到用户账号的云端收件箱，然后返回手机短链并停止；不要替用户 claim、"
-        "确认内容、提交生成或下载成片。手机确认后，电脑成片台会在后台渲染。"
+        "GetCut 短视频工作台：先通过 authorize_getcut() 让客户在已登录的 GetCut 页面授权；"
+        "只有用户明确确认上传后，才把 getcut-bundle 做好的 zip 上传到该账号的云端收件箱，"
+        "然后返回手机短链并停止。不要替用户 claim、确认内容、提交生成或下载成片。"
     ),
 )
 
 
 def _session() -> requests.Session:
     s = requests.Session()
-    # 两张头都带：x-auth-token 是主钥匙通道（站长自己用），x-agent-token 是
-    # **账号自己的设备令牌** —— 客户机器上只该填后者：在「登录设备」里看得见、
-    # 能单独踢掉，泄露了也只波及那一个账号，而不是整站所有人的片子。
-    s.headers["x-auth-token"] = TOKEN
-    s.headers["x-agent-token"] = TOKEN
+    token = _current_token()
+    if token:
+        # 新授权得到的设备令牌只走 x-agent-token；只有显式旧配置里的
+        # GETCUT_TOKEN 才兼容主钥匙通道，避免把用户令牌误当全站钥匙。
+        s.headers["x-agent-token"] = token
+        if ENV_TOKEN.strip():
+            s.headers["x-auth-token"] = ENV_TOKEN.strip()
     return s
+
+
+def _public_session() -> requests.Session:
+    return requests.Session()
+
+
+def _public_api(method: str, path: str, **kw) -> dict:
+    r = _public_session().request(method, BASE + path, timeout=kw.pop("timeout", 180), **kw)
+    try:
+        d = r.json()
+    except ValueError as exc:
+        raise RuntimeError(f"{path} HTTP {r.status_code}（非 JSON 响应）") from exc
+    if r.status_code >= 400:
+        raise RuntimeError(f"{path} HTTP {r.status_code}: {d.get('error') or d}")
+    return d
+
+
+@mcp.tool()
+def authorize_getcut() -> dict:
+    """创建一次性授权链接；客户需在已登录的 GetCut 页面点击“授权这台电脑”。"""
+    out = _public_api("POST", "/api/agent/authorize/start",
+                      json={"device": "GetCut Agent"})
+    _write_local(PENDING_FILE, {
+        "request_id": out["request_id"],
+        "poll_secret": out["poll_secret"],
+        "created": int(time.time()),
+    })
+    return {"status": "awaiting_authorization", "authorization_url": out["url"],
+            "user_code": out["user_code"], "expires_at": out["expires"],
+            "next": "请客户打开授权链接，在已登录的 GetCut 页面点击“授权这台电脑”"}
+
+
+@mcp.tool()
+def getcut_authorization_status() -> dict:
+    """查询授权结果；令牌只在 Agent 本地保存，不回显给用户。"""
+    pending = _read_local(PENDING_FILE)
+    rid = str(pending.get("request_id") or "")
+    secret = str(pending.get("poll_secret") or "")
+    if not rid or not secret:
+        return {"status": "not_started", "next": "先调用 authorize_getcut()"}
+    out = _public_api("POST", "/api/agent/authorize/poll",
+                      json={"request_id": rid, "poll_secret": secret})
+    if out.get("status") == "approved":
+        _write_local(AUTH_FILE, {"token": out.get("token", ""),
+                                  "email": out.get("email", ""),
+                                  "device": out.get("device", "GetCut Agent"),
+                                  "authorized_at": int(time.time())})
+        _clear_pending()
+        return {"status": "authorized", "email": out.get("email", ""),
+                "device": out.get("device", "GetCut Agent"),
+                "next": "授权完成；后续只有用户明确确认上传时才会发送 ZIP"}
+    return {"status": out.get("status", "pending"),
+            "next": "等待客户在 GetCut 页面点击授权"}
 
 
 def _api(method: str, path: str, **kw) -> dict:
@@ -83,17 +174,33 @@ def _api(method: str, path: str, **kw) -> dict:
 
 
 @mcp.tool()
-def upload_bundle(zip_path: str) -> dict:
-    """只上传素材包，不导入、不提交生成。
+def getcut_account() -> dict:
+    """检查当前 GetCut 设备令牌对应的账号；未登录时明确失败。
 
-    这是方案 1 的首选动作：申请账号绑定的收件票，流式上传 ZIP，返回手机打开的
-    /i/<code> 短链后停止。手机端负责导入、确认设置和提交生成。
+    电脑 Agent 不能只看本地有没有 ZIP，就默认它属于某个账号。必须先用这张
+    账号设备令牌向服务器确认身份；服务器确认后，上传才会绑定到这个账号。
+    """
+    if not _current_token():
+        raise RuntimeError("这台电脑还没有授权 GetCut；先调用 authorize_getcut()")
+    return _api("GET", "/api/agent/whoami")
+
+
+@mcp.tool()
+def upload_bundle(zip_path: str, user_confirmed: bool = False) -> dict:
+    """用户明确确认后，才把素材包上传到当前账号空间。
+
+    `user_confirmed=True` 只能由用户在对话里明确点击/说“上传”后传入。默认
+    False 时只检查本地 ZIP，不申请收件票、不上传；这样公开 Skills 不会在
+    用户还没确认账号和上传动作时把文件送到服务器。
     """
     p = Path(zip_path)
     if not p.is_file():
         raise RuntimeError(f"找不到文件：{zip_path}")
-    tk = _api("POST", "/api/intake/ticket",
-              json={"email": EMAIL} if EMAIL else {})
+    if not user_confirmed:
+        return {"status": "awaiting_confirmation", "zip_path": str(p),
+                "next": "素材包已在本地完成；请用户确认登录账号后点击“上传”"}
+    account = getcut_account()
+    tk = _api("POST", "/api/intake/ticket", json={})
     with open(p, "rb") as f:
         r = _session().put(tk["put_url"], data=f, params={"name": p.name}, timeout=600)
     try:
@@ -102,10 +209,11 @@ def upload_bundle(zip_path: str) -> dict:
         raise RuntimeError(f"上传收件地址 HTTP {r.status_code}（非 JSON 响应）") from None
     if r.status_code >= 400:
         raise RuntimeError(f"上传失败 HTTP {r.status_code}: {sent.get('error') or sent}")
-    return {"code": tk.get("code"), "intake_url": tk.get("url"),
+    return {"status": "uploaded", "account": account.get("email"),
+            "code": tk.get("code"), "intake_url": tk.get("url"),
             "url": tk.get("url"), "expires_at": tk.get("expiresAt"),
             "bytes": sent.get("bytes") or p.stat().st_size,
-            "next": "请在手机打开这个链接，登录后点击导入并提交生成"}
+            "next": "请在手机登录同一账号，看到“已送达”后点击导入"}
 
 
 @mcp.tool()
@@ -120,6 +228,7 @@ def feed_bundle(zip_path: str) -> dict:
     p = Path(zip_path)
     if not p.is_file():
         raise RuntimeError(f"找不到文件：{zip_path}")
+    getcut_account()  # 兼容入口也不能绕过真实账号授权
     tk = _api("POST", "/api/intake/ticket",
               json={"email": EMAIL} if EMAIL else {})
     with open(p, "rb") as f:

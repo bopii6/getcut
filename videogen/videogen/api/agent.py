@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from fastapi import Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from .. import agenthub, auth, config
+from .. import agenthub, agent_auth, auth, config
 
 from .. import ctx
 
@@ -42,6 +42,59 @@ def _agent_device(request: Request, fallback: str = "device") -> str:
     name = (request.headers.get("x-agent-device")
             or request.query_params.get("device") or fallback).strip()
     return re.sub(r"[^\w.\-]", "_", name)[:48] or fallback
+@router.post("/api/agent/authorize/start")
+def agent_authorize_start(body: dict, request: Request):
+    """为电脑 Agent 创建一次性授权请求；不接收目标邮箱。"""
+    try:
+        out = agent_auth.start(str(body.get("device") or "电脑 Agent"), ctx._client_ip(request))
+    except PermissionError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=429)
+    out["url"] = f"{str(request.base_url).rstrip('/')}/agent/authorize?request_id={out['request_id']}"
+    return out
+
+
+@router.get("/api/agent/authorize/info")
+def agent_authorize_info(request: Request, request_id: str = ""):
+    """给授权页看设备名和状态；不返回 poll secret 或设备令牌。"""
+    out = agent_auth.info(request_id)
+    if not out:
+        return JSONResponse({"error": "授权请求不存在或已过期"}, status_code=404)
+    return out
+
+
+@router.post("/api/agent/authorize/approve")
+def agent_authorize_approve(body: dict, request: Request):
+    """只有已登录的浏览器账号才能确认授权；不把令牌返回给浏览器。"""
+    email = ctx._session_email(request)
+    if not email:
+        return JSONResponse({"error": "请先登录或注册 GetCut"}, status_code=401)
+    try:
+        return agent_auth.approve(str(body.get("request_id") or ""), email,
+                                  ctx._client_ip(request))
+    except LookupError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=404)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=409)
+
+
+@router.post("/api/agent/authorize/poll")
+def agent_authorize_poll(body: dict, request: Request):
+    """Agent 用自己的 poll secret 领取一次已批准的设备令牌。"""
+    out = agent_auth.poll(str(body.get("request_id") or ""), str(body.get("poll_secret") or ""))
+    if out.get("status") == "not_found":
+        return JSONResponse({"error": "授权请求不存在或校验失败"}, status_code=404)
+    return out
+
+
+@router.get("/api/agent/whoami")
+def agent_whoami(request: Request):
+    """确认设备令牌对应的账号，不返回素材、任务或其他账号信息。"""
+    ident = ctx._agent_identity(request)
+    if ident in (None, "__admin__", "__open__"):
+        return JSONResponse({"error": "成片台未登录到用户账号"}, status_code=401)
+    return {"email": ident}
+
+
 @router.post("/api/agent/login")
 def agent_login(body: dict, request: Request):
     """成片台登录：邮箱密码换 90 天设备令牌，存本机以后免输。

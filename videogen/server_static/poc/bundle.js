@@ -12880,7 +12880,6 @@ const App = () => {
   const [libMsg, setLibMsg] = react.useState("");
   const [inbox, setInbox] = react.useState(null);
   const [inboxMsg, setInboxMsg] = react.useState("");
-  const [ticket, setTicket] = react.useState("");
   const playerRef = react.useRef(null);
   const audioRef = react.useRef(null);
   const abortRef = react.useRef(null);
@@ -13640,20 +13639,6 @@ const App = () => {
     setInbox([]);
     void refreshInbox(true);
   };
-  const newTicket = async () => {
-    setInboxMsg("\u6B63\u5728\u751F\u6210\u6536\u4EF6\u5730\u5740\u2026");
-    try {
-      const d = await api("/api/intake/ticket", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: "{}"
-      });
-      setTicket(String(d.put_url || ""));
-      setInboxMsg("");
-    } catch (e) {
-      setInboxMsg(String(e.message || e));
-    }
-  };
   const importCode = async (code) => {
     setInboxMsg("\u6B63\u5728\u5BFC\u5165\u2026");
     try {
@@ -13918,7 +13903,7 @@ const App = () => {
         ] }),
         !me ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "chip", onClick: () => setSheet("pricing"), title: "\u514D\u8D39\u7248\u4E0E\u9AD8\u7EA7\u7248", children: "\u5B9A\u4EF7" }) : null,
         me ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "chip", onClick: openLib, title: "\u5386\u53F2\u9879\u76EE\u4E0E\u6210\u7247", children: "\u4F5C\u54C1\u5E93" }) : null,
-        me ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "chip", onClick: openInbox, title: "\u7535\u8111\u5BC4\u6765\u7684\u7D20\u6750\u5305 / \u751F\u6210\u6536\u4EF6\u5730\u5740", children: "\u7D20\u6750" }) : null,
+        me ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "chip", onClick: openInbox, title: "\u67E5\u770B\u7535\u8111 Agent \u4E0A\u4F20\u7684\u7D20\u6750\u5305", children: "\u7D20\u6750" }) : null,
         /* @__PURE__ */ (0,jsx_runtime.jsx)(
           Account,
           {
@@ -14557,41 +14542,14 @@ const App = () => {
         },
         children: [
           /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: IS_HANDHELD ? "\u7535\u8111 Agent \u4E0A\u4F20\u5B8C\u6210\u540E\uFF0C\u8FD9\u91CC\u4F1A\u81EA\u52A8\u51FA\u73B0\u7D20\u6750\u5305\uFF1B\u770B\u5230\u201C\u5DF2\u9001\u8FBE\u201D\u540E\u70B9\u201C\u5BFC\u5165\u201D\u3002" : "\u8FD9\u91CC\u663E\u793A\u7535\u8111 Agent \u5BC4\u6765\u7684\u7D20\u6750\u5305\u3002\u624B\u673A\u8D1F\u8D23\u786E\u8BA4\u5185\u5BB9\uFF0C\u7535\u8111\u8D1F\u8D23\u540E\u53F0\u751F\u6210\u3002" }),
-          /* @__PURE__ */ (0,jsx_runtime.jsx)(
-            "button",
-            {
-              className: "btn",
-              style: { alignSelf: "flex-start", marginTop: 10 },
-              onClick: () => void newTicket(),
-              children: ticket ? "\u518D\u751F\u6210\u4E00\u6761\u6536\u4EF6\u5730\u5740" : "\u751F\u6210\u6536\u4EF6\u5730\u5740"
-            }
-          ),
-          ticket ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { display: "flex", gap: 8, marginTop: 10 }, children: [
-            /* @__PURE__ */ (0,jsx_runtime.jsx)(
-              "input",
-              {
-                readOnly: true,
-                value: ticket,
-                onFocus: (e) => e.currentTarget.select(),
-                style: { flex: 1, fontSize: 12, padding: "6px 8px" }
-              }
-            ),
-            /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn ln sm", onClick: () => {
-              var _a2;
-              (_a2 = navigator.clipboard) == null ? void 0 : _a2.writeText(ticket).then(
-                () => say("\u5DF2\u590D\u5236"),
-                () => say("\u590D\u5236\u4E0D\u4E86\uFF1A\u957F\u6309\u90A3\u884C\u5B57\u9009\u4E2D\u590D\u5236")
-              );
-            }, children: "\u590D\u5236" })
-          ] }) : null,
           inboxMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: inboxMsg }) : null,
           !inbox.length && !inboxMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: "\u7535\u8111 Agent \u4E0A\u4F20\u5B8C\u6210\u540E\uFF0C\u7D20\u6750\u5305\u4F1A\u81EA\u52A8\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" }) : null,
           /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "liblist", children: inbox.map((it) => {
-            const state = it.state || (it.ready ? "ready" : "waiting_upload");
+            const state = it.state || (it.ready ? "ready" : "imported");
             return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "librow", children: [
               /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-t", children: [
                 /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: it.file || it.code }),
-                /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: state === "ready" ? "\u5DF2\u9001\u8FBE \xB7 \u53EF\u4EE5\u5BFC\u5165" : state === "imported" ? "\u5DF2\u5BFC\u5165 \xB7 \u53BB\u9879\u76EE\u91CC\u7EE7\u7EED" : "\u7535\u8111 Agent \u6B63\u5728\u4E0A\u4F20\u2026" })
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: state === "ready" ? "\u5DF2\u9001\u8FBE \xB7 \u53EF\u4EE5\u5BFC\u5165" : state === "imported" ? "\u5DF2\u5BFC\u5165 \xB7 \u53BB\u9879\u76EE\u91CC\u7EE7\u7EED" : "\u6B63\u5728\u5BFC\u5165\u2026" })
               ] }),
               /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-a", children: [
                 state === "ready" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(

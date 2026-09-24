@@ -301,14 +301,16 @@ def intake_list(request: Request):
                 continue
             ready = (ctx.INTAKES / f"{f.stem}.zip").is_file()
             claimed = bool(side.get("claimed") and side.get("project_id"))
+            # 空白收件票只是电脑 Agent 申请上传时产生的内部凭据，不给客户看。
+            # 手机收件箱只列真正收到 ZIP 的包，以及已经导入的项目。
+            if not ready and not claimed:
+                continue
             if claimed:
                 state = "imported"
             elif side.get("claim_token"):
                 state = "importing"
-            elif ready:
-                state = "ready"
             else:
-                state = "waiting_upload"
+                state = "ready"
             project = None
             if claimed:
                 with ctx._LOCK:
