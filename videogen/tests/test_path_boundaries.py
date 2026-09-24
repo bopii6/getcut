@@ -20,6 +20,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 # config.py 在 import 时就读环境变量定死所有路径：先设环境，再 import 业务模块。
 _TMP = tempfile.mkdtemp(prefix="videogen-boundary-")
@@ -40,7 +41,9 @@ from starlette.requests import Request  # noqa: E402
 from starlette.responses import FileResponse, JSONResponse  # noqa: E402
 from starlette.testclient import TestClient  # noqa: E402
 
-from videogen import agenthub, auth, ctx, server  # noqa: E402
+from videogen import agenthub, auth, ctx, remotion_render, server  # noqa: E402
+from videogen.planner import Plan, Shot  # noqa: E402
+from videogen.schemas import Content  # noqa: E402
 
 ADMIN = "boundary-admin@example.invalid"
 ADMIN_PASSWORD = "Yt7-nQz3WkRs9Lb4Xp2M"
@@ -370,6 +373,55 @@ class AgentMediaBoundaryTest(BoundaryFixture):
             with self.subTest(payload=payload):
                 r = _request(f"/agent-media/{self.job}/{payload}", self.session)
                 self.assertBlockedHandler(server.agent_media(self.job, r, payload), f"fonts {payload}")
+
+
+class RenderAssetBoundaryTest(unittest.TestCase):
+    """渲染包出口：素材路径必须是 bundle-relative，不能把包外文件拷进媒体目录。"""
+
+    def setUp(self):
+        self.base = Path(tempfile.mkdtemp(prefix="vg-render-boundary-", dir=_TMP))
+        self.bundle = self.base / "bundle"
+        self.bundle.mkdir()
+        self.outside = self.base / "outside.png"
+        self.outside.write_bytes(SENTINEL.encode("utf-8"))
+        self.renderer = self.base / "renderer"
+        self.patch = patch.object(remotion_render, "RENDERER", self.renderer)
+        self.patch.start()
+        self.addCleanup(self.patch.stop)
+        self.media_dir = self.renderer / "public" / "media"
+        self.content = Content(schema_version=1, title="边界", script="")
+
+    def build(self, plan, template="editorial"):
+        return remotion_render.build_props(
+            self.bundle, plan, self.content, {}, {}, template=template)
+
+    def assert_outside_not_copied(self):
+        self.assertEqual(list(self.media_dir.iterdir()), [])
+
+    def test_shot_asset_path_outside_bundle_is_not_copied(self):
+        plan = Plan(duration_ms=1000, shots=[
+            Shot(kind="footage", asset_path="../outside.png", sent_indexes=[]),
+        ])
+        props = self.build(plan)
+        self.assertNotIn("media", props["shots"][0])
+        self.assert_outside_not_copied()
+
+    def test_next_asset_path_outside_bundle_is_not_copied(self):
+        class Shots:
+            def __iter__(self):
+                yield Shot(kind="title_card", asset_path=None, sent_indexes=[])
+                yield Shot(kind="footage", asset_path="../outside.png", sent_indexes=[])
+
+        plan = Plan(duration_ms=1000, shots=Shots())
+        props = self.build(plan, template="zhigu")
+        self.assertNotIn("media", props["shots"][0])
+        self.assert_outside_not_copied()
+
+    def test_macro_background_path_outside_bundle_is_not_copied(self):
+        plan = Plan(duration_ms=1000, bg_asset="../outside.png")
+        props = self.build(plan, template="macro")
+        self.assertEqual(props["bgImage"], "rep__macro_bg.jpg")
+        self.assert_outside_not_copied()
 
 
 class ZipExtractBoundaryTest(unittest.TestCase):

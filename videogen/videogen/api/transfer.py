@@ -66,24 +66,41 @@ def _usage_today(email: str) -> int:
     return int(((ctx._usage_load().get(email) or {}).get(time.strftime("%Y-%m-%d")) or 0))
 def _free_quota_check(email: str) -> tuple[bool, int]:
     """免费档还能不能出这一条 + 今天已用几条。判额度只读，记账留给放行之后。"""
-    used = _usage_today(email)
-    return used < config.FREE_DAILY_BUILDS, used
-def _usage_bump(email: str) -> int:
-    """记一次出片，返回今天已用次数。只留最近 3 天，防文件长大。"""
+    with ctx._LOCK:
+        used = _usage_today(email)
+        return used < config.FREE_DAILY_BUILDS, used
+
+
+def _usage_bump_locked(email: str) -> int:
+    """在 ``ctx._LOCK`` 内记一次出片；调用方必须已经持锁。"""
     today = time.strftime("%Y-%m-%d")
     keep = {today, time.strftime("%Y-%m-%d", time.localtime(time.time() - 86400)),
             time.strftime("%Y-%m-%d", time.localtime(time.time() - 172800))}
+    data = ctx._usage_load()
+    user = {d: n for d, n in (data.get(email) or {}).items() if d in keep}
+    user[today] = int(user.get(today, 0)) + 1
+    data[email] = user
+    try:
+        ctx.USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        safestore.write_json(ctx.USAGE_FILE, data, indent=None)
+    except OSError:
+        pass
+    return user[today]
+
+
+def _usage_bump(email: str) -> int:
+    """记一次出片，返回今天已用次数。只留最近 3 天，防文件长大。"""
     with ctx._LOCK:
-        data = ctx._usage_load()
-        user = {d: n for d, n in (data.get(email) or {}).items() if d in keep}
-        user[today] = int(user.get(today, 0)) + 1
-        data[email] = user
-        try:
-            ctx.USAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
-            safestore.write_json(ctx.USAGE_FILE, data, indent=None)
-        except OSError:
-            pass
-        return user[today]
+        return _usage_bump_locked(email)
+
+
+def _free_quota_claim(email: str) -> tuple[bool, int]:
+    """在同一临界区检查并记一次免费出片，避免并发请求各自看到旧余额。"""
+    with ctx._LOCK:
+        used = _usage_today(email)
+        if used >= config.FREE_DAILY_BUILDS:
+            return False, used
+        return True, _usage_bump_locked(email)
 # 各长阶段的进度区间（真实上报缺位时，用渐近曲线兜底爬升，既不冻住也不会跑飞）
 _STAGE_SPAN = {"tts": (6, 16), "plan": (16, 30), "props": (30, 40),
                "render": (40, 78), "audio": (78, 88), "mux": (88, 93), "verify": (93, 99)}
@@ -233,16 +250,38 @@ def _intake_sidecar(code: str) -> dict:
             return {}
     return {}
 def _intake_sidecar_save(code: str, data: dict) -> None:
-    """写收件登记（几 KB 的 json）：领票时就写，包还没到也有一条记录。"""
+    """原子写收件登记（几 KB 的 json）：领票时就写，包还没到也有一条记录。"""
     ctx.INTAKES.mkdir(parents=True, exist_ok=True)
     _, side = _intake_paths(code)
-    side.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    safestore.write_json(side, data, indent=None)
 
 
 def _intake_stored_bytes() -> int:
     if not ctx.INTAKES.is_dir():
         return 0
-    return sum(f.stat().st_size for f in ctx.INTAKES.glob("*.zip") if f.is_file())
+    total = 0
+    for f in ctx.INTAKES.glob("*.zip"):
+        try:
+            if f.is_file():
+                total += f.stat().st_size
+        except OSError:
+            pass
+    return total
+
+
+def _intake_reserved_bytes(exclude: str | None = None) -> int:
+    """已通过 PUT 原子占位、尚未转正的字节数。"""
+    if not ctx.INTAKES.is_dir():
+        return 0
+    total = 0
+    for side_path in ctx.INTAKES.glob("*.json"):
+        code = side_path.stem
+        if code == exclude:
+            continue
+        side = _intake_sidecar(code)
+        if side.get("put_claim"):
+            total += max(0, int(side.get("put_reserved") or 0))
+    return total
 @router.get("/api/intake")
 def intake_list(request: Request):
     """我的收件箱：这个账号领过、还没导入的包。手机端「素材」入口读的就是这里。
@@ -313,50 +352,108 @@ async def intake_put(code: str, request: Request):
     """凭票上传：一条 PUT。票本身就是一次性凭证，不要账号、不要任何钥匙。"""
     if not INTAKE_CODE_RE.match(code):
         return JSONResponse({"error": "链接无效"}, status_code=404)
+
     zf_path, _ = _intake_paths(code)
-    side = _intake_sidecar(code)
     got = (request.query_params.get("t") or "")[:64]
-    # 不区分"没有这张票"与"票不对"：这条地址会被抄来抄去，别替人探路
-    if not side.get("secret") or not secrets.compare_digest(str(side["secret"]), got):
-        return JSONResponse({"error": "收件地址无效或已过期"}, status_code=403)
-    if zf_path.is_file():
-        return JSONResponse({"error": "这个收件地址已经收过包了"}, status_code=409)
-    ctx._sweep_intakes()
-    if _intake_stored_bytes() > _INTAKE_WATERLINE_BYTES:
-        return JSONResponse({"error": "收件区暂时满了，请稍后再试"}, status_code=503)
+    claim = uuid.uuid4().hex
+    # 占用与水位预留只在同步临界区内完成；网络流 await 期间绝不持有线程锁。
+    with ctx._LOCK:
+        ctx._sweep_intakes()
+        side = _intake_sidecar(code)
+        # 不区分"没有这张票"与"票不对"：这条地址会被抄来抄去，别替人探路
+        if not side.get("secret") or not secrets.compare_digest(str(side["secret"]), got):
+            return JSONResponse({"error": "收件地址无效或已过期"}, status_code=403)
+        if zf_path.is_file() or side.get("claimed"):
+            return JSONResponse({"error": "这个收件地址已经收过包了"}, status_code=409)
+        if side.get("put_claim"):
+            return JSONResponse({"error": "这个收件地址正在上传，请不要重复提交"}, status_code=409)
+        if _intake_stored_bytes() + _intake_reserved_bytes() > _INTAKE_WATERLINE_BYTES:
+            return JSONResponse({"error": "收件区暂时满了，请稍后再试"}, status_code=503)
+        side["put_claim"] = claim
+        side["put_claim_at"] = time.time()
+        side["put_reserved"] = 0
+        _intake_sidecar_save(code, side)
+
     # 包体边收边落盘（临时文件、验完原子转正）：整包憋内存的老写法，
-    # 几条并发的 200MB PUT 就能把 3G 内存的小机顶进 OOM
+    # 几条并发的 200MB PUT 就能把 3G 内存的小机顶进 OOM。
     ctx.INTAKES.mkdir(parents=True, exist_ok=True)
     tmp = ctx.INTAKES / f".put-{uuid.uuid4().hex}.part"
+    committed = False
+    published = False
     try:
         over = False
+        full = False
         with tmp.open("wb") as out:
             left = MAX_INTAKE_BYTES
             async for chunk in request.stream():
-                left -= len(chunk)
-                if left < 0:
-                    over = True
+                for start in range(0, len(chunk), 1024 * 1024):
+                    piece = chunk[start:start + 1024 * 1024]
+                    if left - len(piece) < 0:
+                        over = True
+                        break
+                    # 先在水位账本里原子预留，再把这块写到盘上。这样多条 PUT
+                    # 即使同时通过入口，也不可能一起按“旧余额”把收件区写越线。
+                    with ctx._LOCK:
+                        current = _intake_sidecar(code)
+                        if current.get("put_claim") != claim:
+                            return JSONResponse(
+                                {"error": "这个收件地址正在上传，请不要重复提交"},
+                                status_code=409)
+                        used = (_intake_stored_bytes()
+                                + _intake_reserved_bytes(exclude=code)
+                                + int(current.get("put_reserved") or 0))
+                        if used + len(piece) > _INTAKE_WATERLINE_BYTES:
+                            full = True
+                            break
+                        current["put_reserved"] = int(current.get("put_reserved") or 0) + len(piece)
+                        _intake_sidecar_save(code, current)
+                    out.write(piece)
+                    left -= len(piece)
+                if over or full:
                     break
-                out.write(chunk)
         if over:
             return JSONResponse({"error": f"素材包超过 {MAX_INTAKE_BYTES // 1048576}MB 上限"},
                                 status_code=413)
+        if full:
+            return JSONResponse({"error": "收件区暂时满了，请稍后再试"}, status_code=503)
         try:
             with zipfile.ZipFile(tmp) as zf:
                 if "content.json" not in zf.namelist():
                     raise zipfile.BadZipFile("no content.json")
         except zipfile.BadZipFile:
             return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
-        tmp.replace(zf_path)
+
+        with ctx._LOCK:
+            current = _intake_sidecar(code)
+            if current.get("put_claim") != claim or zf_path.is_file():
+                return JSONResponse({"error": "这个收件地址已经收过包了"}, status_code=409)
+            tmp.replace(zf_path)
+            published = True
+            # 24 小时从"包真到了"这一刻算。文件名走 query（HTTP 头只许 ASCII，
+            # 而客户就是把选题写进 zip 名的人）；名字只用于导入后给项目起名。
+            current.pop("put_claim", None)
+            current.pop("put_claim_at", None)
+            current.pop("put_reserved", None)
+            current["created"] = time.time()
+            current["file"] = _fix_mojibake_name(
+                request.query_params.get("name") or "bundle.zip")[:160]
+            _intake_sidecar_save(code, current)
+            committed = True
     finally:
         tmp.unlink(missing_ok=True)
-    # 24 小时从"包真到了"这一刻算。文件名走 query（HTTP 头只许 ASCII，而客户
-    # 就是把选题写进 zip 名的人）；名字只用于导入后给项目起名
-    side["created"] = time.time()
-    side["file"] = _fix_mojibake_name(request.query_params.get("name") or "bundle.zip")[:160]
-    _intake_sidecar_save(code, side)
+        if not committed:
+            if locals().get("published"):
+                zf_path.unlink(missing_ok=True)
+            with ctx._LOCK:
+                current = _intake_sidecar(code)
+                if current.get("put_claim") == claim:
+                    current.pop("put_claim", None)
+                    current.pop("put_claim_at", None)
+                    current.pop("put_reserved", None)
+                    _intake_sidecar_save(code, current)
+    size = zf_path.stat().st_size
     base = str(request.base_url).rstrip("/")
-    return {"ok": True, "bytes": zf_path.stat().st_size, "url": f"{base}/i/{code}"}
+    return {"ok": True, "bytes": size, "url": f"{base}/i/{code}"}
 @router.get("/api/intake/{code}/meta")
 def intake_meta(code: str, request: Request):
     """落地页概要：**只说"有个包在等你"，不说包里写了什么**。
@@ -402,56 +499,91 @@ def intake_claim(code: str, request: Request, body: dict = None):
     email = _effective_email(request, (body or {}).get("email"))
     if not email and not ctx._open_mode():
         return JSONResponse({"error": "先登录或注册，再导入素材包"}, status_code=401)
-    side = _intake_sidecar(code)
-    owner = side.get("owner")
-    admin = ctx._is_adminish(request) or ctx._open_mode()
-    if owner and email != owner and not admin:
-        # 票是谁领的，包就只能谁导：把收件地址转给别人，别人也导不走这条稿子
-        return JSONResponse({"error": "这条收件地址是给别的账号领的，换本人账号再来"},
-                            status_code=403)
-    zf_path, side_path = _intake_paths(code)
-    if not zf_path.is_file():
-        if side.get("project_id"):
-            # 已导入：项目号只给正主，别人只知道"这条用过了"
-            if admin or email == owner:
-                return JSONResponse({"error": "这个素材包已被导入过了",
-                                     "projectId": side["project_id"]}, status_code=409)
-            return JSONResponse({"error": "这个素材包已经被导入过了"}, status_code=409)
-        return JSONResponse({"error": "包还没到，或这条地址已过期（24 小时内有效）"},
-                            status_code=404)
-    orig_name = Path(_fix_mojibake_name(side.get("file") or "bundle.zip")).stem or "bundle"
-    name = re.sub(r'[\\/:*?"<>|]', "", orig_name).strip() or "bundle"
-    dest = ctx.WORKSPACES / name
-    i = 1
-    while dest.exists():
-        dest = ctx.WORKSPACES / f"{name}-{i}"
-        i += 1
-    dest.mkdir(parents=True)
+
+    zf_path, _ = _intake_paths(code)
+    claim = uuid.uuid4().hex
+    dest = None
+    committed = False
     try:
-        with zipfile.ZipFile(zf_path) as zf:
-            _safe_extract(zf, dest)
-    except (zipfile.BadZipFile, ValueError) as e:
-        shutil.rmtree(dest, ignore_errors=True)
-        return JSONResponse({"error": f"素材包无效：{e}"}, status_code=400)
-    if not (dest / "content.json").is_file():
-        shutil.rmtree(dest, ignore_errors=True)
-        return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
-    meta = ctx._bundles_meta()
-    meta[dest.name] = {"owner": email, "created": time.strftime("%Y/%m/%d %H:%M")}
-    ctx._bundles_meta_save(meta)
-    with ctx._LOCK:
-        reg = ctx._reg()
-        pid = uuid.uuid4().hex[:12]
-        reg["projects"].append({"project_id": pid, "title": dest.name, "bundle": dest.name,
-                                "created": time.strftime("%Y/%m/%d"), "renders": [],
-                                "owner": email})
-        ctx._reg_save(reg)
-    side["claimed"] = True
-    side["claimed_at"] = time.time()
-    side["project_id"] = pid
-    side_path.write_text(json.dumps(side, ensure_ascii=False), encoding="utf-8")
-    zf_path.unlink(missing_ok=True)
-    return {"name": dest.name, "project_id": pid, "title": dest.name}
+        # 先在同一把锁里复查票权并写 claim 标记。第二个并发请求只能看到
+        # “正在导入”，不能也去解包、建同名目录或追加第二个项目。
+        with ctx._LOCK:
+            side = _intake_sidecar(code)
+            owner = side.get("owner")
+            admin = ctx._is_adminish(request) or ctx._open_mode()
+            if owner and email != owner and not admin:
+                return JSONResponse(
+                    {"error": "这条收件地址是给别的账号领的，换本人账号再来"},
+                    status_code=403)
+            if not zf_path.is_file():
+                if side.get("project_id"):
+                    # 已导入：项目号只给正主，别人只知道"这条用过了"
+                    if admin or email == owner:
+                        return JSONResponse({"error": "这个素材包已被导入过了",
+                                             "projectId": side["project_id"]}, status_code=409)
+                    return JSONResponse({"error": "这个素材包已经被导入过了"}, status_code=409)
+                if side.get("claim_token"):
+                    return JSONResponse({"error": "这个素材包正在导入，请稍候"}, status_code=409)
+                return JSONResponse(
+                    {"error": "包还没到，或这条地址已过期（24 小时内有效）"},
+                    status_code=404)
+
+            orig_name = Path(_fix_mojibake_name(side.get("file") or "bundle.zip")).stem or "bundle"
+            name = re.sub(r'[\\/:*?"<>|]', "", orig_name).strip() or "bundle"
+            dest = ctx.WORKSPACES / name
+            i = 1
+            while True:
+                try:
+                    dest.mkdir(parents=True, exist_ok=False)
+                    break
+                except FileExistsError:
+                    dest = ctx.WORKSPACES / f"{name}-{i}"
+                    i += 1
+            side["claim_token"] = claim
+            side["claim_at"] = time.time()
+            _intake_sidecar_save(code, side)
+
+        try:
+            with zipfile.ZipFile(zf_path) as zf:
+                _safe_extract(zf, dest)
+        except (zipfile.BadZipFile, ValueError) as e:
+            return JSONResponse({"error": f"素材包无效：{e}"}, status_code=400)
+        if not (dest / "content.json").is_file():
+            return JSONResponse(
+                {"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
+
+        with ctx._LOCK:
+            current = _intake_sidecar(code)
+            if current.get("claim_token") != claim:
+                return JSONResponse({"error": "这个素材包正在导入，请稍候"}, status_code=409)
+            meta = ctx._bundles_meta()
+            meta[dest.name] = {"owner": email, "created": time.strftime("%Y/%m/%d %H:%M")}
+            ctx._bundles_meta_save(meta)
+            reg = ctx._reg()
+            pid = uuid.uuid4().hex[:12]
+            reg["projects"].append({"project_id": pid, "title": dest.name, "bundle": dest.name,
+                                    "created": time.strftime("%Y/%m/%d"), "renders": [],
+                                    "owner": email})
+            ctx._reg_save(reg)
+            current.pop("claim_token", None)
+            current.pop("claim_at", None)
+            current["claimed"] = True
+            current["claimed_at"] = time.time()
+            current["project_id"] = pid
+            _intake_sidecar_save(code, current)
+            zf_path.unlink(missing_ok=True)
+            committed = True
+        return {"name": dest.name, "project_id": pid, "title": dest.name}
+    finally:
+        if not committed and dest is not None:
+            shutil.rmtree(dest, ignore_errors=True)
+        if not committed:
+            with ctx._LOCK:
+                current = _intake_sidecar(code)
+                if current.get("claim_token") == claim:
+                    current.pop("claim_token", None)
+                    current.pop("claim_at", None)
+                    _intake_sidecar_save(code, current)
 @router.post("/api/build")
 def start_build(body: dict, request: Request):
     fmt = body.get("format") or ctx.DEFAULT_TEMPLATE
@@ -475,20 +607,11 @@ def start_build(body: dict, request: Request):
         return JSONResponse({"error": str(e)}, status_code=400)
     # 付费墙：免费档每天限量出片且强制带 GetCut 水印；基础/高级版不限量、水印随意。
     email = _effective_email(request, body.get("email"))
-    if email and not auth.is_admin(email) and auth.user_tier(email) == "free":
+    free_email = (email if email and not auth.is_admin(email)
+                  and auth.user_tier(email) == "free" else None)
+    if free_email:
         body = dict(body)
         body["watermark"] = True
-        allowed, used = _free_quota_check(email)
-        if not allowed:
-            # 被挡的这一次**不记账**：以前是先 _usage_bump 再判超限，
-            # 于是被拒的尝试也一直往账本上加数，「我的」里会出现「已用 7 / 2 条」
-            return JSONResponse(
-                {"error": f"今天的免费额度（每天 {config.FREE_DAILY_BUILDS} 条）用完了，"
-                          f"已用 {used} 条。"
-                          f"¥{config.PRICES['premium']} 永久买断，不限量去水印——点右上角「升级」看看",
-                 "limited": True},
-                status_code=429)
-        _usage_bump(email)
     if email:
         body = dict(body)
         body["brand"] = ctx._brand_for(email)   # 高级档品牌套件，服务端自动带上（默认配置固化）
@@ -499,12 +622,23 @@ def start_build(body: dict, request: Request):
         body["series"] = {"badge": raw_badge[:24]} if raw_badge and auth.tier_at_least(email, "premium") else None
     pid = body.get("project_id")
     with ctx._LOCK:
+        # 先判项目已有任务，再消费免费额度。两者与入队共用 ctx._LOCK，
+        # 既避免 409 白扣额度，也避免两个同项目请求同时越过检查。
         if pid:
             for j in ctx.JOBS.values():
                 if j.get("project_id") == pid and j.get("stage") not in ("done", "failed", "cancelled"):
                     return JSONResponse(
                         {"error": "该项目已有任务在排队/渲染，等它完成再发起新的"},
                         status_code=409)
+        if free_email:
+            allowed, used = _free_quota_claim(free_email)
+            if not allowed:
+                return JSONResponse(
+                    {"error": f"今天的免费额度（每天 {config.FREE_DAILY_BUILDS} 条）用完了，"
+                              f"已用 {used} 条。"
+                              f"¥{config.PRICES['premium']} 永久买断，不限量去水印——点右上角「升级」看看",
+                     "limited": True},
+                    status_code=429)
         job_id = uuid.uuid4().hex[:12]
         ahead = ctx._queue_ahead(job_id)
         ctx.JOBS[job_id] = {"stage": "queued", "stage8": 1, "progress": 3, "error": None, "video": None,
@@ -575,7 +709,13 @@ def job_status(job_id: str, request: Request):
     j = ctx.JOBS.get(job_id)
     if j is None or not ctx._job_visible(j, request):
         return {"stage": "unknown"}   # 不存在与无权同形，不泄露任务存在性
-    out = dict(j)
+    if j.get("try"):
+        # 通用任务接口只给试玩的公开进度；不能把 video/try_video/work_dir
+        # 等内部路径借 dict(j) 顺手带出去。样片下载走 /try/<id>.mp4 的专属鉴权。
+        out = {key: j.get(key) for key in
+               ("stage", "stage8", "progress", "detail", "error")}
+    else:
+        out = dict(j)
     out.pop("cancel", None)           # 内部旗子不外泄
     if out.get("stage") in ("queued", "prepped"):
         with ctx._LOCK:
@@ -586,9 +726,12 @@ def job_status(job_id: str, request: Request):
         else:
             out["detail"] = ("排队中 · 前面还有 %d 个任务" % ahead) if ahead else "马上开始"
     t0 = out.get("t0")
-    # 跑完/失败后冻结耗时，否则"已用"会一直涨（回来再看变成几十小时）
-    out["elapsed"] = int((out.get("t_end") or time.time()) - t0) if t0 else None
+    # 跑完/失败后冻结耗时，否则"已用"会一直涨（回来再看变成几十小时）。
+    # try 的白名单里没有 t0，也就不额外制造 elapsed 字段。
+    if t0:
+        out["elapsed"] = int((j.get("t_end") or time.time()) - t0)
     return out
+
 @router.post("/api/job/{job_id}/cancel")
 def cancel_job(job_id: str, request: Request):
     """停止任务。排队中的直接移出队列即刻生效；已经在干活的举旗子，

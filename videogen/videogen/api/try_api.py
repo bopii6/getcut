@@ -23,7 +23,7 @@ from fastapi import Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 
 from .. import config, ctx
-from .transfer import _free_quota_check, _usage_bump
+from .transfer import _free_quota_claim
 
 from fastapi import APIRouter
 
@@ -104,15 +104,16 @@ def try_render(request: Request, body: dict = None):
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
 
-    if email:
-        allowed, used = _free_quota_check(email)
-        if not allowed:
-            return JSONResponse({"error": f"今天 {used}/{config.FREE_DAILY_BUILDS} 条免费额度"
-                                          "用完了：明天再来，或看「权益与定价」"},
-                                status_code=429)
-
     job_id = uuid.uuid4().hex[:12]
     with ctx._LOCK:
+        if email:
+            # 检查与记账是同一个事务；拿到额度后立即在同一临界区入队。
+            allowed, used = _free_quota_claim(email)
+            if not allowed:
+                return JSONResponse({"error": f"今天 {used}/{config.FREE_DAILY_BUILDS} 条免费额度"
+                                              "用完了：明天再来，或看「权益与定价」"},
+                                    status_code=429)
+
         ahead = ctx._queue_ahead(job_id)
         ctx.JOBS[job_id] = {"stage": "queued", "stage8": 1, "progress": 3, "error": None,
                         "video": None, "project_id": None, "owner": email,
@@ -124,8 +125,6 @@ def try_render(request: Request, body: dict = None):
                             "watermark": True, "useLlm": True, "sfx": True, "sfxMode": "all"}
         ctx._PREP_WAIT.append(job_id)
         ctx._PREP_CV.notify()
-    if email:
-        _usage_bump(email)          # 额度按账号算，不再靠那枚 180 天的设备 cookie
     return JSONResponse({"job": job_id, "topic": t["id"], "template": fmt})
 @router.get("/api/try/{job_id}")
 def try_status(job_id: str, request: Request):

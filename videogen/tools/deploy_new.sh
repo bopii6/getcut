@@ -53,9 +53,39 @@ else
 fi
 
 # 重建容器（先停旧的再改名，避免端口占用）
+# 从这里开始，本事务中的任何失败都必须恢复旧容器，并把原始失败码带回调用方。
+DEPLOY_ACTIVE=0
+OLD_RENAMED=0
+rollback_on_exit() {
+  local status=$?
+  trap - EXIT
+  if [ "$DEPLOY_ACTIVE" = 1 ]; then
+    set +e
+    [ "$status" -ne 0 ] || status=1
+    echo "[deploy] 部署失败（退出码 $status），回滚旧容器" >&2
+    if [ "$OLD_RENAMED" = 1 ]; then
+      if docker container inspect videogen >/dev/null 2>&1; then
+        echo "[deploy] 新容器日志：" >&2
+        docker logs videogen --tail 20 >&2
+        docker rm -f videogen >/dev/null 2>&1
+      fi
+      if docker container inspect videogen-old >/dev/null 2>&1; then
+        docker rename videogen-old videogen
+      else
+        echo "[deploy] 严重：找不到 videogen-old，无法恢复旧容器名" >&2
+      fi
+    fi
+    docker start videogen >/dev/null
+  fi
+  exit "$status"
+}
+trap rollback_on_exit EXIT
+DEPLOY_ACTIVE=1
+
 docker stop videogen >/dev/null
 docker rm -f videogen-old >/dev/null 2>&1 || true
 docker rename videogen videogen-old
+OLD_RENAMED=1
 docker run -d --name videogen --restart unless-stopped --network host \
   --log-driver json-file --log-opt max-size=20m --log-opt max-file=5 \
   --env-file .env \
@@ -90,12 +120,10 @@ for i in $(seq 1 20); do
   if curl -fsS --max-time 4 http://127.0.0.1:8600/healthz 2>/dev/null | grep -q '"ok":true'; then
     echo "[deploy] 服务正常（新容器已就绪，旧容器保留为 videogen-old 可回滚）"
     docker exec videogen python -c "from videogen import version; print('[deploy] 容器自报:', version.info())" || true
+    DEPLOY_ACTIVE=0
+    trap - EXIT
     exit 0
   fi
 done
-echo "[deploy] 失败，回滚"
-docker rm -f videogen >/dev/null 2>&1 || true
-docker rename videogen-old videogen
-docker start videogen >/dev/null
-docker logs videogen --tail 20
+echo "[deploy] 健康检查超时" >&2
 exit 1

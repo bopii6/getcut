@@ -66,8 +66,12 @@ class AgentJobAclTest(unittest.TestCase):
         self._reg = ctx._reg
         server.JOBS.clear()
         server.JOBS["job-mine"] = {"owner": OWNER, "project_id": "p1", "stage": "queued"}
-        server.JOBS["job-try"] = {"owner": OWNER, "try": True, "project_id": "p2", "stage": "queued"}
-        # 线上真实形态：/api/try 建单不写 owner，也不挂项目（匿名访客提交的）
+        self.raw_try = Path(_TMP) / "try-raw.mp4"
+        self.raw_try.write_bytes(b"RAW-TRY-PRIVATE")
+        server.JOBS["job-try"] = {
+            "owner": OWNER, "try": True, "project_id": None, "stage": "done",
+            "video": str(self.raw_try), "try_video": str(self.raw_try),
+        }
         server.JOBS["job-try-anon"] = {"try": True, "project_id": None, "stage": "queued"}
         self.owner = auth.make_session(OWNER, auth.SESSION_TTL_SHORT)
         self.other = auth.make_session(INTRUDER, auth.SESSION_TTL_SHORT)
@@ -143,7 +147,7 @@ class AgentJobAclTest(unittest.TestCase):
                 r = self.client.request(method, template.format("job-mine"), json={})
                 self.assertEqual(r.status_code, 401)
 
-    # ---------- 试玩样片：内容公开，但"谁能替它渲、往它上交东西"不公开 ----------
+    # ---------- 试玩任务：本人可见，通用接口不得泄露内部路径 ----------
     def test_try_job_is_not_open_to_strangers(self):
         """2026-09-23 隔离定调：一条片子只有本人（与本来就能领它的站长通道）能经手。
 
@@ -158,6 +162,27 @@ class AgentJobAclTest(unittest.TestCase):
                     own = self.hit(method, template.format(job), self.owner, claim=self.claim)
                     if job == "job-try" and not any(c in template for c in CLAIMED):
                         self.assertNotIn(own.status_code, (401, 403))
+
+    def test_generic_job_status_does_not_expose_try_paths(self):
+        for session in (self.owner, self.other):
+            with self.subTest(owner=session == self.owner):
+                r = self.client.get(
+                    "/api/job/job-try",
+                    cookies={server.SESSION_COOKIE: session},
+                )
+                self.assertNotIn(str(self.raw_try), r.text)
+                self.assertNotIn("try_video", r.text)
+                self.assertNotIn("work_dir", r.text)
+
+    def test_raw_try_video_is_never_served_by_generic_video_route(self):
+        for session in (self.owner, self.other):
+            with self.subTest(owner=session == self.owner):
+                r = self.client.get(
+                    "/video/job-try",
+                    cookies={server.SESSION_COOKIE: session},
+                )
+                self.assertEqual(r.status_code, 404)
+                self.assertNotIn(b"RAW-TRY-PRIVATE", r.content)
 
     # ---------- 管理员的兜底：看得到、救得了，但不冒充渲染方 ----------
     def test_admin_can_look_but_not_report_without_claim(self):

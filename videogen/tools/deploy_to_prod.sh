@@ -253,7 +253,12 @@ cat /tmp/BUILD_INFO.json | $SSH "$HOST" "cat > $BASE/code/videogen/BUILD_INFO.js
 if [ "$REBUILD" = 1 ]; then
   echo "[deploy] 重建容器（.env 改动只有重建才生效）"
   $SSH "$HOST" "cd $BASE && bash deploy_new.sh" | tail -6
-  rm -rf "$STAGE"; exit 0
+  rc=${PIPESTATUS[0]}
+  if [ "$rc" -ne 0 ]; then
+    echo "[deploy] 远端重建失败（退出码 $rc）" >&2
+  fi
+  rm -rf "$STAGE"
+  exit "$rc"
 fi
 
 echo "[deploy] 重启并探活"

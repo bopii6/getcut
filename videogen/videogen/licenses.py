@@ -17,6 +17,7 @@ import hashlib
 import json
 import logging
 import secrets
+import threading
 import time
 from pathlib import Path
 
@@ -28,6 +29,9 @@ log = logging.getLogger(__name__)
 _ALPHABET = "2346789ABCDEFGHJKMNPQRTUVWXYZ"
 _CODE_FILE = Path(config.LICENSES_FILE)
 _AUDIT_FILE = Path(config.LICENSE_AUDIT_FILE)
+# 卡密表是读-改-写，且兑换还要同步更新账号档位。整段事务共用一把可重入锁，
+# 避免两个进程内请求同时读到“未兑换”，也避免与发卡/匿名化互相覆盖。
+_LOCK = threading.RLock()
 
 
 def _norm(code: str) -> str:
@@ -57,18 +61,19 @@ def generate(tier: str, count: int, note: str = "") -> list[str]:
     if tier not in ("basic", "premium"):
         raise ValueError("档位只能是 basic 或 premium")
     count = max(1, min(int(count), 200))
-    data = _load()
-    codes = []
-    now = time.strftime("%Y-%m-%d %H:%M")
-    for _ in range(count):
-        code = _new_code(tier)
-        while any(c["code"] == code for c in data["codes"]):   # 理论撞码，重摇
+    with _LOCK:
+        data = _load()
+        codes = []
+        now = time.strftime("%Y-%m-%d %H:%M")
+        for _ in range(count):
             code = _new_code(tier)
-        data["codes"].append({"code": code, "tier": tier, "created": now,
-                              "note": note, "redeemed_by": None, "redeemed_at": None})
-        codes.append(code)
-    _save(data)
-    return codes
+            while any(c["code"] == code for c in data["codes"]):   # 理论撞码，重摇
+                code = _new_code(tier)
+            data["codes"].append({"code": code, "tier": tier, "created": now,
+                                  "note": note, "redeemed_by": None, "redeemed_at": None})
+            codes.append(code)
+        _save(data)
+        return codes
 
 
 def _find(data: dict, code: str) -> dict | None:
@@ -84,48 +89,73 @@ def redeem(email: str, code: str) -> tuple[bool, str, str]:
         return False, "先登录，再输入卡密", auth.user_tier(email)
     if len(raw) != 11 or raw[:3] not in ("GCB", "GCP"):
         return False, "卡密格式不对，应是 GCB/GCP 开头的那串码", auth.user_tier(email)
-    data = _load()
-    rec = _find(data, raw)
-    if rec is None:
-        return False, "没有这张卡密，找站长核对一下", auth.user_tier(email)
-    if rec["redeemed_by"]:
-        return False, "这张卡密已被使用", auth.user_tier(email)
-    tier = rec["tier"]
-    current = auth.user_tier(email)
-    if auth.TIER_RANK[current] > auth.TIER_RANK[tier]:
-        return False, f"你已经是{auth.TIER_LABEL[current]}，这张{auth.TIER_LABEL[tier]}码就退给站长吧", current
-    if auth.TIER_RANK[current] == auth.TIER_RANK[tier] and current != "free":
-        return False, f"你已经是{auth.TIER_LABEL[tier]}了，这张码别浪费", current
-    try:
-        auth.set_tier(email, tier)
-    except ValueError as e:
-        return False, str(e), current
-    rec["redeemed_by"] = email
-    rec["redeemed_at"] = time.strftime("%Y-%m-%d %H:%M")
-    _save(data)
-    return True, f"激活成功！你现在是{auth.TIER_LABEL[tier]}，永久有效", tier
+
+    with _LOCK:
+        data = _load()
+        rec = _find(data, raw)
+        if rec is None:
+            return False, "没有这张卡密，找站长核对一下", auth.user_tier(email)
+        if rec["redeemed_by"]:
+            return False, "这张卡密已被使用", auth.user_tier(email)
+        tier = rec["tier"]
+        current = auth.user_tier(email)
+        if auth.TIER_RANK[current] > auth.TIER_RANK[tier]:
+            return False, f"你已经是{auth.TIER_LABEL[current]}，这张{auth.TIER_LABEL[tier]}码就退给站长吧", current
+        if auth.TIER_RANK[current] == auth.TIER_RANK[tier] and current != "free":
+            return False, f"你已经是{auth.TIER_LABEL[tier]}了，这张码别浪费", current
+
+        upgraded = False
+        try:
+            auth.set_tier(email, tier)
+            upgraded = True
+            rec["redeemed_by"] = email
+            rec["redeemed_at"] = time.strftime("%Y-%m-%d %H:%M")
+            _save(data)
+        except ValueError as e:
+            if upgraded:
+                try:
+                    auth.set_tier(email, current)
+                except Exception:  # noqa: BLE001
+                    log.exception("license redemption rollback failed",
+                                  extra={"email": email, "code_prefix": raw[:7]})
+            return False, str(e), current
+        except Exception:  # noqa: BLE001 - 两份账必须能一起失败恢复
+            # 账号已经升档但卡密落盘失败时，恢复原档；卡密文件仍是未消费状态，
+            # 客户端重试不会“一码双兑”。回滚本身若失败则保留错误现场，不能假装成功。
+            if upgraded:
+                try:
+                    auth.set_tier(email, current)
+                except Exception:  # noqa: BLE001
+                    log.exception("license redemption rollback failed",
+                                  extra={"email": email, "code_prefix": raw[:7]})
+            log.exception("license redemption failed",
+                          extra={"email": email, "code_prefix": raw[:7]})
+            return False, "激活没有完成，请稍后重试", current
+        return True, f"激活成功！你现在是{auth.TIER_LABEL[tier]}，永久有效", tier
 
 
 def stats() -> dict:
     """后台盘点用。"""
-    codes = _load()["codes"]
-    out = {"basic": {"total": 0, "used": 0}, "premium": {"total": 0, "used": 0}}
-    for c in codes:
-        s = out.setdefault(c["tier"], {"total": 0, "used": 0})
-        s["total"] += 1
-        if c["redeemed_by"]:
-            s["used"] += 1
-    return out
+    with _LOCK:
+        codes = _load()["codes"]
+        out = {"basic": {"total": 0, "used": 0}, "premium": {"total": 0, "used": 0}}
+        for c in codes:
+            s = out.setdefault(c["tier"], {"total": 0, "used": 0})
+            s["total"] += 1
+            if c["redeemed_by"]:
+                s["used"] += 1
+        return out
 
 
 def list_codes(limit: int = 200) -> list[dict]:
     """给管理后台展示（脱敏到前 7 位 + 状态）。"""
-    out = []
-    for c in _load()["codes"][-limit:][::-1]:
-        out.append({"code": c["code"][:7] + "…", "tier": c["tier"], "created": c["created"],
-                    "note": c.get("note") or "",
-                    "redeemed_by": c["redeemed_by"], "redeemed_at": c["redeemed_at"]})
-    return out
+    with _LOCK:
+        out = []
+        for c in _load()["codes"][-limit:][::-1]:
+            out.append({"code": c["code"][:7] + "…", "tier": c["tier"], "created": c["created"],
+                        "note": c.get("note") or "",
+                        "redeemed_by": c["redeemed_by"], "redeemed_at": c["redeemed_at"]})
+        return out
 
 
 if __name__ == "__main__":
@@ -153,16 +183,17 @@ def anonymize(email: str) -> int:
     want = (email or "").strip().lower()
     if not want:
         return 0
-    data = _load()
-    digest = hashlib.sha256((want + _anon_salt()).encode("utf-8")).hexdigest()[:10]
-    n = 0
-    for c in data["codes"]:
-        if (c.get("redeemed_by") or "").strip().lower() == want:
-            c["redeemed_by"] = "erased-" + digest
-            n += 1
-    if n:
-        _save(data)
-    return n
+    with _LOCK:
+        data = _load()
+        digest = hashlib.sha256((want + _anon_salt()).encode("utf-8")).hexdigest()[:10]
+        n = 0
+        for c in data["codes"]:
+            if (c.get("redeemed_by") or "").strip().lower() == want:
+                c["redeemed_by"] = "erased-" + digest
+                n += 1
+        if n:
+            _save(data)
+        return n
 
 
 def _anon_salt() -> str:

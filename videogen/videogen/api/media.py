@@ -48,7 +48,9 @@ def agent_media(job_id: str, request: Request, rel_path: str = ""):
 @router.get("/video/{job_id}")
 def video(job_id: str, request: Request):
     j = ctx.JOBS.get(job_id)
-    v = (j or {}).get("video")
+    if not j or j.get("try"):
+        return JSONResponse({"error": "not ready"}, status_code=404)
+    v = j.get("video")
     if not v or not ctx._job_visible(j, request):
         return JSONResponse({"error": "not ready"}, status_code=404)
     key = (j or {}).get("cos_key")

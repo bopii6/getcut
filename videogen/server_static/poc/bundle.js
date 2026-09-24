@@ -12884,6 +12884,8 @@ const App = () => {
   const playerRef = react.useRef(null);
   const audioRef = react.useRef(null);
   const abortRef = react.useRef(null);
+  const finalUrlRef = react.useRef(null);
+  const jyRunRef = react.useRef(0);
   const packRef = react.useRef(null);
   const jobIdRef = react.useRef("");
   const autoRef = react.useRef(false);
@@ -12893,6 +12895,45 @@ const App = () => {
   const t0Ref = react.useRef(0);
   phaseRef.current = phase;
   jobIdRef.current = jobId;
+  const replaceFinalUrl = react.useCallback((url) => {
+    const old = finalUrlRef.current;
+    const next = url && url.startsWith("blob:") ? url : null;
+    finalUrlRef.current = next;
+    setFinalUrl(url);
+    if (old && old !== next) URL.revokeObjectURL(old);
+  }, []);
+  const clearOutputState = react.useCallback(() => {
+    jyRunRef.current += 1;
+    replaceFinalUrl(null);
+    setCloudOk(null);
+    setLayerMsg("");
+    setLayersOk(null);
+    setLayerErr("");
+    setLayerNote("");
+    setJy("");
+    setJyBusy(false);
+    setLibJyKey("");
+  }, [replaceFinalUrl]);
+  const clearActiveJob = react.useCallback(() => {
+    var _a2;
+    (_a2 = abortRef.current) == null ? void 0 : _a2.abort();
+    packRef.current = null;
+    setPack(null);
+    setJobId("");
+    jobIdRef.current = "";
+    setPct(0);
+    clearOutputState();
+  }, [clearOutputState]);
+  const claimBadResponse = (status, data) => status === 403 || data.claim_bad === true || /claim_bad|认领凭据不对/i.test(String(data.error || ""));
+  const stopForClaimBad = react.useCallback((cur) => {
+    var _a2, _b2;
+    if (((_a2 = packRef.current) == null ? void 0 : _a2.job) !== cur.job || packRef.current.claim !== cur.claim) return;
+    (_b2 = abortRef.current) == null ? void 0 : _b2.abort();
+    autoRef.current = false;
+    clearActiveJob();
+    setPhase("error");
+    setErr("\u8FD9\u4E00\u5355\u7684\u8BA4\u9886\u5DF2\u5931\u6548\uFF0C\u5DF2\u505C\u6B62\u751F\u6210/\u4EA4\u56DE\uFF0C\u8BF7\u7B49\u4E91\u7AEF\u91CD\u65B0\u5206\u914D\u4EFB\u52A1");
+  }, [clearActiveJob]);
   react.useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem(THEME_KEY, theme);
@@ -12981,6 +13022,10 @@ const App = () => {
         body: JSON.stringify({ pct: p, detail, requeue })
       });
       const d = await r.json().catch(() => ({}));
+      if (claimBadResponse(r.status, d)) {
+        stopForClaimBad(cur);
+        return true;
+      }
       return !!d.cancel;
     } catch (_) {
       return false;
@@ -13028,6 +13073,7 @@ const App = () => {
     const MAX_FAILS = 8;
     let stage = "\u9886\u5355";
     (async () => {
+      var _a2, _b2;
       for (; ; ) {
         if (!alive) return;
         try {
@@ -13047,6 +13093,7 @@ const App = () => {
             claim: String(data.claim || "")
           };
           if (!alive) return;
+          clearActiveJob();
           const resuming = sessionStorage.getItem(RESUME_KEY) === data.job;
           if (resuming) {
             sessionStorage.removeItem(RESUME_KEY);
@@ -13070,6 +13117,7 @@ const App = () => {
           }, 5e3);
           try {
             for (const f of p.files) {
+              if (((_a2 = packRef.current) == null ? void 0 : _a2.job) !== p.job) return;
               const url = `/agent-media/${p.job}/${f.path}`;
               let why = "\u672A\u53D6";
               for (let a = 0; a < 2 && why; a++) {
@@ -13087,6 +13135,7 @@ const App = () => {
               if (why) {
                 throw new Error(`\u7D20\u6750\u6CA1\u53D6\u56DE\u6765\uFF1A${f.path}\uFF08${why}\uFF09\u2014\u2014\u5237\u65B0\u8FD9\u4E00\u9875\u91CD\u65B0\u9886\u5355`);
               }
+              if (((_b2 = packRef.current) == null ? void 0 : _b2.job) !== p.job) return;
               done += 1;
               setPrewarmDone(done);
             }
@@ -13265,7 +13314,7 @@ const App = () => {
           }
           if (stage === "done") {
             if (IS_HANDHELD && !packRef.current) {
-              setFinalUrl(`/video/${jid}`);
+              replaceFinalUrl(`/video/${jid}`);
               setCloudOk(true);
             }
             return;
@@ -13285,23 +13334,35 @@ const App = () => {
       if (/额度|升级|水印/.test(m)) setSheet("pricing");
     }
   };
-  const exportDraftLayers = async (cur) => {
+  const exportDraftLayers = async (cur, signal) => {
     var _a2, _b2;
     const props = cur.props;
     const stills = draftStillsOf(props);
     const last = Math.max(0, props.durationInFrames - 1);
+    const current = () => {
+      var _a3;
+      return !signal.aborted && ((_a3 = packRef.current) == null ? void 0 : _a3.job) === cur.job && packRef.current.claim === cur.claim;
+    };
     const post = async (name, body, type) => {
       const r = await fetch(
         `/api/agent/job/${cur.job}/layer?name=${encodeURIComponent(name)}&device=${encodeURIComponent(DEVICE)}`,
-        { method: "POST", headers: { "content-type": type, "x-agent-claim": cur.claim }, body }
+        {
+          method: "POST",
+          headers: { "content-type": type, "x-agent-claim": cur.claim },
+          body,
+          signal
+        }
       );
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
+        if (claimBadResponse(r.status, d)) {
+          stopForClaimBad(cur);
+          throw new Error(`${name} \u4EA4\u56DE\u5931\u8D25\uFF1A\u8BA4\u9886\u5DF2\u5931\u6548`);
+        }
         throw new Error(`${name} \u4EA4\u56DE\u5931\u8D25\uFF1A${String(d.error || `HTTP ${r.status}`)}`);
       }
     };
     const still = async (extra, frame) => {
-      var _a3;
       await document.fonts.ready.catch(() => {
       });
       const res = await (0,dist_esm/* renderStillOnWeb */.Uu)({
@@ -13309,12 +13370,13 @@ const App = () => {
         inputProps: { ...props, ...extra },
         frame: Math.max(0, Math.min(last, frame)),
         delayRenderTimeoutInMilliseconds: 18e4,
-        signal: ((_a3 = abortRef.current) == null ? void 0 : _a3.signal) ?? null
+        signal
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       });
       return res.blob({ format: "png" });
     };
     const sink = probeSink();
+    if (!current()) return;
     setLayerMsg("\u6B63\u5728\u51FA\u526A\u6620\u5E95\u677F\u2026");
     await post(
       "base.png",
@@ -13322,11 +13384,14 @@ const App = () => {
       "application/octet-stream"
     );
     for (let i = 0; i < stills.length; i++) {
+      if (!current()) return;
       setLayerMsg(`\u6B63\u5728\u51FA\u526A\u6620\u5361\u7247\u5C42 ${i + 1}/${stills.length}`);
       delete sink[stills[i].id];
       const png = await still({ exportMode: "card", probeTag: stills[i].id }, stills[i].frame);
+      if (!current()) return;
       await post(`cards/${stills[i].id}.png`, png, "application/octet-stream");
     }
+    if (!current()) return;
     const texts = {};
     for (const s of stills) if ((_b2 = sink[s.id]) == null ? void 0 : _b2.length) texts[s.id] = sink[s.id];
     const nTexts = Object.keys(texts).length;
@@ -13334,10 +13399,11 @@ const App = () => {
     await post("texts.json", JSON.stringify(texts), "application/json");
   };
   const startRender = async () => {
-    var _a2, _b2;
+    var _a2, _b2, _c2, _d2, _e2, _f2, _g2, _h2;
     const cur = packRef.current;
     if (!cur) return;
-    (_a2 = playerRef.current) == null ? void 0 : _a2.pause();
+    (_a2 = abortRef.current) == null ? void 0 : _a2.abort();
+    (_b2 = playerRef.current) == null ? void 0 : _b2.pause();
     setPhase("rendering");
     setMsg("");
     const ac = new AbortController();
@@ -13346,7 +13412,7 @@ const App = () => {
     let lastReport = 0;
     let wake = null;
     try {
-      wake = await ((_b2 = navigator.wakeLock) == null ? void 0 : _b2.request("screen")) ?? null;
+      wake = await ((_c2 = navigator.wakeLock) == null ? void 0 : _c2.request("screen")) ?? null;
     } catch {
     }
     try {
@@ -13380,7 +13446,7 @@ const App = () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       });
       const blob = await getBlob();
-      setFinalUrl(URL.createObjectURL(blob));
+      replaceFinalUrl(URL.createObjectURL(blob));
       setPhase("uploading");
       setMsg("\u6B63\u5728\u4EA4\u56DE\u4E91\u7AEF\u2026");
       const upBeat = setInterval(() => {
@@ -13391,8 +13457,14 @@ const App = () => {
         const r = await fetch(`/api/agent/job/${cur.job}/visual?final=1&device=${encodeURIComponent(DEVICE)}`, {
           method: "POST",
           headers: { "content-type": "application/octet-stream", "x-agent-claim": cur.claim },
-          body: blob
+          body: blob,
+          signal: ac.signal
         });
+        const d = await r.json().catch(() => ({}));
+        if (claimBadResponse(r.status, d)) {
+          stopForClaimBad(cur);
+          throw new Error("\u8FD9\u4E00\u5355\u7684\u8BA4\u9886\u5DF2\u5931\u6548\uFF0C\u5DF2\u505C\u6B62\u4EA4\u56DE");
+        }
         ok = r.ok;
       } finally {
         clearInterval(upBeat);
@@ -13400,6 +13472,7 @@ const App = () => {
       setCloudOk(ok);
       if (ok) {
         await report(100, "\u6D4F\u89C8\u5668\u6210\u7247\u5DF2\u4EA4\u56DE");
+        if (((_d2 = packRef.current) == null ? void 0 : _d2.job) !== cur.job) return;
         try {
           window.parent.postMessage({ type: "getcut-export-done", job: cur.job }, "*");
         } catch (_) {
@@ -13412,17 +13485,20 @@ const App = () => {
         setLayerErr("");
         setLayerNote("");
         try {
-          await exportDraftLayers(cur);
+          await exportDraftLayers(cur, ac.signal);
+          if (((_e2 = packRef.current) == null ? void 0 : _e2.job) !== cur.job) return;
           setLayersOk(true);
         } catch (e) {
+          if (((_f2 = packRef.current) == null ? void 0 : _f2.job) !== cur.job) return;
           setLayersOk(false);
           setLayerErr(layerHint(e));
           console.warn("GetCut \u526A\u6620\u56FE\u5C42\u51FA\u56FE\u5931\u8D25", e.stack || String(e));
         } finally {
-          setLayerMsg("");
+          if (((_g2 = packRef.current) == null ? void 0 : _g2.job) === cur.job) setLayerMsg("");
         }
       }
     } catch (e) {
+      if (((_h2 = packRef.current) == null ? void 0 : _h2.job) !== cur.job) return;
       setPhase("error");
       setErr(renderHint(e));
       console.warn("GetCut \u6D4F\u89C8\u5668\u51FA\u7247\u5931\u8D25", e.stack || String(e));
@@ -13443,12 +13519,7 @@ const App = () => {
     setBundle(null);
     setProjectId("");
     setJobId("");
-    setFinalUrl(null);
-    setCloudOk(null);
-    setLayerMsg("");
-    setLayerErr("");
-    setLayerNote("");
-    setLayersOk(null);
+    clearOutputState();
     setPct(0);
     setErr("");
     t0Ref.current = 0;
@@ -13590,13 +13661,21 @@ const App = () => {
   };
   const jianying = async () => {
     if (!projectId || !jobId || jyBusy) return;
+    const pid = projectId;
+    const jid = jobId;
+    const run = ++jyRunRef.current;
+    const same = () => jyRunRef.current === run;
+    const notify = (m) => {
+      if (same()) setJy(m);
+    };
     setJyBusy(true);
-    setJy("\u6B63\u5728\u51C6\u5907\u526A\u6620\u8349\u7A3F\u2026\u9996\u6B21\u4F1A\u6574\u7406\u5206\u955C\u7D20\u6750\uFF0C\u9875\u9762\u6CA1\u6709\u5361\u4F4F");
+    setJy("\u6B63\u5728\u51C6\u5907\u526A\u6620\u8349\u7A3F\u2026\u9996\u6B21\u6574\u7406\u5206\u955C\u7D20\u6750\uFF0C\u9875\u9762\u6CA1\u6709\u5361\u4F4F");
     try {
       const res = await api(
-        `/api/projects/${projectId}/renders/${jobId}/jianying-import`,
+        `/api/projects/${pid}/renders/${jid}/jianying-import`,
         { method: "POST" }
       );
+      if (!same()) return;
       if (res.installed) {
         setJy("\u5DF2\u5BFC\u5165\u526A\u6620\uFF0C\u6253\u5F00\u526A\u6620\u5C31\u80FD\u770B\u5230");
       } else if (res.protocol && res.pull) {
@@ -13611,26 +13690,27 @@ const App = () => {
         setTimeout(() => {
           window.removeEventListener("blur", off);
           document.removeEventListener("visibilitychange", off);
-          if (!woke) {
-            setJy("\u8FD9\u53F0\u7535\u8111\u6CA1\u88C5\u5BFC\u5165\u5C0F\u52A9\u624B\uFF1A\u8349\u7A3F\u5305\u5DF2\u6539\u4E3A\u4E0B\u8F7D\uFF0C\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D\uFF1B\u4E0D\u88C5\u4E5F\u80FD\u7528\u2014\u2014\u526A\u6620\u91CC\u76F4\u63A5\u5BFC\u5165\u90A3\u4E2A MP4\u3002");
-            void downloadDraftPackage(
-              `/api/projects/${projectId}/renders/${jobId}/jianying-draft`,
-              setJy,
-              `GetCut-\u526A\u6620\u8349\u7A3F-${jobId.slice(-6)}.zip`
-            ).catch((e) => setJy("\u4E0B\u8F7D\u5931\u8D25\uFF1A" + String(e.message || e)));
-          }
+          if (!same() || woke) return;
+          notify("\u8FD9\u53F0\u7535\u8111\u6CA1\u88C5\u5BFC\u5165\u5C0F\u52A9\u624B\uFF1A\u8349\u7A3F\u5305\u5DF2\u6539\u4E3A\u4E0B\u8F7D\uFF0C\u89E3\u538B\u540E\u53CC\u51FB\u300C\u4E00\u952E\u5BFC\u5165\u526A\u6620.bat\u300D\uFF1B\u4E0D\u88C5\u4E5F\u80FD\u7528\u2014\u2014\u526A\u6620\u91CC\u76F4\u63A5\u5BFC\u5165\u90A3\u4E2A MP4\u3002");
+          void downloadDraftPackage(
+            `/api/projects/${pid}/renders/${jid}/jianying-draft`,
+            notify,
+            `GetCut-\u526A\u6620\u8349\u7A3F-${jid.slice(-6)}.zip`
+          ).catch((e) => notify("\u4E0B\u8F7D\u5931\u8D25\uFF1A" + String(e.message || e)));
         }, 2600);
       } else {
         await downloadDraftPackage(
-          `/api/projects/${projectId}/renders/${jobId}/jianying-draft`,
-          setJy,
-          `GetCut-\u526A\u6620\u8349\u7A3F-${jobId.slice(-6)}.zip`
+          `/api/projects/${pid}/renders/${jid}/jianying-draft`,
+          notify,
+          `GetCut-\u526A\u6620\u8349\u7A3F-${jid.slice(-6)}.zip`
         );
       }
     } catch (e) {
-      setJy("\u5BFC\u5165\u5931\u8D25\uFF1A" + String(e.message));
+      notify("\u5BFC\u5165\u5931\u8D25\uFF1A" + String(e.message));
     } finally {
-      setTimeout(() => setJyBusy(false), 3e3);
+      setTimeout(() => {
+        if (same()) setJyBusy(false);
+      }, 3e3);
     }
   };
   const libJy = async (pid, rid) => {

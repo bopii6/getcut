@@ -19,6 +19,20 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 DISCLAIMER = ""   # 免责声明已整体下线；调用方显式传文案才会显示
 
 
+def _bundle_file(bundle: Path, rel: str | None) -> Path | None:
+    """只返回仍位于素材包内的文件，越界或软链逃逸一律不读。"""
+    if not rel:
+        return None
+    try:
+        root = bundle.resolve()
+        src = (bundle / rel).resolve()
+    except (OSError, RuntimeError):
+        return None
+    if not src.is_relative_to(root) or not src.is_file():
+        return None
+    return src
+
+
 def _safe_key(key: str | None, default: str = "job") -> str:
     """渲染中间产物文件名里的任务标识：只留安全字符，避免拼路径出事。"""
     k = re.sub(r"[^0-9A-Za-z_-]", "_", str(key or ""))[:48]
@@ -68,8 +82,8 @@ def build_props(bundle: Path, plan: Plan, content: Content,
     for idx, shot in enumerate(plan.shots):
         s: dict = {"kind": shot.kind, "startMs": round(shot.start_ms), "endMs": round(shot.end_ms)}
         if shot.asset_path:
-            src = bundle / shot.asset_path
-            if src.is_file():
+            src = _bundle_file(bundle, shot.asset_path)
+            if src:
                 rel = str(shot.asset_path).replace("\\", "/").strip("/")
                 uniq = f"{bundle.name}__{rel}".replace("/", "__")
                 s["media"] = uniq
@@ -92,8 +106,8 @@ def build_props(bundle: Path, plan: Plan, content: Content,
             if shot.kind == "title_card" and not s.get("media"):
                 nxt = next((x for x in plan.shots if x.asset_path), None)
                 if nxt and nxt.asset_path:
-                    src = bundle / nxt.asset_path
-                    if src.is_file():
+                    src = _bundle_file(bundle, nxt.asset_path)
+                    if src:
                         rel = str(nxt.asset_path).replace("\\", "/").strip("/")
                         uniq = f"{bundle.name}__{rel}".replace("/", "__")
                         s["media"] = uniq
@@ -255,8 +269,8 @@ def build_props(bundle: Path, plan: Plan, content: Content,
         props_out["headline"] = {"lines": [{"text": _macro_series_title(content.title)}]}
         bg_rel = getattr(plan, "bg_asset", None)
         if bg_rel:
-            src = bundle / bg_rel
-            if src.is_file():
+            src = _bundle_file(bundle, bg_rel)
+            if src:
                 uniq = f"{bundle.name}__macrobg{src.suffix.lower()}"
                 dst = media_dir / uniq
                 if not dst.exists() or dst.stat().st_size != src.stat().st_size:

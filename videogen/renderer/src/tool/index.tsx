@@ -267,6 +267,8 @@ const App: React.FC = () => {
   const playerRef = React.useRef<PlayerRef>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
+  const finalUrlRef = React.useRef<string | null>(null);
+  const jyRunRef = React.useRef(0);
   const packRef = React.useRef<JobPack | null>(null);
   const jobIdRef = React.useRef('');
   const autoRef = React.useRef(false);
@@ -276,6 +278,49 @@ const App: React.FC = () => {
   const t0Ref = React.useRef(0);
   phaseRef.current = phase;
   jobIdRef.current = jobId;
+
+  // 只记住自己创建的 blob URL：/video/... 这类服务端地址不能 revoke。
+  // 换新 URL 时先换 ref 再 revoke 旧值，避免误把当前正在使用的 URL 回收掉。
+  const replaceFinalUrl = React.useCallback((url: string | null) => {
+    const old = finalUrlRef.current;
+    const next = url && url.startsWith('blob:') ? url : null;
+    finalUrlRef.current = next;
+    setFinalUrl(url);
+    if (old && old !== next) URL.revokeObjectURL(old);
+  }, []);
+  const clearOutputState = React.useCallback(() => {
+    jyRunRef.current += 1;
+    replaceFinalUrl(null);
+    setCloudOk(null);
+    setLayerMsg('');
+    setLayersOk(null);
+    setLayerErr('');
+    setLayerNote('');
+    setJy('');
+    setJyBusy(false);
+    setLibJyKey('');
+  }, [replaceFinalUrl]);
+  const clearActiveJob = React.useCallback(() => {
+    abortRef.current?.abort();
+    packRef.current = null;
+    setPack(null);
+    setJobId('');
+    jobIdRef.current = '';
+    setPct(0);
+    clearOutputState();
+  }, [clearOutputState]);
+  const claimBadResponse = (status: number, data: Record<string, unknown>) =>
+    status === 403 || data.claim_bad === true
+    || /claim_bad|认领凭据不对/i.test(String(data.error || ''));
+  const stopForClaimBad = React.useCallback((cur: JobPack) => {
+    // 旧请求晚回来时不能把已经换上的新一单清掉。
+    if (packRef.current?.job !== cur.job || packRef.current.claim !== cur.claim) return;
+    abortRef.current?.abort();
+    autoRef.current = false;
+    clearActiveJob();
+    setPhase('error');
+    setErr('这一单的认领已失效，已停止生成/交回，请等云端重新分配任务');
+  }, [clearActiveJob]);
 
   React.useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -379,7 +424,11 @@ const App: React.FC = () => {
         headers: {'content-type': 'application/json', 'x-agent-claim': cur.claim},
         body: JSON.stringify({pct: p, detail, requeue}),
       });
-      const d = await r.json().catch(() => ({}));
+      const d = await r.json().catch(() => ({})) as Record<string, unknown>;
+      if (claimBadResponse(r.status, d)) {
+        stopForClaimBad(cur);
+        return true;
+      }
       return !!d.cancel;
     } catch (_) {
       return false;
@@ -458,6 +507,8 @@ const App: React.FC = () => {
           const p: JobPack = {job: data.job, props: data.props,
                                files: data.files || [], claim: String(data.claim || '')};
           if (!alive) return;
+          // 自动接到下一条时，上一条的成片/图层/剪映状态不能再露出来。
+          clearActiveJob();
           // 刷新前那条是这一页自己交还的：领回来就直接接着跑，不再要用户点一次
           const resuming = sessionStorage.getItem(RESUME_KEY) === data.job;
           if (resuming) {
@@ -486,6 +537,7 @@ const App: React.FC = () => {
           }, 5000);
           try {
             for (const f of p.files) {
+              if (packRef.current?.job !== p.job) return;
               const url = `/agent-media/${p.job}/${f.path}`;
               let why = '未取';
               for (let a = 0; a < 2 && why; a++) {
@@ -506,6 +558,7 @@ const App: React.FC = () => {
               if (why) {
                 throw new Error(`素材没取回来：${f.path}（${why}）——刷新这一页重新领单`);
               }
+              if (packRef.current?.job !== p.job) return;
               done += 1;
               setPrewarmDone(done);
             }
@@ -686,7 +739,7 @@ const App: React.FC = () => {
             // 把云端那份挂到第 4 步上，手机上点开就能播/能存（限时签名链接，
             // 而且 /video/<id> 查归属，别人要不到这一条）
             if (IS_HANDHELD && !packRef.current) {
-              setFinalUrl(`/video/${jid}`);
+              replaceFinalUrl(`/video/${jid}`);
               setCloudOk(true);
             }
             return;
@@ -713,15 +766,22 @@ const App: React.FC = () => {
   };
 
   // ---- 剪映分轨图层：成片交回后接着在本页出（服务器已无 Chrome） ----
-  const exportDraftLayers = async (cur: JobPack) => {
+  const exportDraftLayers = async (cur: JobPack, signal: AbortSignal) => {
     const props = cur.props;
     const stills = draftStillsOf(props);
     const last = Math.max(0, props.durationInFrames - 1);
+    const current = () => !signal.aborted && packRef.current?.job === cur.job
+      && packRef.current.claim === cur.claim;
     const post = async (name: string, body: Blob | string, type: string) => {
       const r = await fetch(`/api/agent/job/${cur.job}/layer?name=${encodeURIComponent(name)}&device=${encodeURIComponent(DEVICE)}`,
-        {method: 'POST', headers: {'content-type': type, 'x-agent-claim': cur.claim}, body});
+        {method: 'POST', headers: {'content-type': type, 'x-agent-claim': cur.claim},
+         body, signal});
       if (!r.ok) {
         const d = await r.json().catch(() => ({}) as Record<string, unknown>);
+        if (claimBadResponse(r.status, d)) {
+          stopForClaimBad(cur);
+          throw new Error(`${name} 交回失败：认领已失效`);
+        }
         throw new Error(`${name} 交回失败：${String(d.error || `HTTP ${r.status}`)}`);
       }
     };
@@ -733,21 +793,25 @@ const App: React.FC = () => {
         inputProps: {...(props as unknown as Record<string, unknown>), ...extra},
         frame: Math.max(0, Math.min(last, frame)),
         delayRenderTimeoutInMilliseconds: 180_000,
-        signal: abortRef.current?.signal ?? null,
+        signal,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       return res.blob({format: 'png'});
     };
     const sink = probeSink();
+    if (!current()) return;
     setLayerMsg('正在出剪映底板…');
     await post('base.png', await still({exportMode: 'base'}, stills[0]?.frame ?? 0),
                'application/octet-stream');
     for (let i = 0; i < stills.length; i++) {
+      if (!current()) return;
       setLayerMsg(`正在出剪映卡片层 ${i + 1}/${stills.length}`);
       delete sink[stills[i].id];
       const png = await still({exportMode: 'card', probeTag: stills[i].id}, stills[i].frame);
+      if (!current()) return;
       await post(`cards/${stills[i].id}.png`, png, 'application/octet-stream');
     }
+    if (!current()) return;
     const texts: Record<string, unknown[]> = {};
     for (const s of stills) if (sink[s.id]?.length) texts[s.id] = sink[s.id];
     const nTexts = Object.keys(texts).length;
@@ -759,6 +823,8 @@ const App: React.FC = () => {
   const startRender = async () => {
     const cur = packRef.current;
     if (!cur) return;
+    // 上一条已完成后可能还挂着它的图层导出；换单先把它收住。
+    abortRef.current?.abort();
     playerRef.current?.pause();
     setPhase('rendering');
     setMsg('');
@@ -804,7 +870,7 @@ const App: React.FC = () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       const blob = await getBlob();
-      setFinalUrl(URL.createObjectURL(blob));
+      replaceFinalUrl(URL.createObjectURL(blob));
       setPhase('uploading');
       setMsg('正在交回云端…');
       // 交回这一段也要心跳：二三十兆的成片从上行慢的线路上去，几分钟不吭声
@@ -818,7 +884,13 @@ const App: React.FC = () => {
           method: 'POST',
           headers: {'content-type': 'application/octet-stream', 'x-agent-claim': cur.claim},
           body: blob,
+          signal: ac.signal,
         });
+        const d = await r.json().catch(() => ({})) as Record<string, unknown>;
+        if (claimBadResponse(r.status, d)) {
+          stopForClaimBad(cur);
+          throw new Error('这一单的认领已失效，已停止交回');
+        }
         ok = r.ok;
       } finally {
         clearInterval(upBeat);
@@ -826,6 +898,7 @@ const App: React.FC = () => {
       setCloudOk(ok);
       if (ok) {
         await report(100, '浏览器成片已交回');
+        if (packRef.current?.job !== cur.job) return;
         try {
           window.parent.postMessage({type: 'getcut-export-done', job: cur.job}, '*');
         } catch (_) {}
@@ -838,17 +911,20 @@ const App: React.FC = () => {
         setLayerErr('');
         setLayerNote('');
         try {
-          await exportDraftLayers(cur);
+          await exportDraftLayers(cur, ac.signal);
+          if (packRef.current?.job !== cur.job) return;
           setLayersOk(true);
         } catch (e) {
+          if (packRef.current?.job !== cur.job) return;
           setLayersOk(false);
           setLayerErr(layerHint(e));
           console.warn('GetCut 剪映图层出图失败', (e as Error).stack || String(e));
         } finally {
-          setLayerMsg('');
+          if (packRef.current?.job === cur.job) setLayerMsg('');
         }
       }
     } catch (e) {
+      if (packRef.current?.job !== cur.job) return;
       setPhase('error');
       setErr(renderHint(e));
       console.warn('GetCut 浏览器出片失败', (e as Error).stack || String(e));
@@ -870,12 +946,7 @@ const App: React.FC = () => {
     setBundle(null);
     setProjectId('');
     setJobId('');
-    setFinalUrl(null);
-    setCloudOk(null);
-    setLayerMsg('');
-    setLayerErr('');
-    setLayerNote('');
-    setLayersOk(null);
+    clearOutputState();
     setPct(0);
     setErr('');
     t0Ref.current = 0;
@@ -1011,11 +1082,17 @@ const App: React.FC = () => {
   // 导入剪映：装了小助手的机器一键直达；没装就回落成下载草稿包
   const jianying = async () => {
     if (!projectId || !jobId || jyBusy) return;
+    const pid = projectId;
+    const jid = jobId;
+    const run = ++jyRunRef.current;
+    const same = () => jyRunRef.current === run;
+    const notify = (m: string) => { if (same()) setJy(m); };
     setJyBusy(true);
-    setJy('正在准备剪映草稿…首次会整理分镜素材，页面没有卡住');
+    setJy('正在准备剪映草稿…首次整理分镜素材，页面没有卡住');
     try {
-      const res = await api(`/api/projects/${projectId}/renders/${jobId}/jianying-import`,
+      const res = await api(`/api/projects/${pid}/renders/${jid}/jianying-import`,
         {method: 'POST'});
+      if (!same()) return;
       if (res.installed) {
         setJy('已导入剪映，打开剪映就能看到');
       } else if (res.protocol && res.pull) {
@@ -1028,24 +1105,23 @@ const App: React.FC = () => {
         setTimeout(() => {
           window.removeEventListener('blur', off);
           document.removeEventListener('visibilitychange', off);
-          if (!woke) {
-            setJy('这台电脑没装导入小助手：草稿包已改为下载，解压后双击「一键导入剪映.bat」；不装也能用——剪映里直接导入那个 MP4。');
-            void downloadDraftPackage(
-              `/api/projects/${projectId}/renders/${jobId}/jianying-draft`, setJy,
-              `GetCut-剪映草稿-${jobId.slice(-6)}.zip`,
-            ).catch((e) => setJy('下载失败：' + String((e as Error).message || e)));
-          }
+          if (!same() || woke) return;
+          notify('这台电脑没装导入小助手：草稿包已改为下载，解压后双击「一键导入剪映.bat」；不装也能用——剪映里直接导入那个 MP4。');
+          void downloadDraftPackage(
+            `/api/projects/${pid}/renders/${jid}/jianying-draft`, notify,
+            `GetCut-剪映草稿-${jid.slice(-6)}.zip`,
+          ).catch((e) => notify('下载失败：' + String((e as Error).message || e)));
         }, 2600);
       } else {
         await downloadDraftPackage(
-          `/api/projects/${projectId}/renders/${jobId}/jianying-draft`, setJy,
-          `GetCut-剪映草稿-${jobId.slice(-6)}.zip`,
+          `/api/projects/${pid}/renders/${jid}/jianying-draft`, notify,
+          `GetCut-剪映草稿-${jid.slice(-6)}.zip`,
         );
       }
     } catch (e) {
-      setJy('导入失败：' + String((e as Error).message));
+      notify('导入失败：' + String((e as Error).message));
     } finally {
-      setTimeout(() => setJyBusy(false), 3000);
+      setTimeout(() => { if (same()) setJyBusy(false); }, 3000);
     }
   };
 

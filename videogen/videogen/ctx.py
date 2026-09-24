@@ -210,10 +210,7 @@ def _project_visible(p: dict, request: Request) -> bool:
     return bool(email) and p.get("owner") == email
 
 def _job_visible(j: dict, request: Request) -> bool:
-    """任务（进度/成片/剧照）按归属隔离：试玩样片本就是公开引流物，其余只给
-    提交者本人/管理员/开放模式。改动前入库的老任务没有 owner，退回按项目归属判。"""
-    if j.get("try"):
-        return True
+    """任务（进度/成片/剧照）按归属隔离；试玩也必须只有本人或管理员可见。"""
     if _is_adminish(request):
         return True
     if _open_mode():
