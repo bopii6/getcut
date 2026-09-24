@@ -42,6 +42,34 @@ if [ ${#have[@]} -eq 0 ]; then
   exit 0
 fi
 
+mirror_guard() {  # 镜像前看一眼余量：正本一半大 + 至少 1G，不够就别动
+  local src="$1" avail need
+  command -v rsync >/dev/null 2>&1 || { echo "[backup] ⚠ 没有 rsync，跳过大件镜像" >&2; return 1; }
+  avail=$(df -k "$DEST" | awk 'NR==2 {print $4}')
+  need=$(du -sk "$src" | awk '{print $1}')
+  [ "$avail" -gt $((need / 2 + 1048576)) ]
+}
+
+mirror_big_files() {  # 大件镜像（2026-09-24 起）：成片与素材包不进上面的 tar ——
+                      # 一天一份 tar 会把盘吃光，rsync 只拷增量。
+                      # ⚠️ 与正本同盘：防误删、防写坏，不防整盘故障；整机级
+                      # 备份要另走云存储（TODO，盘富余前先这样顶着）。
+  # 成片：客户付过钱的交付物，云端没有底片（片子在客户浏览器里渲的）。
+  # 不加 --delete：正本被误删后镜像还在 —— 删除不该被备份同步过去。
+  if [ -d "$BASE/outputs" ] && mirror_guard "$BASE/outputs"; then
+    mkdir -p "$DEST/outputs-mirror"; chmod 700 "$DEST/outputs-mirror"
+    rsync -a "$BASE/outputs/" "$DEST/outputs-mirror/"
+    echo "[backup] 成片镜像完成 $(du -sh "$DEST/outputs-mirror" | cut -f1)"
+  fi
+  # 素材包：客户传上来的原始材料，丢了要客户重传。加 --delete：源头清掉的
+  # 死包镜像跟着清，不让镜像单方面膨胀。收件区是 24h 过期的临时票，不备。
+  if [ -d "$BASE/data" ] && mirror_guard "$BASE/data"; then
+    mkdir -p "$DEST/bundles-mirror"; chmod 700 "$DEST/bundles-mirror"
+    rsync -a --delete --exclude='.intakes' "$BASE/data/" "$DEST/bundles-mirror/"
+    echo "[backup] 素材包镜像完成 $(du -sh "$DEST/bundles-mirror" | cut -f1)"
+  fi
+}
+
 mkdir -p "$DEST"
 chmod 700 "$DEST"
 
@@ -89,6 +117,7 @@ case "$cmd" in
       echo "[backup] ⚠ 清理后只剩 $left 个包，请检查 KEEP 配置（当前 $KEEP 天）" >&2
     fi
     echo "[backup] 完成 $pack ($size, 共 $left 个包, 保留 $KEEP 天)"
+    mirror_big_files
     ;;
   *)
     echo "用法: $0 [run|list|verify|restore <成员> [包] [目标]]" >&2

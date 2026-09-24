@@ -178,6 +178,18 @@ class BackupScriptTest(unittest.TestCase):
         self.assertIn("VIDEOGEN_BACKUP_KEEP", s, "保留天数写死了或没了：会攒爆磁盘或悄悄不备")
         self.assertIn("tar tzf", s, "打包后不校验，坏包要到恢复那天才发现")
 
+    def test_big_files_get_mirrored(self):
+        """成片（付过钱的交付物，云端没底片）与素材包必须有镜像，且随 run 一起跑。"""
+        s = read("tools/backup_state.sh")
+        self.assertIn("mirror_big_files", s, "大件镜像没了：成片/素材包又回到零备份")
+        self.assertIn("outputs-mirror", s, "成片没进备份")
+        self.assertIn("bundles-mirror", s, "素材包没进备份")
+        # 成片镜像不许带 --delete：正本被误删后镜像必须还在，删除不能被同步
+        run_arm = s.split("mirror_big_files() {", 1)[1]
+        self.assertNotIn('rsync -a --delete "$BASE/outputs', run_arm, "成片镜像把删除也同步了")
+        # 余量守卫要在：备份不能反过来把盘写爆
+        self.assertIn("mirror_guard", s)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
