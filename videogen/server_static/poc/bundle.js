@@ -13103,6 +13103,8 @@ const App = () => {
           }
           setPack(p);
           packRef.current = p;
+          setJobId(p.job);
+          jobIdRef.current = p.job;
           setStalled(false);
           autoRef.current = true;
           if (phaseRef.current === "done" || phaseRef.current === "error") {
@@ -13543,6 +13545,81 @@ const App = () => {
       setLibMsg(String(e.message || e));
     });
   };
+  const refreshInbox = react.useCallback(async (showLoading = false) => {
+    if (showLoading) setInboxMsg("\u6B63\u5728\u53D6\u6536\u4EF6\u7BB1\u2026");
+    try {
+      const d = await api("/api/intake");
+      setInbox(d.intakes || []);
+      if (showLoading) setInboxMsg("");
+    } catch (e) {
+      if (showLoading) setInbox(null);
+      setInboxMsg(String(e.message || e));
+    }
+  }, []);
+  react.useEffect(() => {
+    if (inbox === null) return;
+    let alive = true;
+    const pull = () => {
+      if (!alive || document.hidden) return;
+      void refreshInbox(false);
+    };
+    pull();
+    const timer = setInterval(pull, 4e3);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [inbox !== null, refreshInbox]);
+  react.useEffect(() => {
+    if (!IS_HANDHELD || !authReady || !resumeJob) return;
+    let alive = true;
+    let finished = false;
+    const restore = async () => {
+      if (!alive || finished) return;
+      try {
+        const j = await api(`/api/job/${resumeJob}`);
+        if (!alive) return;
+        const stage = String(j.stage || "");
+        const pid = String(j.project_id || "");
+        if (pid) setProjectId(pid);
+        setJobId(resumeJob);
+        jobIdRef.current = resumeJob;
+        if (stage === "done") {
+          finished = true;
+          sessionStorage.removeItem(RESUME_KEY);
+          setResumeJob("");
+          replaceFinalUrl(`/video/${resumeJob}`);
+          setCloudOk(true);
+          setPhase("done");
+          setPct(100);
+          return;
+        }
+        if (stage === "failed" || stage === "error" || stage === "cancelled" || stage === "unknown") {
+          finished = true;
+          sessionStorage.removeItem(RESUME_KEY);
+          setResumeJob("");
+          setErr(stage === "unknown" ? "\u8FD9\u4E00\u5355\u7684\u8BB0\u5F55\u4E0D\u5728\u4E86\uFF0C\u8BF7\u5728\u4F5C\u54C1\u5E93\u91CC\u91CD\u65B0\u6253\u5F00\u9879\u76EE\u3002" : "\u8FD9\u4E00\u5355\u5DF2\u7ED3\u675F\uFF0C\u8BF7\u5728\u4F5C\u54C1\u5E93\u91CC\u67E5\u770B\u6210\u7247\u3002");
+          setPhase("config");
+          return;
+        }
+        setPhase("prepping");
+        setPrepStage(stage);
+        setPrepMsg(String(j.detail || "\u6B63\u5728\u7B49\u5F85\u751F\u6210\u2026"));
+        setPrepPct(Number(j.progress || 0));
+        if (!t0Ref.current) t0Ref.current = Date.now();
+      } catch (e) {
+        if (alive) setErr(String(e.message || e));
+      }
+    };
+    void restore();
+    const timer = setInterval(() => {
+      void restore();
+    }, 3e3);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [IS_HANDHELD, authReady, resumeJob, replaceFinalUrl]);
   const resumeProject = async (pid, bundleName) => {
     const p = phaseRef.current;
     if (p === "prepping" || p === "rendering" || p === "uploading") {
@@ -13561,13 +13638,7 @@ const App = () => {
   const openInbox = () => {
     setInboxMsg("\u6B63\u5728\u53D6\u6536\u4EF6\u7BB1\u2026");
     setInbox([]);
-    api("/api/intake").then((d) => {
-      setInbox(d.intakes || []);
-      setInboxMsg("");
-    }).catch((e) => {
-      setInbox(null);
-      setInboxMsg(String(e.message || e));
-    });
+    void refreshInbox(true);
   };
   const newTicket = async () => {
     setInboxMsg("\u6B63\u5728\u751F\u6210\u6536\u4EF6\u5730\u5740\u2026");
@@ -13879,8 +13950,8 @@ const App = () => {
     ] }),
     /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "body", children: [
       /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "pane left", children: [
-        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "lede", children: "\u62D6\u5165\u7D20\u6750\u5305\uFF0C\u4E00\u6761\u597D\u7247\u5B50\u5728\u4F60\u8FD9\u53F0\u7535\u8111\u4E0A\u5B8C\u6210\u2014\u2014\u4E0D\u6392\u961F\u3001\u4E0D\u9650\u901F\u3002" }),
-        /* @__PURE__ */ (0,jsx_runtime.jsx)(
+        /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "lede", children: IS_HANDHELD ? "\u7535\u8111 Agent \u505A\u597D\u7D20\u6750\u5305\u540E\u4F1A\u81EA\u52A8\u5BC4\u5230\u8FD9\u91CC\uFF1B\u4F60\u786E\u8BA4\u5185\u5BB9\u540E\uFF0C\u7535\u8111\u5728\u540E\u53F0\u751F\u6210\u3002" : "\u62D6\u5165\u7D20\u6750\u5305\uFF0C\u4E00\u6761\u597D\u7247\u5B50\u5728\u4F60\u8FD9\u53F0\u7535\u8111\u4E0A\u5B8C\u6210\u3002" }),
+        !IS_HANDHELD ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
           "input",
           {
             ref: fileInput,
@@ -13892,7 +13963,7 @@ const App = () => {
               return void importZip((_a2 = e.target.files) == null ? void 0 : _a2[0]);
             }
           }
-        ),
+        ) : null,
         /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "steps", children: [
           /* @__PURE__ */ (0,jsx_runtime.jsx)(
             Step,
@@ -13921,7 +13992,7 @@ const App = () => {
                     "%"
                   ] })
                 ] })
-              ] }) : bundle ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn ln sm", onClick: pick, children: "\u6362\u4E00\u4E2A\u7D20\u6750\u5305" }) : /* @__PURE__ */ (0,jsx_runtime.jsxs)(
+              ] }) : bundle ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn ln sm", onClick: IS_HANDHELD ? openInbox : pick, children: IS_HANDHELD ? "\u4ECE\u7535\u8111\u5BFC\u5165\u53E6\u4E00\u4E2A\u7D20\u6750\u5305" : "\u6362\u4E00\u4E2A\u7D20\u6750\u5305" }) : IS_HANDHELD ? /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn", onClick: openInbox, children: "\u6253\u5F00\u7535\u8111\u5BC4\u6765\u7684\u7D20\u6750\u5305" }) : /* @__PURE__ */ (0,jsx_runtime.jsxs)(
                 "div",
                 {
                   className: `drop${hot ? " hot" : ""}`,
@@ -13951,7 +14022,7 @@ const App = () => {
               )
             }
           ),
-          bundle ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(Step, { n: 2, title: "\u5185\u5BB9\u4E0E\u914D\u97F3", state: st(2), children: [
+          bundle ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(Step, { n: 2, title: "\u5185\u5BB9\u4E0E\u8BBE\u7F6E", state: st(2), children: [
             /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "meta", children: [
               /* @__PURE__ */ (0,jsx_runtime.jsxs)("span", { children: [
                 nChars,
@@ -13969,7 +14040,7 @@ const App = () => {
                 " \u89C6\u9891"
               ] })
             ] }),
-            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "togo", children: "\u53E3\u64AD\u6587\u6848\u5728\u53F3\u8FB9\u6574\u5C4F\u6838\u5BF9\uFF0C\u770B\u5B8C\u76F4\u63A5\u70B9\u751F\u6210" }),
+            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "togo", children: "\u5148\u6838\u5BF9\u5185\u5BB9\uFF0C\u518D\u786E\u8BA4\u63D0\u4EA4\u751F\u6210" }),
             tpls.length ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "field", style: { marginTop: 16 }, children: [
               /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "lb tpl-lb", children: [
                 /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: "\u753B\u9762\u6837\u5F0F" }),
@@ -14073,10 +14144,13 @@ const App = () => {
               /* @__PURE__ */ (0,jsx_runtime.jsx)(Toggle, { label: "\u97F3\u6548", on: cfg.sfx, set: (v) => setCfg({ ...cfg, sfx: v }) }),
               /* @__PURE__ */ (0,jsx_runtime.jsx)(Toggle, { label: "\u8D44\u6599\u6765\u6E90", on: cfg.sources, set: (v) => setCfg({ ...cfg, sources: v }) })
             ] }),
-            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { style: { marginTop: 18 }, children: /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { className: "btn", onClick: () => void submit(), children: [
-              "\u751F\u6210\u89C6\u9891",
-              durS ? `\uFF08\u7EA6 ${estMin} \u5206\u949F\uFF09` : ""
-            ] }) })
+            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { style: { marginTop: 18 }, children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("button", { className: "btn", onClick: () => void submit(), children: [
+                "\u786E\u8BA4\u5185\u5BB9\u5E76\u63D0\u4EA4\u751F\u6210",
+                durS ? `\uFF08\u7EA6 ${estMin} \u5206\u949F\uFF09` : ""
+              ] }),
+              /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 8 }, children: "\u70B9\u51FB\u540E\u4F1A\u6D88\u8017\u4E00\u6B21\u751F\u6210\u989D\u5EA6\uFF1B\u7535\u8111\u6210\u7247\u53F0\u968F\u540E\u5728\u540E\u53F0\u751F\u6210\uFF0C\u5B8C\u6210\u540E\u624B\u673A\u76F4\u63A5\u4E0B\u8F7D\u3002" })
+            ] })
           ] }) : null,
           pack || jobId || phase === "prepping" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)(Step, { n: 3, title: phase === "done" ? "\u89C6\u9891\u5DF2\u751F\u6210" : "\u6B63\u5728\u751F\u6210\u89C6\u9891", state: st(3), children: [
             phase !== "error" && phase !== "done" ? /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { children: [
@@ -14475,18 +14549,14 @@ const App = () => {
       Sheet,
       {
         title: "\u7D20\u6750",
-        sub: "\u5305\u5728\u7535\u8111\u4E0A\u4EA7\u51FA\u3001\u7531\u7535\u8111\u5BC4\u4E0A\u6765\uFF1B\u624B\u673A\u4E0A\u6311\u4E00\u6761\uFF0C\u8BA9\u7535\u8111\u53BB\u751F\u6210",
+        sub: "\u7535\u8111 Agent \u505A\u597D\u7684\u7D20\u6750\u5305\u4F1A\u81EA\u52A8\u9001\u5230\u8FD9\u91CC",
         width: 620,
         onClose: () => {
           setInbox(null);
           setInboxMsg("");
         },
         children: [
-          /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "note", children: [
-            "\u8981\u7ED9\u8FD9\u53F0\u7535\u8111\u5BC4\u4E00\u4E2A\u65B0\u5305\uFF1F\u70B9\u4E0B\u9762\u9886\u4E00\u6761",
-            /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: "\u6536\u4EF6\u5730\u5740" }),
-            "\uFF08\u4E00\u6B21\u4E00\u7528\u300124 \u5C0F\u65F6\u4F5C\u5E9F\uFF09\uFF0C \u4EA4\u7ED9\u7535\u8111\u4E0A\u7684\u6253\u5305\u5DE5\u5177\u4F20\u5B8C\uFF0C\u56DE\u8FD9\u91CC\u5237\u65B0\u5C31\u80FD\u770B\u5230\u5B83\u3002"
-          ] }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: IS_HANDHELD ? "\u7535\u8111 Agent \u4E0A\u4F20\u5B8C\u6210\u540E\uFF0C\u8FD9\u91CC\u4F1A\u81EA\u52A8\u51FA\u73B0\u7D20\u6750\u5305\uFF1B\u770B\u5230\u201C\u5DF2\u9001\u8FBE\u201D\u540E\u70B9\u201C\u5BFC\u5165\u201D\u3002" : "\u8FD9\u91CC\u663E\u793A\u7535\u8111 Agent \u5BC4\u6765\u7684\u7D20\u6750\u5305\u3002\u624B\u673A\u8D1F\u8D23\u786E\u8BA4\u5185\u5BB9\uFF0C\u7535\u8111\u8D1F\u8D23\u540E\u53F0\u751F\u6210\u3002" }),
           /* @__PURE__ */ (0,jsx_runtime.jsx)(
             "button",
             {
@@ -14515,24 +14585,38 @@ const App = () => {
             }, children: "\u590D\u5236" })
           ] }) : null,
           inboxMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: inboxMsg }) : null,
-          !inbox.length && !inboxMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: "\u8FD8\u6CA1\u6709\u5BC4\u4E0A\u6765\u7684\u5305\u3002\u624B\u5934\u5DF2\u6709 zip \u7684\u8BDD\uFF0C\u76F4\u63A5\u62D6\u8FDB\u7B2C 1 \u6B65\u66F4\u5FEB\u3002" }) : null,
-          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "liblist", children: inbox.map((it) => /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "librow", children: [
-            /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-t", children: [
-              /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: it.file || it.code }),
-              /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: it.ready ? "\u5DF2\u9001\u8FBE \xB7 \u53EF\u4EE5\u5BFC\u5165" : "\u5730\u5740\u5DF2\u751F\u6210\uFF0C\u7B49\u7535\u8111\u628A\u5305\u4F20\u4E0A\u6765" })
-            ] }),
-            /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "li-a", children: it.ready ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
-              "button",
-              {
-                className: "btn sm",
-                style: { minWidth: 62 },
-                onClick: () => void importCode(it.code),
-                children: "\u5BFC\u5165"
-              }
-            ) : null })
-          ] }, it.code)) }),
-          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 14 }, children: "\u5BFC\u5165\u540E\u8FDB\u7B2C 2 \u6B65\u6838\u5BF9\u6587\u6848\u3001\u6311\u97F3\u8272\uFF0C\u70B9\u300C\u751F\u6210\u89C6\u9891\u300D\u2014\u2014\u6E32\u67D3\u8DD1\u5728\u90A3\u53F0\u5F00\u7740\u7684\u7535\u8111\u4E0A\uFF0C \u4F60\u4EBA\u5728\u4E0D\u5728\u65C1\u8FB9\u90FD\u4E00\u6837\u3002" }),
-          /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn ln", style: { alignSelf: "flex-start" }, onClick: openInbox, children: "\u5237\u65B0\u6536\u4EF6\u7BB1" })
+          !inbox.length && !inboxMsg ? /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", children: "\u7535\u8111 Agent \u4E0A\u4F20\u5B8C\u6210\u540E\uFF0C\u7D20\u6750\u5305\u4F1A\u81EA\u52A8\u51FA\u73B0\u5728\u8FD9\u91CC\u3002" }) : null,
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "liblist", children: inbox.map((it) => {
+            const state = it.state || (it.ready ? "ready" : "waiting_upload");
+            return /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "librow", children: [
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-t", children: [
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("b", { children: it.file || it.code }),
+                /* @__PURE__ */ (0,jsx_runtime.jsx)("span", { children: state === "ready" ? "\u5DF2\u9001\u8FBE \xB7 \u53EF\u4EE5\u5BFC\u5165" : state === "imported" ? "\u5DF2\u5BFC\u5165 \xB7 \u53BB\u9879\u76EE\u91CC\u7EE7\u7EED" : "\u7535\u8111 Agent \u6B63\u5728\u4E0A\u4F20\u2026" })
+              ] }),
+              /* @__PURE__ */ (0,jsx_runtime.jsxs)("div", { className: "li-a", children: [
+                state === "ready" ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  "button",
+                  {
+                    className: "btn sm",
+                    style: { minWidth: 62 },
+                    onClick: () => void importCode(it.code),
+                    children: "\u5BFC\u5165"
+                  }
+                ) : null,
+                state === "imported" && it.projectId ? /* @__PURE__ */ (0,jsx_runtime.jsx)(
+                  "button",
+                  {
+                    className: "btn sm",
+                    style: { minWidth: 62 },
+                    onClick: () => void resumeProject(it.projectId || "", it.bundle || it.file),
+                    children: "\u6253\u5F00"
+                  }
+                ) : null
+              ] })
+            ] }, it.code);
+          }) }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("div", { className: "note", style: { marginTop: 14 }, children: "\u5BFC\u5165\u540E\u6838\u5BF9\u6587\u6848\u548C\u58F0\u97F3\uFF0C\u70B9\u201C\u786E\u8BA4\u5185\u5BB9\u5E76\u63D0\u4EA4\u751F\u6210\u201D\u3002\u7535\u8111\u540E\u53F0\u751F\u6210\uFF0C\u5B8C\u6210\u540E\u624B\u673A\u76F4\u63A5\u4E0B\u8F7D\u3002" }),
+          /* @__PURE__ */ (0,jsx_runtime.jsx)("button", { className: "btn ln", style: { alignSelf: "flex-start" }, onClick: openInbox, children: "\u7ACB\u5373\u5237\u65B0" })
         ]
       }
     ) : null,

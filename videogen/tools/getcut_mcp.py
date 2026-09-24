@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """GetCut MCP server：把工作台的「投喂 → 渲染 → 取片」变成 Agent 可直接调用的工具。
 
-Agent 全流程（不再开浏览器、不再碰网站 UI）：
-    feed_bundle(素材包.zip) → submit_render(project_id, voice=…) → wait_for_job(job_id)
-    → download_video(job_id, 保存路径)
+方案 1 的电脑 Agent 流程：
+    upload_bundle(素材包.zip) → 返回手机短链 → 停止
+手机负责导入、确认和提交；电脑成片台负责后台渲染。
 
 配置（优先级：环境变量 > videogen/.env）：
     GETCUT_BASE   工作台地址，默认 https://gc.hellojoy.top
@@ -54,10 +54,9 @@ EMAIL = (os.environ.get("GETCUT_EMAIL") or "").strip().lower()
 mcp = MCPServer(
     name="getcut",
     instructions=(
-        "GetCut 短视频工作台：把 getcut-bundle 技能做好的素材包 zip 投进工作台、"
-        "提交渲染、盯进度、下载成片。先 feed_bundle，再 submit_render（voice 可传 "
-        "list_voices 里的任意 id，'@clone' 代表「我的声音」），wait_for_job 等出片，"
-        "download_video 拿 MP4。"
+        "GetCut 短视频工作台：方案 1 中电脑 Agent 只负责把 getcut-bundle 做好的 zip "
+        "自动上传到用户账号的云端收件箱，然后返回手机短链并停止；不要替用户 claim、"
+        "确认内容、提交生成或下载成片。手机确认后，电脑成片台会在后台渲染。"
     ),
 )
 
@@ -81,6 +80,32 @@ def _api(method: str, path: str, **kw) -> dict:
     if r.status_code >= 400:
         raise RuntimeError(f"{path} HTTP {r.status_code}: {d.get('error') or d}")
     return d
+
+
+@mcp.tool()
+def upload_bundle(zip_path: str) -> dict:
+    """只上传素材包，不导入、不提交生成。
+
+    这是方案 1 的首选动作：申请账号绑定的收件票，流式上传 ZIP，返回手机打开的
+    /i/<code> 短链后停止。手机端负责导入、确认设置和提交生成。
+    """
+    p = Path(zip_path)
+    if not p.is_file():
+        raise RuntimeError(f"找不到文件：{zip_path}")
+    tk = _api("POST", "/api/intake/ticket",
+              json={"email": EMAIL} if EMAIL else {})
+    with open(p, "rb") as f:
+        r = _session().put(tk["put_url"], data=f, params={"name": p.name}, timeout=600)
+    try:
+        sent = r.json()
+    except ValueError:
+        raise RuntimeError(f"上传收件地址 HTTP {r.status_code}（非 JSON 响应）") from None
+    if r.status_code >= 400:
+        raise RuntimeError(f"上传失败 HTTP {r.status_code}: {sent.get('error') or sent}")
+    return {"code": tk.get("code"), "intake_url": tk.get("url"),
+            "url": tk.get("url"), "expires_at": tk.get("expiresAt"),
+            "bytes": sent.get("bytes") or p.stat().st_size,
+            "next": "请在手机打开这个链接，登录后点击导入并提交生成"}
 
 
 @mcp.tool()

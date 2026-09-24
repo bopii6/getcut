@@ -286,8 +286,8 @@ def _intake_reserved_bytes(exclude: str | None = None) -> int:
 def intake_list(request: Request):
     """我的收件箱：这个账号领过、还没导入的包。手机端「素材」入口读的就是这里。
 
-    只列自己的（owner 写在票上），别人看不见你寄了什么；`ready` 表示 zip 到了没
-    （领了票还没上传时也在列表里，手机上看得见"在等电脑传上来"）。
+    只列自己的（owner 写在票上），别人看不见你寄了什么。`state` 给手机一个
+    明确的人话状态，旧的 `ready` / `projectId` 字段继续保留给旧页面。
     """
     email = ctx._session_email(request)
     if not email and not ctx._open_mode():
@@ -300,8 +300,25 @@ def intake_list(request: Request):
             if not side or side.get("owner") != email:
                 continue
             ready = (ctx.INTAKES / f"{f.stem}.zip").is_file()
+            claimed = bool(side.get("claimed") and side.get("project_id"))
+            if claimed:
+                state = "imported"
+            elif side.get("claim_token"):
+                state = "importing"
+            elif ready:
+                state = "ready"
+            else:
+                state = "waiting_upload"
+            project = None
+            if claimed:
+                with ctx._LOCK:
+                    project = next((p for p in ctx._reg()["projects"]
+                                    if p.get("project_id") == side.get("project_id")
+                                    and p.get("owner") == email), None)
             out.append({"code": f.stem, "ready": ready,
+                        "claimed": claimed, "state": state,
                         "file": Path(str(side.get("file") or "")).name,
+                        "bundle": project.get("bundle") if project else None,
                         "expiresAt": (side.get("created") or 0) + ctx.INTAKE_TTL_SECONDS,
                         "projectId": side.get("project_id")})
     out.sort(key=lambda x: -x["expiresAt"])

@@ -260,7 +260,9 @@ const App: React.FC = () => {
   const [lib, setLib] = React.useState<Project[] | null>(null);
   const [libMsg, setLibMsg] = React.useState('');
   // 「素材」面板：电脑寄上来的包（收件箱）+ 一条一次性的收件地址
-  type Inbox = {code: string; ready: boolean; file: string; expiresAt: number; projectId?: string};
+  type Inbox = {code: string; ready: boolean; claimed?: boolean;
+    state?: 'waiting_upload' | 'importing' | 'ready' | 'imported' | 'expired';
+    file: string; bundle?: string | null; expiresAt: number; projectId?: string};
   const [inbox, setInbox] = React.useState<Inbox[] | null>(null);
   const [inboxMsg, setInboxMsg] = React.useState('');
   const [ticket, setTicket] = React.useState('');
@@ -519,6 +521,8 @@ const App: React.FC = () => {
           }
           setPack(p);
           packRef.current = p;
+          setJobId(p.job);
+          jobIdRef.current = p.job;
           setStalled(false);
           // 这台既然开着成片台，就是"这台电脑来出片"的意思 —— 领到就开跑，
           // 不再要人回到页面上再点一次「生成视频」（手机下的单在电脑上自动接）
@@ -969,8 +973,78 @@ const App: React.FC = () => {
     }).catch((e) => { setLib(null); setLibMsg(String((e as Error).message || e)); });
   };
 
-  // ---- 素材：收件地址（给电脑上的打包工具用）+ 收件箱（手机上挑一条接着做）----
-  // 手机上不做渲染、也不选文件：包由电脑产、由电脑寄上来，这里只挑"哪一条"
+  const refreshInbox = React.useCallback(async (showLoading = false) => {
+    if (showLoading) setInboxMsg('正在取收件箱…');
+    try {
+      const d = await api('/api/intake');
+      setInbox(((d.intakes || []) as Inbox[]) || []);
+      if (showLoading) setInboxMsg('');
+    } catch (e) {
+      if (showLoading) setInbox(null);
+      setInboxMsg(String((e as Error).message || e));
+    }
+  }, []);
+
+  // 收件箱打开时自动等电脑 Agent 上传；关闭面板、页面不可见时停止轮询。
+  React.useEffect(() => {
+    if (inbox === null) return;
+    let alive = true;
+    const pull = () => {
+      if (!alive || document.hidden) return;
+      void refreshInbox(false);
+    };
+    pull();
+    const timer = setInterval(pull, 4000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [inbox !== null, refreshInbox]);
+
+  // 手机刷新后恢复最近的任务：只恢复手机提交的任务，电脑成片台仍由自己的轮询领取。
+  React.useEffect(() => {
+    if (!IS_HANDHELD || !authReady || !resumeJob) return;
+    let alive = true;
+    let finished = false;
+    const restore = async () => {
+      if (!alive || finished) return;
+      try {
+        const j = await api(`/api/job/${resumeJob}`) as Record<string, unknown>;
+        if (!alive) return;
+        const stage = String(j.stage || '');
+        const pid = String(j.project_id || '');
+        if (pid) setProjectId(pid);
+        setJobId(resumeJob);
+        jobIdRef.current = resumeJob;
+        if (stage === 'done') {
+          finished = true;
+          sessionStorage.removeItem(RESUME_KEY);
+          setResumeJob('');
+          replaceFinalUrl(`/video/${resumeJob}`);
+          setCloudOk(true);
+          setPhase('done');
+          setPct(100);
+          return;
+        }
+        if (stage === 'failed' || stage === 'error' || stage === 'cancelled' || stage === 'unknown') {
+          finished = true;
+          sessionStorage.removeItem(RESUME_KEY);
+          setResumeJob('');
+          setErr(stage === 'unknown' ? '这一单的记录不在了，请在作品库里重新打开项目。' : '这一单已结束，请在作品库里查看成片。');
+          setPhase('config');
+          return;
+        }
+        setPhase('prepping');
+        setPrepStage(stage);
+        setPrepMsg(String(j.detail || '正在等待生成…'));
+        setPrepPct(Number(j.progress || 0));
+        if (!t0Ref.current) t0Ref.current = Date.now();
+      } catch (e) {
+        if (alive) setErr(String((e as Error).message || e));
+      }
+    };
+    void restore();
+    const timer = setInterval(() => { void restore(); }, 3000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [IS_HANDHELD, authReady, resumeJob, replaceFinalUrl]);
+
   const resumeProject = async (pid: string, bundleName: string) => {
     const p = phaseRef.current;
     if (p === 'prepping' || p === 'rendering' || p === 'uploading') {
@@ -990,10 +1064,7 @@ const App: React.FC = () => {
   const openInbox = () => {
     setInboxMsg('正在取收件箱…');
     setInbox([]);
-    api('/api/intake').then((d) => {
-      setInbox(((d.intakes || []) as Inbox[]) || []);
-      setInboxMsg('');
-    }).catch((e) => { setInbox(null); setInboxMsg(String((e as Error).message || e)); });
+    void refreshInbox(true);
   };
 
   const newTicket = async () => {
@@ -1287,10 +1358,14 @@ const App: React.FC = () => {
       <div className="body">
         {/* 左：动作 */}
         <div className="pane left">
-          <div className="lede">拖入素材包，一条好片子在你这台电脑上完成——不排队、不限速。</div>
+          <div className="lede">
+            {IS_HANDHELD
+              ? '电脑 Agent 做好素材包后会自动寄到这里；你确认内容后，电脑在后台生成。'
+              : '拖入素材包，一条好片子在你这台电脑上完成。'}
+          </div>
 
-          <input ref={fileInput} type="file" accept=".zip" style={{display: 'none'}}
-                 onChange={(e) => void importZip(e.target.files?.[0])} />
+          {!IS_HANDHELD ? <input ref={fileInput} type="file" accept=".zip" style={{display: 'none'}}
+                 onChange={(e) => void importZip(e.target.files?.[0])} /> : null}
 
           <div className="steps">
             {/* 1 导入 */}
@@ -1304,7 +1379,11 @@ const App: React.FC = () => {
                     <span className="pc">{upPct}%</span></div>
                 </div>
               ) : bundle ? (
-                <button className="btn ln sm" onClick={pick}>换一个素材包</button>
+                <button className="btn ln sm" onClick={IS_HANDHELD ? openInbox : pick}>
+                  {IS_HANDHELD ? '从电脑导入另一个素材包' : '换一个素材包'}
+                </button>
+              ) : IS_HANDHELD ? (
+                <button className="btn" onClick={openInbox}>打开电脑寄来的素材包</button>
               ) : (
                 <div className={`drop${hot ? ' hot' : ''}`} role="button" tabIndex={0}
                      aria-label="点这里选素材包 zip" onClick={pick}
@@ -1322,12 +1401,12 @@ const App: React.FC = () => {
 
             {/* 2 内容与配音 */}
             {bundle ? (
-              <Step n={2} title="内容与配音" state={st(2)}>
+              <Step n={2} title="内容与设置" state={st(2)}>
                 <div className="meta">
                   <span>{nChars} 字口播</span><span>约 {bundle.estSeconds} 秒</span>
                   <span>{nImg} 图 / {nVid} 视频</span>
                 </div>
-                <div className="togo">口播文案在右边整屏核对，看完直接点生成</div>
+                <div className="togo">先核对内容，再确认提交生成</div>
 
                 {/* 画面样式：这套片子最贵的差别，不该藏在二级浮层里 —— 缩略图直接摊开，点哪个用哪个 */}
                 {tpls.length ? (
@@ -1394,8 +1473,11 @@ const App: React.FC = () => {
                 </div>
                 <div style={{marginTop: 18}}>
                   <button className="btn" onClick={() => void submit()}>
-                    生成视频{durS ? `（约 ${estMin} 分钟）` : ''}
+                    确认内容并提交生成{durS ? `（约 ${estMin} 分钟）` : ''}
                   </button>
+                  <div className="note" style={{marginTop: 8}}>
+                    点击后会消耗一次生成额度；电脑成片台随后在后台生成，完成后手机直接下载。
+                  </div>
                 </div>
               </Step>
             ) : null}
@@ -1730,11 +1812,12 @@ const App: React.FC = () => {
       ) : null}
 
       {inbox !== null ? (
-        <Sheet title="素材" sub="包在电脑上产出、由电脑寄上来；手机上挑一条，让电脑去生成" width={620}
+        <Sheet title="素材" sub="电脑 Agent 做好的素材包会自动送到这里" width={620}
                onClose={() => { setInbox(null); setInboxMsg(''); }}>
           <div className="note">
-            要给这台电脑寄一个新包？点下面领一条<b>收件地址</b>（一次一用、24 小时作废），
-            交给电脑上的打包工具传完，回这里刷新就能看到它。
+            {IS_HANDHELD
+              ? '电脑 Agent 上传完成后，这里会自动出现素材包；看到“已送达”后点“导入”。'
+              : '这里显示电脑 Agent 寄来的素材包。手机负责确认内容，电脑负责后台生成。'}
           </div>
           <button className="btn" style={{alignSelf: 'flex-start', marginTop: 10}}
                   onClick={() => void newTicket()}>
@@ -1752,30 +1835,38 @@ const App: React.FC = () => {
           ) : null}
           {inboxMsg ? <div className="note">{inboxMsg}</div> : null}
           {!inbox.length && !inboxMsg ? (
-            <div className="note">还没有寄上来的包。手头已有 zip 的话，直接拖进第 1 步更快。</div>
+            <div className="note">电脑 Agent 上传完成后，素材包会自动出现在这里。</div>
           ) : null}
           <div className="liblist">
-            {inbox.map((it) => (
-              <div className="librow" key={it.code}>
-                <div className="li-t">
-                  <b>{it.file || it.code}</b>
-                  <span>{it.ready ? '已送达 · 可以导入' : '地址已生成，等电脑把包传上来'}</span>
+            {inbox.map((it) => {
+              const state = it.state || (it.ready ? 'ready' : 'waiting_upload');
+              return (
+                <div className="librow" key={it.code}>
+                  <div className="li-t">
+                    <b>{it.file || it.code}</b>
+                    <span>{state === 'ready' ? '已送达 · 可以导入'
+                      : state === 'imported' ? '已导入 · 去项目里继续'
+                      : '电脑 Agent 正在上传…'}</span>
+                  </div>
+                  <div className="li-a">
+                    {state === 'ready' ? (
+                      <button className="btn sm" style={{minWidth: 62}}
+                              onClick={() => void importCode(it.code)}>导入</button>
+                    ) : null}
+                    {state === 'imported' && it.projectId ? (
+                      <button className="btn sm" style={{minWidth: 62}}
+                              onClick={() => void resumeProject(it.projectId || '', it.bundle || it.file)}>打开</button>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="li-a">
-                  {it.ready ? (
-                    <button className="btn sm" style={{minWidth: 62}}
-                            onClick={() => void importCode(it.code)}>导入</button>
-                  ) : null}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="note" style={{marginTop: 14}}>
-            导入后进第 2 步核对文案、挑音色，点「生成视频」——渲染跑在那台开着的电脑上，
-            你人在不在旁边都一样。
+            导入后核对文案和声音，点“确认内容并提交生成”。电脑后台生成，完成后手机直接下载。
           </div>
           <button className="btn ln" style={{alignSelf: 'flex-start'}} onClick={openInbox}>
-            刷新收件箱
+            立即刷新
           </button>
         </Sheet>
       ) : null}

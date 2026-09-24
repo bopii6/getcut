@@ -142,6 +142,30 @@ class IntakeTicketTest(Base):
                   self.client.get("/api/intake", cookies=self.ck_b).json()["intakes"]]
         self.assertEqual(b_seen, [code_b["code"]])
 
+    def test_inbox_state_moves_from_ready_to_imported(self):
+        code = self.deliver()
+        item = self.client.get("/api/intake", cookies=self.ck_a).json()["intakes"][0]
+        self.assertEqual(item["state"], "ready")
+        self.assertTrue(item["ready"])
+        self.assertFalse(item["claimed"])
+        self.assertIsNone(item["bundle"])
+
+        claim = self.client.post(f"/api/intake/{code}/claim", json={}, cookies=self.ck_a)
+        self.assertEqual(claim.status_code, 200, claim.text)
+        item = self.client.get("/api/intake", cookies=self.ck_a).json()["intakes"][0]
+        self.assertEqual(item["state"], "imported")
+        self.assertFalse(item["ready"])
+        self.assertTrue(item["claimed"])
+        self.assertEqual(item["projectId"], claim.json()["project_id"])
+        self.assertEqual(item["bundle"], claim.json()["name"])
+
+    def test_inbox_shows_ticket_waiting_for_upload(self):
+        self.new_ticket()
+        item = self.client.get("/api/intake", cookies=self.ck_a).json()["intakes"][0]
+        self.assertEqual(item["state"], "waiting_upload")
+        self.assertFalse(item["ready"])
+        self.assertFalse(item["claimed"])
+
     def test_ticket_is_single_use(self):
         tk = self.new_ticket()
         self.deliver(tk)
