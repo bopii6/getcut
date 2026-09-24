@@ -3177,6 +3177,13 @@ let INTAKE_PENDING = null;
 const qs = (u) => u + (u.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOK());
 async function api(u, o) {
   o = o || {};
+  // 对象 body 统一序列化成 JSON：把对象直接塞给 fetch 会变成字符串
+  // "[object Object]"，服务端解析不了回 422 ——「登录设备与注销」整块
+  // 就是被这个坑坏的（点了永远没反应/按钮卡死）。
+  if (o.body && typeof o.body === "object" && !(o.body instanceof FormData)) {
+    o.headers = Object.assign({"Content-Type": "application/json"}, o.headers || {});
+    o.body = JSON.stringify(o.body);
+  }
   o.headers = Object.assign({"x-auth-token": TOK()}, o.headers || {});
   const r = await fetch(u, o);
   let d = null;
@@ -3952,7 +3959,6 @@ function toggleMeMenu(){
    否则政策就是空话；被投诉时"我们支持注销"却找不到按钮，比不写更糟。 */
 function openDevices(){
   api("/api/auth/sessions").then(rs => {
-    if (rs && rs.error){ dialog("登录设备与注销", "读取失败：" + rs.error, null, "", true); return; }
     const rows = (rs && rs.sessions) || [];
     const list = rows.length
       ? `<div class="dv-h">当前登录中的设备（${rows.length} 台）</div>` + rows.map(x =>
@@ -3974,21 +3980,36 @@ function openDevices(){
         <button class="btn sm" id="dvGo" style="background:var(--err,#ff6b6b)">确认注销</button></div>`);
     const box = [...document.querySelectorAll(".modal")].pop();
     if (!box) return;
+    const err = box.querySelector("#dvErr");
+    // api() 失败是 throw 不是回 {error}：这里必须接住，否则按钮永久卡死、
+    // 或者行不删又没有任何提示（输错密码就踩这个）。
     box.querySelectorAll("[data-sid]").forEach(b => b.onclick = async (e) => {
       e.preventDefault(); e.stopPropagation();
-      const r = await api("/api/auth/session/revoke", {method:"POST", body:{sid:b.dataset.sid}});
-      if (r && r.error) b.textContent = "没踢掉"; else b.closest(".dv-row").remove();
+      b.disabled = true;
+      try {
+        await api("/api/auth/session/revoke", {method:"POST", body:{sid:b.dataset.sid}});
+        b.closest(".dv-row").remove();
+      } catch (er) {
+        b.disabled = false;
+        b.textContent = "没踢掉";
+        if (err) err.textContent = er.message || "网络问题，没踢掉";
+      }
     });
-    const go = box.querySelector("#dvGo"), err = box.querySelector("#dvErr");
+    const go = box.querySelector("#dvGo");
     if (go) go.onclick = async () => {
       const yes = box.querySelector("#dvYes"), pw = box.querySelector("#dvPwd");
       if (!yes.checked || !pw.value){ err.textContent = "请先勾选确认并输入密码"; pw.focus(); return; }
       go.disabled = true; go.textContent = "正在删除…";
-      const r = await api("/api/auth/delete-account", {method:"POST", body:{confirm:true, password:pw.value}});
-      go.disabled = false; go.textContent = "确认注销";
-      if (r && r.error){ err.textContent = r.error; return; }
-      location.href = "/";
+      try {
+        await api("/api/auth/delete-account", {method:"POST", body:{confirm:true, password:pw.value}});
+        location.href = "/";
+      } catch (er) {
+        go.disabled = false; go.textContent = "确认注销";
+        if (err) err.textContent = er.message || "注销没有生效，请重试";
+      }
     };
+  }).catch(er => {
+    dialog("登录设备与注销", "读取失败：" + (er.message || "网络问题，稍后再试"), null, "", true);
   });
 }
 
