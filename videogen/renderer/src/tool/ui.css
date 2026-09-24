@@ -338,6 +338,8 @@ a { color: inherit; text-decoration: none }
 .stage .cap {
   position: absolute; left: 0; right: 0; bottom: 0; padding: 34px 16px 12px; text-align: center;
   font-size: 12.5px; color: #b5afa6; background: linear-gradient(transparent, rgba(0, 0, 0, .6)) }
+.stage .capbtn { width: 100%; cursor: pointer; border: 0; color: #e8e2d9; font: inherit; font-size: 12.5px }
+.stage .capbtn:hover { color: #fff }
 .void {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 14px; padding: 34px; text-align: center; color: #8a857d;
@@ -419,7 +421,26 @@ a { color: inherit; text-decoration: none }
 }
 
 @media (max-width: 900px) {
-  .body { grid-template-columns: 1fr; overflow-y: auto }
-  .pane.right { min-height: 62vh }
-  .stage { height: 62vh }
+  .shell { min-height: 100vh; height: auto; overflow: visible }
+  .topbar { min-height: 58px; height: auto; padding: 8px 12px; gap: 8px; flex-wrap: wrap }
+  .brand .sub { display: none }
+  .top-right { gap: 6px; max-width: 68%; flex-wrap: wrap; justify-content: flex-end }
+  .chip { padding: 5px 8px; font-size: 12px }
+  .body { grid-template-columns: 1fr; overflow-y: visible; min-height: 0 }
+  .pane { overflow: visible; padding: 14px 12px; gap: 12px }
+  .pane.right { min-height: 62vh; justify-content: flex-start; padding: 12px 12px 18px }
+  .stage { height: min(62vh, 520px); min-height: 320px }
+  .stagewrap { justify-content: flex-start; gap: 8px }
+  .stagecap { max-width: 100%; width: 100% }
+  .mobile-download { display: flex; width: min(100%, 420px); min-height: 48px;
+    align-items: center; justify-content: center; margin: 2px auto 0; text-align: center }
+  /* 手机上先给用户当前任务和成片，不要先滚过一整张配置表单。 */
+  .body.handheld-focus .pane.right { order: -1; min-height: auto; padding: 12px 12px 18px }
+  .body.handheld-focus .pane.right .genwrap { max-height: none; overflow: visible }
+  .body.handheld-focus .pane.right .stage { height: min(72vh, 620px) }
+  .body.handheld-focus .pane.left { border-right: 0; border-top: 1px solid var(--line) }
+  .g-act { font-size: clamp(28px, 8vw, 40px) }
+  .g { padding: 16px 16px 14px }
+  .footbar { min-height: 40px; height: auto; padding: 8px 12px; flex-wrap: wrap }
+  .footbar .right { gap: 10px; margin-left: 0; flex-wrap: wrap }
 }

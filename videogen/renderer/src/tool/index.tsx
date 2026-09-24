@@ -244,6 +244,8 @@ const App: React.FC = () => {
   const [pct, setPct] = React.useState(0);
   const [msg, setMsg] = React.useState('');
   const [finalUrl, setFinalUrl] = React.useState<string | null>(null);
+  // 浏览器预览默认静音，避免自动播放策略突然把声音放出来；用户点一下即可听配音。
+  const [previewMuted, setPreviewMuted] = React.useState(true);
   const [cloudOk, setCloudOk] = React.useState<boolean | null>(null);
   const [layerMsg, setLayerMsg] = React.useState('');
   const [layersOk, setLayersOk] = React.useState<boolean | null>(null);
@@ -745,6 +747,13 @@ const App: React.FC = () => {
               replaceFinalUrl(`/video/${jid}`);
               setCloudOk(true);
             }
+            sessionStorage.removeItem(RESUME_KEY);
+            setResumeJob('');
+            setPhase('done');
+            setPrepStage('done');
+            setPrepMsg('成片已生成');
+            setPrepPct(100);
+            setPct(100);
             return;
           }
           setPrepMsg(String(j.detail || stage));
@@ -951,6 +960,7 @@ const App: React.FC = () => {
     setJobId('');
     clearOutputState();
     setPct(0);
+    setPreviewMuted(true);
     setErr('');
     t0Ref.current = 0;
     setElapsed(0);
@@ -1266,11 +1276,14 @@ const App: React.FC = () => {
     queued: '排队等号', tts: '合成配音', plan: '排分镜', props: '设计画面',
     prepped: '打包交给你', render: '等你这台电脑开工',
   };
+  const waitingForAgent = !pack && prepStage === 'render';
+  const agentHasClaimed = waitingForAgent && /已领取|正在本机|正在生成|渲染/.test(prepMsg);
   const act = phase === 'done' ? '已完成'
     : phase === 'rendering' ? '本机生成画面'
     : phase === 'uploading' ? '交回云端'
     : phase === 'ready' ? '等你这台电脑开工'
     : pack ? '缓存素材'
+    : agentHasClaimed ? '电脑已领取，正在生成'
     : ACT[prepStage] || '云端备料';
 
   // 四段轨道：每段走完打一个勾，等的过程要看得见在推进
@@ -1281,6 +1294,7 @@ const App: React.FC = () => {
   const rest = RAIL.slice(genIdx + 1);
   const gdetail = phase === 'rendering'
     ? `画面已出 ${Math.round(pct * durS / 100)} / ${Math.round(durS)} 秒`
+    : agentHasClaimed ? prepMsg
     : rest.length ? `接下来：${rest.join(' → ')}` : '最后一步，交完就能取片';
 
   const cacheMB = pack ? pack.files.reduce((s, f) => s + f.size, 0) / 1048576 : 0;
@@ -1344,7 +1358,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <div className="body">
+      <div className={`body${IS_HANDHELD && (gen || finalUrl) ? ' handheld-focus' : ''}`}>
         {/* 左：动作 */}
         <div className="pane left">
           <div className="lede">
@@ -1654,13 +1668,15 @@ const App: React.FC = () => {
                       style={{width: '100%', height: '100%'}}
                       autoplay
                       loop
-                      muted
+                      muted={previewMuted}
                       showControls={false}
                       acknowledgeRemotionLicense
                     />
                   )}
                   {phase !== 'rendering' ? (
-                    <div className="cap">实时预览（静音） · 成片带配音与音乐</div>
+                    <button className="cap capbtn" onClick={() => setPreviewMuted((v) => !v)}>
+                      {previewMuted ? '实时预览已静音 · 点这里打开声音' : '实时预览有声 · 点这里关闭声音'}
+                    </button>
                   ) : null}
                 </div>
               ) : null}
@@ -1682,7 +1698,7 @@ const App: React.FC = () => {
             <div className="stagewrap">
               <div className="stage">
                 {finalUrl ? (
-                  <video src={finalUrl} controls autoPlay />
+                  <video src={finalUrl} controls autoPlay playsInline preload="metadata" />
                 ) : (
                   <Player
                     ref={playerRef}
@@ -1695,19 +1711,26 @@ const App: React.FC = () => {
                     style={{width: '100%', height: '100%'}}
                     autoplay
                     loop
-                    muted
+                    muted={previewMuted}
                     showControls={false}
                     acknowledgeRemotionLicense
                   />
                 )}
                 {pack && !finalUrl ? (
-                  <div className="cap">实时预览（静音） · 成片带配音与音乐</div>
+                  <button className="cap capbtn" onClick={() => setPreviewMuted((v) => !v)}>
+                    {previewMuted ? '实时预览已静音 · 点这里打开声音' : '实时预览有声 · 点这里关闭声音'}
+                  </button>
                 ) : null}
               </div>
               <div className="stagecap">
                 <b>{title}</b>
                 <span>{Math.round(durS)} 秒 · 1080×1920 竖屏 · {phase === 'done' ? '已完成' : phase === 'rendering' ? '生成中' : '预览中'}</span>
               </div>
+              {finalUrl && IS_HANDHELD ? (
+                <a className="btn mobile-download" href={finalUrl} download={fileName}>
+                  下载 MP4 成片
+                </a>
+              ) : null}
             </div>
           ) : bundle ? (
             <article className="reader">

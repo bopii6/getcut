@@ -78,7 +78,9 @@ def _saved_token() -> str:
 
 
 def _current_token() -> str:
-    return ENV_TOKEN.strip() or _saved_token()
+    # 新授权得到的账号设备令牌必须优先于旧的环境变量；否则 .env 里的旧令牌
+    # 会把刚授权的账号遮住，甚至把请求带回旧身份。
+    return _saved_token() or ENV_TOKEN.strip()
 
 
 def _clear_pending() -> None:
@@ -104,8 +106,9 @@ def _session() -> requests.Session:
         # 新授权得到的设备令牌只走 x-agent-token；只有显式旧配置里的
         # GETCUT_TOKEN 才兼容主钥匙通道，避免把用户令牌误当全站钥匙。
         s.headers["x-agent-token"] = token
-        if ENV_TOKEN.strip():
+        if ENV_TOKEN.strip() and not _saved_token():
             s.headers["x-auth-token"] = ENV_TOKEN.strip()
+
     return s
 
 
