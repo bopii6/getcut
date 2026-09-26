@@ -998,7 +998,9 @@ const HeadlineBand: React.FC<{lines: {text: string; highlight?: string}[]}> = ({
               justifyContent: stretch ? 'flex-start' : 'center',
               marginTop: H.lineGap ?? 14,
               paddingLeft: stretch ? panelRect().left : 40,
-              paddingRight: 22,
+              // stretch 右边界=纸卡右缘（不是画布右缘）：顶到「卡片」右缘才是招牌样式，
+              // 按画布算会戳出白卡 75px 落到深底上（2026-09-26 用户反馈出边界）
+              paddingRight: stretch ? 1080 - (paperRect().left + paperRect().width) : 22,
             }}
           >
             {before ? (

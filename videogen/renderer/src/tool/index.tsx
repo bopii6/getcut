@@ -249,7 +249,8 @@ const App: React.FC = () => {
   const [layersOk, setLayersOk] = React.useState<boolean | null>(null);
   const [layerErr, setLayerErr] = React.useState('');
   const [layerNote, setLayerNote] = React.useState('');
-  const [theme, setTheme] = React.useState(() => localStorage.getItem(THEME_KEY) || 'ziyu');
+  // 配色收敛为石墨金一款（2026-09-26 用户拍板）：不再读用户存过的选择，选过其他配色的也会回到默认
+  const [theme] = React.useState('ziyu');
   const [hot, setHot] = React.useState(false);
   const [elapsed, setElapsed] = React.useState(0);
   const [prepStage, setPrepStage] = React.useState('');
@@ -1327,16 +1328,8 @@ const App: React.FC = () => {
         <div className="brand">
           <Mark />
           <span className="wm">GetCut</span>
-          <span className="sub">成片台</span>
         </div>
         <div className="top-right">
-          <span className="selw">
-            <select className="chip sel-theme" value={theme} aria-label="配色主题"
-                    onChange={(e) => setTheme(e.target.value)}>
-              {THEMES.map((t) => <option key={t.id} value={t.id}>配色 · {t.name}</option>)}
-            </select>
-            <span className="car">▾</span>
-          </span>
           {!me ? <button className="chip" onClick={() => setSheet('pricing')} title="免费版与高级版">定价</button> : null}
           {me ? <button className="chip" onClick={openLib} title="历史项目与成片">作品库</button> : null}
           {me ? <button className="chip" onClick={openInbox} title="电脑寄来的素材包 / 生成收件地址">素材</button> : null}
@@ -1750,11 +1743,6 @@ const App: React.FC = () => {
         <span style={{color: codecOk ? undefined : 'var(--err)'}}>
           {codecOk ? '本机出片能力 正常' : '浏览器太旧，请换新版 Chrome / Edge'}
         </span>
-        <div className="right">
-          <a href="/privacy" target="_blank" rel="noopener">隐私政策</a>
-          <a href="/terms" target="_blank" rel="noopener">用户协议</a>
-          <a href="/refund" target="_blank" rel="noopener">退款说明</a>
-        </div>
       </footer>
 
       {tplSample ? (
