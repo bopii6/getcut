@@ -29,4 +29,8 @@ worker/.wrangler/
 app/_*.cjs
 /tools-local/
 /pixel-video/
+/article.html
+/article.md
+/extract_article.ps1
+/tweet.html
 
