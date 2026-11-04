@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
@@ -9,29 +9,29 @@ import { exportJianyingDraft } from './lib/jianying';
 
 type Choice = ThemeName | 'auto';
 
-const STYLES: { id: Choice; name: string; thumb?: string }[] = [
+const STYLES: { id: Choice; name: string; thumb?: string; preview?: string }[] = [
   { id: 'auto', name: '自动' },
-  { id: 'poster', name: '大字报', thumb: 'style-thumbs/poster.jpg' },
-  { id: 'magazine', name: '杂志', thumb: 'style-thumbs/magazine.jpg' },
+  { id: 'poster', name: '大字报', thumb: 'style-thumbs/poster.jpg', preview: 'style-previews/poster.mp4' },
+  { id: 'magazine', name: '杂志', thumb: 'style-thumbs/magazine.jpg', preview: 'style-previews/magazine.mp4' },
   { id: 'dashboard', name: '数据', thumb: 'style-thumbs/dashboard.jpg' },
-  { id: 'newsroom', name: '播报', thumb: 'style-thumbs/newsroom.jpg' },
-  { id: 'ledger', name: '财报', thumb: 'style-thumbs/ledger.jpg' },
-  { id: 'marker', name: '白板', thumb: 'style-thumbs/marker.jpg' },
-  { id: 'swiss', name: '极简', thumb: 'style-thumbs/swiss.jpg' },
-  { id: 'terminal', name: '终端', thumb: 'style-thumbs/terminal.jpg' },
-  { id: 'broadsheet', name: '报纸', thumb: 'style-thumbs/broadsheet.jpg' },
-  { id: 'cover', name: '封面', thumb: 'style-thumbs/cover.jpg' },
-  { id: 'reel', name: '胶片', thumb: 'style-thumbs/reel.jpg' },
+  { id: 'newsroom', name: '播报', thumb: 'style-thumbs/newsroom.jpg', preview: 'style-previews/newsroom.mp4' },
+  { id: 'ledger', name: '财报' },
+  { id: 'marker', name: '白板', thumb: 'style-thumbs/marker.jpg', preview: 'style-previews/marker.mp4' },
+  { id: 'swiss', name: '极简', thumb: 'style-thumbs/swiss.jpg', preview: 'style-previews/swiss.mp4' },
+  { id: 'terminal', name: '终端', thumb: 'style-thumbs/terminal.jpg', preview: 'style-previews/terminal.mp4' },
+  { id: 'broadsheet', name: '报纸', thumb: 'style-thumbs/broadsheet.jpg', preview: 'style-previews/broadsheet.mp4' },
+  { id: 'cover', name: '封面', thumb: 'style-thumbs/cover.jpg', preview: 'style-previews/cover.mp4' },
+  { id: 'reel', name: '胶片', thumb: 'style-thumbs/reel.jpg', preview: 'style-previews/reel.mp4' },
   { id: 'news', name: '新闻' },
   { id: 'night', name: '夜行' },
 ];
 
 const VOICES = [
-  { id: 'zh-CN-YunxiNeural', name: '云希 · 男声 · 年轻' },
-  { id: 'zh-CN-YunyangNeural', name: '云扬 · 男声 · 播音' },
-  { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓 · 女声 · 温和' },
-  { id: 'zh-CN-XiaoyiNeural', name: '晓伊 · 女声 · 活泼' },
-  { id: 'zh-CN-YunjianNeural', name: '云健 · 男声 · 厚实' },
+  { id: 'zh-CN-YunxiNeural', name: '云希', desc: '男声 · 年轻' },
+  { id: 'zh-CN-YunyangNeural', name: '云扬', desc: '男声 · 播音' },
+  { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓', desc: '女声 · 温和' },
+  { id: 'zh-CN-XiaoyiNeural', name: '晓伊', desc: '女声 · 活泼' },
+  { id: 'zh-CN-YunjianNeural', name: '云健', desc: '男声 · 厚实' },
 ];
 
 const DEMO = `想开一家小店，你最怕的是什么？
@@ -50,7 +50,6 @@ function pickTheme(text: string): ThemeName {
   return 'poster';
 }
 
-/** 生成前用句子长度估一个时间轴，让底部轨道一直是"活的" */
 function draftScenes(text: string) {
   const parts = text.split(/[。！？\n]/).map((s) => s.trim()).filter(Boolean).slice(0, 12);
   return parts.map((p) => ({ text: p, duration: Math.max(1.6, Math.round(p.length / 4.6)) }));
@@ -60,6 +59,46 @@ function fmt(t: number) {
   const m = Math.floor(t / 60);
   const s = Math.floor(t % 60);
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/** 大图标：给 40+ 用户看，笔画粗、形状实、一眼认得出 */
+function Icon({ name }: { name: 'text' | 'style' | 'voice' | 'works' }) {
+  const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  if (name === 'text') {
+    return (
+      <svg viewBox="0 0 32 32" width="30" height="30" {...common}>
+        <path d="M8 5h12l5 5v17H8z" />
+        <path d="M20 5v6h5" />
+        <path d="M12 16h9M12 21h9M12 26h5" />
+      </svg>
+    );
+  }
+  if (name === 'style') {
+    return (
+      <svg viewBox="0 0 32 32" width="30" height="30" {...common}>
+        <rect x="4" y="6" width="15" height="20" rx="2" />
+        <rect x="15" y="12" width="13" height="14" rx="2" />
+        <path d="M7 20l4-4 3 3" />
+        <path d="M18 22l3-3 4 3" />
+      </svg>
+    );
+  }
+  if (name === 'voice') {
+    return (
+      <svg viewBox="0 0 32 32" width="30" height="30" {...common}>
+        <path d="M5 13h5l6-5v16l-6-5H5z" />
+        <path d="M21 12a6 6 0 010 8" />
+        <path d="M25 9a10 10 0 010 14" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 32 32" width="30" height="30" {...common}>
+      <rect x="4" y="8" width="24" height="16" rx="2" />
+      <path d="M4 14h24M4 20h24" />
+      <path d="M10 8v16M22 8v16" />
+    </svg>
+  );
 }
 
 export default function Studio() {
@@ -93,11 +132,16 @@ export default function Studio() {
   const [playId, setPlayId] = useState('');
   const [tab, setTab] = useState<'text' | 'style' | 'voice' | 'works'>('text');
   const [selectedScene, setSelectedScene] = useState(0);
+  const [hoverStyle, setHoverStyle] = useState<string>('');
+  const [previewing, setPreviewing] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [now, setNow] = useState(0);
   const [dur, setDur] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const dragging = useRef(false);
 
   const refresh = async () => {
     try { setMe(await getMe()); } catch { /* 离线也能用 */ }
@@ -112,6 +156,7 @@ export default function Studio() {
     return draftScenes(text);
   }, [plan, text]);
   const totalDur = scenes.reduce((n, s) => n + s.duration, 0) || 1;
+  const playable = dur || totalDur;
 
   async function doAuth() {
     setAuthErr('');
@@ -186,25 +231,57 @@ export default function Studio() {
     }
   }
 
+  /** 点一下就试听 3 秒，确认音色合不合适 */
+  async function previewVoice(id: string) {
+    if (previewing) return;
+    setPreviewing(id);
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: '开店三个数：先算投入，再算回本，最后看流水。', voice: id }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const blob = await res.blob();
+      const u = URL.createObjectURL(blob);
+      audioRef.current?.pause();
+      const audio = new Audio(u);
+      audioRef.current = audio;
+      audio.onended = () => { setPreviewing(''); URL.revokeObjectURL(u); };
+      await audio.play();
+    } catch {
+      setPreviewing('');
+      setErr('试听失败，稍后再试');
+    }
+  }
+
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
     if (v.paused) { void v.play(); } else { v.pause(); }
   };
 
-  const seek = (ratio: number) => {
+  const seekRatio = (ratio: number) => {
     const v = videoRef.current;
-    if (!v || !v.duration) return;
-    v.currentTime = Math.max(0, Math.min(1, ratio)) * v.duration;
+    const r = Math.max(0, Math.min(1, ratio));
+    setNow(r * playable);
+    if (v && v.duration) v.currentTime = r * v.duration;
   };
+
+  const seekFromEvent = (clientX: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    seekRatio((clientX - rect.left) / rect.width);
+  };
+
+  const sceneStart = (i: number) => scenes.slice(0, i).reduce((n, s) => n + s.duration, 0);
 
   return (
     <div className="studio">
-      {/* 顶栏 */}
       <header className="top">
         <div className="brand">GetCut<span>studio</span></div>
         <div className="project">
-          <b>{text.trim().split(/[。！？\n]/)[0].slice(0, 16) || '未命名项目'}</b>
+          <b>{text.trim().split(/[。！？\n]/)[0].slice(0, 18) || '未命名项目'}</b>
           <span>{running ? `${stage} ${pct}%` : url ? '已出片' : '草稿'}</span>
         </div>
         <div className="top-act">
@@ -220,22 +297,20 @@ export default function Studio() {
       </header>
 
       <div className="body">
-        {/* 左侧栏 */}
         <nav className="rail">
           {([
-            ['text', '文案', 'M4 5h16M4 10h16M4 15h10'],
-            ['style', '长相', 'M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z'],
-            ['voice', '声音', 'M4 12h3l3-6 3 12 3-6h4'],
-            ['works', '作品', 'M4 6h16v12H4zM4 10h16'],
-          ] as const).map(([id, label, d]) => (
-            <button key={id} className={`rail-btn ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)} title={label}>
-              <svg viewBox="0 0 24 24" width="20" height="20"><path d={d} fill="none" stroke="currentColor" strokeWidth="1.6" /></svg>
+            ['text', '文案'],
+            ['style', '长相'],
+            ['voice', '声音'],
+            ['works', '作品'],
+          ] as const).map(([id, label]) => (
+            <button key={id} className={`rail-btn ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}>
+              <Icon name={id} />
               <span>{label}</span>
             </button>
           ))}
         </nav>
 
-        {/* 画布 */}
         <main className="stage">
           <div className="canvas" onClick={togglePlay}>
             {url ? (
@@ -243,6 +318,7 @@ export default function Studio() {
                 ref={videoRef}
                 src={url}
                 playsInline
+                onLoadedData={(e) => { e.currentTarget.currentTime = 0.4; }}
                 onTimeUpdate={(e) => { const v = e.currentTarget; setNow(v.currentTime); setDur(v.duration || 0); }}
                 onPlay={() => setPlaying(true)}
                 onPause={() => setPlaying(false)}
@@ -252,30 +328,33 @@ export default function Studio() {
                 <img src="samples/poster.jpg" alt="" />
               </div>
             )}
-            {!url && !running ? null : null}
             {running ? <div className="hud">{stage} · {pct}%</div> : null}
           </div>
 
           <div className="transport">
             <button className="play" onClick={togglePlay} disabled={!url} aria-label="播放">
               {playing ? (
-                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor" /></svg>
+                <svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 5h4v14H6zM14 5h4v14h-4z" fill="currentColor" /></svg>
               ) : (
-                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M8 5l11 7-11 7z" fill="currentColor" /></svg>
+                <svg viewBox="0 0 24 24" width="18" height="18"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>
               )}
             </button>
-            <span className="tc">{fmt(now)} / {fmt(dur || totalDur)}</span>
-            <div className="scrub" onClick={(e) => {
-              const r = (e.currentTarget.getBoundingClientRect());
-              seek((e.clientX - r.left) / r.width);
-            }}>
-              <i style={{ width: `${dur ? (now / dur) * 100 : 0}%` }} />
+            <span className="tc">{fmt(now)} / {fmt(playable)}</span>
+            <div
+              className="scrub"
+              ref={trackRef}
+              onPointerDown={(e) => { dragging.current = true; seekFromEvent(e.clientX); (e.target as HTMLElement).setPointerCapture?.(e.pointerId); }}
+              onPointerMove={(e) => { if (dragging.current) seekFromEvent(e.clientX); }}
+              onPointerUp={() => { dragging.current = false; }}
+              onPointerCancel={() => { dragging.current = false; }}
+            >
+              <i style={{ width: `${(now / playable) * 100}%` }} />
+              <b style={{ left: `${(now / playable) * 100}%` }} />
             </div>
-            <span className="tc dim">1080×1920 · 30fps</span>
+            <span className="tc dim">1080×1920</span>
           </div>
         </main>
 
-        {/* 右侧检查器 */}
         <aside className="inspector">
           <div className="ins-head">
             <b>{tab === 'text' ? '文案' : tab === 'style' ? '长相' : tab === 'voice' ? '声音' : '作品'}</b>
@@ -299,8 +378,17 @@ export default function Studio() {
           {tab === 'style' ? (
             <div className="thumbs">
               {STYLES.map((s) => (
-                <button key={s.id} className={`thumb ${choice === s.id ? 'on' : ''}`} onClick={() => setChoice(s.id)}>
+                <button
+                  key={s.id}
+                  className={`thumb ${choice === s.id ? 'on' : ''}`}
+                  onClick={() => setChoice(s.id)}
+                  onMouseEnter={() => setHoverStyle(s.id)}
+                  onMouseLeave={() => setHoverStyle('')}
+                >
                   {s.thumb ? <img src={s.thumb} alt="" /> : <span className="nothumb" />}
+                  {s.preview && hoverStyle === s.id ? (
+                    <video className="hover-preview" src={s.preview} autoPlay muted loop playsInline />
+                  ) : null}
                   <i>{s.name}</i>
                 </button>
               ))}
@@ -310,13 +398,18 @@ export default function Studio() {
           {tab === 'voice' ? (
             <div className="voices">
               {VOICES.map((v) => (
-                <button key={v.id} className={`voice-row ${voice === v.id ? 'on' : ''}`} onClick={() => setVoice(v.id)}>
-                  <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 12h3l3-6 3 12 3-6h4" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg>
-                  <span>{v.name}</span>
-                </button>
+                <div key={v.id} className={`voice-row ${voice === v.id ? 'on' : ''}`}>
+                  <button className="voice-main" onClick={() => setVoice(v.id)}>
+                    <span className="vname">{v.name}</span>
+                    <span className="vdesc">{v.desc}</span>
+                  </button>
+                  <button className="try" onClick={() => void previewVoice(v.id)} disabled={previewing === v.id}>
+                    {previewing === v.id ? '播放中' : '试听'}
+                  </button>
+                </div>
               ))}
-              <label className="check"><input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} />自动配乐（人声出现时压低）</label>
-              <label className="check"><input type="checkbox" checked={broll} onChange={(e) => setBroll(e.target.checked)} />插入实拍空镜（慢，慎用）</label>
+              <label className="check"><input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} />自动配乐（说话时自动压低）</label>
+              <label className="check"><input type="checkbox" checked={broll} onChange={(e) => setBroll(e.target.checked)} />插入实拍空镜（较慢）</label>
             </div>
           ) : null}
 
@@ -345,6 +438,7 @@ export default function Studio() {
           ) : null}
 
           {err ? <p className="err">{err}</p> : null}
+
           {url ? (
             <div className="out">
               <a className="primary wide" href={url} download="getcut.mp4">下载 MP4</a>
@@ -360,12 +454,12 @@ export default function Studio() {
         </aside>
       </div>
 
-      {/* 时间轴 */}
       <section className="timeline">
         <div className="tl-head">
           <b>时间轴</b>
-          <span>{scenes.length} 个镜头 · 约 {Math.round(totalDur)} 秒</span>
+          <span>{scenes.length} 个镜头 · 约 {Math.round(url ? playable : totalDur)} 秒</span>
           {running ? <span className="tl-run">{stage} {pct}%</span> : null}
+          <span className="tl-tip">点片段跳到那一句</span>
         </div>
         <div className="tl-body">
           <div className="tl-lane-label">画面</div>
@@ -375,7 +469,7 @@ export default function Studio() {
                 key={i}
                 className={`clip ${selectedScene === i ? 'on' : ''}`}
                 style={{ flexGrow: s.duration }}
-                onClick={() => setSelectedScene(i)}
+                onClick={() => { setSelectedScene(i); seekRatio(sceneStart(i) / totalDur); }}
                 title={s.text}
               >
                 <span>{s.text.slice(0, 12)}</span>
@@ -386,16 +480,21 @@ export default function Studio() {
           <div className="tl-lane-label">字幕</div>
           <div className="tl-lane texts">
             {scenes.slice(0, 12).map((s, i) => (
-              <button key={i} className="sub" style={{ flexGrow: s.duration }} onClick={() => setSelectedScene(i)}>
+              <button
+                key={i}
+                className="sub"
+                style={{ flexGrow: s.duration }}
+                onClick={() => { setSelectedScene(i); seekRatio(sceneStart(i) / totalDur); }}
+              >
                 {s.text.slice(0, 16)}
               </button>
             ))}
             {!scenes.length ? <div className="sub empty">—</div> : null}
           </div>
+          <div className="playhead" style={{ left: `calc(52px + (100% - 60px) * ${now / playable})` }} />
         </div>
       </section>
 
-      {/* 弹窗 */}
       {showAuth ? (
         <div className="mask" onClick={() => setShowAuth(false)}>
           <div className="dialog" onClick={(e) => e.stopPropagation()}>
@@ -446,147 +545,155 @@ export default function Studio() {
         :root {
           --bg: #0B0B0C;
           --panel: #131316;
-          --panel-2: #1A1A1E;
-          --line: rgba(255,255,255,.08);
-          --line-2: rgba(255,255,255,.16);
-          --ink: #ECECEE;
-          --dim: #8A8A93;
+          --panel-2: #1C1C21;
+          --line: rgba(255,255,255,.10);
+          --line-2: rgba(255,255,255,.20);
+          --ink: #F2F2F4;
+          --dim: #A6A6B0;
           --gold: #F0B429;
         }
         * { box-sizing: border-box; }
         html, body, #root { height: 100%; }
         body { margin: 0; background: var(--bg); color: var(--ink);
-          font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; overflow: hidden; }
+          font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; overflow: hidden; font-size: 15px; }
         .studio { height: 100vh; display: flex; flex-direction: column; }
 
-        .top { height: 56px; flex: none; display: flex; align-items: center; gap: 20px;
-          padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
-        .brand { font-weight: 900; font-size: 15px; letter-spacing: .02em; }
-        .brand span { color: var(--gold); font-weight: 500; margin-left: 4px; font-size: 12px; }
-        .project { flex: 1; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-        .project b { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .project span { font-size: 11px; color: var(--dim); }
-        .top-act { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--dim); }
-        .quota { letter-spacing: .04em; }
-        .tlink { background: none; border: 0; padding: 0; font: inherit; color: var(--dim); cursor: pointer; }
+        .top { height: 64px; flex: none; display: flex; align-items: center; gap: 20px;
+          padding: 0 18px; border-bottom: 1px solid var(--line); background: var(--panel); }
+        .brand { font-weight: 900; font-size: 17px; letter-spacing: .02em; }
+        .brand span { color: var(--gold); font-weight: 500; margin-left: 5px; font-size: 13px; }
+        .project { flex: 1; display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+        .project b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .project span { font-size: 13px; color: var(--dim); }
+        .top-act { display: flex; align-items: center; gap: 18px; font-size: 14px; color: var(--dim); }
+        .quota { letter-spacing: .03em; }
+        .tlink { background: none; border: 0; padding: 0; font: inherit; color: var(--dim); cursor: pointer; font-size: 14px; }
         .tlink:hover { color: var(--ink); }
         .tlink.danger { color: #ff8f7a; }
-        .primary { background: var(--gold); color: #171207; border: 0; border-radius: 6px;
-          padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: .04em; }
+        .primary { background: var(--gold); color: #171207; border: 0; border-radius: 8px;
+          padding: 12px 22px; font-size: 15px; font-weight: 800; cursor: pointer; letter-spacing: .03em; }
         .primary:hover { filter: brightness(1.06); }
         .primary:disabled { opacity: .6; cursor: not-allowed; }
-        .primary.wide { width: 100%; padding: 11px 16px; }
+        .primary.wide { width: 100%; padding: 13px 16px; }
         .ghost { background: transparent; border: 1px solid var(--line-2); color: var(--ink);
-          border-radius: 6px; padding: 9px 12px; font-size: 12px; cursor: pointer; }
+          border-radius: 8px; padding: 11px 12px; font-size: 14px; cursor: pointer; }
         .ghost:hover { border-color: var(--gold); }
 
-        .body { flex: 1; display: grid; grid-template-columns: 68px minmax(0,1fr) 320px; min-height: 0; }
+        .body { flex: 1; display: grid; grid-template-columns: 92px minmax(0,1fr) 372px; min-height: 0; }
 
         .rail { border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center;
-          padding-top: 12px; gap: 6px; background: var(--panel); }
-        .rail-btn { width: 52px; height: 54px; display: grid; place-items: center; gap: 3px;
-          background: none; border: 0; border-radius: 8px; color: var(--dim); cursor: pointer; font-size: 10px; }
+          padding-top: 14px; gap: 8px; background: var(--panel); }
+        .rail-btn { width: 76px; padding: 12px 0 10px; display: grid; place-items: center; gap: 7px;
+          background: none; border: 0; border-radius: 10px; color: var(--dim); cursor: pointer; font-size: 13px; }
         .rail-btn:hover { background: var(--panel-2); color: var(--ink); }
         .rail-btn.on { background: var(--panel-2); color: var(--gold); }
 
         .stage { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-          background:
-            radial-gradient(1200px 600px at 50% 0%, rgba(255,255,255,.03), transparent 70%),
-            var(--bg);
-          padding: 18px 24px 8px; gap: 12px; }
-        .canvas { position: relative; height: min(62vh, 560px); aspect-ratio: 9/16; background: #000;
-          border-radius: 8px; overflow: hidden; box-shadow: 0 20px 60px -30px #000, 0 0 0 1px var(--line-2);
+          background: radial-gradient(1200px 600px at 50% 0%, rgba(255,255,255,.035), transparent 70%), var(--bg);
+          padding: 18px 24px 10px; gap: 14px; }
+        .canvas { position: relative; height: min(58vh, 520px); aspect-ratio: 9/16; background: #000;
+          border-radius: 10px; overflow: hidden; box-shadow: 0 20px 60px -30px #000, 0 0 0 1px var(--line-2);
           cursor: pointer; display: grid; place-items: center; }
         .canvas video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .placeholder { position: absolute; inset: 0; display: grid; place-items: center; }
         .placeholder img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .45; }
-        .placeholder::after { content: ''; position: absolute; inset: 24px; border: 1px dashed rgba(255,255,255,.18); pointer-events: none; }
-        .ph-meta { position: relative; display: grid; gap: 6px; justify-items: center; }
-        .ph-meta span { font-size: 22px; letter-spacing: .18em; color: rgba(255,255,255,.7); }
-        .ph-meta em { font-style: normal; font-size: 12px; color: rgba(255,255,255,.6); }
-        .hud { position: absolute; left: 10px; bottom: 10px; background: rgba(0,0,0,.6); color: #fff;
-          font-size: 11px; padding: 4px 8px; border-radius: 4px; }
+        .placeholder::after { content: ''; position: absolute; inset: 26px; border: 1px dashed rgba(255,255,255,.2); pointer-events: none; }
+        .hud { position: absolute; left: 12px; bottom: 12px; background: rgba(0,0,0,.65); color: #fff;
+          font-size: 13px; padding: 5px 10px; border-radius: 6px; }
 
-        .transport { width: min(62vh * 9/16, 560px * 9/16, 100%); max-width: 340px; display: flex; align-items: center; gap: 10px; }
-        .play { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-2);
+        .transport { width: min(100%, 360px); display: flex; align-items: center; gap: 12px; }
+        .play { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line-2);
           background: var(--panel-2); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
         .play:disabled { opacity: .4; cursor: default; }
-        .tc { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
-        .scrub { flex: 1; height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; cursor: pointer; }
-        .scrub i { display: block; height: 100%; width: 0; background: var(--gold); border-radius: 2px; }
+        .tc { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+        .scrub { position: relative; flex: 1; height: 8px; background: rgba(255,255,255,.12);
+          border-radius: 4px; cursor: pointer; touch-action: none; }
+        .scrub i { display: block; height: 100%; width: 0; background: var(--gold); border-radius: 4px; }
+        .scrub b { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%;
+          background: var(--gold); transform: translate(-50%, -50%); box-shadow: 0 0 0 3px rgba(240,180,41,.25); }
 
-        .inspector { border-left: 1px solid var(--line); background: var(--panel); padding: 14px;
-          overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .inspector { border-left: 1px solid var(--line); background: var(--panel); padding: 16px;
+          overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
         .ins-head { display: flex; align-items: center; justify-content: space-between; }
-        .ins-head b { font-size: 13px; letter-spacing: .06em; }
-        textarea { width: 100%; min-height: 220px; resize: vertical; background: var(--panel-2); color: var(--ink);
-          border: 1px solid var(--line); border-radius: 8px; padding: 12px; font: inherit; font-size: 13px;
-          line-height: 1.9; outline: none; }
+        .ins-head b { font-size: 16px; letter-spacing: .04em; }
+        textarea { width: 100%; min-height: 230px; resize: vertical; background: var(--panel-2); color: var(--ink);
+          border: 1px solid var(--line); border-radius: 10px; padding: 14px; font: inherit; font-size: 15px;
+          line-height: 1.95; outline: none; }
         textarea:focus { border-color: var(--gold); }
-        .meta-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); }
+        .meta-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--dim); }
 
-        .thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .thumb { position: relative; padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+        .thumbs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .thumb { position: relative; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
           background: var(--panel-2); cursor: pointer; aspect-ratio: 9/16; }
-        .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .8; }
-        .thumb .nothumb { display: block; width: 100%; height: 100%; background: linear-gradient(160deg, #2A2A31, #17171B); }
-        .thumb i { position: absolute; left: 0; right: 0; bottom: 0; font-style: normal; font-size: 10px;
-          padding: 3px 0; text-align: center; background: rgba(0,0,0,.55); color: #fff; }
+        .thumb img, .thumb .hover-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+        .thumb img { opacity: .82; }
+        .thumb .nothumb { display: block; width: 100%; height: 100%; background: linear-gradient(160deg, #2E2E37, #17171B); }
+        .thumb i { position: absolute; left: 0; right: 0; bottom: 0; font-style: normal; font-size: 12px;
+          padding: 4px 0; text-align: center; background: rgba(0,0,0,.6); color: #fff; }
         .thumb:hover { border-color: var(--line-2); }
-        .thumb.on { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+        .thumb.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(240,180,41,.4); }
         .thumb.on img { opacity: 1; }
 
-        .voices { display: grid; gap: 6px; }
-        .voice-row { display: flex; align-items: center; gap: 10px; background: var(--panel-2);
-          border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; color: var(--dim);
-          font-size: 12px; cursor: pointer; text-align: left; }
-        .voice-row:hover { color: var(--ink); }
-        .voice-row.on { border-color: var(--gold); color: var(--ink); }
-        .check { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); margin-top: 4px; }
-        .check input { accent-color: var(--gold); }
+        .voices { display: grid; gap: 8px; }
+        .voice-row { display: flex; align-items: stretch; gap: 8px; background: var(--panel-2);
+          border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+        .voice-row.on { border-color: var(--gold); }
+        .voice-main { flex: 1; display: grid; gap: 2px; text-align: left; background: none; border: 0;
+          padding: 11px 12px; color: var(--ink); cursor: pointer; font: inherit; }
+        .vname { font-size: 15px; font-weight: 700; }
+        .vdesc { font-size: 12px; color: var(--dim); }
+        .try { border: 0; border-left: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--gold);
+          font-size: 13px; padding: 0 14px; cursor: pointer; }
+        .try:disabled { color: var(--dim); cursor: default; }
+        .check { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--dim); margin-top: 6px; }
+        .check input { width: 18px; height: 18px; accent-color: var(--gold); }
 
         .works { display: grid; gap: 10px; }
-        .work { border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: grid; gap: 4px; }
-        .work b { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .work-act { display: flex; gap: 12px; margin-top: 2px; font-size: 11px; }
+        .work { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 5px; }
+        .work b { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .work-act { display: flex; gap: 14px; margin-top: 3px; font-size: 13px; }
 
-        .out { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
-        .dim { font-size: 11px; color: var(--dim); line-height: 1.6; }
-        .err { font-size: 12px; color: #ff8f7a; margin: 0; }
-        .ok { font-size: 12px; color: #7ed69b; margin: 0; }
+        .out { display: grid; gap: 9px; border-top: 1px solid var(--line); padding-top: 14px; }
+        .dim { font-size: 13px; color: var(--dim); line-height: 1.65; }
+        .err { font-size: 13px; color: #ff8f7a; margin: 0; }
+        .ok { font-size: 13px; color: #7ed69b; margin: 0; }
 
-        .timeline { flex: none; height: 132px; border-top: 1px solid var(--line); background: var(--panel);
-          padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 6px; }
-        .tl-head { display: flex; align-items: baseline; gap: 12px; font-size: 11px; color: var(--dim); }
-        .tl-head b { color: var(--ink); font-size: 12px; letter-spacing: .06em; }
+        .timeline { position: relative; flex: none; height: 168px; border-top: 1px solid var(--line);
+          background: var(--panel); padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 8px; }
+        .tl-head { display: flex; align-items: baseline; gap: 14px; font-size: 13px; color: var(--dim); }
+        .tl-head b { color: var(--ink); font-size: 14px; letter-spacing: .05em; }
+        .tl-tip { margin-left: auto; font-size: 12px; color: rgba(255,255,255,.35); }
         .tl-run { color: var(--gold); margin-left: auto; }
-        .tl-body { flex: 1; display: grid; grid-template-columns: 44px 1fr; gap: 4px 8px; min-height: 0; }
-        .tl-lane-label { font-size: 10px; color: var(--dim); align-self: center; }
-        .tl-lane { display: flex; gap: 3px; min-width: 0; overflow: hidden; }
-        .clip { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #2C2C34, #222229);
-          border: 1px solid var(--line); border-radius: 4px; color: #C9C9D1; font-size: 10px;
-          padding: 4px 6px; text-align: left; overflow: hidden; white-space: nowrap; cursor: pointer; }
-        .clip.on { border-color: var(--gold); color: var(--ink); }
+        .tl-body { position: relative; flex: 1; display: grid; grid-template-columns: 52px 1fr; gap: 6px 10px; min-height: 0; }
+        .tl-lane-label { font-size: 12px; color: var(--dim); align-self: center; }
+        .tl-lane { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
+        .clip { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #34343E, #26262E);
+          border: 1px solid var(--line); border-radius: 6px; color: #D6D6DE; font-size: 12px;
+          padding: 8px 8px; text-align: left; overflow: hidden; white-space: nowrap; cursor: pointer; }
+        .clip:hover { border-color: var(--line-2); }
+        .clip.on { border-color: var(--gold); color: #fff; }
         .clip span { display: block; overflow: hidden; text-overflow: ellipsis; }
-        .texts .sub { flex: 1 1 0; min-width: 0; background: rgba(240,180,41,.10); border: 1px solid rgba(240,180,41,.22);
-          color: #D9C79B; font-size: 10px; border-radius: 4px; padding: 3px 6px; text-align: left;
+        .texts .sub { flex: 1 1 0; min-width: 0; background: rgba(240,180,41,.12); border: 1px solid rgba(240,180,41,.28);
+          color: #E3CE9C; font-size: 12px; border-radius: 6px; padding: 7px 8px; text-align: left;
           overflow: hidden; white-space: nowrap; cursor: pointer; }
         .clip.empty, .sub.empty { flex: 1; color: var(--dim); background: transparent; border-style: dashed; }
+        .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--gold); pointer-events: none;
+          box-shadow: 0 0 8px rgba(240,180,41,.6); }
 
         .mask { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: grid; place-items: center; z-index: 40; }
-        .dialog { width: 100%; max-width: 380px; background: var(--panel); border: 1px solid var(--line-2);
-          border-radius: 12px; padding: 22px; display: grid; gap: 10px; }
-        .dialog h3 { margin: 0 0 4px; font-size: 18px; }
-        .dialog input { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
-          color: var(--ink); padding: 10px 12px; font: inherit; font-size: 13px; outline: none; }
+        .dialog { width: 100%; max-width: 400px; background: var(--panel); border: 1px solid var(--line-2);
+          border-radius: 14px; padding: 24px; display: grid; gap: 12px; }
+        .dialog h3 { margin: 0 0 4px; font-size: 20px; }
+        .dialog input { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+          color: var(--ink); padding: 12px; font: inherit; font-size: 15px; outline: none; }
         .dialog input:focus { border-color: var(--gold); }
-        .kicker { margin: 0; font-size: 10px; letter-spacing: .18em; color: var(--gold); }
-        .player { width: min(360px, 90vw); }
-        .player video { width: 100%; border-radius: 8px; background: #000; }
+        .kicker { margin: 0; font-size: 12px; letter-spacing: .16em; color: var(--gold); }
+        .player { width: min(380px, 90vw); }
+        .player video { width: 100%; border-radius: 10px; background: #000; }
 
-        @media (max-width: 1080px) {
-          .body { grid-template-columns: 56px minmax(0,1fr) 280px; }
-          .canvas { height: min(52vh, 460px); }
+        @media (max-width: 1180px) {
+          .body { grid-template-columns: 84px minmax(0,1fr) 320px; }
+          .canvas { height: min(50vh, 440px); }
         }
       `}</style>
     </div>

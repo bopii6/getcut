@@ -91,12 +91,12 @@ function newsStage(ctx: Ctx, beat: Beat, t: number) {
 
   // 信息板
   ctx.fillStyle = 'rgba(16,35,58,.92)';
-  ctx.fillRect(90, 400, 900, 560);
+  ctx.fillRect(90, 430, 900, 540);
   ctx.strokeStyle = '#2C5A8E';
   ctx.lineWidth = 1;
-  ctx.strokeRect(90, 400, 900, 560);
+  ctx.strokeRect(90, 430, 900, 540);
   ctx.fillStyle = NEWS.red;
-  ctx.fillRect(90, 400, 4, 64);
+  ctx.fillRect(90, 430, 4, 64);
 
   const items = (beat.items?.length ? beat.items : String(beat.text).split(/[，。；]/)).filter(Boolean).slice(0, 3);
   if (beat.card === 'hook' || beat.card === 'quote' || items.length === 0) {
@@ -112,7 +112,7 @@ function newsStage(ctx: Ctx, beat: Beat, t: number) {
   items.forEach((item, i) => {
     const s = ease((t - 0.2 - i * 0.12) / 0.3);
     if (s <= 0) return;
-    const y = 480 + i * 150;
+    const y = 505 + i * 150;
     ctx.save();
     ctx.globalAlpha = s;
     ctx.fillStyle = NEWS.red;
@@ -884,6 +884,7 @@ export const NEW_STYLES: Partial<Record<ThemeName, (c: Ctx, b: Beat, t: number, 
   cover: drawCover,
   reel: drawReel,
 };
+
 
 
 
