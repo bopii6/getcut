@@ -73,6 +73,7 @@ export default function Workbench() {
   const [buyCode, setBuyCode] = useState('');
   const [buyMsg, setBuyMsg] = useState('');
   const [plan, setPlan] = useState<PlanBeat[] | null>(null);
+  const [voice, setVoice] = useState('zh-CN-YunxiNeural');
 
   const refresh = async () => {
     try { setMe(await getMe()); } catch { /* 离线也能用 */ }
@@ -114,7 +115,7 @@ export default function Workbench() {
       const blob = await renderVideo(plan, theme, title, ({ stage: s, percent }) => {
         setStage(s);
         setPct(percent);
-      }, broll, music);
+      }, broll, music, voice);
       const secs = Math.round((performance.now() - t0) / 1000);
       setSecs(secs);
       setUrl(URL.createObjectURL(blob));
@@ -287,6 +288,18 @@ export default function Workbench() {
                 ))}
               </div>
               <span className="checks">
+                <select
+                  className="voice"
+                  value={voice}
+                  onChange={(e) => setVoice(e.target.value)}
+                  title="配音音色"
+                >
+                  <option value="zh-CN-YunxiNeural">云希 · 男声</option>
+                  <option value="zh-CN-YunyangNeural">云扬 · 播音</option>
+                  <option value="zh-CN-XiaoxiaoNeural">晓晓 · 女声</option>
+                  <option value="zh-CN-XiaoyiNeural">晓伊 · 活泼</option>
+                  <option value="zh-CN-YunjianNeural">云健 · 厚实</option>
+                </select>
                 <label className="check">
                   <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} />
                   背景音乐
@@ -304,6 +317,10 @@ export default function Workbench() {
               <span>{chars} 字{chars ? ` · 约 ${est} 秒` : ''}</span>
               <button className="link" onClick={() => setText(DEMO)}>用示例文案试试</button>
             </div>
+            <p className="price">
+              {me?.pro ? '已买断 · 不限条数' : `免费 3 条 · 之后 599 元买断，不限条数`}
+              {me && !me.pro ? <button className="link" onClick={() => setShowBuy(true)}>用卡密解锁</button> : null}
+            </p>
             {running ? <div className="progress"><i style={{ width: `${pct}%` }} /></div> : null}
             {err ? <p className="err">{err}</p> : null}
           </>
@@ -396,7 +413,7 @@ export default function Workbench() {
 
         .samples { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
         .samples figure { margin: 0; }
-        .samples video { width: 100%; max-height: 330px; aspect-ratio: 9/16; object-fit: cover; border-radius: 14px;
+        .samples video { width: 100%; max-height: 220px; aspect-ratio: 9/16; object-fit: cover; border-radius: 14px;
           background: #111; display: block; border: 1px solid var(--line); }
         .samples figcaption { display: flex; justify-content: space-between; align-items: baseline;
           margin-top: 8px; font-size: 12px; color: var(--dim); }
@@ -416,7 +433,11 @@ export default function Workbench() {
           padding: 7px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; transition: all .18s; }
         .styles button:hover { color: var(--ink); border-color: rgba(244,239,228,.25); }
         .styles button.on { color: var(--gold-ink); background: var(--gold); border-color: var(--gold); }
-        .checks { display: inline-flex; gap: 16px; }
+        .checks { display: inline-flex; align-items: center; gap: 14px; }
+        .voice { background: #0d0c0a; color: var(--ink); border: 1px solid var(--line);
+          border-radius: 8px; padding: 6px 10px; font-size: 12px; outline: none; }
+        .page { display: flex; flex-direction: column; }
+        .hero { order: 1; } .composer { order: 2; } .samples { order: 3; } .works { order: 4; } footer { order: 5; }
         .check { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--dim); cursor: pointer; }
         .check input { width: 15px; height: 15px; accent-color: var(--gold); }
 
@@ -430,6 +451,7 @@ export default function Workbench() {
         .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 10px;
           font-size: 12px; color: var(--dim); }
         .link { background: none; border: 0; color: var(--gold); font-size: 12px; cursor: pointer; }
+        .price { display: flex; align-items: center; gap: 12px; margin: 12px 0 0; font-size: 12px; color: var(--dim); }
         .progress { height: 3px; background: rgba(244,239,228,.08); border-radius: 3px; overflow: hidden; margin-top: 12px; }
         .progress i { display: block; height: 100%; background: var(--gold); transition: width .3s; }
         .err { color: #ff9a86; font-size: 13px; margin-top: 10px; }
@@ -452,6 +474,9 @@ export default function Workbench() {
     </div>
   );
 }
+
+
+
 
 
 

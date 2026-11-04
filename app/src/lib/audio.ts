@@ -1,4 +1,4 @@
-// 配音：走本机代理（部署时换成 Worker）。拿 mp3 → WebAudio 解码 → 拼成一条音轨。
+﻿// 配音：走本机代理（部署时换成 Worker）。拿 mp3 → WebAudio 解码 → 拼成一条音轨。
 import { api } from './api';
 
 export async function tts(text: string, voice = 'zh-CN-YunxiNeural'): Promise<ArrayBuffer> {
@@ -31,6 +31,7 @@ function b64ToBuffer(b64: string): ArrayBuffer {
 export async function voiceAll(
   texts: string[],
   onProgress?: (done: number, total: number) => void,
+  voice = 'zh-CN-YunxiNeural',
 ): Promise<Voiced[]> {
   const ac = new AudioContext({ sampleRate: 48000 });
   const out: Voiced[] = [];
@@ -49,7 +50,7 @@ export async function voiceAll(
       const res = await fetch(api('/api/tts/batch'), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ texts: chunk }),
+        body: JSON.stringify({ texts: chunk, voice }),
       });
       if (!res.ok) throw new Error(String(res.status));
       items = (await res.json()).items || [];
@@ -64,7 +65,7 @@ export async function voiceAll(
       } else {
         // 兜底：单句重试一次
         try {
-          await push(chunk[k], await tts(chunk[k]));
+          await push(chunk[k], await tts(chunk[k], voice));
         } catch (e) {
           throw new Error(`第 ${start + k + 1} 句配音失败：${e instanceof Error ? e.message : e}`);
         }
@@ -200,6 +201,7 @@ export async function encodeAudio(
   encoder.close();
   onProgress?.(1);
 }
+
 
 
 

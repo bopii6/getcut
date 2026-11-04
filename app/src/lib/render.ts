@@ -1,4 +1,4 @@
-﻿// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
+// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import type { Beat, PlanBeat, ThemeName } from './types';
 import { drawFrame, FPS, H, W } from './draw';
@@ -63,6 +63,7 @@ export async function renderVideo(
   onProgress: (p: Progress) => void,
   useBroll = false,
   useMusic = true,
+  voice = 'zh-CN-YunxiNeural',
 ): Promise<Blob> {
   // 1. 实拍空镜（默认关：抓素材慢且不稳，需要时在界面上打开）
   onProgress({ stage: useBroll ? '找实拍空镜' : '准备', percent: 1 });
@@ -77,7 +78,7 @@ export async function renderVideo(
   const spoken = plan.filter((b) => b.text && !['intro', 'chapter'].includes(b.card));
   const voiced = await voiceAll(spoken.map((b) => b.text), (d, t) => {
     onProgress({ stage: `配音 ${d}/${t}`, percent: 10 + Math.round((d / t) * 22) });
-  });
+  }, voice);
   const voicedBeats: Beat[] = plan.map((b, i) => {
     if (b.card === 'intro' || b.card === 'chapter') return { ...b, duration: b.card === 'intro' ? 2 : 1.4 };
     const v = voiced.find((x) => x.text === b.text);
@@ -154,6 +155,7 @@ export async function renderVideo(
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
 
 
 

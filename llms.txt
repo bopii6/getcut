@@ -1,0 +1,37 @@
+﻿# VidGuy Documentation
+
+> Guides and API documentation for creating, rendering, and publishing short-form content with VidGuy.
+
+## Getting Started
+
+- [Overview](https://www.vidguy.ai/docs.md): What VidGuy creates and how the brief-to-video workflow works.
+- [First Video](https://www.vidguy.ai/docs/first-video.md): Create a first video: brief, style, audio, generation, and export.
+
+## Guides
+
+- [Brief Inputs](https://www.vidguy.ai/docs/brief-inputs.md): Write briefs with a topic, platform, audience, goal, and duration.
+- [Style & Audio](https://www.vidguy.ai/docs/style-audio.md): Choose tone, hook, visual style, voiceover, music, and captions.
+- [Content Sources](https://www.vidguy.ai/docs/content-sources.md): Choose stock and AI visuals and provide brand assets.
+- [Attio Integration](https://www.vidguy.ai/docs/attio.md): Connect Attio, create content from company briefs, and save approved notes to records.
+- [Export & Publishing](https://www.vidguy.ai/docs/export.md): Export finished videos and prepare them for social publishing.
+- [Credits & Billing](https://www.vidguy.ai/docs/credits.md): Understand plans, credit costs, billing, and usage.
+- [Troubleshooting](https://www.vidguy.ai/docs/troubleshooting.md): Resolve generation, brand consistency, render, and credit issues.
+
+## Developers
+
+- [API Overview](https://www.vidguy.ai/docs/api.md): API quick start, authentication, asynchronous jobs, and endpoint overview.
+- [Ads on Demand](https://www.vidguy.ai/docs/ads-on-demand.md): Generate ads from a store, app, or service URL without brand setup.
+- [Token Snacks](https://www.vidguy.ai/docs/token-snacks.md): Generate short-form content packs from a DexScreener token URL.
+- [API Reference](https://www.vidguy.ai/docs/api-reference.md): API workflows and links to the interactive reference and OpenAPI schemas.
+- [Authentication](https://www.vidguy.ai/docs/api/authentication.md): Authenticate requests using Bearer API keys.
+- [Errors](https://www.vidguy.ai/docs/api/errors.md): Error response format, failure categories, and retry guidance.
+- [Rate Limits](https://www.vidguy.ai/docs/api/rate-limits.md): API quotas, rate-limit responses, and retry backoff.
+- [Polling](https://www.vidguy.ai/docs/api/polling.md): Poll asynchronous jobs, handle failures, and retrieve rendered assets.
+- [For AI Agents](https://www.vidguy.ai/docs/agent-skill.md): Install the VidGuy skill for AI agents.
+
+## API specifications and agent resources
+
+- [OpenAPI specification](https://www.vidguy.ai/openapi.json): Machine-readable API schemas and endpoints.
+- [Agent skill](https://www.vidguy.ai/docs/agent-skill/skill.md): Instructions for using the VidGuy API.
+- [Endpoint reference](https://www.vidguy.ai/docs/agent-skill/endpoints.md): Detailed agent API reference.
+
