@@ -16,6 +16,9 @@ const BGM: Record<ThemeName, string> = {
   night: 'music/cinematic.mp3',
   newsroom: 'music/news.mp3',
   ledger: 'music/corporate.mp3',
+  marker: 'music/funk.mp3',
+  swiss: 'music/corporate.mp3',
+  terminal: 'music/electronic.mp3',
 };
 
 export async function planScript(text: string): Promise<PlanBeat[]> {
@@ -148,6 +151,7 @@ export async function renderVideo(
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
 
 
 

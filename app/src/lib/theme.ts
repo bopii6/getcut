@@ -41,6 +41,30 @@ export const PALETTES: Record<ThemeName, Palette> = {
     hairline: 'rgba(20,20,20,0.18)', panel: 'rgba(255,255,255,0.7)',
     panelEdge: 'rgba(214,40,40,0.45)', dark: false,
   },
+  marker: {
+    bg1: '#F7F4EC', bg2: '#F7F4EC',
+    glow: 'rgba(229,52,43,0.10)',
+    ink: '#141414', muted: 'rgba(20,20,20,0.55)',
+    accent: '#E5342B', accentInk: '#FFFFFF',
+    hairline: 'rgba(20,20,20,0.18)', panel: '#FFFFFF',
+    panelEdge: '#141414', dark: false,
+  },
+  swiss: {
+    bg1: '#F7F7F5', bg2: '#F7F7F5',
+    glow: 'rgba(226,35,26,0.08)',
+    ink: '#111111', muted: 'rgba(17,17,17,0.55)',
+    accent: '#E2231A', accentInk: '#FFFFFF',
+    hairline: 'rgba(17,17,17,0.16)', panel: 'rgba(0,0,0,0.03)',
+    panelEdge: 'rgba(17,17,17,0.3)', dark: false,
+  },
+  terminal: {
+    bg1: '#050607', bg2: '#050607',
+    glow: 'rgba(57,255,136,0.14)',
+    ink: '#E8FFF2', muted: 'rgba(232,255,242,0.5)',
+    accent: '#39FF88', accentInk: '#050607',
+    hairline: '#16201A', panel: '#0A0F0C',
+    panelEdge: '#1E2A22', dark: true,
+  },
   newsroom: {
     bg1: '#0C1B2A', bg2: '#0C1B2A',
     glow: 'rgba(216,35,42,0.16)',
@@ -66,4 +90,5 @@ export const PALETTES: Record<ThemeName, Palette> = {
     panelEdge: 'rgba(167,139,250,0.5)', dark: true,
   },
 };
+
 

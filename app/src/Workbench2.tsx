@@ -12,6 +12,9 @@ const STYLES: { id: Choice; name: string }[] = [
   { id: 'news', name: '新闻' },
   { id: 'newsroom', name: '播报' },
   { id: 'ledger', name: '财报' },
+  { id: 'marker', name: '白板' },
+  { id: 'swiss', name: '极简' },
+  { id: 'terminal', name: '终端' },
   { id: 'night', name: '夜行' },
 ];
 
@@ -248,6 +251,7 @@ export default function Workbench() {
     </div>
   );
 }
+
 
 
 

@@ -1,4 +1,4 @@
-// 新风格：新闻播报（newsroom）与财报数据（ledger）
+﻿// 新风格：新闻播报（newsroom）与财报数据（ledger）
 // 每个风格自己画顶部/中部/字幕，不走通用卡片，才能真正"换骨架"。
 import type { Beat, ThemeName } from './types';
 
@@ -302,10 +302,305 @@ export function drawLedger(ctx: Ctx, beat: Beat, t: number, index: number, total
   ctx.fillRect(64, 1690, (952 * (index + 1)) / total, 2);
 }
 
+// ───────────────────────── 白板讲解 ─────────────────────────
+const MK = { bg: '#F7F4EC', ink: '#141414', red: '#E5342B', yellow: '#FFD400', sub: '#6B6B6B' };
+
+/** 手抖矩形：四边各取三个点，做 2–3px 随机起伏。 */
+function wobbleRect(ctx: Ctx, x: number, y: number, w: number, h: number, rnd: number) {
+  ctx.beginPath();
+  const j = (n: number) => Math.sin(rnd + n * 12.9898) * 2.6;
+  ctx.moveTo(x + j(1), y + j(2));
+  ctx.lineTo(x + w + j(3), y + j(4));
+  ctx.lineTo(x + w + j(5), y + h + j(6));
+  ctx.lineTo(x + j(7), y + h + j(8));
+  ctx.closePath();
+}
+
+function drawMarker(ctx: Ctx, beat: Beat, t: number, index: number, _total: number) {
+  ctx.fillStyle = MK.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // 板擦痕
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 3; i++) {
+    ctx.save();
+    ctx.translate(120 + i * 300, 300 + i * 380);
+    ctx.rotate((-20 + i * 3) * Math.PI / 180);
+    ctx.fillRect(0, 0, 120, 900);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // 标题 + 手抖框
+  const title = beat.title || beat.topic || beat.text;
+  ctx.font = '900 66px ' + HEAVY;
+  const lines = wrap(ctx, title, 820).slice(0, 2);
+  ctx.strokeStyle = MK.ink;
+  ctx.lineWidth = 4;
+  const boxH = lines.length * 80 + 26;
+  const boxW = Math.min(880, Math.max(...lines.map((l) => ctx.measureText(l).width)) + 56);
+  wobbleRect(ctx, 64, 92, boxW, boxH, 3);
+  ctx.stroke();
+  ctx.fillStyle = MK.ink;
+  lines.forEach((ln, i) => ctx.fillText(ln, 88, 160 + i * 80));
+
+  // 黄色马克笔波浪
+  const bw = 620 * ease(t / 0.4);
+  ctx.strokeStyle = MK.yellow;
+  ctx.lineWidth = 12;
+  ctx.beginPath();
+  for (let x = 0; x < bw; x += 8) {
+    const y = 120 + boxH + Math.sin(x / 26) * 6;
+    if (x === 0) ctx.moveTo(80 + x, y); else ctx.lineTo(80 + x, y);
+  }
+  ctx.stroke();
+
+  // 右上手绘圆 + 序号
+  ctx.strokeStyle = MK.red;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.ellipse(940, 130, 54, 50, 0.1, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.font = '900 52px ' + HEAVY;
+  ctx.fillStyle = MK.red;
+  ctx.fillText(String(index + 1).padStart(2, '0'), 912, 150);
+
+  // 主卡（硬阴影）
+  const items = (beat.items?.length ? beat.items : String(beat.text).split(/[，。；]/)).filter(Boolean).slice(0, 3);
+  const startY = 640;
+  items.forEach((item, i) => {
+    const p = ease((t - 0.15 - i * 0.1) / 0.35);
+    if (p <= 0) return;
+    const y = startY + i * 210;
+    ctx.save();
+    ctx.globalAlpha = p;
+    ctx.translate((1 - p) * -20, 0);
+    // 硬阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(84, y + 10, 880, 170);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(76, y, 880, 170);
+    ctx.strokeStyle = MK.ink;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(76, y, 880, 170);
+    ctx.fillStyle = MK.ink;
+    ctx.font = '900 40px ' + HEAVY;
+    ctx.fillText(String(i + 1), 108, y + 108);
+    ctx.font = '900 52px ' + HEAVY;
+    const txt = wrap(ctx, item, 720)[0];
+    ctx.fillText(txt, 168, y + 104);
+    ctx.restore();
+  });
+
+  // 字幕 + 马克笔底
+  ctx.font = '900 54px ' + HEAVY;
+  const sub = wrap(ctx, String(beat.text), 860).slice(0, 2);
+  const subY = 1470;
+  ctx.fillStyle = 'rgba(255,212,0,0.55)';
+  const subW = Math.max(...sub.map((l) => ctx.measureText(l).width));
+  ctx.fillRect((W - subW) / 2 - 10, subY + 20, (subW + 20) * ease(t / 0.5), 24);
+  ctx.fillStyle = '#111';
+  sub.forEach((ln, i) => {
+    const w = ctx.measureText(ln).width;
+    ctx.fillText(ln, (W - w) / 2, subY + i * 62);
+  });
+
+  // 元信息
+  ctx.font = '400 22px ' + LIGHT;
+  ctx.fillStyle = '#8A857C';
+  ctx.fillText('板书 · 第 ' + (index + 1) + ' 页', 64, H - 90);
+  ctx.fillText('GETCUT', W - 64 - ctx.measureText('GETCUT').width, H - 90);
+}
+
+// ───────────────────────── 极简瑞士 ─────────────────────────
+const SW = { bg: '#F7F7F5', ink: '#111111', red: '#E2231A', gray: '#8A8A8A' };
+
+function drawSwiss(ctx: Ctx, beat: Beat, t: number, index: number, total: number) {
+  ctx.fillStyle = SW.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // 顶部：红点 + 页码 + 基准线
+  ctx.fillStyle = SW.red;
+  ctx.beginPath();
+  ctx.arc(78, 96, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = '400 24px ' + LIGHT;
+  ctx.fillStyle = SW.gray;
+  ctx.fillText(`${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`, 104, 104);
+  const right = 'STRATEGY';
+  ctx.fillText(right, 1008 - ctx.measureText(right).width, 104);
+  ctx.fillStyle = SW.ink;
+  ctx.fillRect(72, 120, 936 * ease(t / 0.3), 1);
+
+  // 标题
+  ctx.font = '900 92px ' + HEAVY;
+  ctx.fillStyle = SW.ink;
+  const lines = wrap(ctx, beat.title || beat.topic || beat.text, 880).slice(0, 2);
+  lines.forEach((ln, i) => ctx.fillText(ln, 72, 220 + i * 100));
+
+  // 中线
+  ctx.fillStyle = SW.ink;
+  ctx.fillRect(72, 380, 388 * ease(t / 0.4), 2);
+
+  // 巨数字
+  const raw = String(beat.value || '').replace(/[^\d.]/g, '');
+  const num = Number(raw);
+  const p = Math.min(1, t / 0.5);
+  const shown = Number.isFinite(num) && raw ? String(Math.round(num * p)) : (beat.value || '');
+  ctx.font = '900 360px ' + HEAVY;
+  ctx.fillStyle = SW.ink;
+  ctx.fillText(shown, 60, 800);
+  const wNum = ctx.measureText(shown).width;
+  ctx.font = '900 72px ' + HEAVY;
+  ctx.fillText(beat.unit || '', 72 + wNum + 28, 790);
+
+  // 唯一红方块
+  ctx.fillStyle = SW.red;
+  const sq = 90 * ease((t - 0.2) / 0.25);
+  ctx.fillRect(820, 470, sq, sq);
+
+  // 两条细线 + 正文
+  ctx.fillStyle = SW.ink;
+  ctx.fillRect(72, 840, 936, 1);
+  ctx.font = '400 34px ' + LIGHT;
+  ctx.fillStyle = '#333';
+  const body = wrap(ctx, beat.label || String(beat.text), 860).slice(0, 2);
+  body.forEach((ln, i) => ctx.fillText(ln, 72, 920 + i * 50));
+
+  // 底部
+  ctx.fillStyle = SW.ink;
+  ctx.fillRect(72, 1400, 936, 1);
+  ctx.font = '900 54px ' + HEAVY;
+  const sub = wrap(ctx, String(beat.text), 860).slice(0, 2);
+  sub.forEach((ln, i) => ctx.fillText(ln, 72, 1470 + i * 62));
+  ctx.font = '400 18px ' + LIGHT;
+  ctx.fillStyle = '#999';
+  ctx.fillText('1080×1920 ／ 30FPS ／ GETCUT', 72, 1640);
+
+  // 页码角标
+  ctx.fillStyle = '#BBB';
+  ctx.fillText(String(index + 1).padStart(2, '0'), 970, 1300);
+}
+
+// ───────────────────────── 赛博终端 ─────────────────────────
+const TM = { bg: '#050607', ink: '#E8FFF2', green: '#39FF88', dim: '#4A5A50', pane: '#0A0F0C', line: '#16201A' };
+
+function drawTerminal(ctx: Ctx, beat: Beat, t: number, index: number, _total: number) {
+  ctx.fillStyle = TM.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // 扫描线
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, W, 1);
+
+  // 顶部窗口条
+  const dots = ['#FF5F57', '#FEBC2E', '#28C840'];
+  dots.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(76 + i * 30, 40, 7, 0, Math.PI * 2); ctx.fill(); });
+  ctx.font = '400 24px ' + LIGHT;
+  ctx.fillStyle = TM.dim;
+  ctx.fillText('root@leadgen:~/campaign', 180, 50);
+  ctx.fillStyle = TM.line;
+  ctx.fillRect(0, 68, W, 1);
+
+  // 标题
+  ctx.font = '900 64px ' + HEAVY;
+  ctx.fillStyle = TM.green;
+  ctx.fillText('›', 64, 168);
+  ctx.fillStyle = TM.ink;
+  const titleLines = wrap(ctx, beat.title || beat.topic || beat.text, 800).slice(0, 2);
+  titleLines.forEach((ln, i) => ctx.fillText(ln, 112, 160 + i * 70));
+  const title = titleLines[titleLines.length - 1];
+  const caretY = 112 + (titleLines.length - 1) * 70;
+  const caretOn = Math.floor(t * 2) % 2 === 0;
+  if (caretOn) { ctx.fillStyle = TM.green; ctx.fillRect(112 + ctx.measureText(title).width + 12, caretY, 24, 54); }
+
+  // 日志窗口
+  ctx.fillStyle = TM.pane;
+  ctx.fillRect(64, 240, 952, 300);
+  ctx.strokeStyle = '#1E2A22';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(64, 240, 952, 300);
+  ctx.font = '400 22px ' + LIGHT;
+  ctx.fillStyle = '#6B8578';
+  ctx.fillText('SCAN_REPORT.LOG', 84, 272);
+  ctx.fillStyle = TM.line;
+  ctx.fillRect(64, 286, 952, 1);
+
+  const logs = ['01 解析口播文案 …… DONE', '02 匹配行业模板 …… DONE', '03 渲染 1080×1920 …… 100%'];
+  ctx.font = '400 28px ' + LIGHT;
+  logs.forEach((ln, i) => {
+    const p = ease((t - 0.1 - i * 0.12) / 0.3);
+    if (p <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = p;
+    ctx.fillStyle = TM.green;
+    ctx.fillText('✓', 88, 350 + i * 62);
+    ctx.fillStyle = '#8FA899';
+    ctx.fillText(ln, 116, 350 + i * 62);
+    ctx.restore();
+  });
+
+  // 巨数字
+  const raw = String(beat.value || '').replace(/[^\d.]/g, '');
+  const num = Number(raw);
+  const shown = Number.isFinite(num) && raw ? String(Math.round(num * Math.min(1, t / 0.5))) : (beat.value || '');
+  if (shown) {
+  ctx.font = '900 180px ' + HEAVY;
+  ctx.fillStyle = 'rgba(255,59,59,.35)';
+  ctx.fillText(shown, 68, 880);
+  ctx.fillStyle = 'rgba(0,217,255,.35)';
+  ctx.fillText(shown, 60, 872);
+  ctx.fillStyle = TM.green;
+  ctx.fillText(shown, 64, 876);
+  }
+
+  // 进度条
+  ctx.fillStyle = TM.line;
+  ctx.fillRect(64, 950, 952, 18);
+  ctx.fillStyle = TM.green;
+  ctx.fillRect(64, 950, 952 * 0.92, 18);
+  if (caretOn) { ctx.fillStyle = TM.green; ctx.fillRect(1020, 944, 8, 30); }
+
+  // 四角 L
+  ctx.strokeStyle = TM.green;
+  ctx.lineWidth = 2;
+  [[40, 210], [1008, 210], [40, 1330], [1008, 1330]].forEach(([x, y]) => {
+    const sx = x === 40 ? 1 : -1;
+    const sy = y === 210 ? 1 : -1;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 32 * sy);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x + 32 * sx, y);
+    ctx.stroke();
+  });
+
+  // 底部
+  ctx.font = '400 26px ' + LIGHT;
+  ctx.fillStyle = TM.dim;
+  ctx.fillText('OUT›', 64, 1462);
+  ctx.font = '900 52px ' + HEAVY;
+  ctx.fillStyle = TM.ink;
+  const sub = wrap(ctx, String(beat.text), 760).slice(0, 2);
+  sub.forEach((ln, i) => ctx.fillText(ln, 170, 1462 + i * 58));
+  ctx.fillStyle = TM.line;
+  for (let x = 64; x < 1016; x += 16) ctx.fillRect(x, 1560, 8, 1);
+  ctx.font = '400 20px ' + LIGHT;
+  ctx.fillStyle = '#33463B';
+  ctx.fillText(`// FRAME ${String(index + 1).padStart(4, '0')} · 30FPS · RENDER OK`, 64, 1620);
+}
+
 export const NEW_STYLES: Partial<Record<ThemeName, (c: Ctx, b: Beat, t: number, i: number, n: number) => void>> = {
   newsroom: drawNewsroom,
   ledger: drawLedger,
+  marker: drawMarker,
+  swiss: drawSwiss,
+  terminal: drawTerminal,
 };
+
+
+
 
 
 
