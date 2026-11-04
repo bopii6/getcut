@@ -3,48 +3,116 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import queue
 import subprocess
+import tempfile
+import threading
+import time
 from pathlib import Path
 
 log = logging.getLogger(__name__)
 
+# ffmpeg 是外部进程：坏素材、编码器卡死、磁盘写满都会让它永远不返回。
+# 以前没有超时，一条挂死的 ffmpeg 会占住一条渲染灶台线程，用户点"停止"也杀不掉
+# ——任务永远停在 audio/mux 88~93%，线程堆满后整站不再接单。
+FFMPEG_TIMEOUT = float(os.environ.get("GETCUT_FFMPEG_TIMEOUT", "900") or 900)
 
-def _run(cmd: list[str], cwd: Path) -> None:
-    p = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, encoding="utf-8", errors="replace")
+
+def _kill_tree(p: subprocess.Popen) -> None:
+    """连子进程一起杀（POSIX 杀进程组，Windows 用 taskkill /T）。"""
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(p.pid)],
+                           capture_output=True, timeout=30)
+        else:
+            os.killpg(os.getpgid(p.pid), 9)
+    except Exception:  # noqa: BLE001 - 杀不掉也不能再抛，上层已经要报错了
+        try:
+            p.kill()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def _timeout_err(seconds: float) -> RuntimeError:
+    return RuntimeError(
+        f"ffmpeg 超时（{seconds:.0f} 秒）已被终止：素材损坏或磁盘写满时会这样，"
+        "换一条素材重试，或把 GETCUT_FFMPEG_TIMEOUT 调大")
+
+
+def _run(cmd: list[str], cwd: Path, timeout: float | None = None) -> None:
+    limit = FFMPEG_TIMEOUT if timeout is None else timeout
+    try:
+        p = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=limit)
+    except subprocess.TimeoutExpired:
+        raise _timeout_err(limit) from None
     if p.returncode != 0:
         raise RuntimeError("ffmpeg failed:\n" + (p.stderr or "")[-3000:])
 
 
 def _run_progress(cmd: list[str], cwd: Path, total_s: float, progress=None,
-                  detail: str | None = None) -> None:
+                  detail: str | None = None, timeout: float | None = None) -> None:
     """跑一次 ffmpeg，并把 -progress 的输出换算成百分比上报。
 
     total_s 是这步的预期时长（同一时间轴），用 out_time_us 对齐。抽不到进度
     时静默降级为普通执行，不影响渲染。
+
+    stderr 写临时文件、stdout 交给读线程喂队列：以前先读干 stdout 再读 stderr，
+    两边管道都可能写满导致互锁；又没有超时，一锁就是永久。
     """
+    limit = FFMPEG_TIMEOUT if timeout is None else timeout
     full = [cmd[0], "-progress", "pipe:1", "-nostats", *cmd[1:]]
     tail: list[str] = []
-    p = subprocess.Popen(full, cwd=str(cwd), stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
-    if p.stdout is not None:
-        for line in p.stdout:
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace") as errf:
+        p = subprocess.Popen(full, cwd=str(cwd), stdout=subprocess.PIPE, stderr=errf,
+                             text=True, encoding="utf-8", errors="replace")
+        lines: queue.Queue[str | None] = queue.Queue()
+
+        def _pump() -> None:
+            try:
+                if p.stdout is not None:
+                    for ln in p.stdout:
+                        lines.put(ln)
+            finally:
+                lines.put(None)
+
+        threading.Thread(target=_pump, name="ffmpeg-out", daemon=True).start()
+        start = time.time()
+        while True:
+            try:
+                line = lines.get(timeout=1.0)
+            except queue.Empty:
+                if time.time() - start > limit:
+                    _kill_tree(p)
+                    raise _timeout_err(limit) from None
+                continue
+            if line is None:
+                break
             tail.append(line)
             if len(tail) > 120:
                 tail = tail[-120:]
-            if progress is None or total_s <= 0:
-                continue
-            k, _, v = line.strip().partition("=")
-            if k in ("out_time_us", "out_time_ms") and v.isdigit():
-                done = int(v) / 1_000_000.0
-                pct = max(0, min(100, int(done / total_s * 100)))
-                try:
-                    progress(pct, detail)
-                except TypeError:
-                    progress(pct)
-                except Exception:
-                    pass
-    err = p.stderr.read() if p.stderr is not None else ""
-    p.wait()
+            if progress is not None and total_s > 0:
+                k, _, v = line.strip().partition("=")
+                if k in ("out_time_us", "out_time_ms") and v.isdigit():
+                    done = int(v) / 1_000_000.0
+                    pct = max(0, min(100, int(done / total_s * 100)))
+                    try:
+                        progress(pct, detail)
+                    except TypeError:
+                        progress(pct)
+                    except Exception:  # noqa: BLE001 - 上报失败绝不影响出片
+                        pass
+            if time.time() - start > limit:
+                _kill_tree(p)
+                raise _timeout_err(limit) from None
+        try:
+            p.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            _kill_tree(p)
+            raise _timeout_err(limit) from None
+        errf.seek(0)
+        err = errf.read()
     if p.returncode != 0:
         raise RuntimeError("ffmpeg failed:\n" + (err or "".join(tail))[-3000:])
 

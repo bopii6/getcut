@@ -157,3 +157,6 @@ deliverables/
 # 成片台手动验收截图、一次性 UI 比对页
 getcut/renderer/_qa*
 getcut/_ui_sample/
+
+# 用户上传的素材包与项目数据（本地默认落地目录）
+/workspace/

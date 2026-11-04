@@ -75,14 +75,20 @@ TTS_MODEL = _env("TTS_MODEL") or "cosyvoice-v2"
 PRICES = {"basic": int(_env("PRICE_BASIC") or "399"), "premium": int(_env("PRICE_PREMIUM") or "599")}
 # 免费注册档每天能出几条片（管理员在 admin 面板生成的卡密无此限制）
 FREE_DAILY_BUILDS = int(_env("FREE_DAILY_BUILDS") or "2")
+# 云端等"成片台"来领单的上限（秒）。用户点完生成就关标签页是最常见的行为，
+# 以前默认等 24 小时：任务挂在 render 不动、占住一条渲染线程，用户当天额度也白扣。
+# 30 分钟内没上台就判失败，把原因写清楚让他重新打开页面。
+RENDER_WAIT_SECONDS = float(_env("GETCUT_RENDER_WAIT") or "1800")
 # 直播间销售：用户付款后加这个微信号拿卡密（展示在定价页）
 SALES_WECHAT_ID = _env("SALES_WECHAT_ID")
 
 # 站点公网地址（声音克隆要让百炼来下载录音，需公网可达；留空则按请求头拼）
 PUBLIC_BASE_URL = _env("PUBLIC_BASE_URL")
 
-# 工作台扫描素材包的根目录（默认 getcut 的上级目录）
-WORKSPACES = Path(_env("GETCUT_WORKSPACE") or ROOT.parent).resolve()
+# 工作台扫描素材包的根目录（默认：仓库根的 workspace/，别放代码目录里）。
+# 以前默认是 ROOT.parent，也就是仓库根本身 —— 用户上传的素材包直接落在代码旁边，
+# 一个 git add -A 就进库了，本地也会看到一堆意外目录。
+WORKSPACES = Path(_env("GETCUT_WORKSPACE") or (ROOT.parent / "workspace")).resolve()
 
 # 访问令牌：设置后所有数据接口（/api、媒体、成片）都要求携带；
 # 留空 = 不鉴权（仅建议本机自用）。前端会通过 x-auth-token 头或 ?token= 携带。

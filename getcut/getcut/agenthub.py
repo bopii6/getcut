@@ -364,9 +364,15 @@ def wait_result(job_id: str, progress=None, cancel_check=None,
             progress(cur[0], cur[1])
         if time.time() > deadline:
             wait_s = int(patience or _WAIT_PATIENCE)
+            if wait_s < 120:
+                human = f"{wait_s} 秒"
+            elif wait_s < 7200:
+                human = f"{wait_s / 60:.0f} 分钟"
+            else:
+                human = f"{wait_s / 3600:.0f} 小时"
             raise RuntimeError(
-                "等成片台超时（%s）：请打开成片台页面领取渲染"
-                % ("%.0f 分钟" % (wait_s / 60) if wait_s < 7200 else "%.0f 小时" % (wait_s / 3600)))
+                f"等成片台超时（{human}）：请打开成片台页面领取渲染，重新点一次生成即可"
+                "（这一次没出片，免费额度已退回）")
         time.sleep(1.0)
 
 

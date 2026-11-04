@@ -8,10 +8,14 @@
 
 ```bash
 cd E:\getcut\getcut
-python -m getcut build <素材包目录> -o 成片.mp4 --format data
+python -m getcut.server          # 打开 http://127.0.0.1:8600，拖素材包 → 生成 → 取片
 ```
 
-依赖：Python 3.12+、ffmpeg（PATH 内）、`pip install edge-tts pillow requests`。
+依赖：Python 3.12+、ffmpeg（PATH 内）、`pip install -r requirements.txt`。
+
+**画面只在浏览器里渲**（成片台，客户自己那台电脑算），所以没有"一条命令直接出 mp4"
+的 CLI：`python -m getcut build` 只跑到备料（TTS + 分镜 + 音频），最后一步会明确报
+"缺少 visual_fn"。要出片就起服务、在页面里点生成。
 
 ## 模板（7 套上架）
 

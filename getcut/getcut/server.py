@@ -782,6 +782,10 @@ def _mark_failed(job_id: str, err) -> None:
         j = ctx.JOBS.get(job_id)
         if j and j.get("stage") not in ("done", "failed", "cancelled"):
             j.update(stage="failed", stage8=8, error=str(err)[-800:], t_end=time.time())
+            # 失败不还额度 = 用户当天白丢一次免费机会（额度是入队时先扣的）
+            if j.get("free_quota") and not j.get("free_refunded"):
+                if ctx._usage_refund(j.get("owner") or ""):
+                    j["free_refunded"] = True
             ctx._jobs_save()
 
 
@@ -1104,10 +1108,11 @@ def _agent_visual(job_id: str, layers_dir: Path | None = None):
                           layers_dir=str(layers_dir) if layers_dir else None)
         try:
             # 试玩是免登录公开入口，谁都能连着提交几条；让它最多占一条渲染灶台
-            # 线程 5 分钟（真人客户的单才配"等你的电脑开机"那 24 小时）
+            # 线程 5 分钟。真人客户默认 GETCUT_RENDER_WAIT（30 分钟）——
+            # 以前是 24 小时：人点完就关页面，任务一直挂在这儿占线程。
             visual = agenthub.wait_result(job_id, progress=progress,
                                           cancel_check=cancel_check,
-                                          patience=300.0 if is_try else None)
+                                          patience=300.0 if is_try else config.RENDER_WAIT_SECONDS)
             delivered_final = agenthub.is_final_delivered(job_id)
             agenthub.discard(job_id)
         except BaseException:
@@ -1248,19 +1253,6 @@ for _i in range(_PREP_CONCURRENCY):
     threading.Thread(target=_prep_worker, daemon=True).start()
 for _i in range(ctx._RENDER_STAGE_WORKERS):
     threading.Thread(target=_render_worker, daemon=True).start()
-
-
-def _intake_sweeper() -> None:
-    """定期清掉过期的待认领素材包（Agent 直投，24 小时无人认领即删）。"""
-    while True:
-        time.sleep(1800)
-        try:
-            ctx._sweep_intakes()
-        except Exception as exc:  # noqa: BLE001 - 清扫线程绝不能死
-            log.error("intake sweeper error", exc_info=exc)
-
-
-threading.Thread(target=_intake_sweeper, daemon=True).start()
 
 
 def main():

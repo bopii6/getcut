@@ -77,15 +77,29 @@ _BROWSER_EXPORT_WIDGET = """
     f.allow = 'display-capture';
     f.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;border:0;z-index:2147483001;background:#111;';
     document.body.appendChild(f);
+    // 手机上这一层是全屏 iframe，原来只在渲染完成时才移除 —— 领不到单的手机，
+    // 点进来就是死路。给一个常驻出口。
+    var x = document.createElement('button');
+    x.id = 'gc-bx-close';
+    x.type = 'button';
+    x.textContent = '退出';
+    x.style.cssText = 'position:fixed;top:12px;right:12px;z-index:2147483002;padding:9px 16px;border-radius:999px;border:0;background:rgba(0,0,0,.66);color:#fff;font:600 14px/1.2 system-ui,sans-serif;cursor:pointer;';
+    x.addEventListener('click', function(){ f.remove(); x.remove(); });
+    document.body.appendChild(x);
     window.addEventListener('message', function(ev){
       if (ev.data && ev.data.type === 'getcut-export-done' && f.parentNode){
-        setTimeout(function(){ f.remove(); location.reload(); }, 1800);
+        setTimeout(function(){ f.remove(); x.remove(); location.reload(); }, 1800);
       }
     });
   }
+  function isMobile(){
+    return /Android|iPhone|iPad|iPod|Mobile|HarmonyOS/i.test(navigator.userAgent || '');
+  }
   function tick(){
     waitingCount().then(function(n){
-      if (n > 0) openFrame();
+      // 手机领不到渲染单（成片台在手机上不轮询），自动全屏只会把人困住：
+      // 桌面上照旧自动弹，手机上只保留顶部按钮，由用户自己点。
+      if (n > 0 && !isMobile()) openFrame();
     });
   }
   function boot(){ tick(); setInterval(tick, 5000); }

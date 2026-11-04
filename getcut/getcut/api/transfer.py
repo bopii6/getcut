@@ -21,6 +21,7 @@ from fastapi import Request, UploadFile
 from fastapi.responses import JSONResponse
 from .. import agenthub, auth, config, safestore
 from .. import brand as brand_kit
+from .. import schemas
 
 from .. import ctx
 
@@ -231,6 +232,20 @@ async def upload(file: UploadFile, request: Request):
     if not (dest / "content.json").is_file():
         shutil.rmtree(dest, ignore_errors=True)
         return JSONResponse({"error": "zip 里没有 content.json，不是有效的素材包"}, status_code=400)
+    # 只查"文件在不在"是不够的：content.json 少个 title 字段，包会被收下，
+    # 直到出片那一刻才 500，前端只看到 "HTTP 500"、任务里是一截 'title'。
+    # 收包当场解析一遍，坏包直接 400 说人话，不占名字也不占额度。
+    try:
+        content = schemas.Content.load(dest / "content.json")
+        if not content.title.strip():
+            raise ValueError("content.json 的 title 是空的")
+        if not content.script.strip():
+            raise ValueError("content.json 的 script（口播稿）是空的")
+        if (dest / "manifest.json").is_file():
+            schemas.Manifest.load(dest / "manifest.json")
+    except (ValueError, KeyError, TypeError, json.JSONDecodeError) as e:
+        shutil.rmtree(dest, ignore_errors=True)
+        return JSONResponse({"error": f"素材包内容有问题：{e}"}, status_code=400)
     # owner 用 _effective_email：设备令牌（技能/MCP）传的包也记到账号头上，
     # 以前只认会话，工具端传的包 owner 落 None，成了无主数据
     meta[dest.name] = {"owner": email, "created": time.strftime("%Y/%m/%d %H:%M")}
@@ -660,6 +675,7 @@ def start_build(body: dict, request: Request):
         ahead = ctx._queue_ahead(job_id)
         ctx.JOBS[job_id] = {"stage": "queued", "stage8": 1, "progress": 3, "error": None, "video": None,
                         "project_id": pid, "owner": email,
+                        "free_quota": bool(free_email),
                         "detail": ("排队中 · 前面还有 %d 个任务" % ahead) if ahead
                         else "已加入队列", "t0": time.time()}
         ctx._jobs_save()
@@ -769,6 +785,10 @@ def cancel_job(job_id: str, request: Request):
         j["cancel"] = True
         if dequeued:
             ctx._PENDING.pop(job_id, None)
+        # 用户自己停掉也没拿到片子：那次免费额度同样退回去
+        if j.get("free_quota") and not j.get("free_refunded"):
+            if ctx._usage_refund(j.get("owner") or ""):
+                j["free_refunded"] = True
         ctx._jobs_save()
     if dequeued:
         ctx._mark_cancelled(job_id)

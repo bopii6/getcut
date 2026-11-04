@@ -277,6 +277,29 @@ def _usage_load() -> dict:
     data = safestore.read_json(USAGE_FILE, default={}, shape=lambda d: isinstance(d, dict))
     return data if isinstance(data, dict) else {}
 
+def _usage_refund(email: str) -> bool:
+    """把今天记的一次出片还回去（失败/取消时用）。调用方必须已持 _LOCK。
+
+    额度是入队时先扣的（防并发超用），但失败不还就等于：TTS 掉线、素材包坏、
+    成片台没开，用户当天两次免费机会全被吃掉，还没地方申诉。
+    返回是否真退了一次（没记录 / 已经是 0 就返回 False，不会退成负数）。
+    """
+    if not email:
+        return False
+    today = time.strftime("%Y-%m-%d")
+    data = _usage_load()
+    user = dict(data.get(email) or {})
+    used = int(user.get(today) or 0)
+    if used <= 0:
+        return False
+    user[today] = used - 1
+    data[email] = user
+    try:
+        safestore.write_json(USAGE_FILE, data, indent=None)
+    except OSError:
+        return False
+    return True
+
 def _brand_for(email: str | None) -> dict | None:
     """高级档：当前用户的品牌套件出片参数。免费/未登录/没设置 = None。"""
     if not email or not auth.tier_at_least(email, "premium"):
