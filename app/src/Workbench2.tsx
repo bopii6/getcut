@@ -1,6 +1,10 @@
-﻿import { useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName } from './lib/types';
+import {
+  createGen, deleteGen, getMe, listHistory, login, logout, register,
+  uploadVideo, videoUrl, type GenItem, type Me,
+} from './lib/account';
 
 type Choice = ThemeName | 'auto';
 
@@ -56,8 +60,36 @@ export default function Workbench() {
   const [running, setRunning] = useState(false);
   const busy = useRef(false);
 
+  const [me, setMe] = useState<Me | null>(null);
+  const [history, setHistory] = useState<GenItem[]>([]);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPass, setAuthPass] = useState('');
+  const [authErr, setAuthErr] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'limited' | 'error'>('idle');
+
+  const refresh = async () => {
+    try { setMe(await getMe()); } catch { /* 离线也能用 */ }
+    try { setHistory((await listHistory()).items); } catch { /* 同上 */ }
+  };
+  useEffect(() => { void refresh(); }, []);
+
   const chars = text.trim().length;
   const est = Math.max(0, Math.round(chars / 4.6));
+
+  async function doAuth() {
+    setAuthErr('');
+    try {
+      if (authMode === 'register') await register(authEmail.trim(), authPass);
+      else await login(authEmail.trim(), authPass);
+      setShowAuth(false);
+      setAuthPass('');
+      await refresh();
+    } catch (e) {
+      setAuthErr(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   async function run() {
     if (busy.current) return;
@@ -66,9 +98,9 @@ export default function Workbench() {
     busy.current = true;
     setRunning(true);
     setErr(null); setUrl(null); setPct(0); setSecs(null);
+    setSaveState('idle');
     const t0 = performance.now();
     const theme = choice === 'auto' ? pickTheme(src) : choice;
-    console.log('[getcut] theme =', theme);
     try {
       setStage('读文案，拆镜头');
       const plan = await planScript(src);
@@ -77,9 +109,25 @@ export default function Workbench() {
         setStage(s);
         setPct(percent);
       }, broll, music);
-      setSecs(Math.round((performance.now() - t0) / 1000));
+      const secs = Math.round((performance.now() - t0) / 1000);
+      setSecs(secs);
       setUrl(URL.createObjectURL(blob));
       setPct(100);
+
+      // 存进作品库（额度在这里扣）
+      setSaveState('saving');
+      try {
+        const rec = await createGen({
+          title, text: src, theme,
+          duration: Math.round(plan.length * 2.5),
+        });
+        await uploadVideo(rec.id, blob);
+        setSaveState('saved');
+        await refresh();
+      } catch (e) {
+        const status = (e as Error & { status?: number }).status;
+        setSaveState(status === 402 ? 'limited' : 'error');
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -92,8 +140,46 @@ export default function Workbench() {
     <div className="page">
       <header>
         <a className="brand" href="/">GetCut</a>
-        <span className="note">免费试做 · 素材不上传</span>
+        <div className="topright">
+          {me ? <span className="quota">免费剩 {me.remaining} 条</span> : null}
+          {me?.loggedIn ? (
+            <span className="who" title={me.email || ''}>
+              {me.email}
+              <button className="link" onClick={async () => { await logout(); await refresh(); }}>退出</button>
+            </span>
+          ) : (
+            <button className="link" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>登录</button>
+          )}
+        </div>
       </header>
+
+      {showAuth ? (
+        <div className="mask" onClick={() => setShowAuth(false)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>{authMode === 'login' ? '登录' : '注册'}</h3>
+            <p>用邮箱登录，作品会存在你的账号下</p>
+            <input
+              type="email" placeholder="you@example.com" value={authEmail}
+              onChange={(e) => setAuthEmail(e.target.value)}
+            />
+            <input
+              type="password" placeholder="密码（至少 6 位）" value={authPass}
+              onChange={(e) => setAuthPass(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void doAuth(); }}
+            />
+            {authErr ? <p className="err">{authErr}</p> : null}
+            <button className="primary" onClick={doAuth}>
+              {authMode === 'login' ? '登录' : '注册并登录'}
+            </button>
+            <button
+              className="link"
+              onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthErr(''); }}
+            >
+              {authMode === 'login' ? '没有账号？注册一个' : '已有账号，去登录'}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <section className="hero">
         <h1>一条能发出去的获客片，<br />只需要一段文案。</h1>
@@ -117,8 +203,12 @@ export default function Workbench() {
             <div className="result-side">
               <h3>做好了</h3>
               <p>{secs ? `用时 ${secs} 秒` : ''} · 1080×1920 · 可直接发抖音/视频号</p>
+              {saveState === 'saving' ? <p className="dim">正在存进作品库…</p> : null}
+              {saveState === 'saved' ? <p className="ok">已存进作品库</p> : null}
+              {saveState === 'limited' ? <p className="err">免费 3 条用完了 · 这条可以先下载，解锁后自动存</p> : null}
+              {saveState === 'error' ? <p className="err">存作品库失败，但下载不受影响</p> : null}
               <a className="primary" href={url} download="getcut.mp4">下载 MP4</a>
-              <button className="ghost" onClick={() => { setUrl(null); setPct(0); setStage(''); }}>
+              <button className="ghost" onClick={() => { setUrl(null); setPct(0); setStage(''); setSaveState('idle'); }}>
                 再做一条
               </button>
             </div>
@@ -166,6 +256,36 @@ export default function Workbench() {
         )}
       </section>
 
+      {history.length ? (
+        <section className="works">
+          <div className="works-head">
+            <h2>我的作品</h2>
+            <span>{me?.loggedIn ? '换设备登录也能看到' : '登录后换设备也能看到'}</span>
+          </div>
+          <div className="works-grid">
+            {history.map((g) => (
+              <article key={g.id} className="work">
+                <h3>{g.title || '未命名'}</h3>
+                <p className="dim">
+                  {new Date(g.created).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {g.duration ? ` · ${g.duration} 秒` : ''}
+                  {g.size ? ` · ${(g.size / 1024 / 1024).toFixed(1)} MB` : ''}
+                </p>
+                <div className="work-actions">
+                  {g.hasVideo
+                    ? <a className="link" href={videoUrl(g.id)} download={`${g.title || 'getcut'}.mp4`}>下载</a>
+                    : <span className="dim">成片未保存</span>}
+                  <button
+                    className="link danger"
+                    onClick={async () => { await deleteGen(g.id); await refresh(); }}
+                  >删除</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <footer>
         <span>GetCut · 获客短视频</span>
         <span>文案 20~1200 字 · 竖屏 1080×1920</span>
@@ -191,6 +311,29 @@ export default function Workbench() {
         .brand { color: var(--ink); text-decoration: none; font-size: 20px; font-weight: 900; letter-spacing: .5px; }
         .brand::after { content: ''; }
         .note { font-size: 12px; color: var(--dim); letter-spacing: 1px; }
+        .topright { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--dim); }
+        .quota { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; }
+        .who { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; max-width: 260px;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .mask { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; z-index: 20; padding: 20px; }
+        .dialog { width: 100%; max-width: 380px; background: #131110; border: 1px solid var(--line);
+          border-radius: 16px; padding: 22px; display: grid; gap: 10px; }
+        .dialog h3 { margin: 0; font-size: 20px; }
+        .dialog p { margin: 0; color: var(--dim); font-size: 13px; }
+        .dialog input { background: #0d0c0a; border: 1px solid var(--line); border-radius: 10px;
+          color: var(--ink); padding: 12px 14px; font-size: 14px; outline: none; }
+        .dialog input:focus { border-color: rgba(216,169,74,.6); }
+        .ok { color: #8bd18b !important; font-size: 13px; margin: 0 0 12px; }
+        .works { margin-top: 42px; }
+        .works-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+        .works-head h2 { margin: 0; font-size: 18px; font-weight: 800; }
+        .works-head span { font-size: 12px; color: var(--dim); }
+        .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+        .work { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #0d0c0a; }
+        .work h3 { margin: 0 0 6px; font-size: 14px; font-weight: 700; overflow: hidden;
+          text-overflow: ellipsis; white-space: nowrap; }
+        .work-actions { display: flex; gap: 14px; margin-top: 10px; }
+        .danger { color: #ff9a86; }
 
         .hero { padding: 56px 0 34px; }
         .hero h1 { margin: 0; font-size: 46px; line-height: 1.25; font-weight: 900; letter-spacing: -.5px; }
@@ -254,6 +397,7 @@ export default function Workbench() {
     </div>
   );
 }
+
 
 
 
