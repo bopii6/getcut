@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
@@ -156,8 +156,11 @@ export default function Workbench() {
       const a = document.createElement('a');
       a.href = u;
       a.download = `${title}-剪映草稿.zip`;
+      a.rel = 'noopener';
+      document.body.appendChild(a);   // 游离节点有的浏览器不认 download
       a.click();
-      URL.revokeObjectURL(u);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 5000);
     }
   }
 
@@ -474,6 +477,7 @@ export default function Workbench() {
     </div>
   );
 }
+
 
 
 
