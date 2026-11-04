@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>样张C2 · 大字场 + 拖放框</title>
+<style>
+:root {
+  --bg: #0e0e11; --surface: #17171b; --surface2: #1c1c21;
+  --ink: #f4f4f6; --ink-2: #b6b6c0; --ink-3: #85858d;
+  --line: #232329; --line2: #2e2e36;
+  --acc: #d8b36a; --acc-ink: #1c1508; --acc-soft: rgba(216,179,106,.12);
+  --ok: #7fcb96;
+  --sans: "PingFang SC","HarmonyOS Sans SC","MiSans","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  --mono: ui-monospace,"SF Mono",Consolas,monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0 }
+html, body { height: 100% }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans);
+  font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased }
+a { color: inherit; text-decoration: none }
+button { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer }
+
+.shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden }
+.topbar { display: flex; align-items: center; gap: 14px; padding: 0 22px; height: 58px;
+  flex: none; background: var(--surface); border-bottom: 1px solid var(--line) }
+.brand { display: flex; align-items: center; gap: 10px }
+.brand .wm { font-size: 17px; font-weight: 800; letter-spacing: .02em }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 10px }
+.chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 8px;
+  border: 1px solid var(--line2); color: var(--ink-2); font-size: 13px; font-weight: 600 }
+.chip:hover { color: var(--ink); border-color: var(--acc); background: var(--acc-soft) }
+.account { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px 5px 6px;
+  border-radius: 999px; border: 1px solid var(--line2) }
+.avatar { width: 24px; height: 24px; border-radius: 50%; background: #5b4a8a;
+  display: grid; place-items: center; font-size: 12px; font-weight: 800; color: #fff }
+.account b { font-size: 13px; font-weight: 700 }
+.tier { font-size: 11px; font-weight: 800; color: var(--acc); border: 1px solid rgba(216,179,106,.45);
+  border-radius: 5px; padding: 1px 6px; background: var(--acc-soft) }
+
+/* ── 主区 ── */
+.main { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; padding: 30px 24px 66px; position: relative }
+h1 { font-size: 37px; font-weight: 900; line-height: 1.6; letter-spacing: .02em }
+h1 .gold { color: var(--acc) }
+.sub { margin-top: 8px; font-size: 14.5px; color: var(--ink-3) }
+
+/* 拖放框:矩形本体就是按钮(点击选文件),视觉元素示意「拖进来」 */
+.drop { margin-top: 30px; width: 600px; max-width: 92vw; height: 216px; border-radius: 18px;
+  border: 1.5px dashed rgba(255,255,255,.22);
+  background: linear-gradient(180deg, #141419 0%, #101015 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px;
+  cursor: pointer; position: relative;
+  transition: border-color .15s ease, background .15s ease }
+.drop:hover, .drop.hot { border-color: var(--acc);
+  background: linear-gradient(180deg, #17150f 0%, #121017 100%) }
+.drop .badge { position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; font-weight: 800; letter-spacing: .14em; color: var(--acc);
+  background: var(--bg); border: 1px solid rgba(216,179,106,.4); border-radius: 999px;
+  padding: 2px 12px }
+.drop .inner { font-size: 14.5px; color: var(--ink-2) }
+.drop .inner b { color: var(--ink); font-weight: 750 }
+.drop .pk { font-size: 12px; color: var(--ink-3); font-family: var(--mono) }
+
+.fine { margin-top: 14px; font-size: 12.5px; color: var(--ink-3) }
+.fine a { color: var(--acc) }
+
+.steps { margin-top: 30px; display: flex; align-items: center; gap: 16px;
+  font-size: 13px; color: var(--ink-3) }
+.steps b { color: var(--ink-2); font-weight: 700 }
+.steps .sep { width: 26px; height: 1px; background: var(--line2) }
+
+.env { position: absolute; left: 30px; bottom: 22px; display: flex; gap: 12px;
+  align-items: center; font-size: 12.5px }
+.env .ok { color: var(--ok); font-weight: 700 }
+.env .re { color: var(--ink-3); text-decoration: underline; text-underline-offset: 3px }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 32 32"><path d="M9 0H23A9 9 0 0 1 32 9v9.5L18.5 32H9A9 9 0 0 1 0 23V9a9 9 0 0 1 9-9Z" fill="#d8b36a"/><path d="M10.5 8.6 23.6 15.6 10.5 22.6Z" fill="#1c1508"/></svg>
+      <span class="wm">GetCut</span>
+    </div>
+    <div class="top-right">
+      <a class="chip" href="#">作品展示</a>
+      <a class="chip" href="#">作品库</a>
+      <span class="account"><span class="avatar">王</span><b>老王</b><span class="tier">高级版</span></span>
+    </div>
+  </header>
+
+  <main class="main">
+    <h1>把想法、思考和收藏的资讯，<br>变成<span class="gold">可复利的视频流量</span>。</h1>
+    <div class="sub">拖入一个素材包，核对、配音、渲染，一条好片子在你这台电脑上生成。</div>
+
+    <div class="drop" role="button" aria-label="拖入素材包 zip，或点击选择文件">
+      <span class="badge">DRAG &amp; DROP</span>
+      <svg width="76" height="72" viewBox="0 0 76 72" fill="none" aria-hidden="true">
+        <path d="M30 6h16" stroke="#d8b36a" stroke-width="3.5" stroke-linecap="round" opacity=".95"/>
+        <path d="M24 13h28" stroke="#d8b36a" stroke-width="3.5" stroke-linecap="round" opacity=".5"/>
+        <path d="M38 20v22" stroke="#d8b36a" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M28 33.5 38 43.5l10-10" stroke="#d8b36a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="27" y="50" width="22" height="14" rx="4" fill="rgba(216，179，106，.14)" stroke="#d8b36a" stroke-width="1.5"/>
+        <text x="38" y="60.5" text-anchor="middle" font-family="Consolas，monospace" font-size="9.5" font-weight="700" fill="#d8b36a">ZIP</text>
+        <path d="M12 54v8a8 8 0 0 0 8 8h36a8 8 0 0 0 8-8v-8" stroke="#85858d" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+      <div class="inner"><b>把素材包拖进这个框</b>，或点击选择文件</div>
+      <div class="pk">.zip · 最大 512 MB</div>
+    </div>
+
+    <div class="fine">zip 不解压，文案与素材一起读入 · 还没有素材包？<a href="#">下载一条现成的</a> · 注册后每天免费出 2 条</div>
+
+    <div class="steps">
+      <b>导入</b><span class="sep"></span>
+      <b>核对与配音</b><span class="sep"></span>
+      <b>本机出片</b>
+    </div>
+
+    <div class="env"><span class="ok">✓ 这台电脑可以正常出片</span><a class="re" href="#">重新检查</a></div>
+  </main>
+</div>
+</body>
+</html>

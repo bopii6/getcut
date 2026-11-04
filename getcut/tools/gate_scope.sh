@@ -23,7 +23,7 @@ while IFS= read -r p; do
     *.py|ruff.toml|requirements*.txt|Dockerfile|docker-compose.yml|tests/*)
       backend=1 ;;
     *.md|*.txt|*.png|*.jpg|*.jpeg|*.gif|*.webp|*.mp4|*.zip|*.otf|*.ttf|*.woff2|\
-    design-mockups/*|_diag/*|_qa/*|work/*|docs/*|samples/*|对比/*|选题/*|配音对比/*|音色样例/*)
+    design-mockups/*|_scratch/*|work/*|docs/*|deliverables/*|samples/*|对比/*|选题/*|配音对比/*|音色样例/*)
       : ;;                               # 文档与素材：没有任何门禁覆盖它们
     *)
       full=1 ;;                          # tools/、deploy/、.github/ 以及认不出来的一切

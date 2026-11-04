@@ -142,3 +142,18 @@ getcut/_redesign_8600.log
 getcut/_redesign_8601.log
 getcut/renderer/props_*.json
 getcut/renderer/render_*.log
+
+# ================= 2026-11-04 根目录收拢 =================
+# 仓库根只留三层：代码（getcut/）、文档（docs/）、产出（deliverables/）。
+# 一次性诊断、逆向 dump、旧 worktree 副本统一扔进 _scratch/，都不进 git。
+_scratch/
+# 成片 mp4 与素材包 zip 的落地目录（*.mp4 / *.zip 已全局忽略，这里再挡住目录本体）
+deliverables/
+# 素材包目录的另一种命名：`素材包-选题/` 与带编号的 `xx-素材包-1/`，老的 *-素材包/ 挡不住
+素材包-*/
+*-素材包-*/
+# 本地登录会话记录（含 sid / IP，不该入库）
+.videogen-sessions.json
+# 成片台手动验收截图、一次性 UI 比对页
+getcut/renderer/_qa*
+getcut/_ui_sample/

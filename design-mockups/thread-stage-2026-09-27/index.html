@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>盖楼体 · 帖子现场 — 样张 2026-09-27</title>
+<style>
+  :root{
+    --x-bg:#000; --x-card:#16181c; --x-border:#2f3336; --x-text:#e7e9ea;
+    --x-sub:#71767b; --x-blue:#1d9bf0; --x-like:#f91880;
+    --gold:#d8a94e; --gold-hi:#f0c675; --gold-dim:rgba(216,169,78,.16);
+  }
+  *{box-sizing:border-box}
+  body{background:#0b0c0e;color:#cfd2d6;font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;margin:0;padding:34px 30px 60px}
+  h1{font-size:22px;color:#e7e9ea;margin:0 0 8px;letter-spacing:.5px}
+  h1 em{font-style:normal;color:var(--gold)}
+  .sub{color:#8b9097;font-size:13.5px;margin:0 0 14px;max-width:860px;line-height:1.8}
+  .rules{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0 40px}
+  .chip{border:1px solid #2a2d31;border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.7;color:#a9adb2;background:#101114}
+  .chip b{color:var(--gold)}
+  .chip.blue b{color:var(--x-blue)}
+
+  .row{display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start}
+  .shot{width:332px}
+  .phone{width:332px;height:700px;background:var(--x-bg);border:1px solid #33373c;border-radius:24px;
+         overflow:hidden;position:relative;box-shadow:0 14px 44px rgba(0,0,0,.55)}
+  .cap{margin-top:12px;padding:0 4px}
+  .cap b{color:#e7e9ea;font-size:13.5px;display:block;margin-bottom:5px}
+  .cap b i{font-style:normal;color:var(--gold);margin-right:6px}
+  .cap span{color:#868b91;font-size:12px;line-height:1.75;display:block}
+
+  /* 顶部钩子标题带（金色=稿子） */
+  .hook{position:absolute;top:0;left:0;right:0;z-index:5;padding:18px 18px 14px;
+        background:linear-gradient(180deg,rgba(0,0,0,.96) 55%,rgba(0,0,0,0));}
+  .hook .l{font-size:19px;font-weight:700;color:var(--gold-hi);line-height:1.35;letter-spacing:.3px}
+  .hook .l small{display:block;font-size:13px;color:#9a9fa5;font-weight:400;margin-bottom:3px;letter-spacing:2px}
+  .hl{background:var(--gold-dim);border-bottom:3px solid var(--gold);padding:0 3px}
+
+  /* 字幕带（金） */
+  .band{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:26px 20px 20px;
+        background:linear-gradient(0deg,rgba(0,0,0,.97) 55%,rgba(0,0,0,0));
+        font-size:15.5px;color:#f3f4f5;line-height:1.5;font-weight:600}
+  .band b{color:var(--gold-hi)}
+
+  /* 推文卡 */
+  .thread{padding:96px 14px 70px;display:flex;flex-direction:column;gap:10px;height:100%}
+  .tw{background:var(--x-card);border:1px solid var(--x-border);border-radius:16px;padding:14px;position:relative}
+  .tw.main{box-shadow:0 0 0 1px rgba(29,155,240,.25),0 8px 30px rgba(29,155,240,.10)}
+  .hd{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:15px;flex:none;color:#fff}
+  .nm{font-size:13.5px;color:var(--x-text);font-weight:700;line-height:1.3}
+  .nm .tag{font-size:10px;color:var(--gold);border:1px solid var(--gold-dim);background:var(--gold-dim);
+           border-radius:4px;padding:1px 5px;margin-left:6px;letter-spacing:1px}
+  .hd .hand{font-size:11.5px;color:var(--x-sub)}
+  .en{font-size:11px;color:#8b929a;line-height:1.55;border-left:2px solid #2f3336;padding-left:9px;margin:2px 0 8px}
+  .zh{font-size:15.5px;color:var(--x-text);line-height:1.65}
+  .zh em{font-style:normal;color:var(--x-text);border-bottom:2px solid var(--x-blue)}
+  .trans{display:inline-block;font-size:10px;color:var(--x-blue);border:1px solid rgba(29,155,240,.4);
+         border-radius:99px;padding:1.5px 8px;margin:7px 0 6px}
+  .st{display:flex;gap:16px;margin-top:11px;padding-top:9px;border-top:1px solid #23272c;
+      font-size:11.5px;color:var(--x-sub)}
+  .st i{font-style:normal}
+  .st .c{color:var(--x-blue)} .st .r{color:#00ba7c} .st .l{color:var(--x-like)}
+
+  /* 回帖卡 */
+  .rp{background:var(--x-card);border:1px solid var(--x-border);border-radius:14px;padding:12px 13px;position:relative;
+      margin-left:16px}
+  .rp .zh{font-size:13.5px;line-height:1.6}
+  .rp .nm{font-size:12.5px}
+  .rp .st{font-size:10.5px;gap:12px;margin-top:8px;padding-top:7px}
+  .float-tag{position:absolute;top:-9px;right:10px;font-size:10.5px;letter-spacing:2px;color:#0d0d0d;
+             background:var(--gold);border-radius:4px;padding:2px 8px;font-weight:700;z-index:2}
+  .rp.dim{opacity:.55;transform:scale(.985)}
+
+  /* 证据卡（链接预览样式，数字=金） */
+  .ev{border:1px solid #3a3323;border-radius:14px;overflow:hidden;margin-left:16px;background:#131417}
+  .ev .src{display:flex;align-items:center;gap:8px;padding:9px 13px;font-size:10.5px;color:#9a9fa5;
+           background:#191a1e;border-bottom:1px solid #2a2d31;letter-spacing:.5px}
+  .ev .src .dot{width:16px;height:16px;border-radius:4px;background:var(--gold);display:inline-flex;
+                align-items:center;justify-content:center;color:#000;font-size:9px;font-weight:800}
+  .ev .big{padding:14px 13px 4px;font-size:44px;font-weight:800;color:var(--gold-hi);line-height:1;letter-spacing:1px}
+  .ev .big small{font-size:16px;color:var(--gold);font-weight:700;margin-left:4px}
+  .ev .why{padding:6px 13px 13px;font-size:12.5px;color:#b9bdc2;line-height:1.65}
+  .ev .why b{color:var(--x-text)}
+
+  /* 结尾：我们的楼 */
+  .mine{border:1.5px solid var(--gold);border-radius:14px;padding:13px;background:
+        linear-gradient(180deg,rgba(216,169,78,.10),rgba(216,169,78,.03)),var(--x-card);
+        margin-left:16px;position:relative}
+  .mine .av{background:linear-gradient(135deg,#7b3ff2 60%,#7b3ff2 60%);clip-path:polygon(0 0,100% 0,100% 72%,72% 100%,0 100%)}
+  .mine .nm{color:var(--gold-hi)}
+  .mine .zh{font-size:14.5px;color:#f3f4f5;line-height:1.7}
+  .mine .st .l{color:var(--gold)}
+  .gap{display:flex;justify-content:center;padding:2px 0}
+  .gap span{width:2px;height:26px;background:linear-gradient(180deg,transparent,var(--gold),transparent)}
+
+  .sep{margin:52px 0 26px;border-top:1px solid #23262a;padding-top:26px}
+  .sec h2{font-size:17px;color:#e7e9ea;margin:0 0 10px}
+  .sec p{font-size:13px;line-height:1.9;color:#a9adb2;max-width:900px;margin:0 0 10px}
+  .sec p b{color:var(--gold-hi)}
+  .sec p .u{color:#cfd2d6}
+</style>
+</head>
+<body>
+
+<h1>盖楼体 <em>·</em> 帖子现场</h1>
+<p class="sub">
+  给「一个帖子 + 有意思的回帖」这类选题专用。概念一句话：<b>别给帖子配 B-roll——把整条片子拍成这个帖子的评论区现场。</b>
+  主帖是舞台，回帖是演员，证据是盖进楼里的道具，我们的结论不靠旁白说，靠「新盖一楼」这个动作演出来。
+</p>
+<div class="rules">
+  <div class="chip blue">视觉语法：<b>蓝色 = 帖子里他们的话</b>（X 原生 UI）</div>
+  <div class="chip">视觉语法：<b>金色 = 我们稿子的话</b>（标题带 / 归纳签 / 字幕 / 证据数字 / 最后一楼）</div>
+  <div class="chip">观众扫一眼就知道：<b>哪些是别人说的，哪些是本片的判断</b></div>
+</div>
+
+<div class="row">
+
+  <!-- 镜头① -->
+  <div class="shot">
+    <div class="phone">
+      <div class="hook">
+        <div class="l"><small>片头钩子</small>agent 元年喊到第二年<br>卡住它的，是<span class="hl">你的生活</span></div>
+      </div>
+      <div class="thread">
+        <div class="tw main">
+          <div class="hd">
+            <div class="av" style="background:#1a1c1f;border:1px solid #3a3d41">👑</div>
+            <div>
+              <div class="nm">BOOTOSHI 👑<span class="tag">主帖</span></div>
+              <div class="hand">@KingBootoshi · 9月26日</div>
+            </div>
+          </div>
+          <div class="en">realizing that AI agents might not change the world as fast as I thought because most people don't have complex enough lives where AI can actually integrate with them</div>
+          <div class="trans">已翻译</div>
+          <div class="zh">我慢慢意识到：AI agent 改变世界的速度，可能没我想的那么快——<em>因为大多数人的生活根本不够复杂，AI 没有能接进去的地方</em>。</div>
+          <div class="st">
+            <i class="c">💬 49</i><i class="r">🔁 13</i><i class="l">❤ 267</i><i>👁 1万</i>
+          </div>
+        </div>
+      </div>
+      <div class="band">昨天，一个天天做 agent 的工程师，<b>认了个怂</b>。</div>
+    </div>
+    <div class="cap">
+      <b><i>镜头①</i>钉疑问（0:00–0:20）</b>
+      <span>主帖卡独占舞台：英文原文保留（真实感）+「已翻译」浮层给中文。钩子标题带压顶，字幕带压底。动效：卡片微倾斜入场，翻译行延迟 0.8s 淡入——像有人当场点了翻译。</span>
+    </div>
+  </div>
+
+  <!-- 镜头② -->
+  <div class="shot">
+    <div class="phone">
+      <div class="thread" style="padding-top:70px">
+        <div class="tw main dim">
+          <div class="hd">
+            <div class="av" style="background:#1a1c1f;border:1px solid #3a3d41">👑</div>
+            <div>
+              <div class="nm">BOOTOSHI <span class="hand">@KingBootoshi</span></div>
+            </div>
+          </div>
+          <div class="zh" style="font-size:13px">大多数人的生活根本不够复杂，AI 没有能接进去的地方。</div>
+        </div>
+        <div class="rp">
+          <div class="float-tag">隐形派</div>
+          <div class="hd">
+            <div class="av" style="background:#20303c">O</div>
+            <div><div class="nm">@_ontologic</div></div>
+          </div>
+          <div class="zh">不需要那么快。将来会有一整层 AI——藏在交互和应用里，<em>没人意识到那是 AI</em>。</div>
+          <div class="st"><i class="l">❤ 41</i></div>
+        </div>
+        <div class="rp">
+          <div class="float-tag">主动派</div>
+          <div class="hd">
+            <div class="av" style="background:#2b2436">Z</div>
+            <div><div class="nm">@ZachWarunek</div></div>
+          </div>
+          <div class="zh">Agent 得更主动、永远别闲着。<em>人不被示范，根本不知道自己想要什么</em>。</div>
+          <div class="st"><i class="l">❤ 28</i></div>
+        </div>
+        <div class="rp">
+          <div class="float-tag">许愿派</div>
+          <div class="hd">
+            <div class="av" style="background:#36302a">i</div>
+            <div><div class="nm">@igelblork</div></div>
+          </div>
+          <div class="zh">我给同事演示 agent 有多神奇，他们唯一的念头：<em>「帮我暴富」「教我中彩票」</em>。</div>
+          <div class="st"><i class="l">❤ 63</i></div>
+        </div>
+      </div>
+      <div class="band">评论区吵出三种答案，<b>每个听起来都像那么回事</b>。</div>
+    </div>
+    <div class="cap">
+      <b><i>镜头②</i>三种民间答案（0:20–1:20）</b>
+      <span>三条热回帖按热度逐条从底部弹入，右上角金签是<b>我们给每条贴的归纳</b>（隐形派/主动派/许愿派）——旁白念到哪条，哪条亮，其余压暗。主帖缩成小卡钉在顶部当锚。</span>
+    </div>
+  </div>
+
+  <!-- 镜头③ -->
+  <div class="shot">
+    <div class="phone">
+      <div class="thread" style="padding-top:70px">
+        <div class="tw main dim" style="padding:10px 13px">
+          <div class="zh" style="font-size:12px">大多数人的生活根本不够复杂，AI 没有能接进去的地方。</div>
+        </div>
+        <div class="ev">
+          <div class="src"><span class="dot">O</span>OPENAI 官方研究 · 150万条真实对话 · 2025.9</div>
+          <div class="big">七成<small>以上</small></div>
+          <div class="why">的消息<b>跟工作无关</b>——问菜谱、查资料、改作文。<br>人们拿 AI 聊天，<b>不是派活</b>。</div>
+        </div>
+        <div class="ev">
+          <div class="src"><span class="dot">G</span>GARTNER 预测 · 2025.6</div>
+          <div class="big">四成<small>+</small></div>
+          <div class="why">的所谓 agent 项目，2027 年前会被砍掉。市面上几千家「agent 公司」，<b>真做的只有约 130 家</b>，其余是换皮。</div>
+        </div>
+        <div class="ev">
+          <div class="src"><span class="dot">M</span>MIT《State of AI in Business》· 2025.8</div>
+          <div class="big">95<small>%</small></div>
+          <div class="why">的企业 AI 试点，<b>没赚回一分钱</b>。</div>
+        </div>
+      </div>
+      <div class="band">三份数据摆在一起，<b>都在说同一件事</b>。</div>
+    </div>
+    <div class="cap">
+      <b><i>镜头③</i>证据盖楼（1:20–3:00）</b>
+      <span>证据不切走画面，而是<b>以「链接预览卡」的样式盖进线程</b>——像有人往楼里贴了三份报告。大数字金色、滚动到位；来源行带 favicon 式角标，给可信度。</span>
+    </div>
+  </div>
+
+  <!-- 镜头④ -->
+  <div class="shot">
+    <div class="phone">
+      <div class="thread" style="padding-top:70px">
+        <div class="rp dim">
+          <div class="hd"><div class="av" style="background:#36302a">i</div>
+          <div><div class="nm">@igelblork</div></div></div>
+          <div class="zh">他们唯一的念头：「帮我暴富」「教我中彩票」。</div>
+        </div>
+        <div class="gap"><span></span></div>
+        <div class="mine">
+          <div class="hd">
+            <div class="av">▶</div>
+            <div><div class="nm">GetCut 深度稿<span class="tag">最后一楼</span></div>
+            <div class="hand">刚刚</div></div>
+          </div>
+          <div class="zh">卡住 agent 的从来不是算力——<b style="color:var(--gold-hi)">是大多数人的生活，还没复杂到需要它插进来</b>。所以大厂根本不打算「教你用」，它们在做的事叫：把 AI 藏起来，或者替你先把活干了。</div>
+          <div class="st"><i class="l">❤ <span style="color:var(--gold-hi)">999+</span></i></div>
+        </div>
+      </div>
+      <div class="band">这条片子，就是这个帖子<b>新盖的一楼</b>。</div>
+    </div>
+    <div class="cap">
+      <b><i>镜头④</i>给答案 + 盖楼收尾（3:00–结尾）</b>
+      <span>线程向下滚，出现一段空隙，<b>我们的回帖（全片唯一金边卡）盖进楼里</b>。观众要转的「面子」就是这张卡——结论不是旁白念出来的，是「盖楼」这个动作演出来的。转发欲直接长在画面上。</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="sec sep">
+  <h2>为什么这帖子适合这个形态</h2>
+  <p>这条帖子的看点本来就<b>不在帖主，在评论区</b>：主帖只是把一个拧巴摆出来了（agent 这么强，怎么没改变我的生活），真正的料是三条回帖正好代表了三种立场，而数据站队的是第四种。现在的信息版模板处理这种「多声部」只能靠引用卡轮播，谁说的、什么立场、相互怎么顶，全被磨平了。<b>盖楼体把「谁在说」本身变成了画面。</b></p>
+  <p>片子结构也天然对位：主帖=开头钉疑问；三条回帖=中段摆三种民间答案；三份数据=证据；我们的回帖=结尾给答案。<span class="u">（观众记住的那句话 = 最后一楼那张卡上的字。）</span></p>
+
+  <h2 style="margin-top:22px">两条落地路径</h2>
+  <p><b>A · 快路（今天就能出片）：</b>线程里的每一张卡（主帖/回帖/证据/最后一楼）都由我预渲染成静态图，按槽位表进素材包，现有管线直接渲染——入场动画用现有卡片动效顶上。零开发，但回帖是「贴图进场」，没有逐条弹入的手感。</p>
+  <p><b>B · 正路（渲染端加一个「线程场景」模板）：</b>Remotion 里加 ThreadScene 组件：回帖逐条弹入、点赞数滚动、证据卡数字滚动、结尾向下滚盖楼；五道工序加一种「线程卡」卡型，词汇表 TS/Python 两处同步。估 1–2 天。做完之后<b>所有「源头发帖型」选题（X / 知乎 / B 站评论区 / HN）都能复用</b>，等于风格包家族多一个「盖楼包」。</p>
+
+  <h2 style="margin-top:22px">几个实话</h2>
+  <p>· 纯 UI 撑满 4 分钟会闷，所以镜头①④之间允许<b>少量实景 B-roll 切换</b>（说到「做饭接孩子还房贷」时切真人生活画面），线程是主舞台不是牢笼。</p>
+  <p>· 推文是公开引用（带署名），没有授权问题；头像样张里用字母占位，正式版可以抓真人头像，也可以统一风格化字母头像（更稳）。</p>
+  <p>· 3 分钟版建议 12–16 张线程卡 + 2–3 段 B-roll，素材包协议完全不用动。</p>
+</div>
+
+</body>
+</html>

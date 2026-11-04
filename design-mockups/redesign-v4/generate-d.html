@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>D · 自动生成</title>
+<style>
+:root{
+  --bg:#0E0E11; --ink:#F4F4F6; --ink2:#B6B6C0; --ink3:#82828D;
+  --gold:#D8B36A; --hair:rgba(255,255,255,.09);
+  --sans:"Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  --mono:Consolas,"SF Mono",monospace;
+}
+*{box-sizing:border-box;margin:0}
+body{min-height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+/* top bar */
+.top{display:flex;align-items:center;gap:13px;height:60px;padding:0 34px;flex:none}
+.logo{width:27px;height:27px;border-radius:7px;background:linear-gradient(135deg,#8A63FF,#6A3FF0);
+  clip-path:polygon(0 0,100% 0,100% 60%,60% 100%,0 100%);display:flex;align-items:center;justify-content:center;flex:none}
+.logo svg{width:13px;height:13px;fill:#fff;margin-left:1px}
+.brand{font-size:16.5px;font-weight:800}
+.crumb{color:var(--ink2);font-size:14px;padding-left:13px;border-left:1px solid var(--hair)}
+.top .sp{flex:1}
+.pill{font-size:14px;color:var(--ink2);border:1px solid var(--hair);border-radius:8px;padding:7px 14px}
+.pill.user{display:flex;align-items:center;gap:8px;border:none;padding:6px 2px}
+.avatar{width:23px;height:23px;border-radius:6px;background:linear-gradient(135deg,#E08A4E,#B85C2E);
+  display:flex;align-items:center;justify-content:center;font-size:11px}
+.pill.user b{color:var(--ink);font-weight:650}
+.tier{font-size:10.5px;font-weight:700;color:var(--gold);border:1px solid rgba(216,179,106,.4);border-radius:5px;padding:1px 6px}
+/* flow steps */
+.fsteps{display:flex;align-items:center;gap:10px;padding:22px 34px 0;flex:none}
+.fs{display:flex;align-items:center;gap:9px;font-size:15px;color:var(--ink3)}
+.fs i{font-style:normal;width:26px;height:26px;border-radius:8px;border:1px solid var(--hair);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12.5px}
+.fs.done{color:var(--ink2)}
+.fs.done i{color:var(--gold);border-color:rgba(216,179,106,.4);background:rgba(216,179,106,.10)}
+.fs.done i svg{width:12px;height:12px;stroke:var(--gold);stroke-width:2.6;fill:none}
+.fs.cur{color:var(--ink);font-weight:700}
+.fs.cur i{background:var(--gold);border-color:var(--gold);color:#1C1508}
+.fs-sep{flex:none;width:34px;height:1px;background:var(--hair)}
+.fsteps .gap{flex:1}
+.fsteps .eta{font-size:13.5px;color:var(--ink3)}
+/* main split */
+.main{flex:1;display:flex;gap:80px;padding:44px 80px 16px;min-height:0;align-items:center}
+.left{width:520px;flex:none;display:flex;flex-direction:column}
+.right{flex:1;display:flex;align-items:center;justify-content:center}
+/* left: run block */
+.left h1{font-size:38px;font-weight:800;line-height:1.3;letter-spacing:.01em}
+.bigline{color:var(--ink2);font-size:16px;margin-top:10px}
+.bar{margin-top:26px;height:8px;border-radius:99px;background:rgba(255,255,255,.08);position:relative;overflow:visible}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:99px;
+  background:linear-gradient(90deg,rgba(216,179,106,.55),var(--gold))}
+.bar u{position:absolute;left:62%;top:50%;width:14px;height:14px;border-radius:99px;background:#F4F4F6;
+  transform:translate(-50%,-50%);box-shadow:0 0 0 4px rgba(216,179,106,.18)}
+.meta{margin-top:16px;display:flex;align-items:baseline;gap:14px}
+.meta .step{font-size:16px;font-weight:700}
+.meta .step small{color:var(--ink3);font-weight:400;font-size:14px}
+.meta .sp{flex:1}
+.meta .pct{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--gold)}
+.meta .el{font-size:13.5px;color:var(--ink3)}
+.note{margin-top:22px;font-size:14px;color:var(--ink3);line-height:1.8}
+.stop{margin-top:26px;align-self:flex-start;display:inline-flex;align-items:center;gap:9px;height:46px;padding:0 22px;
+  border:1px solid var(--hair);border-radius:11px;color:var(--ink2);font-size:14.5px;font-weight:600}
+.stop svg{width:13px;height:13px;stroke:var(--ink2);stroke-width:2.4;fill:none}
+/* right: stage list */
+.stages{width:100%;max-width:400px;display:flex;flex-direction:column;gap:4px;position:relative}
+.stages::before{content:"";position:absolute;left:13px;top:18px;bottom:18px;width:1px;background:var(--hair)}
+.sg{display:flex;align-items:center;gap:16px;padding:9px 0;position:relative}
+.sg .n{width:27px;height:27px;border-radius:99px;flex:none;background:var(--bg);border:1px solid var(--hair);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11.5px;color:var(--ink3);position:relative;z-index:1}
+.sg.done .n{color:var(--gold);border-color:rgba(216,179,106,.4)}
+.sg.done .n svg{width:11px;height:11px;stroke:var(--gold);stroke-width:2.6;fill:none}
+.sg .t{font-size:16px;color:var(--ink3)}
+.sg.done .t{color:var(--ink2)}
+.sg.cur .t{color:var(--ink);font-weight:700}
+.sg.cur .n{background:var(--gold);border-color:var(--gold);color:#1C1508;
+  box-shadow:0 0 0 4px rgba(216,179,106,.15)}
+.sg .d{margin-left:auto;font-size:13.5px;color:var(--ink3)}
+.sg.cur .d{color:var(--gold)}
+/* footer */
+.foot{flex:none;display:flex;align-items:center;gap:18px;padding:13px 34px;font-size:13px;color:var(--ink3)}
+.foot .sp{flex:1}
+.foot a{color:var(--ink3);text-decoration:none;margin-left:14px}
+.foot .live{display:flex;align-items:center;gap:6px}
+.foot .live::before{content:"";width:5px;height:5px;border-radius:99px;background:#5FA97A}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M8 5.8v12.4L19 12z"/></svg></div>
+  <div class="brand">GetCut</div>
+  <div class="crumb">自动生成</div>
+  <div class="sp"></div>
+  <div class="pill">作品库</div>
+  <div class="pill user"><div class="avatar">帅</div><b>创作者2997</b><span class="tier">高级版</span></div>
+</div>
+
+<div class="fsteps">
+  <div class="fs done"><i><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></i>导入素材</div>
+  <div class="fs-sep"></div>
+  <div class="fs done"><i><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></i>内容确认</div>
+  <div class="fs-sep"></div>
+  <div class="fs cur"><i>3</i>自动生成</div>
+  <div class="fs-sep"></div>
+  <div class="fs"><i>4</i>下载导出</div>
+  <div class="gap"></div>
+  <div class="eta">美国批48架F35给沙特-素材包-4</div>
+</div>
+
+<div class="main">
+  <div class="left">
+    <h1>正在生成你的视频</h1>
+    <p class="bigline">画面渲染 · 正在出第 21 / 23 镜，画面出来后马上校验字幕。</p>
+    <div class="bar"><i></i><u></u></div>
+    <div class="meta">
+      <span class="step"><small>第 5 / 8 步 · </small>画面渲染</span>
+      <span class="sp"></span>
+      <span class="el">已用 04:12</span>
+      <span class="pct">62%</span>
+    </div>
+    <p class="note">页面可以关掉，回来点项目就能接着看。<br>完成后成片直接出现在这一页，也能去「下载导出」取。</p>
+    <div class="stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>停止这次生成</div>
+  </div>
+
+  <div class="right">
+    <div class="stages">
+      <div class="sg done"><span class="n"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></span><span class="t">读取素材</span><span class="d">24 项已读入</span></div>
+      <div class="sg done"><span class="n"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></span><span class="t">AI 配音</span><span class="d">云扬 · 新闻男声</span></div>
+      <div class="sg done"><span class="n"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></span><span class="t">分镜规划</span><span class="d">23 镜</span></div>
+      <div class="sg done"><span class="n"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></span><span class="t">画面设计</span><span class="d">杂志编辑版</span></div>
+      <div class="sg cur"><span class="n">5</span><span class="t">画面渲染</span><span class="d">镜头 21 / 23</span></div>
+      <div class="sg"><span class="n">6</span><span class="t">音效混音</span></div>
+      <div class="sg"><span class="n">7</span><span class="t">画面校验</span></div>
+      <div class="sg"><span class="n">8</span><span class="t">完成</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <div class="live">本机出片能力 正常</div>
+  <span>画面与声音都在这台电脑上完成 · 服务器零排队</span>
+  <div class="sp"></div>
+  <a>隐私政策</a><a>用户协议</a><a>退款说明</a>
+</div>
+
+</body>
+</html>

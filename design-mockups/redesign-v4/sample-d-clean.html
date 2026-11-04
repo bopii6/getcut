@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>方向D · 净 · 大气简约</title>
+<style>
+:root{
+  --bg:#0E0E11;
+  --ink:#F4F4F6;
+  --ink2:#B6B6C0;
+  --ink3:#82828D;
+  --gold:#D8B36A;
+  --hair:rgba(255,255,255,.09);
+  --sans:"Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  --mono:Consolas,"SF Mono",monospace;
+}
+*{box-sizing:border-box;margin:0}
+body{
+  min-height:100vh;display:flex;flex-direction:column;
+  background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;
+}
+/* ---------- top bar ---------- */
+.top{display:flex;align-items:center;gap:13px;height:60px;padding:0 34px;flex:none}
+.logo{width:27px;height:27px;border-radius:7px;background:linear-gradient(135deg,#8A63FF,#6A3FF0);
+  clip-path:polygon(0 0,100% 0,100% 60%,60% 100%,0 100%);display:flex;align-items:center;justify-content:center;flex:none}
+.logo svg{width:13px;height:13px;fill:#fff;margin-left:1px}
+.brand{font-size:16.5px;font-weight:800;letter-spacing:.01em}
+.crumb{color:var(--ink2);font-size:14px;padding-left:13px;border-left:1px solid var(--hair)}
+.top .sp{flex:1}
+.pill{font-size:14px;color:var(--ink2);border:1px solid var(--hair);border-radius:8px;padding:7px 14px}
+.pill.user{display:flex;align-items:center;gap:8px;border:none;padding:6px 2px}
+.avatar{width:23px;height:23px;border-radius:6px;background:linear-gradient(135deg,#E08A4E,#B85C2E);
+  display:flex;align-items:center;justify-content:center;font-size:11px}
+.pill.user b{color:var(--ink);font-weight:650}
+.tier{font-size:10.5px;font-weight:700;color:var(--gold);border:1px solid rgba(216,179,106,.4);border-radius:5px;padding:1px 6px}
+/* ---------- layout ---------- */
+.main{flex:1;display:flex;gap:80px;padding:34px 80px 12px;align-items:stretch;min-height:0}
+.left{width:452px;flex:none;display:flex;flex-direction:column}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+/* ---------- left ---------- */
+.status{display:flex;align-items:center;gap:9px;font-size:14.5px;color:var(--ink2)}
+.status .dot{width:8px;height:8px;border-radius:99px;background:var(--gold);box-shadow:0 0 10px rgba(216,179,106,.7)}
+.status .dim{color:var(--ink3)}
+h1{font-size:40px;font-weight:800;line-height:1.32;letter-spacing:.015em;margin-top:16px}
+.lede{color:var(--ink2);font-size:15px;margin-top:10px}
+/* steps — plain, no card */
+.steps{margin-top:34px;display:flex;flex-direction:column;gap:18px}
+.srow{display:flex;align-items:baseline;gap:13px}
+.srow .ic{flex:none;width:16px;height:16px;transform:translateY(2px)}
+.srow .ic svg{width:16px;height:16px;stroke:var(--ink2);stroke-width:2.4;fill:none}
+.srow .t{font-size:16px;font-weight:600;color:var(--ink2)}
+.srow.cur{border-left:2px solid var(--gold);padding-left:15px;margin-left:-18px}
+.srow.cur .t{color:var(--ink);font-size:17px;font-weight:700}
+.srow.cur .ic svg{stroke:var(--gold)}
+.srow .d{font-size:14px;color:var(--ink3);margin-left:2px}
+/* actions */
+.acts{margin-top:30px;padding-top:26px;border-top:1px solid var(--hair)}
+.dl{height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:10px;
+  background:#F4F4F6;color:#101014;font-size:17px;font-weight:800;letter-spacing:.02em;
+  box-shadow:0 14px 40px rgba(0,0,0,.4)}
+.dl svg{width:17px;height:17px;stroke:#101014;stroke-width:2.4;fill:none}
+.jy{margin-top:12px;height:48px;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:9px;
+  border:1px solid var(--hair);color:var(--ink);font-size:15px;font-weight:600}
+.jy svg{width:16px;height:16px;stroke:var(--ink2);stroke-width:2;fill:none}
+.quiet{margin-top:16px;font-size:14px;color:var(--ink2);line-height:1.8;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.quiet .sep{opacity:.55}
+.quiet a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--ink3)}
+.again{margin-top:24px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--gold)}
+.again svg{width:15px;height:15px;stroke:var(--gold);stroke-width:2.2;fill:none}
+/* ---------- stage / phone ---------- */
+.phone{width:322px;border-radius:34px;padding:10px;background:#050506;
+  border:1px solid rgba(255,255,255,.10);
+  box-shadow:0 44px 110px rgba(0,0,0,.55),0 12px 30px rgba(0,0,0,.4)}
+.screen{border-radius:25px;overflow:hidden;background:#E9E5DB;position:relative}
+.fcard{padding:28px 21px 20px;display:flex;flex-direction:column;gap:13px}
+.ftxt{font-size:25px;font-weight:900;color:#17140E;line-height:1.4}
+.fhl{display:inline-block;margin-left:6px;padding:1px 10px;background:#17140E;color:#E9C87C;
+  border-left:3px solid #C99B3F;font-size:23px;transform:translateY(-1px)}
+.fphoto{height:186px;border-radius:6px;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#8FA6BC 0%,#B9C6D2 46%,#6E7F8E 100%)}
+.fphoto .cl{position:absolute;border-radius:99px;background:rgba(255,255,255,.5);filter:blur(7px)}
+.fphoto .c1{width:126px;height:27px;left:8%;top:24%}
+.fphoto .c2{width:180px;height:32px;right:-6%;top:56%}
+.trail{position:absolute;left:18%;top:58%;width:46%;height:2px;transform:rotate(-16deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.9))}
+.jet{position:absolute;right:16%;top:38%;width:0;height:0;
+  border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:16px solid #3A4148;
+  transform:rotate(-64deg)}
+.fsrc{font-size:9.5px;color:#9A938A;text-align:center;padding:2px 0 48px}
+.pbar{position:absolute;left:0;right:0;bottom:0;padding:10px 15px 12px;
+  background:linear-gradient(180deg,transparent,rgba(0,0,0,.72))}
+.prow{display:flex;align-items:center;gap:11px}
+.pbtn{width:27px;height:27px;border-radius:99px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
+.pbtn svg{width:10px;height:10px;fill:#fff;margin-left:1px}
+.ptime{font-family:var(--mono);font-size:11.5px;color:#DDD}
+.scrub{margin-top:9px;height:3px;border-radius:99px;background:rgba(255,255,255,.22);position:relative}
+.scrub i{position:absolute;left:0;top:0;bottom:0;width:37%;background:var(--gold);border-radius:99px}
+.scrub u{position:absolute;left:37%;top:50%;width:9px;height:9px;border-radius:99px;background:#fff;transform:translate(-50%,-50%)}
+/* under phone */
+.vtitle{margin-top:28px;font-size:18px;font-weight:700;text-align:center}
+.vmeta{margin-top:9px;font-size:14px;color:var(--ink2);text-align:center;display:flex;justify-content:center;align-items:center;gap:9px}
+.vmeta b{font-family:var(--mono);font-weight:600;color:var(--ink)}
+.vmeta .sep{opacity:.5}
+.vmeta .ok{display:flex;align-items:center;gap:6px}
+.vmeta .ok::before{content:"";width:7px;height:7px;border-radius:99px;background:#5FA97A}
+/* ---------- footer ---------- */
+.foot{flex:none;display:flex;align-items:center;gap:18px;padding:15px 34px;
+  font-size:13px;color:var(--ink3)}
+.foot .sp{flex:1}
+.foot a{color:var(--ink3);text-decoration:none;margin-left:14px}
+.foot .live{display:flex;align-items:center;gap:6px}
+.foot .live::before{content:"";width:5px;height:5px;border-radius:99px;background:#5FA97A}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M8 5.8v12.4L19 12z"/></svg></div>
+  <div class="brand">GetCut</div>
+  <div class="crumb">成片台</div>
+  <div class="sp"></div>
+  <div class="pill">作品库</div>
+  <div class="pill user"><div class="avatar">帅</div><b>创作者2997</b><span class="tier">高级版</span></div>
+</div>
+
+<div class="main">
+  <div class="left">
+    <div class="status"><span class="dot"></span>渲染完成<span class="dim">· 本机用时 6 分 12 秒 · 未排队</span></div>
+    <h1>成片已生成，<br>可直接发布。</h1>
+    <p class="lede">拖入素材包，好片子在你这台电脑上完成——不排队、不限速。</p>
+
+    <div class="steps">
+      <div class="srow">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+        <span class="t">导入素材包</span>
+      </div>
+      <div class="srow">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+        <span class="t">内容与配音</span>
+      </div>
+      <div class="srow">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+        <span class="t">视频已生成</span>
+      </div>
+      <div class="srow cur">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+        <span class="t">取走成片</span>
+        <span class="d">先看一遍，顺手带走</span>
+      </div>
+    </div>
+
+    <div class="acts">
+      <div class="dl"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M4.5 19.5h15"/></svg>下载 MP4 成片</div>
+      <div class="jy"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5zm-9 10l9 5 9-5"/></svg>导入剪映 · 分轨草稿，可逐条改字幕</div>
+      <div class="quiet">无水印<span class="sep">·</span>品牌套装<span class="sep">·</span>剪映图层：底板 1 + 卡片 23<span class="sep">·</span><a>已同步云端作品库</a></div>
+    </div>
+
+    <div class="again">再做一条<svg viewBox="0 0 24 24"><path d="M4 12h15m0 0l-5.5-5.5M19 12l-5.5 5.5"/></svg></div>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="screen">
+        <div class="fcard">
+          <div class="ftxt">嘴上说要把仗收尾</div>
+          <div class="ftxt">手上批了<span class="fhl">48架F-35</span></div>
+          <div class="fphoto">
+            <div class="cl c1"></div><div class="cl c2"></div>
+            <div class="trail"></div><div class="jet"></div>
+          </div>
+          <div class="ftxt" style="font-size:21.5px">这单子里还有通信设备</div>
+        </div>
+        <div class="fsrc">资料来源：新华社 · 界面新闻 · 新浪新闻</div>
+        <div class="pbar">
+          <div class="prow">
+            <div class="pbtn"><svg viewBox="0 0 24 24"><path d="M7 4.8v14.4L19 12z"/></svg></div>
+            <div class="ptime">0:31 / 1:25</div>
+          </div>
+          <div class="scrub"><i></i><u></u></div>
+        </div>
+      </div>
+    </div>
+    <div class="vtitle">同一天：美国说要收尾，又批了48架F-35给沙特</div>
+    <div class="vmeta"><b>85</b>秒<span class="sep">·</span><b>1080×1920</b>竖屏<span class="sep">·</span><span class="ok">已完成</span></div>
+  </div>
+</div>
+
+<div class="foot">
+  <div class="live">本机出片能力 正常</div>
+  <span>画面与声音都在这台电脑上完成 · 服务器零排队</span>
+  <div class="sp"></div>
+  <a>隐私政策</a><a>用户协议</a><a>退款说明</a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>账本体 · 给你的一天算笔账 — 样张 2026-09-27</title>
+<style>
+  :root{
+    --bg:#0e0f11; --ink:#e7e9ea; --sub:#8b9097;
+    --gold:#d8a94e; --gold-hi:#f0c675; --gold-dim:rgba(216,169,78,.16);
+    --red:#c0392b;
+    --paper:#f5efdf; --paper-line:#d9e4ef; --paper-margin:#e8b4ad; --paper-note:#7a7568;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:#cfd2d6;font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;margin:0;padding:34px 30px 60px}
+  h1{font-size:22px;color:var(--ink);margin:0 0 8px;letter-spacing:.5px}
+  h1 em{font-style:normal;color:var(--gold)}
+  .sub{color:var(--sub);font-size:13.5px;margin:0 0 14px;max-width:880px;line-height:1.8}
+  .rules{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0 40px}
+  .chip{border:1px solid #2a2d31;border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.7;color:#a9adb2;background:#101114}
+  .chip b{color:var(--gold)}
+
+  .row{display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start}
+  .shot{width:332px}
+  .phone{width:332px;height:700px;background:var(--bg);border:1px solid #33373c;border-radius:24px;
+         overflow:hidden;position:relative;box-shadow:0 14px 44px rgba(0,0,0,.55)}
+  .cap{margin-top:12px;padding:0 4px}
+  .cap b{color:var(--ink);font-size:13.5px;display:block;margin-bottom:5px}
+  .cap b i{font-style:normal;color:var(--gold);margin-right:6px}
+  .cap span{color:#868b91;font-size:12px;line-height:1.75;display:block}
+
+  .hook{position:absolute;top:0;left:0;right:0;z-index:5;padding:18px 18px 14px;
+        background:linear-gradient(180deg,rgba(0,0,0,.97) 55%,rgba(0,0,0,0));}
+  .hook .l{font-size:19px;font-weight:700;color:var(--gold-hi);line-height:1.35;letter-spacing:.3px}
+  .hook .l small{display:block;font-size:13px;color:#9a9fa5;font-weight:400;margin-bottom:3px;letter-spacing:2px}
+  .hl{background:var(--gold-dim);border-bottom:3px solid var(--gold);padding:0 3px}
+
+  .band{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:26px 20px 20px;
+        background:linear-gradient(0deg,rgba(0,0,0,.97) 55%,rgba(0,0,0,0));
+        font-size:15.5px;color:#f3f4f5;line-height:1.5;font-weight:600}
+  .band b{color:var(--gold-hi)}
+
+  /* 账本纸 */
+  .paper{
+    margin:88px 20px 64px;position:relative;
+    background:
+      repeating-linear-gradient(180deg,transparent 0 27px,var(--paper-line) 27px 28px),
+      var(--paper);
+    border-radius:4px;box-shadow:0 10px 28px rgba(0,0,0,.5);
+    padding:16px 18px 14px 26px;
+  }
+  .paper::before{content:"";position:absolute;top:0;bottom:0;left:16px;width:1.5px;background:var(--paper-margin)}
+  .paper::after{content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%) rotate(-2deg);
+    width:74px;height:16px;background:rgba(240,198,117,.35);border:1px solid rgba(240,198,117,.2);border-radius:2px}
+  .ptitle{font-family:"KaiTi","楷体","STKaiti",serif;font-size:17px;color:#3c3628;font-weight:700;
+    letter-spacing:2px;border-bottom:1.5px dashed #c9bfa5;padding-bottom:7px;margin-bottom:4px}
+  .ptitle small{font-size:11px;color:var(--paper-note);letter-spacing:1px;font-weight:400;margin-left:8px}
+  .lrow{font-family:"KaiTi","楷体","STKaiti",serif;display:flex;align-items:baseline;gap:8px;
+    min-height:28px;font-size:15px;color:#2f2a20;line-height:28px}
+  .lrow .t{font-size:12px;color:var(--paper-note);width:38px;flex:none;letter-spacing:.5px}
+  .lrow .what{flex:1}
+  .lrow .mk{width:26px;flex:none;text-align:center;font-weight:700}
+  .mk.no{color:var(--red)} .mk.ok{color:#b8860b} .mk.star{color:var(--red)}
+  .lrow .what small{display:block;font-size:10.5px;color:var(--paper-note);line-height:1.4;margin:-2px 0 2px}
+  .lrow.hot{background:rgba(192,57,43,.07);outline:1.5px dashed rgba(192,57,43,.35);outline-offset:1px}
+
+  /* 总账大字 */
+  .total{margin:96px 20px 0;text-align:center}
+  .total .pre{font-size:13.5px;color:#b9bdc2;line-height:1.7}
+  .total .num{font-size:58px;font-weight:800;color:var(--gold-hi);line-height:1.15;letter-spacing:2px;
+    text-shadow:0 6px 24px rgba(216,169,78,.25)}
+  .total .num small{font-size:22px;color:var(--gold)}
+  .receipts{margin:16px 20px 0;display:flex;flex-direction:column;gap:9px}
+  .rc{background:#f2ecdb;border-radius:3px;padding:9px 12px;position:relative;
+      font-size:12px;color:#4a4436;line-height:1.55;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+  .rc::before,.rc::after{content:"";position:absolute;top:50%;width:12px;height:12px;border-radius:50%;
+    background:var(--bg);transform:translateY(-50%)}
+  .rc::before{left:-6px} .rc::after{right:-6px}
+  .rc .who{font-size:10px;letter-spacing:1.5px;color:#9a8a5f;display:block;margin-bottom:2px}
+  .rc b{color:#b8860b}
+
+  /* 清单卡 */
+  .list-paper{
+    margin:88px 20px 64px;position:relative;
+    background:repeating-linear-gradient(180deg,transparent 0 27px,var(--paper-line) 27px 28px),var(--paper);
+    border-radius:4px;box-shadow:0 10px 28px rgba(0,0,0,.5);padding:16px 18px 14px 26px;
+  }
+  .list-paper::before{content:"";position:absolute;top:0;bottom:0;left:16px;width:1.5px;background:var(--paper-margin)}
+  .sec-name{font-family:"KaiTi","楷体","STKaiti",serif;font-size:13.5px;font-weight:700;letter-spacing:2px;margin:6px 0 2px}
+  .sec-name.ok{color:#b8860b} .sec-name.no{color:var(--red)}
+  .litem{font-family:"KaiTi","楷体","STKaiti",serif;font-size:14.5px;color:#2f2a20;line-height:1.55;
+    display:flex;gap:8px;align-items:baseline}
+  .litem .b{flex:none;font-weight:700;width:16px;text-align:center}
+  .litem.ok .b{color:#b8860b} .litem.no .b{color:var(--red)}
+  .litem small{color:var(--paper-note);font-size:11px}
+  .signal{margin-top:9px;border-top:1.5px dashed #c9bfa5;padding-top:8px;
+    font-family:"KaiTi","楷体","STKaiti",serif;font-size:13.5px;color:#5a4a1e;line-height:1.6}
+  .signal b{color:#b8860b}
+
+  .stamp{position:absolute;right:14px;top:64px;transform:rotate(9deg);border:2.5px solid var(--red);
+    color:var(--red);font-size:12px;font-weight:800;letter-spacing:3px;padding:4px 9px;border-radius:4px;
+    opacity:.85;font-family:"Microsoft YaHei",sans-serif}
+
+  .sep{margin:52px 0 26px;border-top:1px solid #23262a;padding-top:26px}
+  .sec h2{font-size:17px;color:var(--ink);margin:0 0 10px}
+  .sec p{font-size:13px;line-height:1.9;color:#a9adb2;max-width:920px;margin:0 0 10px}
+  .sec p b{color:var(--gold-hi)}
+  .sec table{border-collapse:collapse;font-size:12.5px;color:#a9adb2;margin-top:6px}
+  .sec td,.sec th{border:1px solid #2a2d31;padding:8px 12px;text-align:left;line-height:1.7;vertical-align:top}
+  .sec th{color:var(--ink);background:#141518}
+  .sec td b{color:var(--gold-hi)}
+</style>
+</head>
+<body>
+
+<h1>账本体 <em>·</em> 给你的一天算笔账</h1>
+<p class="sub">
+  概念一句话：<b>别聊 agent 的概念，直接给观众的一天算一笔账</b>——从早到晚列事，agent 能插进去的打金勾、插不进去的打红叉，最后算出总账：「你一天里真正复杂到需要它的活，不到二十分钟」。帖子的判断不用旁白喊，是观众跟着这笔账自己算出来的。
+</p>
+<div class="rules">
+  <div class="chip">接地气的抓法：<b>账本纸 + 楷体手写感 + 你的一天</b>（挤地铁、点外卖、辅导作业），没有一个英文 UI、没有一句行话</div>
+  <div class="chip">实用的抓法：结尾<b>一张能抄走的清单</b>——该交给 AI 的 / 别指望的 / 盯哪个信号，观众截图就走</div>
+  <div class="chip">视觉语法不变：纸和字是「你的生活」，<b>金色 = 我们稿子的话</b>（勾、总账数字、清单重点）</div>
+</div>
+
+<div class="row">
+
+  <!-- 镜头① -->
+  <div class="shot">
+    <div class="phone">
+      <div class="hook">
+        <div class="l"><small>片头钩子</small>agent 元年喊到第二年<br>先给你的一天<span class="hl">算笔账</span></div>
+      </div>
+      <div class="paper">
+        <div class="ptitle">李姐的一天<small>9月26日 · 星期五</small></div>
+        <div class="lrow"><span class="t">06:50</span><span class="what">闹钟响，赖床十分钟</span></div>
+        <div class="lrow"><span class="t">07:30</span><span class="what">挤地铁，人贴人</span></div>
+        <div class="lrow"><span class="t">08:30</span><span class="what">到工位，回消息、点单据</span></div>
+        <div class="lrow"><span class="t">12:00</span><span class="what">外卖比价，纠结吃什么</span></div>
+        <div class="lrow"><span class="t">18:30</span><span class="what">菜市场，挑晚上三样菜</span></div>
+        <div class="lrow"><span class="t">20:00</span><span class="what">盯着娃写作业</span></div>
+        <div class="lrow"><span class="t">22:30</span><span class="what">瘫在沙发上刷手机</span></div>
+      </div>
+      <div class="band">昨天有个工程师发帖说，AI 接不进普通人的生活。<b>咱们不抬杠，先算账。</b></div>
+    </div>
+    <div class="cap">
+      <b><i>镜头①</i>摊开账本（0:00–0:25）</b>
+      <span>开场直接亮出一张「李姐的一天」：楷体手写账本纸，从闹钟到刷手机。不出现任何英文 UI。旁白把帖子的话翻译成一句人话，然后说：不抬杠，算账。动效：纸张拍在桌上入场，逐行浮现。</span>
+    </div>
+  </div>
+
+  <!-- 镜头② -->
+  <div class="shot">
+    <div class="phone">
+      <div class="paper">
+        <div class="ptitle">李姐的一天<small>开始过账</small></div>
+        <div class="lrow"><span class="t">07:30</span><span class="what">挤地铁<small>人在挤、心在放空——它插不进</small></span><span class="mk no">✗</span></div>
+        <div class="lrow"><span class="t">08:30</span><span class="what">回消息、点单据<small>全程在系统里发生——agent 正主食</small></span><span class="mk ok">✓✓</span></div>
+        <div class="lrow"><span class="t">12:00</span><span class="what">外卖比价<small>这事 app 五年前就替你干了</small></span><span class="mk ok">✓</span></div>
+        <div class="lrow"><span class="t">18:30</span><span class="what">买菜做饭<small>手上的活，机器隔着屏幕够不着</small></span><span class="mk no">✗</span></div>
+        <div class="lrow"><span class="t">20:00</span><span class="what">辅导作业<small>情绪活，它顶多帮你出题</small></span><span class="mk no">✗</span></div>
+        <div class="lrow hot"><span class="t">22:30</span><span class="what">瘫着刷手机<small>重点在这——见下一页</small></span><span class="mk star">★</span></div>
+      </div>
+      <div class="band">能插进去的，<b>和你想的不一样</b>；插不进去的，都不在屏幕里。</div>
+    </div>
+    <div class="cap">
+      <b><i>镜头②</i>逐项过账（0:25–1:40）</b>
+      <span>旁白逐行过，念到哪行哪行亮，勾叉「啪」地盖上来。红叉行配 2 秒实拍 B-roll（地铁、菜市场、书桌），金勾行留在纸上——<b>观众的体感：agent 的地盘和我的生活的边界，一眼看穿</b>。红星行是埋的反转钩子。</span>
+    </div>
+  </div>
+
+  <!-- 镜头③ -->
+  <div class="shot">
+    <div class="phone">
+      <div class="total">
+        <div class="pre">一天十六个小时<br>真正复杂到需要 agent 的活——</div>
+        <div class="num">不到 20<small> 分钟</small></div>
+        <div class="pre" style="margin-top:8px">剩下一件最大的事，你在「用它」，<br>却没人叫它 agent：</div>
+      </div>
+      <div class="receipts">
+        <div class="rc"><span class="who">反转 · 你的右手拇指</span>推荐算法替你决定看什么，已经干了<b>五年</b>——「隐形 agent」不是预言，<b>是到岗五年的老员工</b>。</div>
+        <div class="rc"><span class="who">附页一 · OPENAI 150万条对话</span><b>七成</b>的消息跟工作无关：问菜谱、查资料、改作文。</div>
+        <div class="rc"><span class="who">附页二 · GARTNER / MIT</span>四成 agent 项目两年内被砍，真做的只剩约 130 家；企业试点 <b>95%</b> 没赚回钱。</div>
+      </div>
+      <div class="band">账算完了，<b>跟那位工程师说的对上了</b>。</div>
+    </div>
+    <div class="cap">
+      <b><i>镜头③</i>算总账（1:40–3:00）</b>
+      <span>总账数字滚动落定——这就是全片的「观众记住的一句话」。「刷手机」那段反转：推荐算法就是已经到岗的隐形 agent，观众每天都有体感。三份报告做成<b>小票附页</b>订在账本后面，数字说事，不用形容词。</span>
+    </div>
+  </div>
+
+  <!-- 镜头④ -->
+  <div class="shot">
+    <div class="phone">
+      <div class="stamp">能抄走</div>
+      <div class="list-paper">
+        <div class="ptitle">抄走这张清单<small>2026年9月版</small></div>
+        <div class="sec-name ok">现在就该交给 AI 的</div>
+        <div class="litem ok"><span class="b">✓</span><span>读不完的长东西→要三句摘要 <small>报告、长视频、群公告</small></span></div>
+        <div class="litem ok"><span class="b">✓</span><span>写材料的初稿、回信的措辞 <small>你改，它写</small></span></div>
+        <div class="litem ok"><span class="b">✓</span><span>缴费、体检、证件到期 <small>设自动提醒，别靠脑子</small></span></div>
+        <div class="sec-name no">别指望的</div>
+        <div class="litem no"><span class="b">✗</span><span>「帮我暴富」<small>评论区那位同事，省省</small></span></div>
+        <div class="litem no"><span class="b">✗</span><span>替你辅导孩子、做重大决定</span></div>
+        <div class="signal">盯一个信号：某件事<b>每天重复、又全程发生在同一个 app 里</b>——它就能被接管。反过来说，一辈子不在系统里的事，别等。</div>
+      </div>
+      <div class="band">这条片能带走的，<b>就是这张纸</b>。</div>
+    </div>
+    <div class="cap">
+      <b><i>镜头④</i>清单交付（3:00–结尾）</b>
+      <span>全片落点是一张<b>观众会截图的纸</b>：「能抄走」的红章砸下来。「帮我暴富」回收许愿派回帖的梗，头尾呼应。转发理由不用求——清单本身就是转发物。</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="sec sep">
+  <h2>为什么这个形态配这条帖子</h2>
+  <p>帖子的判断是「大多数人的生活<b>不够复杂</b>，AI 接不进去」。这话用嘴讲是观点，<b>摊开一张账本算一遍，就成了观众自己的体验</b>——挤地铁、点外卖、辅导作业全是他们今天刚干完的事。全片没有一个英文界面、一句「赋能/闭环」，最大的数字「不到 20 分钟」是从账里算出来的，不是喊出来的。</p>
+  <p>三份报告（OpenAI 七成、Gartner 四成+130 家、MIT 95%）和回帖梗（许愿派的「暴富」）原样用上，头尾都接得住；「刷手机=推荐算法是到岗五年的隐形 agent」是本片别处没有的料。</p>
+
+  <h2 style="margin-top:22px">落地难度（对着现有管线说实话）</h2>
+  <table>
+    <tr><th>部件</th><th>怎么来</th><th>是否要动管线</th></tr>
+    <tr><td>生活实拍 B-roll（地铁/菜市场/书桌/瘫沙发）</td><td>素材包常规抓取（Pexels/Mixkit，中文生活场景词）</td><td><b>不用</b></td></tr>
+    <tr><td>账本纸/小票/清单卡</td><td>纸质感底图 + 现有文字卡系统渲染</td><td><b>不用</b></td></tr>
+    <tr><td>逐行浮现、勾叉盖章、数字滚动</td><td>现有卡片动效先顶；要「啪」的手感再加小动效</td><td>先不用，后可选</td></tr>
+    <tr><td>手写楷体字</td><td>渲染端指定字体</td><td>小改（加一种卡皮肤）</td></tr>
+  </table>
+  <p style="margin-top:10px">结论：<b>走快路今天就配得出素材包</b>；楷体账本皮肤想做得更狠，渲染端加一张纸卡样式即可（半天内的活，不用动五道工序）。</p>
+
+  <h2 style="margin-top:22px">备选形式（按接地气程度排）</h2>
+  <p><b>② 分屏对照体</b>——左半屏「发布会里的 agent」（代码、进度条、英文 UI），右半屏「你的一天」（实拍）。每个论点都是一次左右对撞，视觉冲击最直接，素材全是现成 B-roll，管线今天就能做。缺点：构图固定，4 分钟容易腻，实用落点不如清单硬。</p>
+  <p><b>③ 替你试过了·清单交付体</b>——把整条片做成一份「帮你踩完坑的清单」：能用的三件、别花钱的三件、再捡起来的信号。实用度最高、最短平快，适合先出一条 90 秒版试水，反响好再扩 3 分钟深度版。</p>
+  <p><b>④ 讲台版</b>——复用之前讲课版的舞台底图资产，像老师上课一样把这事讲透，陪伴感强；但制作重（要舞台资产），且更「听课」而不是「过日子」，接地气程度中。</p>
+</div>
+
+</body>
+</html>

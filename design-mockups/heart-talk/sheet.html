@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>「心里话」模板样张 · 两族四款</title>
+<style>
+  :root{
+    --sans:"Microsoft YaHei","Source Han Sans CN",sans-serif;
+    --kai:"KaiTi","STKaiti",serif;
+    --song:"SimSun","Songti SC",serif;
+    --hei:"SimHei",sans-serif;
+    --mono:"Consolas",monospace;
+    --ink:#1c1a17;
+    --red:#b4532a;      /* A2 赭红 */
+    --zhuhong:#c8401f;  /* B2 朱红 */
+    --yellow:#ffd44d;   /* B1 荧光黄 */
+    --marker:#ffd35e;   /* A1 马克笔 */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#101114;color:#e8eaee;font-family:var(--sans);padding:34px 30px 50px;width:1560px}
+
+  h1{font-size:23px;letter-spacing:.06em;font-weight:700}
+  .lede{color:#9aa3b0;font-size:13px;line-height:1.9;margin-top:10px;max-width:1460px}
+  .lede b{color:#e8eaee}
+  .script{margin-top:12px;padding:12px 16px;border:1px solid #262a32;border-radius:10px;
+          color:#aab2bf;font-size:12.5px;line-height:2;max-width:1460px}
+  .script b{color:#d8dde5}
+
+  .row{display:grid;grid-template-columns:196px 1fr;gap:24px;margin-top:34px;align-items:start}
+  .rowname b{display:block;font-size:16px;letter-spacing:.04em}
+  .rowname .tag{display:inline-block;margin-top:8px;font-size:11px;color:#0f1114;padding:3px 8px;border-radius:4px;font-weight:700}
+  .rowname p{margin-top:10px;font-size:12px;color:#8d96a4;line-height:1.8}
+  .frames{display:flex;gap:20px}
+
+  /* 手机框：1080x1920 等比缩至 300x534 */
+  .ph{width:300px;height:534px;position:relative;overflow:hidden;border-radius:14px;
+      box-shadow:0 12px 30px rgba(0,0,0,.55);flex:none}
+  .cap{font-size:11px;color:#79828f;margin-top:9px;text-align:center;letter-spacing:.05em}
+  .cell{width:300px;flex:none}
+
+  .grain{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><filter id='n'><feTurbulence baseFrequency='.85' numOctaves='3'/></filter><rect width='60' height='60' filter='url(%23n)' opacity='.10'/></svg>")}
+  .ruled{background-image:repeating-linear-gradient(180deg,transparent 0 45px,rgba(60,40,10,.05) 45px 46px)}
+
+  /* ---------- A1 米白纸纹 · 楷体 · 马克笔 ---------- */
+  .a1{background:#f6f1e6;color:var(--ink);font-family:var(--kai)}
+  .a1 .dateline{position:absolute;top:34px;left:34px;right:34px;font-size:12.5px;color:#8a7f6c;
+      letter-spacing:.2em;display:flex;align-items:center;gap:10px}
+  .a1 .dateline::after{content:"";flex:1;border-top:1px solid rgba(120,100,60,.35)}
+  .a1 .main{position:absolute;left:34px;right:34px;top:120px;font-size:31px;line-height:1.95;font-weight:700}
+  .a1 .foot{position:absolute;bottom:30px;left:34px;right:34px;font-size:12px;color:#9a8f7b;
+      display:flex;justify-content:space-between;letter-spacing:.15em}
+  .mk{background:linear-gradient(180deg,transparent 58%,var(--marker) 58%,var(--marker) 94%,transparent 94%);
+      padding:0 2px}
+  .circ{position:relative;white-space:nowrap}
+  .circ svg{position:absolute;left:-8%;top:-30%;width:116%;height:160%;overflow:visible;pointer-events:none}
+
+  /* ---------- A2 浅暖灰 · 宋体 · 赭红 ---------- */
+  .a2{background:#ece7df;color:var(--ink);font-family:var(--song)}
+  .a2 .dateline{position:absolute;top:36px;left:36px;font-size:11px;color:#8d857a;letter-spacing:.35em;font-family:var(--mono)}
+  .a2 .main{position:absolute;left:36px;right:30px;top:128px;font-size:30px;line-height:2.05;font-weight:700}
+  .a2 .accent{color:var(--red)}
+  .a2 .rule-v{position:absolute;left:14px;top:120px;bottom:120px;border-left:3px solid var(--red);opacity:.85}
+  .a2 .foot{position:absolute;bottom:32px;left:36px;right:36px;font-size:11px;color:#8d857a;
+      display:flex;justify-content:space-between;letter-spacing:.25em;font-family:var(--mono)}
+  .ul-red{border-bottom:2px solid var(--red);padding-bottom:2px}
+
+  /* ---------- B1 黑底白字 · 雅黑Heavy · 荧光黄 ---------- */
+  .b1{background:#0c0d10;color:#f4f5f7;font-family:var(--sans)}
+  .b1 .chip{position:absolute;top:32px;left:32px;font-size:11px;color:#6f7680;letter-spacing:.22em;font-family:var(--mono)}
+  .b1 .main{position:absolute;left:32px;right:30px;top:150px;font-size:36px;line-height:1.72;font-weight:800;letter-spacing:.02em}
+  .b1 .y{color:var(--yellow)}
+  .b1 .big{font-size:1.14em}
+  .b1 .foot{position:absolute;bottom:30px;left:32px;right:32px;display:flex;justify-content:space-between;
+      font-size:11px;color:#5d646e;font-family:var(--mono);letter-spacing:.15em}
+  .dots span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#33363d;margin-left:6px}
+  .dots span.on{background:var(--yellow)}
+
+  /* ---------- B2 纸底黑字 · 黑体 · 朱红 ---------- */
+  .b2{background:#f4f2ee;color:#171719;font-family:var(--hei)}
+  .b2 .qmark{position:absolute;top:8px;left:22px;font-family:var(--song);font-size:150px;color:rgba(23,23,25,.08);font-weight:700}
+  .b2 .main{position:absolute;left:34px;right:30px;top:132px;font-size:33px;line-height:1.8;font-weight:700;text-align:left}
+  .b2 .r{color:var(--zhuhong)}
+  .b2 .ul{border-bottom:4px solid var(--zhuhong);padding-bottom:3px}
+  .b2 .foot{position:absolute;bottom:30px;left:34px;right:34px;font-size:11px;color:#9a978f;
+      display:flex;justify-content:space-between;letter-spacing:.2em;font-family:var(--mono)}
+
+  /* 空镜帧 */
+  .photo{position:absolute;inset:0}
+  .photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,10,14,.18),rgba(8,10,14,.66) 74%,rgba(8,10,14,.78))}
+  .photo .sub{position:absolute;left:30px;right:26px;bottom:64px;font-size:27px;line-height:1.9;color:#fbf8f2;font-weight:700;
+      text-shadow:0 2px 10px rgba(0,0,0,.55)}
+  .photo .sub.kai{font-family:var(--kai)}
+  .photo .sub.song{font-family:var(--song)}
+
+  footer{margin-top:40px;color:#6d7581;font-size:12px;line-height:2;border-top:1px solid #22262d;padding-top:16px}
+</style>
+</head>
+<body>
+
+<h1>「心里话」模板样张 · 两族四款</h1>
+<p class="lede">
+  同一份演示口播，四种长相。<b>信纸族（A1 / A2）</b>：句子当主角，纸感底、生活空镜穿插，气质暖；
+  <b>快闪族（B1 / B2）</b>：连空镜都不要，字就是画面，全靠节奏。看四件事——
+  ① 一句一屏的呼吸感 ② 关键词的强调方式 ③ 空镜上字幕压不压得住 ④ 哪款像「你」。
+</p>
+<div class="script">
+  <b>演示口播（约 90 字，实拍全片 400 字左右）：</b>今天，想跟你说几句实话。我以前总觉得，把日子过好是件很复杂的事。
+  后来才发现，让一个人稳下来的，就三件事：睡好觉，把手上的事做完，对身边的人好一点。
+  大部分的焦虑，不是因为你做得太少，是你想得太多、做得太碎。今天先说到这，明天接着聊。
+</div>
+
+<!-- ============ A1 ============ -->
+<div class="row">
+  <div class="rowname">
+    <b>A1 · 米白信纸</b>
+    <span class="tag" style="background:#ffd35e">手写日记感 · 最暖</span>
+    <p>楷体大字 + 马克笔划线，像有人拿笔在纸上写给你。日期和落款营造「一封信」。适合絮叨的、软一点的心里话。</p>
+  </div>
+  <div class="frames">
+    <div class="cell">
+      <div class="ph a1 grain ruled">
+        <div class="dateline">九月二十六日 · 夜</div>
+        <div class="main">今天，想跟你说几句实话。</div>
+        <div class="foot"><span>心里话 · 第 12 封</span><span>01</span></div>
+      </div>
+      <div class="cap">开场 · 一句钩子</div>
+    </div>
+    <div class="cell">
+      <div class="ph">
+        <div class="photo">
+          <img src="assets/1428592953211-077101b2021b.jpg" alt="">
+          <div class="shade"></div>
+          <div class="sub kai">我以前总觉得，把日子过好<br>是件很复杂的事。</div>
+        </div>
+      </div>
+      <div class="cap">空镜穿插 · 每 3~4 句一个</div>
+    </div>
+    <div class="cell">
+      <div class="ph a1 grain ruled">
+        <div class="main" style="top:88px;font-size:24px;line-height:1.9">
+          让一个人稳下来的，<br>就三件事：<br><br>
+          <span class="mk">睡好觉</span>，<br>
+          把手上的事，<span class="mk">做完</span>，<br>
+          对身边的人，<span class="mk">好一点</span>。
+        </div>
+        <div class="foot"><span>心里话 · 第 12 封</span><span>02</span></div>
+      </div>
+      <div class="cap">正文 · 关键词马克笔划线</div>
+    </div>
+    <div class="cell">
+      <div class="ph a1 grain ruled">
+        <div class="main" style="top:130px;font-size:30px">
+          大部分的焦虑，<br>
+          不是因为你<span class="mk">做得太少</span>，<br>
+          是你<span class="circ">想得太多<svg viewBox="0 0 160 62"><path d="M14,31 C15,13 66,7 82,7 C118,6 148,15 147,31 C148,47 110,55 77,55 C44,55 13,47 14,29 Z" fill="none" stroke="#c0392b" stroke-width="3.2" opacity=".82" stroke-linecap="round"/></svg></span>、<br>
+          <span class="mk">做得太碎</span>。
+        </div>
+        <div class="foot"><span>——今晚的最后一句</span><span>03</span></div>
+      </div>
+      <div class="cap">金句 · 手写圈 + 马克笔</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ A2 ============ -->
+<div class="row">
+  <div class="rowname">
+    <b>A2 · 浅暖灰</b>
+    <span class="tag" style="background:#d8cfc2">杂志信纸感 · 最耐看</span>
+    <p>宋体 + 赭红双色，克制、不花哨，几乎没有装饰。适合偏严肃、偏认知的内容，久看不腻，也最不挑素材。</p>
+  </div>
+  <div class="frames">
+    <div class="cell">
+      <div class="ph a2 grain">
+        <div class="dateline">2026.09.26 · NIGHT</div>
+        <div class="rule-v"></div>
+        <div class="main">今天，想跟你说几句<span class="accent">实话</span>。</div>
+        <div class="foot"><span>NOTES · 12</span><span>01 / 06</span></div>
+      </div>
+      <div class="cap">开场 · 关键词变赭红</div>
+    </div>
+    <div class="cell">
+      <div class="ph">
+        <div class="photo">
+          <img src="assets/1519501025264-65ba15a82390.jpg" alt="">
+          <div class="shade"></div>
+          <div class="sub song">我以前总觉得，<br>把日子过好是件很复杂的事。</div>
+        </div>
+      </div>
+      <div class="cap">空镜穿插 · 生活感画面</div>
+    </div>
+    <div class="cell">
+      <div class="ph a2 grain">
+        <div class="rule-v" style="top:96px"></div>
+        <div class="main" style="top:100px;font-size:22px;line-height:1.95">
+          让一个人稳下来的，<br>就三件事：<br><br>
+          <span class="accent">一</span>　睡好觉；<br>
+          <span class="accent">二</span>　把手上的事做完；<br>
+          <span class="accent">三</span>　对身边的人好一点。
+        </div>
+        <div class="foot"><span>NOTES · 12</span><span>02 / 06</span></div>
+      </div>
+      <div class="cap">正文 · 序号当视觉锚点</div>
+    </div>
+    <div class="cell">
+      <div class="ph a2 grain">
+        <div class="rule-v" style="top:128px"></div>
+        <div class="main" style="top:136px;font-size:29px">
+          大部分的焦虑，<br>
+          不是因为你<br>
+          做得太少，<br>
+          是你想得<span class="accent ul-red">太多</span>、<br>
+          做得<span class="accent ul-red">太碎</span>。
+        </div>
+        <div class="foot"><span>NOTES · 12</span><span>完</span></div>
+      </div>
+      <div class="cap">金句 · 换行造节奏 + 细下划线</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ B1 ============ -->
+<div class="row">
+  <div class="rowname">
+    <b>B1 · 黑底快闪</b>
+    <span class="tag" style="background:#ffd44d">字就是画面 · 最省</span>
+    <p>零素材、零空镜，全屏大字跟读，强调词变荧光黄放大，配合词级节奏一行行砸出来。工程上最快能跑通，吃稿子本身的成色。</p>
+  </div>
+  <div class="frames">
+    <div class="cell">
+      <div class="ph b1">
+        <div class="chip">心里话 #12</div>
+        <div class="main">今天，<br>想跟你说几句<br><span class="y big">实话</span>。</div>
+        <div class="foot"><span>00:03</span><span class="dots"><span class="on"></span><span></span><span></span></span></div>
+      </div>
+      <div class="cap">开场 · 强调词变黄放大</div>
+    </div>
+    <div class="cell">
+      <div class="ph b1">
+        <div class="chip">心里话 #12</div>
+        <div class="main" style="font-size:33px">
+          <span class="y">睡好觉</span>，<br>
+          把手上的事做完，<br>
+          对身边的人<br>
+          <span class="y big">好一点</span>。
+        </div>
+        <div class="foot"><span>00:41</span><span class="dots"><span class="on"></span><span class="on"></span><span></span></span></div>
+      </div>
+      <div class="cap">正文 · 逐行砸出，随节奏变色</div>
+    </div>
+    <div class="cell">
+      <div class="ph b1">
+        <div class="chip">心里话 #12</div>
+        <div class="main" style="font-size:30px">
+          大部分的焦虑，<br>
+          不是你做得太少，<br>
+          是你想得<span class="y big">太多</span>、<br>
+          做得<span class="y big">太碎</span>。
+        </div>
+        <div class="foot"><span>01:26</span><span class="dots"><span class="on"></span><span class="on"></span><span class="on"></span></span></div>
+      </div>
+      <div class="cap">金句 · 结尾定格</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ B2 ============ -->
+<div class="row">
+  <div class="rowname">
+    <b>B2 · 纸底快闪</b>
+    <span class="tag" style="background:#e8b7a6">同骨架 · 气质更静</span>
+    <p>B1 的结构搬到纸上：黑体 + 朱红 + 一个巨大的引号。左对齐、直上直下，比黑底柔和，比信纸族硬朗。适合收着说、有锋利感的内容。</p>
+  </div>
+  <div class="frames">
+    <div class="cell">
+      <div class="ph b2 grain">
+        <div class="qmark">“</div>
+        <div class="main">今天，想跟你说几句<span class="r">实话</span>。</div>
+        <div class="foot"><span>心里话 · 12</span><span>01</span></div>
+      </div>
+      <div class="cap">开场 · 朱红点睛</div>
+    </div>
+    <div class="cell">
+      <div class="ph b2 grain">
+        <div class="qmark" style="top:auto;bottom:-30px">”</div>
+        <div class="main" style="font-size:30px">
+          睡好觉，<br>
+          把手上的事做完，<br>
+          对身边的人<br>
+          <span class="ul">好一点</span>。
+        </div>
+        <div class="foot"><span>心里话 · 12</span><span>02</span></div>
+      </div>
+      <div class="cap">正文 · 关键词朱红下划线</div>
+    </div>
+    <div class="cell">
+      <div class="ph b2 grain">
+        <div class="qmark">“</div>
+        <div class="main" style="font-size:29px">
+          大部分的焦虑，<br>
+          不是你做得太少，<br>
+          是你想得<span class="r">太多</span>、<br>
+          做得<span class="r">太碎</span>。
+        </div>
+        <div class="foot"><span>心里话 · 12</span><span>完</span></div>
+      </div>
+      <div class="cap">金句 · 定格收尾</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  版式按线上真实画幅 1080×1920 竖屏等比缩小；样张只定「气质和画面语言」，落地时的字号、边距、逐句节奏、转场时长另行调参。
+  图中没画声音，但配套定了一条硬规矩：<b style="color:#e8eaee">口语化音色 + 慢语速 + 句间留白</b>——「说人话」七成在声音，声音不换，画面再暖也没用。
+  空镜两张取自 Unsplash（可商用），仅作示意；正式上线走素材库授权渠道。
+</footer>
+
+</body>
+</html>

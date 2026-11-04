@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>方向A · 黑金影棚</title>
+<style>
+:root{
+  --bg:#0B0A0E;
+  --ink:#F3EEE2;
+  --ink2:#B4AB97;
+  --ink3:#7E7666;
+  --gold:#D8B878;
+  --gold-hi:#F2DFAE;
+  --gold-dim:rgba(216,184,120,.28);
+  --line:rgba(243,238,226,.10);
+  --card:#14120F;
+  --sans:"Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  --mono:Consolas,"SF Mono",monospace;
+}
+*{box-sizing:border-box;margin:0}
+body{
+  min-height:100vh;display:flex;flex-direction:column;
+  background:
+    radial-gradient(1000px 640px at 69% 40%, rgba(216,184,120,.13), transparent 62%),
+    radial-gradient(700px 380px at 50% -120px, rgba(216,184,120,.08), transparent 70%),
+    var(--bg);
+  color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+/* ---------- top bar ---------- */
+.top{display:flex;align-items:center;gap:14px;height:62px;padding:0 30px;flex:none}
+.logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#8A63FF,#6A3FF0);
+  clip-path:polygon(0 0,100% 0,100% 60%,60% 100%,0 100%);display:flex;align-items:center;justify-content:center;flex:none}
+.logo svg{width:14px;height:14px;fill:#fff;margin-left:1px}
+.brand{font-size:17px;font-weight:800;letter-spacing:.01em}
+.crumb{color:var(--ink3);font-size:13.5px;padding-left:14px;border-left:1px solid var(--line)}
+.top .sp{flex:1}
+.pill{font-size:13px;color:var(--ink2);border:1px solid var(--line);border-radius:99px;padding:7px 15px;display:flex;align-items:center;gap:7px}
+.pill b{color:var(--ink);font-weight:650}
+.pill.user{gap:9px}
+.avatar{width:22px;height:22px;border-radius:99px;background:linear-gradient(135deg,#E08A4E,#B85C2E);display:flex;align-items:center;justify-content:center;font-size:11px}
+.tier{font-size:11px;font-weight:700;color:var(--gold);border:1px solid var(--gold-dim);border-radius:6px;padding:1.5px 6px}
+/* ---------- layout ---------- */
+.main{flex:1;display:flex;gap:56px;padding:38px 56px 20px;align-items:stretch;min-height:0}
+.left{width:472px;flex:none;display:flex;flex-direction:column}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+/* ---------- left column ---------- */
+.eyebrow{display:flex;align-items:center;gap:9px;font-size:12.5px;letter-spacing:.22em;color:var(--gold);font-weight:700}
+.eyebrow .dot{width:7px;height:7px;border-radius:99px;background:var(--gold);box-shadow:0 0 12px rgba(216,184,120,.8)}
+.eyebrow small{letter-spacing:.02em;color:var(--ink3);font-weight:400}
+h1{font-size:33px;font-weight:800;line-height:1.32;letter-spacing:.01em;margin-top:14px}
+h1 .hl{background:linear-gradient(transparent 64%, rgba(216,184,120,.34) 0)}
+.lede{color:var(--ink2);font-size:14.5px;margin-top:10px}
+/* timeline */
+.tl{margin-top:26px;background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:20px 22px 12px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 18px 44px rgba(0,0,0,.35);
+  position:relative;overflow:hidden}
+.tl::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(242,223,174,.35),transparent)}
+.step{display:flex;gap:15px;position:relative;padding-bottom:20px}
+.step:last-child{padding-bottom:8px}
+.step::before{content:"";position:absolute;left:11.5px;top:26px;bottom:-2px;width:1px;
+  background:linear-gradient(180deg,var(--gold-dim),rgba(216,184,120,.10))}
+.step:last-child::before{display:none}
+.node{width:24px;height:24px;border-radius:99px;flex:none;margin-top:1px;position:relative;z-index:1;
+  border:1px solid var(--gold-dim);background:#171410;display:flex;align-items:center;justify-content:center}
+.node svg{width:11px;height:11px;stroke:var(--gold);stroke-width:2.6;fill:none}
+.step.cur .node{background:var(--gold);border-color:var(--gold);box-shadow:0 0 0 4px rgba(216,184,120,.14),0 0 18px rgba(216,184,120,.45)}
+.step.cur .node svg{stroke:#231A08}
+.st-t{font-size:15px;font-weight:700;color:var(--ink);line-height:1.45}
+.step.cur .st-t{color:var(--gold-hi)}
+.st-d{font-size:13px;color:var(--ink3);margin-top:1px}
+.step.cur .st-d{color:var(--ink2)}
+/* actions */
+.dl{margin-top:24px;height:54px;border-radius:13px;display:flex;align-items:center;justify-content:center;gap:10px;
+  background:linear-gradient(180deg,#F2DFAE,#D6B273 55%,#C39D55);
+  color:#231A08;font-size:16.5px;font-weight:800;letter-spacing:.04em;
+  box-shadow:0 1px 0 rgba(255,255,255,.55) inset,0 12px 30px rgba(216,184,120,.22),0 2px 6px rgba(0,0,0,.4)}
+.dl svg{width:17px;height:17px;stroke:#231A08;stroke-width:2.4;fill:none}
+.note{font-size:13px;color:var(--ink3);margin-top:10px;line-height:1.7}
+.jy{margin-top:16px;height:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:9px;
+  border:1px solid var(--gold-dim);color:#E9DFC6;font-size:14px;font-weight:650;background:rgba(216,184,120,.05)}
+.jy svg{width:15px;height:15px;stroke:var(--gold);stroke-width:2;fill:none}
+.spec{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink3);margin-top:9px}
+.spec b{color:var(--ink2);font-family:var(--mono);font-weight:600}
+.quiet{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink3)}
+.quiet .sep{opacity:.5}
+.quiet a{color:var(--ink2);text-decoration:none;border-bottom:1px dotted var(--ink3)}
+.again{margin-top:auto;padding-top:20px;display:flex;align-items:center;gap:7px;font-size:14px;font-weight:650;color:var(--gold)}
+.again svg{width:14px;height:14px;stroke:var(--gold);stroke-width:2.2;fill:none}
+/* ---------- stage / phone ---------- */
+.phonewrap{position:relative;display:flex;flex-direction:column;align-items:center}
+.floorlight{position:absolute;bottom:-34px;left:50%;transform:translateX(-50%);
+  width:420px;height:64px;border-radius:99px;
+  background:radial-gradient(closest-side,rgba(216,184,120,.22),transparent);filter:blur(6px)}
+.phone{position:relative;width:296px;border-radius:36px;padding:10px;background:#060505;
+  border:1px solid rgba(216,184,120,.32);
+  box-shadow:0 34px 90px rgba(0,0,0,.62),0 0 80px rgba(216,184,120,.10),0 1px 0 rgba(255,255,255,.06) inset}
+.screen{border-radius:27px;overflow:hidden;background:#E9E5DB;position:relative}
+.fcard{padding:26px 20px 20px;display:flex;flex-direction:column;gap:12px}
+.ftxt{font-size:24px;font-weight:900;color:#17140E;line-height:1.4;letter-spacing:.01em}
+.fhl{display:inline-block;margin-left:6px;padding:1px 10px;background:#17140E;color:#E9C87C;
+  border-left:3px solid #C99B3F;font-size:22px;transform:translateY(-1px)}
+.fphoto{height:172px;border-radius:6px;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#8FA6BC 0%,#B9C6D2 46%,#6E7F8E 100%)}
+.fphoto .cl{position:absolute;border-radius:99px;background:rgba(255,255,255,.5);filter:blur(7px)}
+.fphoto .c1{width:120px;height:26px;left:8%;top:24%}
+.fphoto .c2{width:170px;height:30px;right:-6%;top:56%}
+.trail{position:absolute;left:18%;top:58%;width:46%;height:2px;transform:rotate(-16deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.9))}
+.jet{position:absolute;right:16%;top:38%;width:0;height:0;
+  border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:15px solid #3A4148;
+  transform:rotate(-64deg)}
+.fsrc{font-size:9.5px;color:#9A938A;text-align:center;padding:2px 0 48px;letter-spacing:.04em}
+.pbar{position:absolute;left:0;right:0;bottom:0;padding:10px 14px 12px;
+  background:linear-gradient(180deg,transparent,rgba(0,0,0,.72))}
+.prow{display:flex;align-items:center;gap:11px}
+.pbtn{width:26px;height:26px;border-radius:99px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
+.pbtn svg{width:10px;height:10px;fill:#fff;margin-left:1px}
+.ptime{font-family:var(--mono);font-size:11.5px;color:#DDD}
+.scrub{margin-top:9px;height:3px;border-radius:99px;background:rgba(255,255,255,.22);position:relative}
+.scrub i{position:absolute;left:0;top:0;bottom:0;width:37%;background:#E9C87C;border-radius:99px}
+.scrub u{position:absolute;left:37%;top:50%;width:9px;height:9px;border-radius:99px;background:#fff;transform:translate(-50%,-50%)}
+/* under phone */
+.vtitle{margin-top:26px;font-size:17.5px;font-weight:750;text-align:center;letter-spacing:.01em}
+.chips{display:flex;gap:9px;margin-top:12px}
+.chip{font-size:12.5px;color:var(--ink2);border:1px solid var(--line);border-radius:99px;padding:5px 13px;
+  display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.02)}
+.chip b{font-family:var(--mono);font-weight:600;color:var(--gold);font-size:12px}
+.chip.ok::before{content:"";width:6px;height:6px;border-radius:99px;background:#7FCB96}
+/* ---------- footer ---------- */
+.foot{flex:none;display:flex;align-items:center;gap:20px;padding:16px 30px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--ink3)}
+.foot .sp{flex:1}
+.foot a{color:var(--ink3);text-decoration:none;margin-left:14px}
+.foot .live{display:flex;align-items:center;gap:6px}
+.foot .live::before{content:"";width:6px;height:6px;border-radius:99px;background:#5FA97A}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M8 5.8v12.4L19 12z"/></svg></div>
+  <div class="brand">GetCut</div>
+  <div class="crumb">成片台</div>
+  <div class="sp"></div>
+  <div class="pill">配色 · <b>玄金影棚</b></div>
+  <div class="pill"><b>作品库</b></div>
+  <div class="pill user"><div class="avatar">帅</div><b>创作者2997</b><span class="tier">高级版</span></div>
+</div>
+
+<div class="main">
+  <div class="left">
+    <div class="eyebrow"><span class="dot"></span>已完成<small>· 本机用时 6 分 12 秒</small></div>
+    <h1>片子出完了，<span class="hl">拿来就能发</span>。</h1>
+    <p class="lede">拖入素材包，一条好片子在你这台电脑上完成——不排队、不限速。</p>
+
+    <div class="tl">
+      <div class="step">
+        <div class="node"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+        <div><div class="st-t">导入素材包</div><div class="st-d">美国批48架F35给沙特-素材包-4 · 24 项素材</div></div>
+      </div>
+      <div class="step">
+        <div class="node"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+        <div><div class="st-t">内容与配音</div><div class="st-d">稿件 85 秒 · 配音已合成</div></div>
+      </div>
+      <div class="step">
+        <div class="node"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+        <div><div class="st-t">视频已生成</div><div class="st-d">23 个镜头 · 1080×1920</div></div>
+      </div>
+      <div class="step cur">
+        <div class="node"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+        <div><div class="st-t">取走成片</div><div class="st-d">先看一遍，顺手就能带走</div></div>
+      </div>
+    </div>
+
+    <div class="dl"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M4.5 19.5h15"/></svg>下载 MP4 成片</div>
+    <p class="note">拿到 MP4 就能直接用：发抖音 / 视频号，或剪映里「导入」这个文件开剪，什么都不用装。</p>
+
+    <div class="jy"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5zm-9 10l9 5 9-5"/></svg>导入剪映 · 分轨草稿，可逐条改字幕</div>
+    <div class="spec">剪映分轨图层已备好：底板 <b>1</b> 张 + 卡片 <b>23</b> 张 + <b>23</b> 镜可改文字</div>
+
+    <div class="quiet">本条干净出片（无水印）<span class="sep">·</span>品牌套装<span class="sep">·</span><a>已同步云端作品库 · 去看历史</a></div>
+    <div class="again">再做一条<svg viewBox="0 0 24 24"><path d="M4 12h15m0 0l-5.5-5.5M19 12l-5.5 5.5"/></svg></div>
+  </div>
+
+  <div class="stage">
+    <div class="phonewrap">
+      <div class="phone">
+        <div class="screen">
+          <div class="fcard">
+            <div class="ftxt">嘴上说要把仗收尾</div>
+            <div class="ftxt">手上批了<span class="fhl">48架F-35</span></div>
+            <div class="fphoto">
+              <div class="cl c1"></div><div class="cl c2"></div>
+              <div class="trail"></div><div class="jet"></div>
+            </div>
+            <div class="ftxt" style="font-size:21px">这单子里还有通信设备</div>
+          </div>
+          <div class="fsrc">资料来源：新华社 · 界面新闻 · 新浪新闻</div>
+          <div class="pbar">
+            <div class="prow">
+              <div class="pbtn"><svg viewBox="0 0 24 24"><path d="M7 4.8v14.4L19 12z"/></svg></div>
+              <div class="ptime">0:31 / 1:25</div>
+            </div>
+            <div class="scrub"><i></i><u></u></div>
+          </div>
+        </div>
+      </div>
+      <div class="floorlight"></div>
+    </div>
+    <div class="vtitle">同一天：美国说要收尾，又批了48架F-35给沙特</div>
+    <div class="chips">
+      <div class="chip"><b>85</b>秒</div>
+      <div class="chip"><b>1080×1920</b>竖屏</div>
+      <div class="chip ok">已完成</div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <div class="live">本机出片能力 正常</div>
+  <span>网页成片台</span>
+  <div class="sp"></div>
+  <span>画面与声音都在这台电脑上完成 · 服务器零排队</span>
+  <a>隐私政策</a><a>用户协议</a><a>退款说明</a>
+</div>
+
+</body>
+</html>

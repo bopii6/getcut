@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>模板差异样张 · 现状 vs 提案</title>
+<style>
+  :root{
+    --ink:#15171c; --muted:#6b7280; --line:#2a2e36;
+    --sans:"Microsoft YaHei","Source Han Sans CN",sans-serif;
+    --mono:"Consolas","DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0b0d10;color:#e8eaee;font-family:var(--sans);padding:34px 30px 70px}
+  h1{font-size:23px;letter-spacing:.06em;font-weight:700}
+  .lede{color:#9aa3b0;font-size:13px;line-height:1.85;margin:10px 0 4px;max-width:1000px}
+  .lede b{color:#e8eaee}
+  table{border-collapse:collapse;margin-top:26px}
+  th{font-size:12px;color:#8d96a4;font-weight:600;text-align:left;padding:0 16px 12px;letter-spacing:.08em}
+  td{padding:0 16px 30px;vertical-align:top}
+  .rowname{width:132px;padding-top:6px}
+  .rowname b{display:block;font-size:15px;letter-spacing:.04em}
+  .rowname span{display:block;font-size:11.5px;color:#7d8694;margin-top:5px;line-height:1.6}
+
+  /* 手机框：与线上缩略图同比例 270x480 */
+  .ph{width:236px;height:420px;position:relative;overflow:hidden;border-radius:16px;
+      box-shadow:0 12px 30px rgba(0,0,0,.55);font-size:12px}
+  .ph *{position:absolute;left:0;right:0}
+  .cap{font-size:11px;color:#79828f;margin-top:8px;text-align:center;letter-spacing:.04em}
+
+  /* 演示素材：统一同一张折线图，避免引入第二个变量 */
+  .chart{width:100%;height:100%;display:block}
+  .sub{ text-align:center;font-weight:700}
+  .foot{text-align:center;letter-spacing:.02em}
+
+  /* ---------- 提案区共用的记号 ---------- */
+  .hair{border-top:1px solid currentColor;opacity:.55}
+  .daterule{font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;text-align:center}
+  .grid-bg{background-image:linear-gradient(rgba(47,111,237,.10) 1px,transparent 1px),
+           linear-gradient(90deg,rgba(47,111,237,.10) 1px,transparent 1px);background-size:22px 22px}
+  .halftone{background-image:radial-gradient(rgba(255,212,0,.16) 1px,transparent 1.4px);background-size:9px 9px}
+  .baselines{background-image:repeating-linear-gradient(180deg,transparent 0 33px,rgba(232,168,51,.14) 33px 34px)}
+  .grain{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><filter id='n'><feTurbulence baseFrequency='.85' numOctaves='3'/></filter><rect width='60' height='60' filter='url(%23n)' opacity='.13'/></svg>")}
+  .vig{box-shadow:inset 0 0 90px 42px rgba(0,0,0,.85)}
+</style>
+</head>
+<body>
+
+<h1>模板差异样张 · 现状 vs 提案</h1>
+<p class="lede">
+  同一句演示口播，在 7 套模板下各长什么样。<b>左边是线上现状</b>（照 <code>skin.ts</code> + <code>layouts.json</code> 的真实参数摆的），
+  <b>右边是提案</b>。看两件事：现状里 <code>news / bleed / poster</code> 是不是像同一套换了三个颜色；
+  提案里把 7 张图并排扫一眼，<b>能不能不读名字就认出谁是谁</b>。
+</p>
+<p class="lede" style="margin-top:6px">
+  提案的硬规矩：<b>7 套占 7 个不同色相族</b>（朱红·正红·钴蓝·荧光黄·无彩色·紫玉·琥珀金），
+  每套再独占一个质感记号（颗粒·无·方格·网点·暗角·描金·基线）。一律无衬线，差异靠字重、字距和等宽。
+</p>
+
+<table>
+<thead><tr><th></th><th>现状</th><th>提案</th><th style="width:250px">提案改了什么 · 为什么认得出</th></tr></thead>
+<tbody>
+
+<!-- ============ editorial ============ -->
+<tr>
+  <td class="rowname"><b>杂志编辑版</b><span>editorial<br>浅暖灰纸卡</span></td>
+  <td>
+    <div class="ph grain" style="background:#1c1a18">
+      <div style="top:20px;left:20px;right:20px;height:344px;background:#e4e2e0;border-radius:13px"></div>
+      <div style="top:34px;text-align:center;font-weight:700;color:#1c1a18;font-size:19px;line-height:1.35">白宫喊话降息<br>美联储 <span style="background:#16110e;color:#f5f3f0;padding:1px 5px">反手加息</span></div>
+      <div style="top:112px;left:26px;right:26px;height:190px;background:#1a1817;border-radius:8px;overflow:hidden">
+        <svg class="chart" viewBox="0 0 200 130" preserveAspectRatio="none"><polyline points="0,100 25,88 45,95 60,20 75,70 95,60 120,110 150,96 175,118 200,105" fill="none" stroke="#4a7fb5" stroke-width="2"/></svg>
+        <div style="top:22px;left:16px;color:#c14f35;font-size:8px;font-weight:700">加息幅度</div>
+        <div style="top:34px;left:16px;color:#f5f3f0;font-size:22px;font-weight:700">25 个基点</div>
+        <div style="top:62px;left:16px;color:#b7b1aa;font-size:9px">2023 年 7 月以来首次</div>
+      </div>
+      <div class="sub" style="top:330px;color:#1c1a18;font-size:15px">美联储把利率上</div>
+      <div class="foot" style="top:392px;color:#d2cdc6;font-size:7.5px">资料来源：美联储FOMC声明 ｜ CNBC</div>
+    </div>
+    <div class="cap">颗粒纸 + 锈红 + 常规黑</div>
+  </td>
+  <td>
+    <div class="ph grain" style="background:#1c1a18">
+      <div style="top:20px;left:20px;right:20px;height:344px;background:#e4e2e0;border-radius:13px"></div>
+      <!-- 大报版头：双细线 + 日期栏，这套独有 -->
+      <div style="top:32px;left:38px;right:38px;color:#B3311F" class="hair"></div>
+      <div class="daterule" style="top:37px;color:#5a5651">第 042 期 · 2026.09.23 · 美联储</div>
+      <div style="top:52px;left:38px;right:38px;color:#B3311F" class="hair"></div>
+      <div style="top:64px;text-align:center;font-weight:700;color:#1c1a18;font-size:19px;line-height:1.35">白宫喊话降息<br>美联储 <span style="background:#B3311F;color:#fff;padding:1px 5px">反手加息</span></div>
+      <div style="top:126px;left:26px;right:26px;height:176px;background:#1a1817;border-radius:8px;overflow:hidden">
+        <svg class="chart" viewBox="0 0 200 130" preserveAspectRatio="none"><polyline points="0,100 25,88 45,95 60,20 75,70 95,60 120,110 150,96 175,118 200,105" fill="none" stroke="#4a7fb5" stroke-width="2"/></svg>
+        <div style="top:20px;left:16px;color:#B3311F;font-size:8px;font-weight:700;letter-spacing:.1em">加息幅度</div>
+        <div style="top:32px;left:16px;color:#f5f3f0;font-size:22px;font-weight:700">25 个基点</div>
+        <div style="top:60px;left:16px;color:#b7b1aa;font-size:9px">2023 年 7 月以来首次</div>
+      </div>
+      <div class="sub" style="top:322px;color:#1c1a18;font-size:15px">美联储把利率上</div>
+      <div class="foot" style="top:390px;color:#d2cdc6;font-size:7.5px">资料来源：美联储FOMC声明 ｜ CNBC</div>
+    </div>
+    <div class="cap">+ 双细线版头 · 朱红（原锈红）</div>
+  </td>
+  <td style="padding-top:8px"><span style="font-size:12px;color:#9aa3b0;line-height:1.9;display:block">
+    <b style="color:#e8eaee">加：大报双细线 + 期号日期栏。</b>这是品牌 B3 已经全站落地的记号，搬进画面，
+    和"工作台"是同一张脸。<br>
+    <b style="color:#e8eaee">改：锈红 #a44231 → 印章朱红 #B3311F</b>，把色相族从"红"里明确占住，
+    跟 news 的正红分开。<br>
+    浅底 + 颗粒 + 纸卡，三项都保持——它已经是最好认的一套。
+  </span></td>
+</tr>
+
+<!-- ============ news ============ -->
+<tr>
+  <td class="rowname"><b>新闻播报版</b><span>news<br>深藏蓝 + 正红</span></td>
+  <td>
+    <div class="ph" style="background:#07101f">
+      <svg class="chart" style="top:0;height:100%;opacity:.5" viewBox="0 0 200 340" preserveAspectRatio="none"><polyline points="0,270 25,240 45,255 60,60 75,190 95,160 120,290 150,255 175,310 200,280" fill="none" stroke="#5aa9e6" stroke-width="2"/></svg>
+      <div style="top:150px;left:16px;right:16px;height:74px;background:rgba(7,16,32,.88);border-left:3px solid #c8102e;border-radius:3px">
+        <div style="top:9px;left:11px;color:#c8102e;font-size:8px;font-weight:700">加息幅度</div>
+        <div style="top:22px;left:11px;color:#fff;font-size:20px;font-weight:700">25 个基点</div>
+        <div style="top:48px;left:11px;color:#c3cede;font-size:9px">2023 年 7 月以来首次</div>
+      </div>
+      <div style="top:288px;left:0;right:0;height:66px;background:#0b1830;border-top:2px solid #c8102e;padding:0">
+        <div style="top:12px;left:14px;color:#fff;font-size:15px;font-weight:700;line-height:1.4">白宫喊话降息<br>美联储反手加息</div>
+      </div>
+      <div class="sub" style="top:360px;color:#fff;font-size:13px;background:rgba(200,16,46,.9);left:22%;right:22%;padding:3px 0">美联储把利率上</div>
+    </div>
+    <div class="cap">满屏素材 + 底部信息条</div>
+  </td>
+  <td>
+    <div class="ph" style="background:#07101f">
+      <svg class="chart" style="top:0;height:100%;opacity:.5" viewBox="0 0 200 340" preserveAspectRatio="none"><polyline points="0,270 25,240 45,255 60,60 75,190 95,160 120,290 150,255 175,310 200,280" fill="none" stroke="#5aa9e6" stroke-width="2"/></svg>
+      <!-- 直播角标：这套独有 -->
+      <div style="top:14px;left:14px;width:auto;right:auto;display:flex;align-items:center;gap:5px;background:rgba(200,16,46,.94);padding:3px 8px;border-radius:2px">
+        <span style="position:static;width:6px;height:6px;border-radius:50%;background:#fff;display:inline-block"></span>
+        <span style="position:static;font-size:8.5px;color:#fff;font-weight:700;letter-spacing:.1em">直播</span>
+      </div>
+      <div style="top:150px;left:16px;right:16px;height:74px;background:rgba(7,16,32,.88);border-left:3px solid #c8102e;border-radius:3px">
+        <div style="top:9px;left:11px;color:#c8102e;font-size:8px;font-weight:700">加息幅度</div>
+        <div style="top:22px;left:11px;color:#fff;font-size:20px;font-weight:700">25 个基点</div>
+        <div style="top:48px;left:11px;color:#c3cede;font-size:9px">2023 年 7 月以来首次</div>
+      </div>
+      <div style="top:288px;left:0;right:0;height:70px;background:#0b1830;border-top:2px solid #c8102e">
+        <div style="top:8px;left:14px;color:#5aa9e6;font-size:8px;font-weight:700;letter-spacing:.14em">环球财经 · 快讯</div>
+        <div style="top:22px;left:14px;color:#fff;font-size:15px;font-weight:700;line-height:1.35">白宫喊话降息<br>美联储反手加息</div>
+        <div class="foot" style="top:8px;right:14px;left:auto;color:#8fa6c4;font-family:var(--mono);font-size:8px">09.23 21:40</div>
+      </div>
+      <div class="sub" style="top:364px;color:#fff;font-size:13px;background:rgba(200,16,46,.9);left:22%;right:22%;padding:3px 0">美联储把利率上</div>
+    </div>
+    <div class="cap">+ 直播角标 · 栏目名 · 等宽时间戳</div>
+  </td>
+  <td style="padding-top:8px"><span style="font-size:12px;color:#9aa3b0;line-height:1.9;display:block">
+    <b style="color:#e8eaee">骨架不动</b>（底部信息条本来就是它的独占记号）。<br>
+    <b style="color:#e8eaee">加三处"电视感"记号：</b>左上直播红点、信息条上方的栏目名、右上角等宽时间戳。<br>
+    这三样<b style="color:#e8eaee">只有 news 有</b>，一眼就和"满屏素材压字"的另外两套分开。
+    时间戳用等宽字，是全片唯一用等宽做正文的两套之一（另一套是 data）。
+  </span></td>
+</tr>
+
+<!-- ============ data ============ -->
+<tr>
+  <td class="rowname"><b>数据面板版</b><span>data<br>浅冷灰 + 钴蓝</span></td>
+  <td>
+    <div class="ph" style="background:#e9edf3">
+      <div style="top:16px;left:16px;right:16px;color:#14181f;font-size:15px;font-weight:700;line-height:1.35">白宫喊话降息<br>美联储 <span style="background:#2f6fed;color:#fff;padding:1px 4px">反手加息</span></div>
+      <div style="top:76px;left:16px;right:16px;height:214px;background:#fff;border-radius:11px;box-shadow:0 6px 18px rgba(24,32,48,.10)">
+        <div style="top:14px;left:16px;width:200px;height:150px;background:#f1f4f8;border-radius:6px">
+          <div style="top:10px;left:12px;color:#2f6fed;font-size:8px;font-weight:700">加息幅度</div>
+          <div style="top:22px;left:12px;color:#14181f;font-size:21px;font-weight:700">25 个基点</div>
+          <div style="top:50px;left:12px;color:#5b6472;font-size:9px">2023 年 7 月以来首次</div>
+        </div>
+        <div style="top:14px;right:16px;left:auto;width:88px;height:150px;background:#eef1f5;border-radius:6px;overflow:hidden">
+          <svg class="chart" viewBox="0 0 88 150" preserveAspectRatio="none"><polyline points="0,110 12,96 22,102 30,30 40,72 50,60 62,118 72,100 88,124" fill="none" stroke="#2f6fed" stroke-width="2"/></svg>
+        </div>
+        <div style="bottom:16px;left:16px;color:#14181f;font-family:var(--mono);font-size:9px">02 / 05</div>
+        <div style="bottom:20px;left:52px;right:16px;height:3px;background:#d8dde6"><div style="position:static;width:40%;height:3px;background:#2f6fed"></div></div>
+      </div>
+      <div class="sub" style="top:308px;color:#fff;font-size:13px;background:rgba(20,24,31,.9);left:14%;right:14%;padding:4px 0">美联储把利率上</div>
+      <div class="foot" style="top:388px;color:#5b6472;font-size:7.5px">资料来源：美联储FOMC声明 ｜ CNBC</div>
+    </div>
+    <div class="cap">左数据右素材 + 进度轨</div>
+  </td>
+  <td>
+    <div class="ph grid-bg" style="background:#e9edf3">
+      <div style="top:16px;left:16px;right:16px;color:#14181f;font-size:15px;font-weight:700;line-height:1.35">白宫喊话降息<br>美联储 <span style="background:#2f6fed;color:#fff;padding:1px 4px">反手加息</span></div>
+      <div style="top:76px;left:16px;right:16px;height:214px;background:rgba(255,255,255,.94);border-radius:11px;box-shadow:0 6px 18px rgba(24,32,48,.10)">
+        <div style="top:14px;left:14px;width:4px;height:150px;background:#2f6fed;border-radius:2px"></div>
+        <div style="top:14px;left:28px;width:196px;height:150px;background:#f1f4f8;border-radius:6px">
+          <div style="top:10px;left:12px;color:#2f6fed;font-size:8px;font-weight:700;letter-spacing:.1em">加息幅度</div>
+          <div style="top:22px;left:12px;color:#14181f;font-size:24px;font-weight:700;font-family:var(--mono)">25</div>
+          <div style="top:32px;left:46px;color:#14181f;font-size:13px;font-weight:700">个基点</div>
+          <div style="top:56px;left:12px;color:#5b6472;font-size:9px">2023 年 7 月以来首次</div>
+          <div style="bottom:26px;left:12px;right:12px;height:1px;background:#d8dde6"></div>
+          <div style="bottom:10px;left:12px;color:#16a34a;font-family:var(--mono);font-size:9.5px">+1.25% <span style="font-family:var(--sans);color:#5b6472">环比</span></div>
+        </div>
+        <div style="top:14px;right:14px;left:auto;width:72px;height:150px;background:#eef1f5;border-radius:6px;overflow:hidden">
+          <svg class="chart" viewBox="0 0 72 150" preserveAspectRatio="none"><polyline points="0,110 10,96 18,102 26,30 34,72 42,60 52,118 60,100 72,124" fill="none" stroke="#2f6fed" stroke-width="2"/></svg>
+        </div>
+        <div style="bottom:18px;left:28px;color:#14181f;font-family:var(--mono);font-size:9px">02 / 05</div>
+        <div style="bottom:21px;left:66px;right:14px;height:3px;background:#d8dde6"><div style="position:static;width:40%;height:3px;background:#2f6fed"></div></div>
+      </div>
+      <div class="sub" style="top:308px;color:#fff;font-size:13px;background:rgba(20,24,31,.9);left:14%;right:14%;padding:4px 0">美联储把利率上</div>
+      <div class="foot" style="top:388px;color:#5b6472;font-size:7.5px">资料来源：美联储FOMC声明 ｜ CNBC</div>
+    </div>
+    <div class="cap">+ 方格纸 · 等宽数字 · 蓝色序号轨</div>
+  </td>
+  <td style="padding-top:8px"><span style="font-size:12px;color:#9aa3b0;line-height:1.9;display:block">
+    <b style="color:#e8eaee">把 <code style="color:#7fb0f0">grid</code> 纹理搬过来用。</b>现在 <code>decor:'grid'</code> 只住在未上架的 finance 里，
+    等于白写；方格纸是"仪表盘"最直白的信号。<br>
+    <b style="color:#e8eaee">数字一律等宽</b>（<code>25</code> 用 Consolas）——研报感最强的一招，且完全不违反"无衬线"。<br>
+    左缘加一条钴蓝序号轨，把"左栏是数据"这件事画出来，而不是只靠摆位。
+  </span></td>
+</tr>
+
+<!-- ============ poster ============ -->
+<tr>
+  <td class="rowname"><b>大字报版</b><span>poster<br>纯黑 + 荧光黄</span></td>
+  <td>
+    <div class="ph" style="background:#0d0d0f">
+      <svg class="chart" style="top:0;height:100%;opacity:.55" viewBox="0 0 200 340" preserveAspectRatio="none"><polyline points="0,270 25,240 45,255 60,60 75,190 95,160 120,290 150,255 175,310 200,280" fill="none" stroke="#4ea8ff" stroke-width="2"/></svg>
+      <div style="top:16px;left:14px;right:14px;color:#fff;font-size:22px;font-weight:700;line-height:1.25">白宫喊话降息<br><span style="color:#ffd400">美联储反手加息</span></div>
+      <div style="top:120px;left:14px;right:14px;height:66px;background:#ffd400;border-radius:2px">
+        <div style="top:8px;left:11px;color:#101014;font-size:8px;font-weight:700">加息幅度</div>
+        <div style="top:20px;left:11px;color:#101014;font-size:20px;font-weight:700">25 个基点</div>
+        <div style="top:45px;left:11px;color:#3a3300;font-size:9px">2023 年 7 月以来首次</div>
+      </div>
+      <div class="sub" style="top:364px;color:#fff;font-size:15px;background:rgba(13,13,15,.88);left:6%;right:6%;padding:5px 0">美联储把利率上</div>
+      <div class="foot" style="top:398px;color:#8d8f99;font-size:7.5px">资料来源：美联储FOMC声明 ｜ CNBC</div>
+    </div>
+    <div class="cap">和 bleed 几乎同图，只差黄色块</div>
+  </td>
+  <td>
+    <div class="ph halftone" style="background:#0d0d0f">
+      <!-- 素材降到 10% 灰阶底纹：字才是主角 -->
+      <svg class="chart" style="top:0;height:100%;opacity:.10;filter:grayscale(1)" viewBox="0 0 200 340" preserveAspectRatio="none"><polyline points="0,270 25,240 45,255 60,60 75,190 95,160 120,290 150,255 175,310 200,280" fill="none" stroke="#fff" stroke-width="6"/></svg>
+      <div style="top:26px;left:16px;right:16px;color:#fff;font-size:31px;font-weight:900;line-height:1.08;letter-spacing:-.03em">白宫<br>喊话<br>降息</div>
+      <div style="top:170px;left:16px;right:16px;height:52px;background:#ffd400"></div>
+      <div style="top:178px;left:26px;color:#101014;font-size:27px;font-weight:900;letter-spacing:-.02em">反手加息</div>
+      <div style="top:232px;left:16px;color:#7c7e88;font-family:var(--mono);font-size:8.5px;letter-spacing:.16em">25BP / 2023.07 以来首次</div>
+      <div class="sub" style="top:364px;color:#ffd400;font-size:16px;font-weight:900;left:5%;right:5%;text-align:left">美联储把利率上</div>
+      <div style="top:392px;left:5%;right:5%;color:#3a3b42" class="hair"></div>
+    </div>
+    <div class="cap">素材压成底纹 · 一屏一句 · 网点</div>
+  </td>
+  <td style="padding-top:8px"><span style="font-size:12px;color:#9aa3b0;line-height:1.9;display:block">
+    <b style="color:#e8eaee">这是最需要改的一套。</b>现在它和 bleed 是同一种摆法（满屏素材 + 上方标题 + 中间一张卡 + 底部字幕），
+    只是把描边卡换成黄色块——远看就是一套。<br>
+    <b style="color:#e8eaee">提案：把素材降到 10% 不透明度、去色，只当底纹</b>；画面让给一句 31px 特粗大字、
+    行距压到 1.08、字距收紧；<code>bigText 168</code> 才是这套的本职，现在根本没上屏。<br>
+    加半调网点底纹（新 <code>decor</code>），只有 poster 有。
+  </span></td>
+</tr>
+
+<!-- ============ bleed ============ -->
+<tr>
+  <td class="rowname"><b>全出血沉浸版</b><span>bleed<br>纯黑 + 琥珀金</span></td>
+  <td>
+    <div class="ph" style="background:#000">
+      <svg class="chart" style="top:0;height:100%;opacity:.62" viewBox="0 0 200 340" preserveAspectRatio="none"><polyline points="0,270 25,240 45,255 60,60 75,190 95,160 120,290 150,255 175,310 200,280" fill="none" stroke="#4a7fb5" stroke-width="2"/></svg>
+      <div style="top:0;height:100%;background:linear-gradient(180deg,rgba(0,0,0,.72),rgba(0,0,0,.1) 28%,rgba(0,0,0,.16) 56%,rgba(0,0,0,.88))"></div>
+      <div style="top:14px;left:14px;right:14px;color:#fff;font-size:18px;font-weight:700;line-height:1.3;text-align:right">白宫喊话降息<br>美联储 <span style="background:#f0b429;color:#1a1206;padding:1px 4px">反手加息</span></div>
+      <div style="top:118px;left:14px;right:14px;height:74px;background:rgba(10,10,10,.82);border-left:3px solid #f0b429">
+        <div style="top:9px;left:11px;color:#f0b429;font-size:8px;font-weight:700">加息幅度</div>
+        <div style="top:22px;left:11px;color:#f7f4ef;font-size:20px;font-weight:700">25 个基点</div>
+        <div style="top:48px;left:11px;color:#c9c3bc;font-size:9px">2023 年 7 月以来首次</div>
+      </div>
+      <div class="sub" style="top:360px;color:#fff;font-size:15px">美联储把利率上</div>
+      <div class="foot" style="top:398px;color:rgba(255,255,255,.6);font-size:7.5px">资料来源：美联储FOMC声明 ｜ CNBC</div>
+    </div>
+    <div class="cap">满屏素材 + 金字 + 描边卡</div>
+  </td>
+  <td>
+    <div class="ph vig" style="background:#000">
+      <svg class="chart" style="top:0;height:100%;opacity:.7;filter:grayscale(1) contrast(1.15)" viewBox="0 0 200 340" preserveAspectRatio="none"><polyline points="0,270 25,240 45,255 60,60 75,190 95,160 120,290 150,255 175,310 200,280" fill="none" stroke="#cfd3d8" stroke-width="2"/></svg>
+      <div style="top:0;height:100%;background:linear-gradient(180deg,rgba(0,0,0,.66),rgba(0,0,0,.06) 30%,rgba(0,0,0,.14) 58%,rgba(0,0,0,.9))"></div>
+      <div style="top:18px;left:16px;right:16px;color:#fff;font-size:17px;font-weight:300;line-height:1.55;text-align:center;letter-spacing:.05em">白宫喊话降息<br>美联储反手加息</div>
+      <div style="top:26px;left:38%;right:38%;height:1px;background:rgba(255,255,255,.5)"></div>
+      <div style="top:126px;left:16px;right:16px;height:70px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.5);border-radius:0">
+        <div style="top:10px;left:13px;color:rgba(255,255,255,.6);font-size:8px;letter-spacing:.2em">加息幅度</div>
+        <div style="top:24px;left:13px;color:#fff;font-size:21px;font-weight:300;letter-spacing:.02em">25 个基点</div>
+        <div style="top:50px;left:13px;color:rgba(255,255,255,.55);font-size:9px">2023 年 7 月以来首次</div>
+      </div>
+      <div class="sub" style="top:358px;color:#fff;font-size:15px;font-weight:300;letter-spacing:.08em">美联储把利率上</div>
+      <div class="foot" style="top:398px;color:rgba(255,255,255,.45);font-size:7.5px">资料来源：美联储FOMC声明 ｜ CNBC</div>
+    </div>
+    <div class="cap">全片零彩色 · 细黑体 · 暗角 · 直角</div>
+  </td>
+  <td style="padding-top:8px"><span style="font-size:12px;color:#9aa3b0;line-height:1.9;display:block">
+    <b style="color:#e8eaee">最大的一刀：bleed 改成全片零彩色。</b>它现在的琥珀金 #f0b429 和 poster 的荧光黄、
+    macro 的描金是同一个色相族，三套挤在一起。<br>
+    黑白摄影感反而更"沉浸"，也更贴客户那句<b style="color:#e8eaee">「简洁中有贵重」</b>。<br>
+    顺带把两个白写的开关用起来：<code>vignette</code>（现在只在未上架的 retro）和
+    <code>LIGHT 细黑体</code>（只在 minimal）——<b style="color:#e8eaee">bleed 成为唯一细字、唯一暗角、唯一直角的一套</b>，
+    和超粗字+网点的 poster 彻底对立。
+  </span></td>
+</tr>
+
+<!-- ============ zhigu ============ -->
+<tr>
+  <td class="rowname"><b>智谷三段式</b><span>zhigu<br>白舞台 + 暗带</span></td>
+  <td>
+    <div class="ph" style="background:#0c0f14">
+      <div style="top:0;height:62px;background:#0c0f14"></div>
+      <div style="top:12px;left:12px;color:#fff;font-size:14px;font-weight:700;line-height:1.35">白宫喊话降息<br><span style="color:#ffd93d">美联储反手加息</span></div>
+      <div style="top:62px;left:0;right:0;height:258px;background:#f2f1ed;overflow:hidden">
+        <svg class="chart" style="top:20px;height:200px" viewBox="0 0 200 200" preserveAspectRatio="none"><polyline points="0,150 25,130 45,140 60,40 75,95 95,80 120,160 150,140 175,175 200,155" fill="none" stroke="#2f6fed" stroke-width="2"/></svg>
+        <div style="bottom:22px;left:16px;background:#ffd93d;color:#171a20;font-size:11px;font-weight:700;padding:4px 9px;border-radius:3px">25 个基点</div>
+        <div style="bottom:22px;left:96px;background:#ffd93d;color:#171a20;font-size:11px;font-weight:700;padding:4px 9px;border-radius:3px">三年首次</div>
+      </div>
+      <div class="sub" style="top:340px;color:#fff;font-size:14px;font-weight:700">美联储把利率上</div>
+      <div style="top:60px;left:0;right:0;height:1px;background:rgba(255,255,255,.12)"></div>
+      <div style="top:320px;left:0;right:0;height:1px;background:rgba(255,255,255,.12)"></div>
+    </div>
+    <div class="cap">顶带 / 白舞台 / 底带 + 黄胶囊</div>
+  </td>
+  <td>
+    <div class="ph" style="background:#0c0f14">
+      <div style="top:0;height:66px;background:#0c0f14"></div>
+      <div style="top:65px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#6E5FA8 20% #C9A96A 50% #6E5FA8 80% transparent)"></div>
+      <div style="top:11px;left:12px;width:9px;height:9px;background:#6E5FA8"></div>
+      <div style="top:11px;left:26px;color:#C9A96A;font-size:7.5px;letter-spacing:.18em;font-weight:700">智谷观察 · 2026.09.23</div>
+      <div style="top:24px;left:12px;color:#fff;font-size:15px;font-weight:700;line-height:1.35">白宫喊话降息<br><span style="background:#6E5FA8;color:#fff;padding:0 4px">美联储反手加息</span></div>
+      <div style="top:66px;left:0;right:0;height:254px;background:#f7f6f3;overflow:hidden">
+        <svg class="chart" style="top:18px;height:196px" viewBox="0 0 200 200" preserveAspectRatio="none"><polyline points="0,150 25,130 45,140 60,40 75,95 95,80 120,160 150,140 175,175 200,155" fill="none" stroke="#6E5FA8" stroke-width="2"/></svg>
+        <div style="bottom:22px;left:16px;background:#6E5FA8;color:#fff;font-size:11px;font-weight:700;padding:4px 9px;border-radius:0">25 个基点</div>
+        <div style="bottom:22px;left:96px;background:#C9A96A;color:#1a1608;font-size:11px;font-weight:700;padding:4px 9px;border-radius:0">三年首次</div>
+      </div>
+      <div style="top:320px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#6E5FA8 20% #C9A96A 50% #6E5FA8 80% transparent)"></div>
+      <div class="sub" style="top:340px;color:#fff;font-size:14px;font-weight:700">美联储把利率上</div>
+    </div>
+    <div class="cap">黄 → 紫玉描金 · 顶带栏目方块 · 直角胶囊</div>
+  </td>
+  <td style="padding-top:8px"><span style="font-size:12px;color:#9aa3b0;line-height:1.9;display:block">
+    骨架（顶带/舞台/底带）已经够独特，<b style="color:#e8eaee">不动</b>。<br>
+    <b style="color:#e8eaee">只把色相族腾出来</b>：#ffd93d 的荧光黄和 poster/macro 撞，换成品牌已经全站落地的
+    <b style="color:#e8eaee">紫玉 #6E5FA8 + 描金 #C9A96A</b>，顶带/底带压一条描金渐变细线。<br>
+    这样 zhigu 和"工作台"是同一张脸，客人从页面点进成片不会觉得串戏；7 套也各自占住一个色相族。
+  </span></td>
+</tr>
+
+<!-- ============ macro ============ -->
+<tr>
+  <td class="rowname"><b>宏观棱镜</b><span>macro<br>墨黑 + 描金</span></td>
+  <td>
+    <div class="ph" style="background:#04080a">
+      <svg class="chart" style="top:0;height:100%;opacity:.16;filter:grayscale(1)" viewBox="0 0 200 340" preserveAspectRatio="none"><polyline points="0,270 25,240 45,255 60,60 75,190 95,160 120,290 150,255 175,310 200,280" fill="none" stroke="#fff" stroke-width="2"/></svg>
+      <div style="top:12px;left:14px;color:#e8a833;font-size:8px;letter-spacing:.16em">01 / 对决</div>
+      <div style="top:26px;left:14px;color:#fff;font-size:22px;font-weight:700">正面顶上了</div>
+      <div style="top:56px;left:14px;color:rgba(255,255,255,.5);font-size:9px">白宫 vs 美联储</div>
+      <div style="top:80px;left:14px;width:100px;height:96px;background:rgba(5,10,11,.55);border:1px solid rgba(255,255,255,.45)">
+        <div style="top:9px;left:9px;color:rgba(255,255,255,.55);font-size:8px">白宫</div>
+        <div style="top:22px;left:9px;color:#fff;font-size:11px;font-weight:700">要的是降息</div>
+      </div>
+      <div style="top:80px;left:122px;width:100px;height:96px;background:rgba(5,10,11,.55);border:1px solid #e8a833">
+        <div style="top:9px;left:9px;color:#e8a833;font-size:8px">美联储</div>
+        <div style="top:22px;left:9px;color:#fff;font-size:11px;font-weight:700">给的是加息</div>
+      </div>
+      <div class="sub" style="top:360px;color:#fff;font-size:13px">美联储给的是加息</div>
+    </div>
+    <div class="cap">章节号 + 金色双卡（已经最独特）</div>
+  </td>
+  <td>
+    <div class="ph baselines" style="background:#04080a">
+      <div style="top:12px;left:14px;color:#e8a833;font-size:8px;letter-spacing:.16em;font-family:var(--mono)">01 / 06 · 对决</div>
+      <div style="top:26px;left:14px;color:#e8a833;font-size:23px;font-weight:700;letter-spacing:.02em">正面顶上了</div>
+      <div style="top:58px;left:14px;color:rgba(255,255,255,.45);font-size:9.5px;font-weight:300">白宫 vs 美联储 · 一次谁也不肯先退的交锋</div>
+      <div style="top:82px;left:14px;width:100px;height:92px;background:rgba(5,10,11,.55);border:1px solid rgba(255,255,255,.45)">
+        <div style="top:9px;left:9px;color:rgba(255,255,255,.55);font-size:8px">白宫</div>
+        <div style="top:22px;left:9px;color:#fff;font-size:11px;font-weight:700">要的是降息</div>
+      </div>
+      <div style="top:82px;left:122px;width:100px;height:92px;background:rgba(5,10,11,.55);border:1px solid #e8a833">
+        <div style="top:9px;left:9px;color:#e8a833;font-size:8px">美联储</div>
+        <div style="top:22px;left:9px;color:#fff;font-size:11px;font-weight:700">给的是加息</div>
+      </div>
+      <div style="top:300px;left:14px;right:14px;height:2px;background:rgba(232,168,51,.25)"><div style="position:static;width:17%;height:2px;background:#e8a833"></div></div>
+      <div class="sub" style="top:360px;color:#fff;font-size:13px;font-weight:300">美联储给的是加息</div>
+    </div>
+    <div class="cap">+ 横向基线纸 · 章节进度轨 · 标题描金</div>
+  </td>
+  <td style="padding-top:8px"><span style="font-size:12px;color:#9aa3b0;line-height:1.9;display:block">
+    现状 7 套里<b style="color:#e8eaee">最独特的一套</b>，几乎不用动。补三个小记号：
+    横向基线（像坐标纸，和 data 的方格区分）、章节进度轨 <code>01/06</code>、大标题描金 + 正文细黑混排。<br>
+    <b style="color:#e8eaee">另有一个必须修的 bug：macro 在 <code>layouts.json</code> 里根本没有条目</b>，
+    TS 的 <code>buildGeo()</code> 和 Python 的 <code>layout_of()</code> 会双双回落成 editorial 的几何——
+    剪映草稿于是照着 editorial 的形状在 macro 画面上挖洞。
+    这正是 README 那句"两边读同一份、不会漂移"想要防住的事。
+  </span></td>
+</tr>
+
+</tbody>
+</table>
+
+<h2 id="tail" style="font-size:17px;margin-top:38px;letter-spacing:.05em">提案后的差异矩阵</h2>
+<p class="lede" style="margin-bottom:12px">6 个轴，每行是一套模板，每列都不该出现两个一样的值。<b>色相族 7 套 7 族，零冲突。</b></p>
+<div style="overflow-x:auto"><table style="font-size:12px;border-collapse:collapse;min-width:900px">
+<thead><tr style="color:#8d96a4">
+  <th style="border-bottom:1px solid #2a2e36">模板</th><th style="border-bottom:1px solid #2a2e36">骨架</th>
+  <th style="border-bottom:1px solid #2a2e36">明暗</th><th style="border-bottom:1px solid #2a2e36">色相族</th>
+  <th style="border-bottom:1px solid #2a2e36">字</th><th style="border-bottom:1px solid #2a2e36">质感</th>
+  <th style="border-bottom:1px solid #2a2e36">节奏</th><th style="border-bottom:1px solid #2a2e36">独占记号</th></tr></thead>
+<tbody style="color:#c3c9d2">
+<tr><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0;color:#e8eaee;font-weight:700">editorial</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">纸卡+媒体窗</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">浅·暖</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0"><span style="color:#e06a52">朱红</span></td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">常规黑</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">颗粒</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">9 慢</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">大报双细线版头</td></tr>
+<tr><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0;color:#e8eaee;font-weight:700">news</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">满屏+底信息条</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">暗·藏蓝</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0"><span style="color:#e8365a">正红</span></td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">黑+等宽戳</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">无</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">5 快</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">直播角标+栏目名</td></tr>
+<tr><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0;color:#e8eaee;font-weight:700">data</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">左右双栏</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">浅·冷</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0"><span style="color:#5b9bff">钴蓝</span></td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">等宽数字</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">方格</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">6</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">序号轨+迷你趋势</td></tr>
+<tr><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0;color:#e8eaee;font-weight:700">poster</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">一屏一句</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">纯黑</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0"><span style="color:#ffd400">荧光黄</span></td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">特粗·紧字距</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">网点</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">4 最快</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">素材压成底纹</td></tr>
+<tr><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0;color:#e8eaee;font-weight:700">bleed</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">满屏压字</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">纯黑</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0"><span style="color:#d8dade">无彩色</span></td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">细黑体</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">暗角</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">9 慢</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">直角+零彩色</td></tr>
+<tr><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0;color:#e8eaee;font-weight:700">zhigu</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">三段钉死</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">白舞台</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0"><span style="color:#9b8bd8">紫玉描金</span></td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">常规黑</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">描金细线</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">5 快</td><td style="border-bottom:1px solid #1a1d22;padding:8px 16px 8px 0">顶底带+图形动作</td></tr>
+<tr><td style="padding:8px 16px 8px 0;color:#e8eaee;font-weight:700">macro</td><td style="padding:8px 16px 8px 0">章节图形</td><td style="padding:8px 16px 8px 0">暗·墨</td><td style="padding:8px 16px 8px 0"><span style="color:#e8a833">琥珀金</span></td><td style="padding:8px 16px 8px 0">重+细混排</td><td style="padding:8px 16px 8px 0">横向基线</td><td style="padding:8px 16px 8px 0">6</td><td style="padding:8px 16px 8px 0">章节号+进度轨</td></tr>
+</tbody></table></div>
+
+<p class="lede" style="margin-top:26px">
+  <b>这张样张只是 CSS 近似，不是真渲染。</b>挑定方向后再动 <code>skin.ts</code> / <code>layouts.json</code> /
+  <code>templates.py</code>，并用 <code>tools/make_template_previews.py</code> 重出 7 张真缩略图并排验收。
+  需要拍板的三处：<b>① bleed 去彩色 ② zhigu 换紫玉 ③ poster 把素材压成底纹</b>——
+  这三刀改的是观感，不是配色微调。
+</p>
+
+</body>
+</html>
