@@ -1,9 +1,11 @@
-import { StrictMode } from 'react';
+﻿import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import Workbench from './Workbench2.tsx';
+import Workbench from './Studio.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Workbench />
   </StrictMode>,
 );
+
+
