@@ -6,15 +6,13 @@
 
 ## 目录
 
+现在就三个文件夹，各管一件事：
+
 | 目录 | 是什么 |
 |------|--------|
 | `getcut/` | **主代码**：Python 管线、Remotion 模板、成片台前端、部署与测试 |
-| `docs/` | 文档与调研：复刻方案、逆向报告、对比迭代、工作台走查、最佳实践评估、A/B 对比图 |
+| `docs/` | 全部文档与参考图：复刻方案、逆向报告、对比迭代、走查报告、A/B 对比图、界面设计稿 |
 | `deliverables/` | 产出：成片 mp4、素材包 zip、素材包目录（不进 git） |
-| `design-mockups/` | 界面设计稿与改版对比（HTML / PNG） |
-| `_tools/`、`tools/` | 一次性脚本与运维脚本（`git_detour_report.sh` 等） |
-| `niwo-render-everything/` | 上游参考实现（git submodule，只读） |
-| `_scratch/` | 诊断残留、逆向 dump、旧 worktree 副本（不进 git，可随时删） |
 
 ## 跑起来
 
