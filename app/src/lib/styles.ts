@@ -591,13 +591,302 @@ function drawTerminal(ctx: Ctx, beat: Beat, t: number, index: number, _total: nu
   ctx.fillText(`// FRAME ${String(index + 1).padStart(4, '0')} · 30FPS · RENDER OK`, 64, 1620);
 }
 
+// ───────────────────────── 报纸铅印 ─────────────────────────
+const BS = { paper: '#F3EDE1', ink: '#141414', red: '#A5121A', gray: '#6E6659' };
+
+/** 网点圆：越靠中心点越大，形成抽象剪影。 */
+function halftone(ctx: Ctx, cx: number, cy: number, r: number, cell = 12) {
+  ctx.fillStyle = BS.ink;
+  for (let y = -r; y <= r; y += cell) {
+    for (let x = -r; x <= r; x += cell) {
+      const d = Math.sqrt(x * x + y * y) / r;
+      if (d > 1) continue;
+      const dot = 0.6 + (1 - d) * 3.6;
+      ctx.beginPath();
+      ctx.arc(cx + x, cy + y, dot, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawBroadsheet(ctx: Ctx, beat: Beat, _t: number, index: number, _total: number) {
+  ctx.fillStyle = BS.paper;
+  ctx.fillRect(0, 0, W, H);
+
+  // 报头
+  ctx.fillStyle = BS.ink;
+  ctx.fillRect(64, 40, 952, 3);
+  ctx.font = '900 92px ' + HEAVY;
+  const mast = '每 日 商 讯';
+  ctx.fillText(mast, (W - ctx.measureText(mast).width) / 2, 130);
+  ctx.font = '400 20px ' + LIGHT;
+  ctx.fillStyle = BS.gray;
+  ctx.fillText('创刊于 2019', 64, 128);
+  const issue = '第 ' + (100 + index) + ' 期';
+  ctx.fillText(issue, 1016 - ctx.measureText(issue).width, 128);
+  ctx.fillStyle = BS.ink;
+  ctx.fillRect(64, 136, 952, 1);
+
+  // 日期条
+  ctx.font = '400 22px ' + LIGHT;
+  ctx.fillStyle = BS.gray;
+  ctx.fillText('2026 年 11 月 4 日 星期三', 64, 176);
+  const price = '零售价 ¥1.00';
+  ctx.fillText(price, 1016 - ctx.measureText(price).width, 176);
+  ctx.fillStyle = BS.ink;
+  ctx.fillRect(64, 190, 952, 1);
+
+  // 主标题
+  ctx.font = '900 80px ' + HEAVY;
+  ctx.fillStyle = BS.ink;
+  const title = wrap(ctx, beat.title || beat.topic || beat.text, 860).slice(0, 2);
+  title.forEach((ln, i) => ctx.fillText(ln, 64, 330 + i * 90));
+  // 独家章
+  ctx.fillStyle = BS.red;
+  ctx.fillRect(64, 206, 96, 36);
+  ctx.fillStyle = '#fff';
+  ctx.font = '900 24px ' + HEAVY;
+  ctx.fillText('独家', 82, 232);
+  ctx.fillStyle = BS.ink;
+  ctx.fillRect(64, 440, 952, 2);
+
+  // 双栏
+  ctx.fillRect(506, 460, 1, 500);
+  ctx.font = '400 26px ' + LIGHT;
+  ctx.fillStyle = '#2B2720';
+  const body = wrap(ctx, `${beat.label || ''}${String(beat.text)}`, 400).slice(0, 5);
+  body.forEach((ln, i) => ctx.fillText(ln, 64, 510 + i * 48));
+
+  // 右栏网点图
+  halftone(ctx, 760, 600, 150);
+  ctx.font = '400 20px ' + LIGHT;
+  ctx.fillStyle = BS.gray;
+  ctx.fillText('图：2019—2026 门店增长', 560, 780);
+
+  // 引言框（双线）
+  ctx.strokeStyle = BS.ink;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(64, 830, 952, 180);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(74, 840, 932, 160);
+  ctx.font = '900 56px ' + HEAVY;
+  ctx.fillStyle = BS.ink;
+  const quote = (beat.value ? `${beat.value}${beat.unit || ''}` : title[0] || '');
+  const qw = ctx.measureText(quote).width;
+  ctx.fillText(quote, (W - qw) / 2, 920);
+  ctx.font = '400 24px ' + LIGHT;
+  ctx.fillStyle = BS.gray;
+  const by = '—— 本报记者';
+  ctx.fillText(by, (W - ctx.measureText(by).width) / 2, 970);
+
+  // 底部
+  ctx.fillStyle = BS.ink;
+  ctx.fillRect(64, 1420, 952, 3);
+  ctx.font = '900 54px ' + HEAVY;
+  ctx.fillStyle = BS.ink;
+  const sub = wrap(ctx, String(beat.text), 900).slice(0, 2);
+  sub.forEach((ln, i) => {
+    const w = ctx.measureText(ln).width;
+    ctx.fillText(ln, (W - w) / 2, 1470 + i * 60);
+  });
+  ctx.fillRect(64, 1560, 952, 1);
+  ctx.font = '400 20px ' + LIGHT;
+  ctx.fillStyle = BS.gray;
+  const end = '— 未 完 待 续 —';
+  ctx.fillText(end, (W - ctx.measureText(end).width) / 2, 1650);
+}
+
+// ───────────────────────── 杂志封面 ─────────────────────────
+const CV = { paper: '#EDE6DA', ink: '#141414', blue: '#2B3CFF', white: '#FFFFFF' };
+
+function drawCover(ctx: Ctx, beat: Beat, t: number, index: number, _total: number) {
+  ctx.fillStyle = CV.paper;
+  ctx.fillRect(0, 0, W, H);
+
+  // 刊名
+  ctx.font = '900 150px ' + HEAVY;
+  ctx.fillStyle = CV.ink;
+  ctx.fillText('老  板', 52, 196);
+  ctx.font = '400 24px ' + LIGHT;
+  const issue = `NO.${String(index + 1).padStart(2, '0')} / 2026`;
+  ctx.fillText(issue, 1016 - ctx.measureText(issue).width, 176);
+  ctx.fillStyle = CV.ink;
+  ctx.fillRect(56, 216, 960, 1);
+
+  // 蓝色主几何（微旋转）
+  const p = ease(t / 0.5);
+  ctx.save();
+  ctx.translate(540, 700);
+  ctx.rotate(-2 * Math.PI / 180);
+  ctx.fillStyle = CV.blue;
+  ctx.fillRect(-450, -280 * p, 900, 560 * p);
+  ctx.restore();
+
+  // 米色圆
+  ctx.fillStyle = CV.paper;
+  ctx.beginPath();
+  ctx.arc(540, 640, 210 * p, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 竖排侧标
+  ctx.font = '400 28px ' + LIGHT;
+  ctx.fillStyle = CV.ink;
+  const sides = ['回本模型', '316 家店', '加盟真相'];
+  sides.forEach((s, i) => {
+    ctx.save();
+    ctx.translate(1008, 340 + i * 190);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillText(s, 0, 0);
+    ctx.restore();
+  });
+
+  // 大标题压蓝块
+  ctx.font = '900 96px ' + HEAVY;
+  ctx.fillStyle = CV.ink;
+  const title = wrap(ctx, beat.title || beat.topic || beat.text, 940).slice(0, 2);
+  title.forEach((ln, i) => ctx.fillText(ln, 44, 1070 + i * 104));
+
+  // 条形码
+  ctx.fillStyle = CV.white;
+  ctx.fillRect(780, 1290, 200, 110);
+  ctx.save();
+  ctx.fillStyle = CV.ink;
+  let x = 792;
+  let seed = 7;
+  while (x < 968) {
+    seed = (seed * 1103515245 + 12345) % 2147483647;
+    const w = 1 + (seed % 5);
+    ctx.fillRect(x, 1300, w, 80);
+    x += w + 2 + ((seed >> 8) % 4);
+  }
+  ctx.restore();
+  ctx.font = '400 16px ' + LIGHT;
+  ctx.fillStyle = CV.ink;
+  ctx.fillText('9 771234 567003', 782, 1394);
+
+  // 左下圆标
+  ctx.strokeStyle = CV.ink;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(150, 1330, 62, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.font = '900 22px ' + HEAVY;
+  ctx.fillStyle = CV.ink;
+  ['本期附赠', '口播模板', '3 套'].forEach((s, i) => ctx.fillText(s, 106, 1318 + i * 28));
+
+  // 底部黑条
+  ctx.fillStyle = CV.ink;
+  ctx.fillRect(0, 1420, W, 160);
+  ctx.fillStyle = CV.blue;
+  ctx.fillRect(0, 1416, W, 4);
+  ctx.font = '900 56px ' + HEAVY;
+  ctx.fillStyle = CV.paper;
+  const sub = wrap(ctx, String(beat.text), 900).slice(0, 2);
+  sub.forEach((ln, i) => {
+    const w = ctx.measureText(ln).width;
+    ctx.fillText(ln, (W - w) / 2, 1490 + i * 62);
+  });
+}
+
+// ───────────────────────── 胶片纪实 ─────────────────────────
+const RL = { black: '#0B0A09', cream: '#F0E6D6', brown: '#6B4A32', orange: '#D9822B', dim: '#8C7B6B' };
+
+function drawReel(ctx: Ctx, beat: Beat, _t: number, index: number, _total: number) {
+  ctx.fillStyle = RL.black;
+  ctx.fillRect(0, 0, W, H);
+
+  // 画框渐变
+  const g = ctx.createLinearGradient(0, 200, W, 1280);
+  g.addColorStop(0, '#2A1F18');
+  g.addColorStop(0.55, '#4A3428');
+  g.addColorStop(1, '#6B4A32');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 200, W, 1080);
+
+  // 漏光
+  const lg = ctx.createRadialGradient(180, 320, 0, 180, 320, 420);
+  lg.addColorStop(0, 'rgba(217,130,43,0.38)');
+  lg.addColorStop(1, 'rgba(217,130,43,0)');
+  ctx.fillStyle = lg;
+  ctx.fillRect(0, 200, W, 1080);
+
+  // 颗粒（每帧随机，确定性种子）
+  ctx.fillStyle = 'rgba(255,255,255,0.055)';
+  let seed = 97 + index * 31;
+  for (let i = 0; i < 900; i++) {
+    seed = (seed * 1103515245 + 12345) % 2147483647;
+    const x = seed % W;
+    seed = (seed * 1103515245 + 12345) % 2147483647;
+    const y = 200 + (seed % 1080);
+    ctx.fillRect(x, y, 2, 2);
+  }
+
+  // 齿孔
+  ctx.fillStyle = RL.black;
+  for (let y = 200; y < 1280; y += 56) {
+    ctx.fillRect(36, y + 8, 30, 40);
+    ctx.fillRect(1014, y + 8, 30, 40);
+  }
+
+  // 顶部黑边信息
+  ctx.font = '400 24px ' + LIGHT;
+  ctx.fillStyle = RL.dim;
+  ctx.fillText(`ROLL ${String(index + 1).padStart(2, '0')} ｜ 00:${String(12 + index).padStart(2, '0')}:04:18`, 64, 96);
+  const iso = 'ISO 400 · f/2.0';
+  ctx.fillText(iso, 1016 - ctx.measureText(iso).width, 96);
+
+  // 画框内文案：一句细字 + 署名
+  ctx.fillStyle = '#B5A08A';
+  ctx.fillRect(510, 560, 60, 2);
+  ctx.font = '400 60px ' + LIGHT;
+  ctx.fillStyle = RL.cream;
+  const line = wrap(ctx, beat.title || beat.text, 820).slice(0, 2);
+  line.forEach((ln, i) => {
+    const w = ctx.measureText(ln).width;
+    ctx.fillText(ln, (W - w) / 2, 660 + i * 76);
+  });
+  ctx.font = '400 26px ' + LIGHT;
+  ctx.fillStyle = '#B5A08A';
+  const by = `—— ${beat.topic || '当事人'} · 第 ${index + 1} 段`;
+  ctx.fillText(by, (W - ctx.measureText(by).width) / 2, 830);
+
+  // 右下时间
+  ctx.font = '400 20px ' + LIGHT;
+  ctx.fillStyle = RL.dim;
+  ctx.fillText(`01:${String(20 + index).padStart(2, '0')}`, 940, 1210);
+
+  // 底部字幕（细体描边）
+  ctx.font = '400 54px ' + LIGHT;
+  const sub = wrap(ctx, String(beat.text), 880).slice(0, 2);
+  sub.forEach((ln, i) => {
+    const w = ctx.measureText(ln).width;
+    const x = (W - w) / 2;
+    const y = 1470 + i * 64;
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText(ln, x, y);
+    ctx.fillStyle = RL.cream;
+    ctx.fillText(ln, x, y);
+  });
+  ctx.font = '400 18px ' + LIGHT;
+  ctx.fillStyle = RL.dim;
+  const end = '导 演 剪 辑 版';
+  ctx.fillText(end, (W - ctx.measureText(end).width) / 2, 1620);
+}
+
 export const NEW_STYLES: Partial<Record<ThemeName, (c: Ctx, b: Beat, t: number, i: number, n: number) => void>> = {
   newsroom: drawNewsroom,
   ledger: drawLedger,
   marker: drawMarker,
   swiss: drawSwiss,
   terminal: drawTerminal,
+  broadsheet: drawBroadsheet,
+  cover: drawCover,
+  reel: drawReel,
 };
+
+
+
 
 
 

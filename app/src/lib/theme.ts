@@ -41,6 +41,30 @@ export const PALETTES: Record<ThemeName, Palette> = {
     hairline: 'rgba(20,20,20,0.18)', panel: 'rgba(255,255,255,0.7)',
     panelEdge: 'rgba(214,40,40,0.45)', dark: false,
   },
+  broadsheet: {
+    bg1: '#F3EDE1', bg2: '#F3EDE1',
+    glow: 'rgba(165,18,26,0.08)',
+    ink: '#141414', muted: 'rgba(20,20,20,0.55)',
+    accent: '#A5121A', accentInk: '#FFFFFF',
+    hairline: 'rgba(20,20,20,0.2)', panel: 'rgba(0,0,0,0.03)',
+    panelEdge: '#141414', dark: false,
+  },
+  cover: {
+    bg1: '#EDE6DA', bg2: '#EDE6DA',
+    glow: 'rgba(43,60,255,0.14)',
+    ink: '#141414', muted: 'rgba(20,20,20,0.55)',
+    accent: '#2B3CFF', accentInk: '#FFFFFF',
+    hairline: 'rgba(20,20,20,0.2)', panel: '#FFFFFF',
+    panelEdge: '#141414', dark: false,
+  },
+  reel: {
+    bg1: '#0B0A09', bg2: '#0B0A09',
+    glow: 'rgba(217,130,43,0.2)',
+    ink: '#F0E6D6', muted: 'rgba(240,230,214,0.5)',
+    accent: '#D9822B', accentInk: '#0B0A09',
+    hairline: 'rgba(240,230,214,0.16)', panel: '#2A1F18',
+    panelEdge: '#6B4A32', dark: true,
+  },
   marker: {
     bg1: '#F7F4EC', bg2: '#F7F4EC',
     glow: 'rgba(229,52,43,0.10)',
@@ -90,5 +114,6 @@ export const PALETTES: Record<ThemeName, Palette> = {
     panelEdge: 'rgba(167,139,250,0.5)', dark: true,
   },
 };
+
 
 
