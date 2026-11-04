@@ -33,4 +33,6 @@ app/_*.cjs
 /article.md
 /extract_article.ps1
 /tweet.html
+/credits.md
+/llms.txt
 
