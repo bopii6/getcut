@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GetCut · 本机工作台</title>
+<style>
+  @font-face {
+    font-family: 'GC Heavy';
+    src: url('/fonts/SourceHanSansCN-Heavy.otf') format('opentype');
+    font-weight: 900;
+    font-display: swap;
+  }
+  :root {
+    --bg: #0b0a09;
+    --panel: #141210;
+    --panel-2: #1b1815;
+    --line: rgba(243,239,230,0.12);
+    --line-strong: rgba(243,239,230,0.22);
+    --ink: #f3efe6;
+    --muted: rgba(243,239,230,0.5);
+    --gold: #d8a94a;
+    --gold-ink: #16120a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(900px 620px at 12% -10%, rgba(216,169,74,0.16), transparent 60%),
+      radial-gradient(760px 560px at 100% 0%, rgba(192,57,43,0.10), transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+    min-height: 100%;
+  }
+  .shell { max-width: 1240px; margin: 0 auto; padding: 28px 28px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: baseline; gap: 14px; }
+  .brand b { font-family: 'GC Heavy', sans-serif; font-size: 30px; letter-spacing: 2px; }
+  .brand b span { color: var(--gold); }
+  .brand em { font-style: normal; color: var(--muted); font-size: 14px; letter-spacing: 6px; }
+  .badge { font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 26px; margin-top: 26px; align-items: start; }
+  .card { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  h2 { font-size: 15px; letter-spacing: 3px; color: var(--muted); font-weight: 500; margin: 0 0 14px; }
+  textarea {
+    width: 100%; min-height: 300px; resize: vertical; background: #0e0d0b; color: var(--ink);
+    border: 1px solid var(--line-strong); border-radius: 12px; padding: 18px;
+    font-size: 16px; line-height: 1.85; font-family: inherit; outline: none;
+  }
+  textarea:focus { border-color: var(--gold); }
+  .count { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0 6px; }
+  .style {
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px; cursor: pointer;
+    background: #0e0d0b; transition: border-color .15s, transform .15s;
+  }
+  .style:hover { transform: translateY(-1px); border-color: var(--line-strong); }
+  .style.on { border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(216,169,74,0.35); }
+  .style b { display: block; font-size: 17px; margin-bottom: 8px; font-family: 'GC Heavy', sans-serif; letter-spacing: 1px; }
+  .style span { color: var(--muted); font-size: 12px; line-height: 1.6; display: block; }
+  .actions { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  button {
+    font-family: inherit; cursor: pointer; border: 0; border-radius: 12px;
+    background: var(--gold); color: var(--gold-ink); font-size: 16px; font-weight: 700;
+    padding: 14px 26px; letter-spacing: 2px;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .ghost { background: transparent; color: var(--ink); border: 1px solid var(--line-strong); font-weight: 500; }
+  .hint { color: var(--muted); font-size: 13px; line-height: 1.7; }
+  .phone {
+    width: 100%; aspect-ratio: 9 / 16; border-radius: 18px; overflow: hidden;
+    background: #0a0908; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 14px; text-align: center; line-height: 1.8; position: relative;
+  }
+  .phone video { width: 100%; height: 100%; object-fit: cover; }
+  .bar { height: 6px; background: rgba(243,239,230,0.08); border-radius: 999px; overflow: hidden; margin: 16px 0 10px; }
+  .warn {
+    margin-top: 18px; padding: 14px 18px; border-radius: 12px; font-size: 13px; line-height: 1.9;
+    border: 1px solid rgba(216,169,74,0.4); background: rgba(216,169,74,0.08); color: #f0dcb0;
+  }
+  .warn b { color: var(--gold); }
+  .bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #b4432f, var(--gold)); transition: width .4s ease; }
+  .row { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
+  .log {
+    margin-top: 14px; max-height: 190px; overflow: auto; font-size: 12px; line-height: 1.9;
+    color: rgba(243,239,230,0.62); background: #0a0908; border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  .download { display: none; margin-top: 14px; }
+  .download.show { display: flex; gap: 12px; }
+  footer { margin-top: 26px; color: var(--muted); font-size: 12px; letter-spacing: 1px; }
+  @media (max-width: 980px) {
+    main { grid-template-columns: 1fr; }
+    .phone { max-width: 420px; margin: 0 auto; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand"><b>Get<span>Cut</span></b><em>本机工作台</em></div>
+    <div class="badge">渲染全在你这台电脑上 · 不排队 · 不上传</div>
+  </header>
+
+  <div id="warn" class="warn" hidden></div>
+
+  <main>
+    <section class="card">
+      <h2>01 · 粘贴文案</h2>
+      <textarea id="text" placeholder="把写好的口播稿粘进来，一两分钟就行。&#10;&#10;比如：&#10;想开一家小店，你最怕的是什么？&#10;不是没客人，是钱投进去，三个月就撑不住……"></textarea>
+      <div class="count"><span>AI 会自己拆镜头、写卡面、配实拍空镜</span><span id="chars">0 字</span></div>
+
+      <h2 style="margin-top:22px">02 · 选长相</h2>
+      <div class="styles" id="styles"></div>
+
+      <div class="actions">
+        <button id="go">生成视频</button>
+        <button class="ghost" id="demo">填一段示例</button>
+        <span class="hint" id="hint">大约 3 倍实时：60 秒的片子要 3 分钟左右</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>03 · 出片</h2>
+      <div class="phone" id="phone">成片会出现在这里<br />竖屏 1080×1920</div>
+      <div class="bar"><i id="fill"></i></div>
+      <div class="row"><span id="stage">等待开始</span><span id="pct">0%</span></div>
+      <div class="log" id="log"></div>
+      <div class="download" id="download">
+        <button id="save">下载 MP4</button>
+        <button class="ghost" id="again">再做一条</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>GetCut · 本机渲染 · 文案不超过 1200 字（约 5 分钟）</footer>
+</div>
+
+<script>
+const DEMO = `想开一家小店，你最怕的是什么？
+不是没客人，是钱投进去，三个月就撑不住。
+我见过太多老板，加盟费一交，装修一做完，才发现总部根本不管你怎么活。
+今天讲三个数，你记下来再去谈加盟。
+第一个数，前期总投入。加盟费、保证金、装修、设备、首批物料，加起来才是真数。
+第二个数，回本周期。总部说八个月，你就按十二个月算，多出来的四个月是你的活路。
+第三个数，日均流水。别问总部要，去他现有的店里蹲三天。
+这三个数算完，你大概就知道这门生意能不能做。
+如果你正在看某个项目，把品牌名发给我，我帮你把这三个数拆开算一遍。`;
+
+const $ = (id) => document.getElementById(id);
+let theme = 'magazine';
+let timer = null;
+
+function setStyles(styles) {
+  $('styles').innerHTML = '';
+  for (const [key, s] of Object.entries(styles)) {
+    const el = document.createElement('div');
+    el.className = 'style' + (key === theme ? ' on' : '');
+    el.innerHTML = `<b>${s.name}</b><span>${s.hint}</span>`;
+    el.onclick = () => {
+      theme = key;
+      document.querySelectorAll('.style').forEach((n) => n.classList.remove('on'));
+      el.classList.add('on');
+    };
+    $('styles').appendChild(el);
+  }
+}
+
+$('text').addEventListener('input', () => { $('chars').textContent = `${$('text').value.trim().length} 字`; });
+$('demo').onclick = () => { $('text').value = DEMO; $('text').dispatchEvent(new Event('input')); };
+$('again').onclick = () => { $('download').classList.remove('show'); $('phone').textContent = '成片会出现在这里'; $('fill').style.width = '0%'; $('log').textContent = ''; $('stage').textContent = '等待开始'; $('pct').textContent = '0%'; };
+
+$('go').onclick = async () => {
+  const text = $('text').value.trim();
+  if (text.length < 20) { $('hint').textContent = '文案太短了，至少 20 个字'; return; }
+  $('go').disabled = true;
+  $('hint').textContent = '拆稿中…';
+  $('log').textContent = '';
+  try {
+    const res = await fetch('/api/render', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, theme }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '提交失败');
+    poll(data.id);
+  } catch (e) {
+    $('hint').textContent = e.message;
+    $('go').disabled = false;
+  }
+};
+
+function poll(id) {
+  clearInterval(timer);
+  timer = setInterval(async () => {
+    try {
+      const job = await (await fetch(`/api/job/${id}`)).json();
+      $('fill').style.width = `${job.percent}%`;
+      $('pct').textContent = `${job.percent}%`;
+      $('stage').textContent = job.status === 'done' ? '出片完成' : job.status === 'failed' ? '失败了' : stageName(job.percent);
+      $('log').textContent = (job.log || []).slice(-12).join('\n');
+      $('log').scrollTop = $('log').scrollHeight;
+      if (job.status === 'done') {
+        clearInterval(timer);
+        $('go').disabled = false;
+        $('phone').innerHTML = `<video src="${job.video}" controls playsinline></video>`;
+        $('download').classList.add('show');
+        $('save').onclick = () => { const a = document.createElement('a'); a.href = job.video; a.download = 'getcut.mp4'; a.click(); };
+      }
+      if (job.status === 'failed') {
+        clearInterval(timer);
+        $('go').disabled = false;
+        $('hint').textContent = job.error || '渲染失败';
+      }
+    } catch (e) { /* 网络抖动就下一轮再试 */ }
+  }, 1000);
+}
+
+function stageName(p) {
+  if (p < 15) return '拆稿 · AI 在切镜头';
+  if (p < 40) return '配音 · 一句一条';
+  if (p < 58) return '找实拍空镜';
+  if (p < 99) return '渲染 · 在本机算画面';
+  return '收尾';
+}
+
+fetch('/api/styles').then((r) => r.json()).then(setStyles);
+
+fetch('/api/health').then((r) => r.json()).then((h) => {
+  if (h.ok) return;
+  const bad = (h.checks || []).filter((c) => !c.ok);
+  const el = document.getElementById('warn');
+  el.innerHTML = `<b>还差一点才能出片：</b><br>${bad.map((c) => `· ${c.hint}`).join('<br>')}`;
+  el.hidden = false;
+});
+</script>
+</body>
+</html>
+
