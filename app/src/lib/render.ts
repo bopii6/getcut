@@ -64,6 +64,7 @@ export async function renderVideo(
   useBroll = false,
   useMusic = true,
   voice = 'zh-CN-YunxiNeural',
+  bgmFile = '',
 ): Promise<Blob> {
   // 1. 实拍空镜（默认关：抓素材慢且不稳，需要时在界面上打开）
   onProgress({ stage: useBroll ? '找实拍空镜' : '准备', percent: 1 });
@@ -144,7 +145,7 @@ export async function renderVideo(
 
   // 4. 音轨（配音 + BGM，人声出现时自动压低音乐）
   onProgress({ stage: '合成音轨', percent: 86 });
-  const bgm = useMusic ? await loadMusic(BGM[theme] || BGM.poster) : null;
+  const bgm = useMusic ? await loadMusic(bgmFile || BGM[theme] || BGM.poster) : null;
   const audioBuf = buildTimeline(voiced, { sampleRate: 48000, channels: 2, bgm });
   await encodeAudio(audioBuf, (chunk, meta) => muxer.addAudioChunk(chunk, meta), (p) => {
     onProgress({ stage: '音轨编码', percent: 86 + Math.round(p * 12) });

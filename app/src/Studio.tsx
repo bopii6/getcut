@@ -34,6 +34,20 @@ const VOICES = [
   { id: 'zh-CN-YunjianNeural', name: '云健', desc: '男声 · 厚实' },
 ];
 
+const BGMS = [
+  { id: '', name: '跟随风格', desc: '按长相自动配' },
+  { id: 'music/corporate.mp3', name: '商务', desc: '稳 · 律师/教培' },
+  { id: 'music/cinematic.mp3', name: '电影', desc: '推进 · 观点/加盟' },
+  { id: 'music/news.mp3', name: '新闻', desc: '紧迫 · 资讯' },
+  { id: 'music/electronic.mp3', name: '电子', desc: '轻快 · 通用' },
+  { id: 'music/trap.mp3', name: '强拍', desc: '钩子 · 强节奏' },
+  { id: 'music/funk.mp3', name: '律动', desc: '轻松 · 门店' },
+  { id: 'music/orchestral.mp3', name: '管弦', desc: '压迫 · 重话题' },
+  { id: 'music/upbeat.mp3', name: '明快', desc: '向上 · 通用' },
+  { id: 'music/breakbeat.mp3', name: '碎拍', desc: '动感 · 大字报' },
+  { id: 'music/chill.mp3', name: '舒缓', desc: '氛围 · 纪实' },
+];
+
 const DEMO = `想开一家小店，你最怕的是什么？
 不是没客人，是钱投进去，三个月就撑不住。
 今天讲三个数，你记下来再去谈加盟。
@@ -107,6 +121,8 @@ export default function Studio() {
   const [broll, setBroll] = useState(false);
   const [music, setMusic] = useState(true);
   const [voice, setVoice] = useState(VOICES[0].id);
+  const [bgm, setBgm] = useState('');
+  const [menu, setMenu] = useState(false);
   const [stage, setStage] = useState('');
   const [pct, setPct] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
@@ -187,7 +203,7 @@ export default function Studio() {
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
       const blob = await renderVideo(plan, theme, title, ({ stage: s, percent }) => {
         setStage(s); setPct(percent);
-      }, broll, music, voice);
+      }, broll, music, voice, bgm);
       setSecs(Math.round((performance.now() - t0) / 1000));
       setUrl(URL.createObjectURL(blob));
       setPct(100);
@@ -285,14 +301,41 @@ export default function Studio() {
           <span>{running ? `${stage} ${pct}%` : url ? '已出片' : '草稿'}</span>
         </div>
         <div className="top-act">
-          <span className="quota">{me ? (me.pro ? '已买断' : `免费剩 ${me.remaining} 条`) : '免费 3 条'}</span>
-          {me && !me.pro ? <button className="tlink" onClick={() => setShowBuy(true)}>买断 ¥599</button> : null}
-          {me?.loggedIn
-            ? <button className="tlink" onClick={async () => { await logout(); await refresh(); }}>{me.email} · 退出</button>
-            : <button className="tlink" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>登录</button>}
           <button className="primary" onClick={run} disabled={running}>
             {running ? `${pct}%` : '生成视频'}
           </button>
+          <button className="avatar" onClick={() => setMenu((v) => !v)} title="账号">
+            {me?.loggedIn ? (me.email || 'U').slice(0, 1).toUpperCase() : '登'}
+          </button>
+          {menu ? (
+            <>
+              <div className="menu-mask" onClick={() => setMenu(false)} />
+              <div className="menu">
+                {me?.loggedIn ? (
+                  <>
+                    <div className="menu-head">
+                      <b>{me.email}</b>
+                      <span>{me.pro ? '已买断 · 不限条数' : `免费剩 ${me.remaining} 条`}</span>
+                    </div>
+                    <button className="menu-item" onClick={() => { setTab('works'); setMenu(false); }}>我的作品</button>
+                    {!me.pro ? (
+                      <button className="menu-item" onClick={() => { setShowBuy(true); setMenu(false); }}>买断 ¥599</button>
+                    ) : null}
+                    <button className="menu-item danger" onClick={async () => { await logout(); setMenu(false); await refresh(); }}>退出登录</button>
+                  </>
+                ) : (
+                  <>
+                    <div className="menu-head">
+                      <b>未登录</b>
+                      <span>{me ? `免费剩 ${me.remaining} 条` : '免费 3 条'}</span>
+                    </div>
+                    <button className="menu-item" onClick={() => { setAuthMode('login'); setShowAuth(true); setMenu(false); }}>登录 / 注册</button>
+                    <button className="menu-item" onClick={() => { setShowBuy(true); setMenu(false); }}>买断 ¥599</button>
+                  </>
+                )}
+              </div>
+            </>
+          ) : null}
         </div>
       </header>
 
@@ -409,6 +452,20 @@ export default function Studio() {
                 </div>
               ))}
               <label className="check"><input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} />自动配乐（说话时自动压低）</label>
+              {music ? (
+                <div className="bgm-list">
+                  {BGMS.map((b) => (
+                    <button
+                      key={b.id || 'auto'}
+                      className={`bgm-row ${bgm === b.id ? 'on' : ''}`}
+                      onClick={() => setBgm(b.id)}
+                    >
+                      <span className="bname">{b.name}</span>
+                      <span className="bdesc">{b.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <label className="check"><input type="checkbox" checked={broll} onChange={(e) => setBroll(e.target.checked)} />插入实拍空镜（较慢）</label>
             </div>
           ) : null}
@@ -462,6 +519,13 @@ export default function Studio() {
           <span className="tl-tip">点片段跳到那一句</span>
         </div>
         <div className="tl-body">
+          <div className="tl-lane-label">主背景</div>
+          <div className="tl-lane">
+            <div className="lane-long bg">
+              {broll ? '实拍空镜 · 按句子匹配' : `纯色底 · ${STYLES.find((s) => s.id === (choice === 'auto' ? 'poster' : choice))?.name || '自动'}`}
+            </div>
+          </div>
+
           <div className="tl-lane-label">画面</div>
           <div className="tl-lane">
             {scenes.slice(0, 12).map((s, i) => (
@@ -477,6 +541,23 @@ export default function Studio() {
             ))}
             {!scenes.length ? <div className="clip empty">等待文案</div> : null}
           </div>
+
+          <div className="tl-lane-label">配音</div>
+          <div className="tl-lane">
+            {scenes.slice(0, 12).map((s, i) => (
+              <button
+                key={i}
+                className="clip voice"
+                style={{ flexGrow: s.duration }}
+                onClick={() => { setSelectedScene(i); seekRatio(sceneStart(i) / totalDur); }}
+                title={`${VOICES.find((v) => v.id === voice)?.name || ''} · ${s.text}`}
+              >
+                <span>{VOICES.find((v) => v.id === voice)?.name || '配音'}</span>
+              </button>
+            ))}
+            {!scenes.length ? <div className="clip empty">—</div> : null}
+          </div>
+
           <div className="tl-lane-label">字幕</div>
           <div className="tl-lane texts">
             {scenes.slice(0, 12).map((s, i) => (
@@ -491,6 +572,14 @@ export default function Studio() {
             ))}
             {!scenes.length ? <div className="sub empty">—</div> : null}
           </div>
+
+          <div className="tl-lane-label">音乐</div>
+          <div className="tl-lane">
+            <div className="lane-long music">
+              {music ? (BGMS.find((b) => b.id === bgm)?.name || '跟随风格') + ' · 人声时自动压低' : '未启用'}
+            </div>
+          </div>
+
           <div className="playhead" style={{ left: `calc(52px + (100% - 60px) * ${now / playable})` }} />
         </div>
       </section>
@@ -565,7 +654,33 @@ export default function Studio() {
         .project { flex: 1; display: flex; align-items: baseline; gap: 12px; min-width: 0; }
         .project b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .project span { font-size: 13px; color: var(--dim); }
-        .top-act { display: flex; align-items: center; gap: 18px; font-size: 14px; color: var(--dim); }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line-2);
+          background: var(--panel-2); color: var(--ink); font-size: 15px; font-weight: 800; cursor: pointer; }
+        .avatar:hover { border-color: var(--gold); }
+        .menu-mask { position: fixed; inset: 0; z-index: 30; }
+        .menu { position: absolute; right: 16px; top: 62px; z-index: 31; width: 260px;
+          background: var(--panel); border: 1px solid var(--line-2); border-radius: 12px;
+          padding: 8px; box-shadow: 0 24px 60px -20px #000; display: grid; gap: 2px; }
+        .menu-head { display: grid; gap: 3px; padding: 10px 12px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+        .menu-head b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+        .menu-head span { font-size: 13px; color: var(--dim); }
+        .menu-item { text-align: left; background: none; border: 0; color: var(--ink); font: inherit;
+          font-size: 15px; padding: 11px 12px; border-radius: 8px; cursor: pointer; }
+        .menu-item:hover { background: var(--panel-2); }
+        .menu-item.danger { color: #ff8f7a; }
+        .bgm-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+        .bgm-row { display: grid; gap: 1px; text-align: left; background: var(--panel-2);
+          border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--ink);
+          cursor: pointer; font: inherit; }
+        .bgm-row.on { border-color: var(--gold); }
+        .bname { font-size: 14px; font-weight: 700; }
+        .bdesc { font-size: 12px; color: var(--dim); }
+        .lane-long { flex: 1; display: flex; align-items: center; padding: 0 10px; font-size: 12px;
+          border-radius: 6px; border: 1px solid var(--line); color: #C9C9D1; background: #24242B;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lane-long.bg { background: rgba(120,140,200,.14); border-color: rgba(120,140,200,.3); color: #C6D2F2; }
+        .lane-long.music { background: rgba(120,200,150,.12); border-color: rgba(120,200,150,.28); color: #BFE6CC; }
+        .clip.voice { background: linear-gradient(180deg, #3A2F26, #2A221B); color: #E7CBA6; }        .top-act { position: relative; display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--dim); }
         .quota { letter-spacing: .03em; }
         .tlink { background: none; border: 0; padding: 0; font: inherit; color: var(--dim); cursor: pointer; font-size: 14px; }
         .tlink:hover { color: var(--ink); }
@@ -591,7 +706,7 @@ export default function Studio() {
         .stage { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
           background: radial-gradient(1200px 600px at 50% 0%, rgba(255,255,255,.035), transparent 70%), var(--bg);
           padding: 18px 24px 10px; gap: 14px; }
-        .canvas { position: relative; height: min(58vh, 520px); aspect-ratio: 9/16; background: #000;
+        .canvas { position: relative; height: min(48vh, 430px); aspect-ratio: 9/16; background: #000;
           border-radius: 10px; overflow: hidden; box-shadow: 0 20px 60px -30px #000, 0 0 0 1px var(--line-2);
           cursor: pointer; display: grid; place-items: center; }
         .canvas video { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -658,7 +773,7 @@ export default function Studio() {
         .err { font-size: 13px; color: #ff8f7a; margin: 0; }
         .ok { font-size: 13px; color: #7ed69b; margin: 0; }
 
-        .timeline { position: relative; flex: none; height: 168px; border-top: 1px solid var(--line);
+        .timeline { position: relative; flex: none; height: 236px; border-top: 1px solid var(--line);
           background: var(--panel); padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 8px; }
         .tl-head { display: flex; align-items: baseline; gap: 14px; font-size: 13px; color: var(--dim); }
         .tl-head b { color: var(--ink); font-size: 14px; letter-spacing: .05em; }
@@ -699,5 +814,7 @@ export default function Studio() {
     </div>
   );
 }
+
+
 
 
