@@ -1,0 +1,44 @@
+# -*- coding: utf-8 -*-
+# 完整传递依赖锁定表 —— 构建镜像用这份（`pip install -r requirements.lock`）。
+# 直接依赖的意图与升级说明写在 requirements.txt；这里只保证"任何一天重建，装到同样的版本"。
+# 重新生成（在 getcut/ 目录下，会连传递依赖一起解析）：
+#   python -m pip install --dry-run --ignore-installed --report <报告路径> `
+#       --target <临时目录> -r requirements.txt
+# 然后把解析出的版本逐行抄进来；升级流程见 requirements.txt 顶部注释。
+# 生成于 2026-09-21，Python 3.12；这套版本当天跑过 128 条离线测试。
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.3
+aiosignal==1.4.0
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+attrs==26.1.0
+certifi==2026.7.22
+charset-normalizer==3.5.1
+click==8.5.0
+cos-python-sdk-v5==1.9.44
+crcmod==1.7
+edge-tts==7.2.8
+fastapi==0.141.1
+frozenlist==1.8.0
+h11==0.16.0
+idna==3.20
+multidict==6.9.0
+pillow==12.3.0
+propcache==0.5.4
+pycryptodome==3.23.0
+pydantic==2.13.5
+pydantic-core==2.46.5
+python-dotenv==1.2.3
+python-multipart==0.0.32
+requests==2.34.2
+six==1.17.0
+starlette==1.6.0
+tabulate==0.10.0
+typing-extensions==4.16.0
+typing-inspection==0.4.4
+urllib3==2.8.0
+uvicorn==0.53.0
+websockets==17.1
+xmltodict==1.0.4
+yarl==1.25.1

@@ -26,7 +26,7 @@ jobs:
           python-version: "3.12"
 
       - name: Python 侧（按 requirements.lock 逐条查 OSV）
-        working-directory: videogen
+        working-directory: getcut
         run: |
           python -m pip install --quiet pip-audit
           pip-audit -r requirements.lock --no-deps --strict --desc on
@@ -36,5 +36,5 @@ jobs:
           node-version: 22
 
       - name: 前端侧（renderer 依赖，含 dev：构建链被投毒同样是事故）
-        working-directory: videogen/renderer
+        working-directory: getcut/renderer
         run: npm audit --audit-level=low

@@ -1,11 +1,11 @@
 #!/usr/bin/env sh
-# 提交前最后一道快闸：只跑 ruff（秒级），全量门禁仍用 videogen/tools/selfcheck.sh。
+# 提交前最后一道快闸：只跑 ruff（秒级），全量门禁仍用 getcut/tools/selfcheck.sh。
 # 背景：2026-09-21 CI 红过一次 —— 修好的代码留在工作区没提交，提交/部署的是没修的版本。
 # 挡不住所有事故，但能把"提交的代码连静态检查都过不了"这种当场摁住。
 # 确有理由跳过时：git commit --no-verify
 set -e
 root="$(git rev-parse --show-toplevel)"
-cd "$root/videogen"
+cd "$root/getcut"
 PYTHON="${PYTHON:-python}"
 if ! "$PYTHON" -m ruff check .; then
   echo ""

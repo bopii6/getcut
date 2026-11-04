@@ -3,7 +3,7 @@
     "getcut": {
       "command": "python",
       "args": [
-        "E:\\短视频生成\\videogen\\tools\\getcut_mcp.py"
+        "E:\\getcut\\getcut\\tools\\getcut_mcp.py"
       ]
     }
   }

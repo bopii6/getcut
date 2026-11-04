@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "videogen/**"
+      - "getcut/**"
       - ".github/workflows/docker.yml"
   workflow_dispatch:
 
@@ -31,8 +31,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: videogen
-          file: videogen/Dockerfile
+          context: getcut
+          file: getcut/Dockerfile
           push: true
           build-args: |
             GIT_SHA=${{ github.sha }}

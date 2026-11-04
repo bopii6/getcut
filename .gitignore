@@ -65,15 +65,15 @@ Thumbs.db
 .videogen-users.json
 bundles.json
 server_local.log
-videogen/server_local.log
-videogen/registry.json
+getcut/server_local.log
+getcut/registry.json
 # 部署脚本写出来的"线上是哪一版"标记：每台机器各说各的话，入库就等于把假版本号
 # 钉进代码里（开发机上的 commit 会冒充生产在跑的那一版）
 BUILD_INFO.json
 
 # ---- local test / verification artifacts ----
 gui-test-screenshots/
-videogen/reinstall_test/
+getcut/reinstall_test/
 走查刹车2/
 
 # ---- scratch copies under _tools ----
@@ -82,19 +82,19 @@ _tools/_cand2/
 
 # ================= 2026-09-19 上线审查补充 =================
 # 试玩素材包随代码走（其中 mp4 不吃全局 *.mp4 忽略）
-!videogen/samples/**/*.mp4
+!getcut/samples/**/*.mp4
 
 # 模板选择器要用的预览资产（sample-*.mp4 静帧样片 + tpl-*.png 封面 + 展示字 ttf）
 # 也是"线上有、仓库没有"的那一类：不收进 git，整包同步就会把它们删掉（2026-09-21 踩过）
-!videogen/server_static/templates/*.mp4
-!videogen/server_static/templates/*.png
-!videogen/server_static/fonts/*.ttf
+!getcut/server_static/templates/*.mp4
+!getcut/server_static/templates/*.png
+!getcut/server_static/fonts/*.ttf
 # 会话/审查产物与本地运行时状态
 .zcode/
-videogen/_audit_tmp/
-videogen/renderer/props_still.json
-videogen/renderer/public/brand/
-videogen/renderer/_patch_brand.py
+getcut/_audit_tmp/
+getcut/renderer/props_still.json
+getcut/renderer/public/brand/
+getcut/renderer/_patch_brand.py
 .videogen-brand/
 .videogen-try.json
 .videogen-licenses.json
@@ -121,10 +121,10 @@ videogen/renderer/_patch_brand.py
 /_tools/_study/macro_frames/
 /_tools/_study/_macro_cmp/
 /_tools/_study/sc_*.png
-/videogen/_tools/
-/videogen/_work_*/
-/videogen/_zhigu_preview/
-/videogen/_zhigu_sample.log
+/getcut/_tools/
+/getcut/_work_*/
+/getcut/_zhigu_preview/
+/getcut/_zhigu_sample.log
 
 # ================= 2026-09-20 提交前分拣 =================
 # 运行/测试产物与本地草稿不进库
@@ -134,11 +134,11 @@ pack-e2e-1/
 端到端登录测试包/
 选题/
 vibe_images/
-videogen/_jy11_exp/
-videogen/_redesign/
-videogen/_shot_users.json
-videogen/_local8600.log
-videogen/_redesign_8600.log
-videogen/_redesign_8601.log
-videogen/renderer/props_*.json
-videogen/renderer/render_*.log
+getcut/_jy11_exp/
+getcut/_redesign/
+getcut/_shot_users.json
+getcut/_local8600.log
+getcut/_redesign_8600.log
+getcut/_redesign_8601.log
+getcut/renderer/props_*.json
+getcut/renderer/render_*.log

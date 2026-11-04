@@ -1,0 +1,26 @@
+# -*- coding: utf-8 -*-
+# getcut 运行依赖（锁定版）
+#
+# 为什么锁：以前这里全是 `>=`，等于"每次重建镜像都重新赌一次上游"。
+# 2026-09-21 线上就差点栽在 COS SDK 的方法名对不上上（见评估文档第 12 节）。
+# 锁定的这套是**当天实际跑过 128 条测试的版本**（fastapi 0.141.1 / starlette 1.6.0 /
+# pydantic 2.13.5 / Pillow 12.3.0），不是挑的最新。
+#
+# 怎么更新：先只改这一份里的版本 → `pip install -r requirements.lock`（先装进虚拟环境跑测试）
+# → 全绿再一起提交。`requirements.lock` 是完整传递依赖，构建镜像用它，保证可复现。
+fastapi==0.141.1
+uvicorn==0.53.0
+python-multipart==0.0.32
+edge-tts==7.2.8
+Pillow==12.3.0
+requests==2.34.2
+python-dotenv==1.2.3
+# 百炼克隆音色走 WebSocket（getcut/tts.py）。本机实测 16.1.1；上一个镜像可能是
+# 2026-09-21 实测线上容器里是 17.1（镜像一直用 >=14 构建，早飘到 17.x），
+# 锁定表按线上事实钉 17.1：否则下次部署会把生产降级。
+# 自查命令：docker exec getcut pip show websockets
+# 两边都跑过之后，把这一行钉死成实际用的那个版本。
+websockets==17.1
+# 成片外存（对象存储）：只有配了 GETCUT_COS_* 才用到。
+# ⚠️ 这个包**只发 sdist 不发 wheel**，所以镜像构建必须允许源码分发（别加 --only-binary=:all:）。
+cos-python-sdk-v5==1.9.44
