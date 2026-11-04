@@ -1,4 +1,4 @@
-# 依赖与钥匙（绝不入库）
+﻿# 依赖与钥匙（绝不入库）
 node_modules/
 .env
 
@@ -17,3 +17,15 @@ public/broll/
 /vktest/
 /vkw/
 /vk.zip
+app/node_modules/
+app/dist/
+app/.env.local
+worker/.wrangler/
+.wrangler/
+
+# 同目录下别的项目/一次性探测脚本
+/idea-forge/
+/wbvideo/
+app/_*.cjs
+/tools-local/
+

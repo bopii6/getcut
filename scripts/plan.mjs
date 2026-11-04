@@ -149,8 +149,23 @@ export async function planScript(text, { apiKey, model = 'deepseek-chat' } = {})
   for (const b of beats) {
     if (!CARD_TYPES.includes(b.card)) b.card = 'plain';
     b.text = String(b.text).trim();
-    normalizeStat(b);
   }
+  // 模型很爱"顺手改稿"：口播必须用用户原话。按原句子顺序回填，只保留模型给的结构。
+  const sentences = source
+    .split(/(?<=[。！？!?；;])/).map((s) => s.trim()).filter(Boolean)
+    .map((s) => s.replace(/[。！？!?；;]$/, ''));
+  if (sentences.length === beats.length) {
+    beats.forEach((b, i) => { b.text = sentences[i]; });
+  } else if (sentences.length > beats.length) {
+    // 句子比镜头多：多余的并到最后一个镜头
+    const head = sentences.slice(0, beats.length - 1);
+    const tail = sentences.slice(beats.length - 1).join('，');
+    beats.forEach((b, i) => { b.text = i === beats.length - 1 ? tail : head[i]; });
+  } else {
+    // 镜头比句子多：模型自己补了句子，直接退回规则版，别让它改稿
+    return rulePlan(source);
+  }
+  for (const b of beats) normalizeStat(b);
   return { beats };
 }
 

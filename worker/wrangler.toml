@@ -1,0 +1,14 @@
+name = "getcut-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# 域名还没托管在 Cloudflare，所以先不绑路由（getcut.cn 的 DNS 在别处）。
+# 把域名迁到 Cloudflare 后，取消下面这段注释，再 wrangler deploy 一次即可同源：
+# routes = [
+#   { pattern = "getcut.cn/api/*", zone_name = "getcut.cn" }
+# ]
+
+[vars]
+AZURE_REGION = "eastasia"
+AZURE_VOICE = "zh-CN-YunxiNeural"
