@@ -1,6 +1,8 @@
 export type CardKind =
   | 'hook' | 'plain' | 'stat' | 'list' | 'compare' | 'quote' | 'cta' | 'intro' | 'chapter';
 
+export type ThemeName = 'poster' | 'magazine' | 'dashboard' | 'news' | 'night';
+
 export type Beat = {
   text: string;
   card: CardKind;
@@ -13,10 +15,10 @@ export type Beat = {
   left?: string;
   right?: string;
   cta?: string;
+  broll?: string;
+  bg?: HTMLCanvasElement | null;
   duration: number;
   audio?: AudioBuffer;
 };
 
-export type PlanBeat = Omit<Beat, 'duration' | 'audio'>;
-
-export type ThemeName = 'poster' | 'magazine' | 'dashboard';
+export type PlanBeat = Omit<Beat, 'duration' | 'audio' | 'bg'>;

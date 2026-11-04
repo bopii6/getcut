@@ -3,6 +3,7 @@ import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import type { Beat, PlanBeat, ThemeName } from './types';
 import { drawFrame, FPS, H, W } from './draw';
 import { buildTimeline, encodeAudio, voiceAll } from './audio';
+import { fetchBroll } from './broll';
 
 import { api } from './api';
 
@@ -43,17 +44,30 @@ export async function renderVideo(
   theme: ThemeName,
   title: string,
   onProgress: (p: Progress) => void,
+  useBroll = false,
 ): Promise<Blob> {
-  // 1. 配音
-  onProgress({ stage: '配音', percent: 2 });
+  // 1. 实拍空镜（默认关：抓素材慢且不稳，需要时在界面上打开）
+  onProgress({ stage: useBroll ? '找实拍空镜' : '准备', percent: 1 });
+  const frames: Map<string, HTMLCanvasElement> = useBroll
+    ? await fetchBroll(plan, (d, t) => {
+        onProgress({ stage: `空镜 ${d}/${t}`, percent: 1 + Math.round((d / t) * 8) });
+      })
+    : new Map();
+
+  // 2. 配音
+  onProgress({ stage: '配音', percent: 10 });
   const spoken = plan.filter((b) => b.text && !['intro', 'chapter'].includes(b.card));
   const voiced = await voiceAll(spoken.map((b) => b.text), (d, t) => {
-    onProgress({ stage: `配音 ${d}/${t}`, percent: 2 + Math.round((d / t) * 28) });
+    onProgress({ stage: `配音 ${d}/${t}`, percent: 10 + Math.round((d / t) * 22) });
   });
-  const voicedBeats: Beat[] = plan.map((b) => {
+  const voicedBeats: Beat[] = plan.map((b, i) => {
     if (b.card === 'intro' || b.card === 'chapter') return { ...b, duration: b.card === 'intro' ? 2 : 1.4 };
     const v = voiced.find((x) => x.text === b.text);
-    return { ...b, duration: v ? Math.max(1.4, v.duration) : 2 };
+    return {
+      ...b,
+      bg: frames.get(String(i)) || null,
+      duration: v ? Math.max(1.4, v.duration) : 2,
+    };
   });
 
   const timeline = withChapterCards(voicedBeats, title);
@@ -63,7 +77,7 @@ export async function renderVideo(
   const candidates = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f'];
   let codec = '';
   for (const c of candidates) {
-    const r = await VideoEncoder.isConfigSupported({ codec: c, width: W, height: H, bitrate: 6_000_000, framerate: FPS });
+    const r = await VideoEncoder.isConfigSupported({ codec: c, width: W, height: H, bitrate: 4_000_000, framerate: FPS });
     if (r.supported) { codec = c; break; }
   }
   if (!codec) throw new Error('这个浏览器没有 H.264 编码器，换 Edge/Chrome 最新版试试');
@@ -75,11 +89,14 @@ export async function renderVideo(
     fastStart: 'in-memory',
   });
 
+  let encoderError: Error | null = null;
   const video = new VideoEncoder({
     output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-    error: (e) => { throw e; },
+    error: (e) => {
+      encoderError = new Error(`浏览器编码器出错（${String(e).slice(0, 80)}）：关掉其它 Chrome 标签/窗口再试`);
+    },
   });
-  video.configure({ codec, width: W, height: H, bitrate: 6_000_000, framerate: FPS });
+  video.configure({ codec, width: W, height: H, bitrate: 4_000_000, framerate: FPS });
 
   // 3. 画帧
   const canvas = new OffscreenCanvas(W, H);
@@ -90,6 +107,7 @@ export async function renderVideo(
     const beat = timeline[bi];
     const frames = Math.max(1, Math.round(beat.duration * FPS));
     for (let f = 0; f < frames; f++) {
+      if (encoderError) throw encoderError;
       drawFrame(ctx, beat, f / FPS, theme, bi, timeline.length);
       const frame = new VideoFrame(canvas, {
         timestamp: Math.round((globalFrame * 1_000_000) / FPS),
@@ -117,6 +135,8 @@ export async function renderVideo(
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
+
 
 
 

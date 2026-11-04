@@ -33,4 +33,20 @@ export const PALETTES: Record<ThemeName, Palette> = {
     hairline: 'rgba(233,242,255,0.16)', panel: 'rgba(233,242,255,0.06)',
     panelEdge: 'rgba(64,169,255,0.5)', dark: true,
   },
+  news: {
+    bg1: '#f7f5f2', bg2: '#e6e2dc',
+    glow: 'rgba(214,40,40,0.14)',
+    ink: '#141414', muted: 'rgba(20,20,20,0.55)',
+    accent: '#d62828', accentInk: '#fff7f4',
+    hairline: 'rgba(20,20,20,0.18)', panel: 'rgba(255,255,255,0.7)',
+    panelEdge: 'rgba(214,40,40,0.45)', dark: false,
+  },
+  night: {
+    bg1: '#0b0a16', bg2: '#161232',
+    glow: 'rgba(124,108,255,0.25)',
+    ink: '#ece9ff', muted: 'rgba(236,233,255,0.55)',
+    accent: '#a78bfa', accentInk: '#120c26',
+    hairline: 'rgba(236,233,255,0.16)', panel: 'rgba(236,233,255,0.06)',
+    panelEdge: 'rgba(167,139,250,0.5)', dark: true,
+  },
 };

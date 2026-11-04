@@ -1,4 +1,4 @@
-export type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+﻿export type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 import type { Beat, ThemeName } from './types';
 import { PALETTES, type Palette } from './theme';
@@ -354,6 +354,23 @@ export function drawFrame(
   drawBackground(ctx, pal);
 
   const isCover = beat.card === 'intro' || beat.card === 'chapter';
+
+  // 实拍空镜：铺满 + 压暗，文字才压得住
+  if (!isCover && beat.bg) {
+    const img = beat.bg;
+    const scale = Math.max(W / img.width, H / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    ctx.fillStyle = pal.dark ? 'rgba(0,0,0,0.72)' : 'rgba(255,255,255,0.8)';
+    ctx.fillRect(0, 0, W, H);
+    const veil = ctx.createLinearGradient(0, 0, 0, H);
+    veil.addColorStop(0, 'rgba(0,0,0,0.35)');
+    veil.addColorStop(0.45, 'rgba(0,0,0,0)');
+    veil.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = veil;
+    ctx.fillRect(0, 0, W, H);
+  }
   if (isCover) {
     CARDS[beat.card](ctx, beat, t, pal);
   } else {
@@ -371,6 +388,7 @@ export function drawFrame(
   }
   ctx.restore();
 }
+
 
 
 

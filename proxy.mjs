@@ -1,4 +1,4 @@
-// 本机代理：浏览器不直接拿 key。
+﻿// 本机代理：浏览器不直接拿 key。
 //   POST /api/plan  {text}          → DeepSeek 拆稿（返回 beats）
 //   POST /api/tts   {text, voice}   → 配音，返回 audio/mpeg
 // 部署时这一层换成 Cloudflare Worker，接口不变。
@@ -13,6 +13,7 @@ import { applyEnv, envOf } from './lib/env.mjs';
 applyEnv(['DEEPSEEK_API_KEY', 'PEXELS_API_KEY']);
 
 const PORT = Number(process.env.GETCUT_PROXY_PORT || 8790);
+const brollCache = new Map();
 
 function cors(res) {
   res.setHeader('access-control-allow-origin', '*');
@@ -62,6 +63,44 @@ const server = http.createServer(async (req, res) => {
       const plan = await planScript(src, { apiKey: envOf('DEEPSEEK_API_KEY') });
       return json(res, 200, plan);
     }
+    if (req.method === 'GET' && req.url.startsWith('/api/broll')) {
+      // 实拍空镜：按关键词去 Pexels 找竖屏视频，直接把字节流回浏览器（避免跨域污染 canvas）
+      const q = new URL(req.url, 'http://localhost').searchParams.get('q') || '';
+      const key = envOf('PEXELS_API_KEY');
+      if (!key) return json(res, 501, { error: '服务端没配 PEXELS_API_KEY' });
+      if (!q.trim()) return json(res, 400, { error: '缺少关键词' });
+      const sr = await fetch(
+        `https://api.pexels.com/videos/search?query=${encodeURIComponent(q)}&orientation=portrait&per_page=8`,
+        { headers: { Authorization: key }, signal: AbortSignal.timeout(15000) },
+      );
+      if (!sr.ok) return json(res, 502, { error: `Pexels ${sr.status}` });
+      const data = await sr.json();
+      const videos = Array.isArray(data.videos) ? data.videos : [];
+      // 挑竖屏、尽量轻的（540 宽够当背景），别动辄下 20MB
+      const pick = (v) => (v.video_files || [])
+        .filter((f) => f.height > f.width && f.link)
+        .sort((a, b) => Math.abs(540 - a.width) - Math.abs(540 - b.width))[0];
+      let file = null;
+      for (const v of videos) { file = pick(v); if (file) break; }
+      if (!file) return json(res, 404, { error: '没找到合适的竖屏素材' });
+      const cacheKey = q.toLowerCase();
+      if (brollCache.has(cacheKey)) {
+        const hit = brollCache.get(cacheKey);
+        cors(res);
+        res.writeHead(200, { 'content-type': 'video/mp4', 'content-length': String(hit.length), 'cache-control': 'public, max-age=86400' });
+        res.end(hit);
+        return;
+      }
+      const vr = await fetch(file.link, { signal: AbortSignal.timeout(30000) });
+      if (!vr.ok) return json(res, 502, { error: `下载素材失败 ${vr.status}` });
+      const buf = Buffer.from(await vr.arrayBuffer());
+      if (brollCache.size > 24) brollCache.clear();
+      brollCache.set(cacheKey, buf);
+      cors(res);
+      res.writeHead(200, { 'content-type': 'video/mp4', 'content-length': String(buf.length), 'cache-control': 'public, max-age=86400' });
+      res.end(buf);
+      return;
+    }
     if (req.method === 'POST' && req.url === '/api/tts') {
       const { text, voice, rate } = await readBody(req);
       const src = String(text || '').trim();
@@ -86,3 +125,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => console.log(`代理已起：http://127.0.0.1:${PORT}`));
+
+

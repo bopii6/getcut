@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName } from './lib/types';
 
@@ -6,6 +6,8 @@ const THEMES: { id: ThemeName; name: string; hint: string }[] = [
   { id: 'poster', name: '大字报', hint: '黑金 · 一屏一句' },
   { id: 'magazine', name: '杂志风', hint: '暖纸 · 印章红' },
   { id: 'dashboard', name: '数据面板', hint: '深蓝 · 数字图表' },
+  { id: 'news', name: '新闻播报', hint: '白底 · 正红条' },
+  { id: 'night', name: '夜行', hint: '深紫 · 冷光' },
 ];
 
 const DEMO = `想开一家小店，你最怕的是什么？
@@ -20,6 +22,7 @@ const DEMO = `想开一家小店，你最怕的是什么？
 export default function App() {
   const [text, setText] = useState('');
   const [theme, setTheme] = useState<ThemeName>('poster');
+  const [useBroll, setUseBroll] = useState(false);
   const [status, setStatus] = useState('待机');
   const [pct, setPct] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
@@ -41,7 +44,7 @@ export default function App() {
       const blob = await renderVideo(plan, theme, title, ({ stage, percent }) => {
         setStatus(stage);
         setPct(percent);
-      });
+      }, useBroll);
       setMs(Math.round(performance.now() - t0));
       setUrl(URL.createObjectURL(blob));
       setStatus(`完成 · ${(blob.size / 1024 / 1024).toFixed(1)} MB`);
@@ -87,6 +90,11 @@ export default function App() {
             ))}
           </div>
 
+          <label className="switch">
+            <input type="checkbox" checked={useBroll} onChange={(e) => setUseBroll(e.target.checked)} />
+            <span>配实拍空镜（Pexels，会慢 1~2 分钟）</span>
+          </label>
+
           <div style={{ marginTop: 22 }}>
             <button className="go" onClick={run} disabled={busy.current}>生成视频</button>
             <div className="status">{status}{pct ? ` · ${pct}%` : ''}{ms ? ` · ${(ms / 1000).toFixed(1)} 秒` : ''}</div>
@@ -125,6 +133,8 @@ export default function App() {
         .row { display: flex; justify-content: space-between; align-items: center;
           font-size: 13px; color: rgba(243,239,230,0.5); margin-top: 8px; }
         .themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .switch { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: rgba(243,239,230,0.7); }
+        .switch input { width: 16px; height: 16px; accent-color: #d8a94a; }
         .theme { text-align: left; background: #0d0c0a; color: #f3efe6; cursor: pointer;
           border: 1px solid rgba(243,239,230,0.14); border-radius: 12px; padding: 14px; }
         .theme.on { border-color: #d8a94a; }
@@ -150,3 +160,6 @@ export default function App() {
     </div>
   );
 }
+
+
+
