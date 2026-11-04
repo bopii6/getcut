@@ -1,8 +1,9 @@
-﻿// 本机代理：浏览器不直接拿 key。
+// 本机代理：浏览器不直接拿 key。
 //   POST /api/plan  {text}          → DeepSeek 拆稿（返回 beats）
 //   POST /api/tts   {text, voice}   → 配音，返回 audio/mpeg
 // 部署时这一层换成 Cloudflare Worker，接口不变。
 import http from 'node:http';
+import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
@@ -45,6 +46,63 @@ function edgeTts(text, outFile, voice, rate) {
   });
 }
 
+// ── 并发闸门：每句一个 python 进程（约 70MB），不限并发，10 个客户 × 20 句就把 2C4G 撑爆
+const TTS_CONCURRENCY = Number(process.env.TTS_CONCURRENCY || 4);
+let running = 0;
+const waiters = [];
+
+function acquire() {
+  if (running < TTS_CONCURRENCY) { running++; return Promise.resolve(); }
+  return new Promise((resolve) => waiters.push(resolve));
+}
+
+function release() {
+  const next = waiters.shift();
+  if (next) next();
+  else running--;
+}
+
+// ── 句级缓存：改一句只重配那一句，同行业套话也常命中
+const TTS_CACHE_MAX = 400;
+const ttsCache = new Map();
+
+function cacheKey(text, voice, rate) {
+  return crypto.createHash('sha1').update(`${voice}|${rate}|${text}`).digest('hex');
+}
+
+function cacheGet(k) {
+  const hit = ttsCache.get(k);
+  if (!hit) return null;
+  ttsCache.delete(k);
+  ttsCache.set(k, hit);            // LRU：命中挪到队尾
+  return hit;
+}
+
+function cacheSet(k, buf) {
+  ttsCache.set(k, buf);
+  if (ttsCache.size > TTS_CACHE_MAX) ttsCache.delete(ttsCache.keys().next().value);
+}
+
+/** 单句合成（带闸门 + 缓存），返回 mp3 Buffer。 */
+async function synth(text, voice, rate) {
+  const key = cacheKey(text, voice, rate);
+  const hit = cacheGet(key);
+  if (hit) return hit;
+
+  await acquire();
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'gc-tts-'));
+  const file = path.join(dir, 'a.mp3');
+  try {
+    await edgeTts(text, file, voice, rate);
+    const buf = await readFile(file);
+    cacheSet(key, buf);
+    return buf;
+  } finally {
+    release();
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { cors(res); res.writeHead(204); res.end(); return; }
   try {
@@ -53,6 +111,8 @@ const server = http.createServer(async (req, res) => {
         ok: Boolean(envOf('DEEPSEEK_API_KEY')),
         plan: Boolean(envOf('DEEPSEEK_API_KEY')),
         tts: true,
+        ttsConcurrency: TTS_CONCURRENCY,
+        ttsCached: ttsCache.size,
         runtime: process.version,
       });
     }
@@ -105,18 +165,28 @@ const server = http.createServer(async (req, res) => {
       const { text, voice, rate } = await readBody(req);
       const src = String(text || '').trim();
       if (!src) return json(res, 400, { error: '没有文本' });
-      const dir = await mkdtemp(path.join(os.tmpdir(), 'gc-tts-'));
-      const file = path.join(dir, 'a.mp3');
-      try {
-        await edgeTts(src, file, voice || 'zh-CN-YunxiNeural', rate || '+16%');
-        const buf = await readFile(file);
-        cors(res);
-        res.writeHead(200, { 'content-type': 'audio/mpeg', 'content-length': String(buf.length) });
-        res.end(buf);
-      } finally {
-        await rm(dir, { recursive: true, force: true }).catch(() => {});
-      }
+      const buf = await synth(src, voice || 'zh-CN-YunxiNeural', rate || '+16%');
+      cors(res);
+      res.writeHead(200, { 'content-type': 'audio/mpeg', 'content-length': String(buf.length) });
+      res.end(buf);
       return;
+    }
+    if (req.method === 'POST' && req.url === '/api/tts/batch') {
+      // 一次 5 句：少 4 次往返，失败也只重来这一批
+      const { texts, voice, rate } = await readBody(req);
+      const list = Array.isArray(texts) ? texts.map((t) => String(t || '').trim()).filter(Boolean) : [];
+      if (!list.length) return json(res, 400, { error: '没有文本' });
+      if (list.length > 8) return json(res, 400, { error: '一批最多 8 句' });
+      const items = [];
+      for (let i = 0; i < list.length; i++) {
+        try {
+          const buf = await synth(list[i], voice || 'zh-CN-YunxiNeural', rate || '+16%');
+          items.push({ i, b64: buf.toString('base64') });
+        } catch (e) {
+          items.push({ i, error: e instanceof Error ? e.message.slice(0, 120) : 'fail' });
+        }
+      }
+      return json(res, 200, { items });
     }
     json(res, 404, { error: 'not found' });
   } catch (e) {
@@ -125,5 +195,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => console.log(`代理已起：http://127.0.0.1:${PORT}`));
+
 
 

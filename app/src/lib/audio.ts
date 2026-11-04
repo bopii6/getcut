@@ -16,17 +16,60 @@ export async function tts(text: string, voice = 'zh-CN-YunxiNeural'): Promise<Ar
 
 export type Voiced = { text: string; buffer: AudioBuffer; duration: number };
 
+function b64ToBuffer(b64: string): ArrayBuffer {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out.buffer;
+}
+
+/**
+ * 逐句配音。5 句一批走 /api/tts/batch：
+ * - 请求数从 N 次降到 N/5，服务端也能按批排队
+ * - 某一批失败就退回单句，坏一句不毁整条
+ */
 export async function voiceAll(
   texts: string[],
   onProgress?: (done: number, total: number) => void,
 ): Promise<Voiced[]> {
   const ac = new AudioContext({ sampleRate: 48000 });
   const out: Voiced[] = [];
-  for (let i = 0; i < texts.length; i++) {
-    const raw = await tts(texts[i]);
+  const BATCH = 5;
+
+  const push = async (text: string, raw: ArrayBuffer) => {
     const buffer = await ac.decodeAudioData(raw);
-    out.push({ text: texts[i], buffer, duration: buffer.duration + 0.18 });
-    onProgress?.(i + 1, texts.length);
+    out.push({ text, buffer, duration: buffer.duration + 0.18 });
+    onProgress?.(out.length, texts.length);
+  };
+
+  for (let start = 0; start < texts.length; start += BATCH) {
+    const chunk = texts.slice(start, start + BATCH);
+    let items: { i: number; b64?: string; error?: string }[] = [];
+    try {
+      const res = await fetch(api('/api/tts/batch'), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ texts: chunk }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      items = (await res.json()).items || [];
+    } catch {
+      items = chunk.map((_, i) => ({ i, error: 'batch failed' }));
+    }
+
+    for (let k = 0; k < chunk.length; k++) {
+      const it = items.find((x) => x.i === k);
+      if (it?.b64) {
+        await push(chunk[k], b64ToBuffer(it.b64));
+      } else {
+        // 兜底：单句重试一次
+        try {
+          await push(chunk[k], await tts(chunk[k]));
+        } catch (e) {
+          throw new Error(`第 ${start + k + 1} 句配音失败：${e instanceof Error ? e.message : e}`);
+        }
+      }
+    }
   }
   await ac.close();
   return out;
