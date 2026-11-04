@@ -1,10 +1,11 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
-import type { ThemeName } from './lib/types';
+import type { ThemeName, PlanBeat } from './lib/types';
 import {
-  createGen, deleteGen, getMe, listHistory, login, logout, register,
+  createGen, deleteGen, getMe, listHistory, login, logout, redeem, register,
   uploadVideo, videoUrl, type GenItem, type Me,
 } from './lib/account';
+import { exportJianyingDraft } from './lib/jianying';
 
 type Choice = ThemeName | 'auto';
 
@@ -68,6 +69,10 @@ export default function Workbench() {
   const [authPass, setAuthPass] = useState('');
   const [authErr, setAuthErr] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'limited' | 'error'>('idle');
+  const [showBuy, setShowBuy] = useState(false);
+  const [buyCode, setBuyCode] = useState('');
+  const [buyMsg, setBuyMsg] = useState('');
+  const [plan, setPlan] = useState<PlanBeat[] | null>(null);
 
   const refresh = async () => {
     try { setMe(await getMe()); } catch { /* 离线也能用 */ }
@@ -104,6 +109,7 @@ export default function Workbench() {
     try {
       setStage('读文案，拆镜头');
       const plan = await planScript(src);
+      setPlan(plan);
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
       const blob = await renderVideo(plan, theme, title, ({ stage: s, percent }) => {
         setStage(s);
@@ -127,6 +133,7 @@ export default function Workbench() {
       } catch (e) {
         const status = (e as Error & { status?: number }).status;
         setSaveState(status === 402 ? 'limited' : 'error');
+        if (status === 402) setShowBuy(true);
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -136,12 +143,31 @@ export default function Workbench() {
     }
   }
 
+  async function exportDraft() {
+    if (!plan) return;
+    const title = text.trim().split(/[。！？\n]/)[0].slice(0, 14) || 'getcut';
+    const r = await exportJianyingDraft({
+      title, width: 1080, height: 1920, fps: 30,
+      beats: plan.map((b) => ({ text: b.text, duration: 2.5, card: b.card })),
+    });
+    if (r.zipBlob) {
+      const u = URL.createObjectURL(r.zipBlob);
+      const a = document.createElement('a');
+      a.href = u;
+      a.download = `${title}-剪映草稿.zip`;
+      a.click();
+      URL.revokeObjectURL(u);
+    }
+  }
+
   return (
     <div className="page">
       <header>
         <a className="brand" href="/">GetCut</a>
         <div className="topright">
-          {me ? <span className="quota">免费剩 {me.remaining} 条</span> : null}
+          {me?.pro ? <span className="quota pro">已买断 · 不限条数</span>
+            : me ? <span className="quota">免费剩 {me.remaining} 条</span> : null}
+          {me && !me.pro ? <button className="link" onClick={() => setShowBuy(true)}>599 买断</button> : null}
           {me?.loggedIn ? (
             <span className="who" title={me.email || ''}>
               {me.email}
@@ -181,6 +207,33 @@ export default function Workbench() {
         </div>
       ) : null}
 
+      {showBuy ? (
+        <div className="mask" onClick={() => setShowBuy(false)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>599 元买断</h3>
+            <p>不限条数 · 作品存 90 天 · 含全部 13 种风格。付款后给你一串卡密，在这里核销。</p>
+            {me?.loggedIn ? null : <p className="err">先登录，卡密会绑到你的账号</p>}
+            <input
+              placeholder="GC-XXXX-XXXX-XXXX" value={buyCode}
+              onChange={(e) => { setBuyCode(e.target.value); setBuyMsg(''); }}
+            />
+            {buyMsg ? <p className={buyMsg.startsWith('已') ? 'ok' : 'err'}>{buyMsg}</p> : null}
+            <button
+              className="primary"
+              onClick={async () => {
+                if (!me?.loggedIn) { setShowBuy(false); setShowAuth(true); return; }
+                try {
+                  const r = await redeem(buyCode);
+                  setBuyMsg(r.already ? '这张卡已经用过，权益已生效' : '已解锁，随便用');
+                  await refresh();
+                } catch (e) { setBuyMsg(e instanceof Error ? e.message : String(e)); }
+              }}
+            >{me?.loggedIn ? '核销卡密' : '先去登录'}</button>
+            <p className="dim">还没买？微信 / 支付宝转账后把邮箱发给客服，人工发码。</p>
+          </div>
+        </div>
+      ) : null}
+
       <section className="hero">
         <h1>一条能发出去的获客片，<br />只需要一段文案。</h1>
         <p>粘贴口播稿，AI 拆镜头、配音、排版，几分钟后拿到竖屏成片。</p>
@@ -208,6 +261,7 @@ export default function Workbench() {
               {saveState === 'limited' ? <p className="err">免费 3 条用完了 · 这条可以先下载，解锁后自动存</p> : null}
               {saveState === 'error' ? <p className="err">存作品库失败，但下载不受影响</p> : null}
               <a className="primary" href={url} download="getcut.mp4">下载 MP4</a>
+              <button className="ghost" onClick={exportDraft}>导出剪映草稿</button>
               <button className="ghost" onClick={() => { setUrl(null); setPct(0); setStage(''); setSaveState('idle'); }}>
                 再做一条
               </button>
@@ -313,6 +367,7 @@ export default function Workbench() {
         .note { font-size: 12px; color: var(--dim); letter-spacing: 1px; }
         .topright { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--dim); }
         .quota { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; }
+        .quota.pro { border-color: rgba(216,169,74,.55); color: var(--gold); }
         .who { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; max-width: 260px;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .mask { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; z-index: 20; padding: 20px; }
@@ -397,6 +452,7 @@ export default function Workbench() {
     </div>
   );
 }
+
 
 
 

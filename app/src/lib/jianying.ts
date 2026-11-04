@@ -8,7 +8,7 @@
 // 一、哪些字段是必须的（按剪映专业版 5.9 的 draft_content.json 核对）
 //   - 顶层必须有：canvas_config{width,height,ratio}、fps、duration（微秒）、
 //     materials、tracks、version=360000、new_version="110.0.0"、platform。
-//     version/new_version/platform 不对，剪映会直接拒绝解析这份草稿。
+//     version/new_version 对不上时，剪映可能拒绝解析或提示草稿损坏。
 //   - 每个片段（segment）必须有：id、material_id、target_timerange{start,duration}
 //     （单位为微秒）；同一条轨道内片段按时间升序、首尾相接、不能重叠。
 //   - 视频/音频片段必须有 source_timerange（截取素材的哪一段）；
@@ -511,15 +511,17 @@ function toMicros(seconds: number): Micros {
 
 /**
  * 把任意标题变成安全的文件夹/草稿名：
- * 去掉 Windows 非法字符与结尾的点/空格，按字符数截断。
+ * 去掉 Windows 非法字符与控制字符，收拢空白，按字符数截断。
  */
 function safeFileSegment(raw: string, fallback: string, maxLength = 40): string {
-  const cleaned = raw
-    .replace(/[\\/:*?"<>|]/g, ' ')
-    .replace(/[\u0000-\u001f]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/[. ]+$/g, '');
+  let cleaned = '';
+  for (const char of raw) {
+    const code = char.codePointAt(0) ?? 0;
+    // Windows 文件名不允许 \ / : * ? " < > |，控制字符也一并换成空格
+    const illegal = '\\/:*?"<>|'.includes(char) || code < 0x20;
+    cleaned += illegal ? ' ' : char;
+  }
+  cleaned = cleaned.replace(/\s+/g, ' ').trim().replace(/[. ]+$/g, '');
   const cut = Array.from(cleaned).slice(0, maxLength).join('');
   return cut || fallback;
 }

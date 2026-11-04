@@ -1,10 +1,11 @@
-// 账号 / 作品库接口（同源 /api/*）
+﻿// 账号 / 作品库接口（同源 /api/*）
 import { api } from './api';
 
 export type Me = {
   device: string;
   email: string | null;
   loggedIn: boolean;
+  pro: boolean;
   freeLimit: number;
   used: number;
   remaining: number;
@@ -48,6 +49,12 @@ export const login = (email: string, password: string) =>
     body: JSON.stringify({ email, password }),
   }) as Promise<{ email: string }>;
 
+export const redeem = (code: string) =>
+  jfetch('/api/redeem', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ code }),
+  }) as Promise<{ ok: true; pro: boolean; already?: boolean }>;
+
 export const logout = () => jfetch('/api/auth/logout', { method: 'POST' }) as Promise<{ ok: true }>;
 
 export const listHistory = () => jfetch('/api/history') as Promise<{ items: GenItem[] }>;
@@ -70,3 +77,4 @@ export const deleteGen = (id: string) =>
   jfetch(`/api/gen/${id}`, { method: 'DELETE' }) as Promise<{ ok: true }>;
 
 export const videoUrl = (id: string) => api(`/api/video/${id}`);
+

@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { planScript } from './scripts/plan.mjs';
 import { applyEnv, envOf } from './lib/env.mjs';
+import { format as fmtCard, normalize as normCard, validate as validCard } from './lib/cards.mjs';
 
 applyEnv(['DEEPSEEK_API_KEY', 'PEXELS_API_KEY']);
 
@@ -23,7 +24,19 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.GETCUT_DATA_DIR || path.join(ROOT, 'data');
 const VIDEO_DIR = path.join(DATA_DIR, 'videos');
 const STORE = path.join(DATA_DIR, 'store.json');
+const CARDS = path.join(DATA_DIR, 'cards.json');
 const FREE_LIMIT = Number(process.env.GETCUT_FREE_LIMIT || 3);
+
+function loadCards() {
+  try { return JSON.parse(readFileSync(CARDS, 'utf8')); } catch { return []; }
+}
+
+function saveCards(cards) {
+  mkdirSync(DATA_DIR, { recursive: true });
+  const tmp = `${CARDS}.tmp`;
+  writeFileSync(tmp, JSON.stringify(cards, null, 1));
+  renameSync(tmp, CARDS);
+}
 mkdirSync(VIDEO_DIR, { recursive: true });
 
 function loadStore() {
@@ -290,28 +303,67 @@ const server = http.createServer(async (req, res) => {
       res.setHeader('set-cookie', 'gc_sid=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
       return json(res, 200, { ok: true });
     }
+    if (req.method === 'POST' && req.url === '/api/redeem') {
+      // 599 买断：卡密核销。先算校验位（不查库），再在单写事务里带条件更新
+      const { email } = ownerOf(req, res);
+      if (!email) return json(res, 401, { error: '先登录，卡密会绑到你的账号' });
+      const body = await readBody(req);
+      const v = validCard(body.code);
+      if (!v.ok) return json(res, 400, { error: v.reason });
+      const code = normCard(body.code);
+      const cards = loadCards();
+      const card = cards.find((c) => c.code === code);
+      if (!card) return json(res, 404, { error: '没有这张卡密' });
+      const store = loadStore();
+      const user = store.users.find((u) => u.email === email);
+      if (!user) return json(res, 401, { error: '账号不存在，重新登录' });
+
+      if (card.used) {
+        if (card.usedBy === email) {
+          if (!user.pro) { user.pro = true; saveStore(store); }
+          return json(res, 200, { ok: true, pro: true, already: true });
+        }
+        return json(res, 409, { error: '这张卡密已经被用过了' });
+      }
+      card.used = true;
+      card.usedBy = email;
+      card.usedAt = Date.now();
+      saveCards(cards);
+      user.pro = true;
+      user.proSince = Date.now();
+      saveStore(store);
+      return json(res, 200, { ok: true, pro: true, plan: 'getcut-599', card: fmtCard(code) });
+    }
 
     // ── 账号 / 历史 / 额度 ────────────────────────────────
     if (req.method === 'GET' && req.url === '/api/me') {
       const { owner, email, device } = ownerOf(req, res);
       const store = loadStore();
-      const used = store.gens.filter((g) => g.owner === owner).length;
+      const user = email ? store.users.find((u) => u.email === email) : null;
+      const pro = Boolean(user && user.pro);
+      // 登录后把同一台设备的试用记录也算进来，避免换个账号白拿 3 条
+      const owners = email ? [`u:${email}`, `d:${device}`] : [`d:${device}`];
+      const used = store.gens.filter((g) => owners.includes(g.owner)).length;
       cors(res);
       return json(res, 200, {
         device,
         email: email || null,
         loggedIn: Boolean(email),
+        pro,
         freeLimit: FREE_LIMIT,
         used,
-        remaining: Math.max(0, FREE_LIMIT - used),
+        remaining: pro ? -1 : Math.max(0, FREE_LIMIT - used),
       });
     }
     if (req.method === 'POST' && req.url === '/api/gen') {
-      const { owner, email } = ownerOf(req, res);
+      const { owner, email, device } = ownerOf(req, res);
       const body = await readBody(req);
       const store = loadStore();
-      const used = store.gens.filter((g) => g.owner === owner).length;
-      if (used >= FREE_LIMIT) {
+      const user = email ? store.users.find((u) => u.email === email) : null;
+      const pro = Boolean(user && user.pro);
+      const owners = email ? [`u:${email}`, `d:${device}`] : [`d:${device}`];
+      const used = store.gens.filter((g) => owners.includes(g.owner)).length;
+      if (!pro && used >= FREE_LIMIT) {
         return json(res, 402, { error: `免费额度已经用完（${FREE_LIMIT} 条）`, limited: true, used, freeLimit: FREE_LIMIT });
       }
       const id = crypto.randomBytes(6).toString('hex');
@@ -327,7 +379,7 @@ const server = http.createServer(async (req, res) => {
       };
       store.gens.unshift(rec);
       saveStore(store);
-      return json(res, 200, { id, used: used + 1, freeLimit: FREE_LIMIT, remaining: Math.max(0, FREE_LIMIT - used - 1) });
+      return json(res, 200, { id, used: used + 1, freeLimit: FREE_LIMIT, pro, remaining: pro ? -1 : Math.max(0, FREE_LIMIT - used - 1) });
     }
     if (req.method === 'PUT' && /^\/api\/gen\/[a-f0-9]+\/video$/.test(req.url)) {
       const { owner } = ownerOf(req, res);
