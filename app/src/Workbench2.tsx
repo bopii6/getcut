@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
@@ -74,6 +74,9 @@ export default function Workbench() {
   const [buyMsg, setBuyMsg] = useState('');
   const [plan, setPlan] = useState<PlanBeat[] | null>(null);
   const [voice, setVoice] = useState('zh-CN-YunxiNeural');
+  const [jianyingMsg, setJianyingMsg] = useState('');
+  const [zipUrl, setZipUrl] = useState('');
+  const [playId, setPlayId] = useState('');
 
   const refresh = async () => {
     try { setMe(await getMe()); } catch { /* 离线也能用 */ }
@@ -147,12 +150,14 @@ export default function Workbench() {
   async function exportDraft() {
     if (!plan) return;
     const title = text.trim().split(/[。！？\n]/)[0].slice(0, 14) || 'getcut';
-    const r = await exportJianyingDraft({
-      title, width: 1080, height: 1920, fps: 30,
-      beats: plan.map((b) => ({ text: b.text, duration: 2.5, card: b.card })),
-    });
-    if (r.zipBlob) {
+    try {
+      const r = await exportJianyingDraft({
+        title, width: 1080, height: 1920, fps: 30,
+        beats: plan.map((b) => ({ text: b.text, duration: 2.5, card: b.card })),
+      });
+      if (!r.zipBlob) throw new Error('没有生成 zip');
       const u = URL.createObjectURL(r.zipBlob);
+      setZipUrl(u);
       const a = document.createElement('a');
       a.href = u;
       a.download = `${title}-剪映草稿.zip`;
@@ -161,6 +166,9 @@ export default function Workbench() {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(u), 5000);
+      setJianyingMsg(`已生成草稿（${(r.zipBlob.size / 1024).toFixed(0)} KB）`);
+    } catch (e) {
+      setJianyingMsg(`导出失败：${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -265,7 +273,7 @@ export default function Workbench() {
               {saveState === 'limited' ? <p className="err">免费 3 条用完了 · 这条可以先下载，解锁后自动存</p> : null}
               {saveState === 'error' ? <p className="err">存作品库失败，但下载不受影响</p> : null}
               <a className="primary" href={url} download="getcut.mp4">下载 MP4</a>
-              <button className="ghost" onClick={exportDraft}>导出剪映草稿</button>
+              <button className="ghost" onClick={exportDraft}>导出剪映草稿</button>`n              {jianyingMsg ? <p className="dim">{jianyingMsg}</p> : null}`n              {zipUrl ? <a className="dl" href={zipUrl} download="getcut-剪映草稿.zip">保存剪映草稿.zip</a> : null}
               <button className="ghost" onClick={() => { setUrl(null); setPct(0); setStage(''); setSaveState('idle'); }}>
                 再做一条
               </button>
@@ -346,9 +354,12 @@ export default function Workbench() {
                   {g.size ? ` · ${(g.size / 1024 / 1024).toFixed(1)} MB` : ''}
                 </p>
                 <div className="work-actions">
-                  {g.hasVideo
-                    ? <a className="link" href={videoUrl(g.id)} download={`${g.title || 'getcut'}.mp4`}>下载</a>
-                    : <span className="dim">成片未保存</span>}
+                  {g.hasVideo ? (
+                    <>
+                      <button className="link" onClick={() => setPlayId(g.id)}>播放</button>
+                      <a className="link" href={videoUrl(g.id)} download={`${g.title || 'getcut'}.mp4`}>下载</a>
+                    </>
+                  ) : <span className="dim">成片未保存</span>}
                   <button
                     className="link danger"
                     onClick={async () => { await deleteGen(g.id); await refresh(); }}
@@ -358,6 +369,14 @@ export default function Workbench() {
             ))}
           </div>
         </section>
+      ) : null}
+
+      {playId ? (
+        <div className="mask" onClick={() => setPlayId('')}>
+          <div className="player" onClick={(e) => e.stopPropagation()}>
+            <video src={videoUrl(playId)} controls autoPlay playsInline />
+          </div>
+        </div>
       ) : null}
 
       <footer>
@@ -409,6 +428,8 @@ export default function Workbench() {
           text-overflow: ellipsis; white-space: nowrap; }
         .work-actions { display: flex; gap: 14px; margin-top: 10px; }
         .danger { color: #ff9a86; }
+        .player { max-width: 380px; width: 100%; }
+        .player video { width: 100%; border-radius: 14px; background: #000; }
 
         .hero { padding: 56px 0 34px; }
         .hero h1 { margin: 0; font-size: 46px; line-height: 1.25; font-weight: 900; letter-spacing: -.5px; }
@@ -477,6 +498,10 @@ export default function Workbench() {
     </div>
   );
 }
+
+
+
+
 
 
 
