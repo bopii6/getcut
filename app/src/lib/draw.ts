@@ -2,6 +2,7 @@
 
 import type { Beat, ThemeName } from './types';
 import { PALETTES, type Palette } from './theme';
+import { NEW_STYLES } from './styles';
 
 export const W = 1080;
 export const H = 1920;
@@ -349,6 +350,8 @@ export function drawFrame(
   index: number,
   total: number,
 ) {
+  const special = NEW_STYLES[theme];
+  if (special) { special(ctx, beat, t, index, total); return; }
   const pal = PALETTES[theme];
   ctx.save();
   drawBackground(ctx, pal);
@@ -388,6 +391,7 @@ export function drawFrame(
   }
   ctx.restore();
 }
+
 
 
 

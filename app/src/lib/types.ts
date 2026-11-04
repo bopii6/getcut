@@ -1,7 +1,7 @@
-export type CardKind =
+﻿export type CardKind =
   | 'hook' | 'plain' | 'stat' | 'list' | 'compare' | 'quote' | 'cta' | 'intro' | 'chapter';
 
-export type ThemeName = 'poster' | 'magazine' | 'dashboard' | 'news' | 'night';
+export type ThemeName = 'poster' | 'magazine' | 'dashboard' | 'news' | 'night' | 'newsroom' | 'ledger';
 
 export type Beat = {
   text: string;
@@ -22,3 +22,4 @@ export type Beat = {
 };
 
 export type PlanBeat = Omit<Beat, 'duration' | 'audio' | 'bg'>;
+

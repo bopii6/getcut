@@ -32,18 +32,81 @@ export async function voiceAll(
   return out;
 }
 
-/** 把每句按时间轴拼成一条完整音轨（48k 双声道）。 */
-export function buildTimeline(voiced: Voiced[], sampleRate = 48000, channels = 2): AudioBuffer {
+/** 解码一首 BGM；失败返回 null（没音乐也能出片）。 */
+export async function loadMusic(url: string): Promise<AudioBuffer | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const raw = await res.arrayBuffer();
+    const ac = new AudioContext({ sampleRate: 48000 });
+    const buf = await ac.decodeAudioData(raw);
+    await ac.close();
+    return buf;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 把配音和 BGM 拼成一条音轨（48k 双声道）。
+ * - BGM 循环铺满，整体音量压在人声之下
+ * - 人声出现时自动压低 BGM（attack/release 一阶平滑），人声停了再抬回来
+ * - 开头 0.4 秒淡入、结尾 1.2 秒淡出
+ */
+export function buildTimeline(
+  voiced: Voiced[],
+  { sampleRate = 48000, channels = 2, bgm = null, bgmGain = 0.34, duckTo = 0.42 } = {} as {
+    sampleRate?: number; channels?: number; bgm?: AudioBuffer | null; bgmGain?: number; duckTo?: number;
+  },
+): AudioBuffer {
   const total = voiced.reduce((n, v) => n + v.duration, 0);
-  const frames = Math.ceil(total * sampleRate);
-  const buf = new AudioBuffer({ length: Math.max(1, frames), numberOfChannels: channels, sampleRate });
+  const frames = Math.max(1, Math.ceil(total * sampleRate));
+  const buf = new AudioBuffer({ length: frames, numberOfChannels: channels, sampleRate });
+
+  // 1. 配音
+  const voice = new Float32Array(frames);
+  const speaking = new Uint8Array(frames);
   let offset = 0;
   for (const v of voiced) {
-    for (let ch = 0; ch < channels; ch++) {
-      const src = v.buffer.getChannelData(Math.min(ch, v.buffer.numberOfChannels - 1));
-      buf.copyToChannel(src, ch, Math.round(offset * sampleRate));
-    }
+    const start = Math.round(offset * sampleRate);
+    const src = v.buffer.getChannelData(0);
+    for (let i = 0; i < src.length && start + i < frames; i++) voice[start + i] = src[i];
+    // 说话区间（前后各留 80ms，避免 BGM 提早抬起）
+    const pad = Math.round(0.08 * sampleRate);
+    const from = Math.max(0, start - pad);
+    const to = Math.min(frames, start + src.length + pad);
+    for (let i = from; i < to; i++) speaking[i] = 1;
     offset += v.duration;
+  }
+
+  // 2. BGM + 闪避
+  const music = new Float32Array(frames);
+  if (bgm) {
+    const src = bgm.getChannelData(0);
+    const n = src.length;
+    const attack = 1 - Math.exp(-1 / (0.08 * sampleRate));   // 80ms
+    const release = 1 - Math.exp(-1 / (0.35 * sampleRate));  // 350ms
+    let env = 1;
+    const fadeIn = Math.round(0.4 * sampleRate);
+    const fadeOut = Math.round(1.2 * sampleRate);
+    for (let i = 0; i < frames; i++) {
+      const target = speaking[i] ? duckTo : 1;
+      env += (target - env) * (target < env ? attack : release);
+      let g = bgmGain * env;
+      if (i < fadeIn) g *= i / fadeIn;
+      if (i > frames - fadeOut) g *= Math.max(0, (frames - i) / fadeOut);
+      music[i] = src[i % n] * g;
+    }
+  }
+
+  // 3. 混音（简单限幅，避免爆音）
+  for (let ch = 0; ch < channels; ch++) {
+    const out = new Float32Array(frames);
+    for (let i = 0; i < frames; i++) {
+      const s = voice[i] + music[i];
+      out[i] = s > 1 ? 1 : s < -1 ? -1 : s;
+    }
+    buf.copyToChannel(out, ch);
   }
   return buf;
 }

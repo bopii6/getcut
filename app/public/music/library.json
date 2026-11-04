@@ -1,0 +1,82 @@
+[
+ {
+  "file": "corporate.mp3",
+  "genre": "corporate",
+  "mood": "商务·稳",
+  "fit": "律师/教培",
+  "mixkit_id": "623",
+  "source": "https://mixkit.co/free-stock-music/corporate/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1121195
+ },
+ {
+  "file": "cinematic.mp3",
+  "genre": "cinematic",
+  "mood": "电影·推进",
+  "fit": "加盟/观点",
+  "mixkit_id": "614",
+  "source": "https://mixkit.co/free-stock-music/cinematic/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1121195
+ },
+ {
+  "file": "news.mp3",
+  "genre": "news",
+  "mood": "新闻·紧迫",
+  "fit": "资讯/热点",
+  "mixkit_id": "720",
+  "source": "https://mixkit.co/free-stock-music/news/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1120940
+ },
+ {
+  "file": "electronic.mp3",
+  "genre": "electronic",
+  "mood": "电子·轻快",
+  "fit": "通用",
+  "mixkit_id": "175",
+  "source": "https://mixkit.co/free-stock-music/electronic/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1121003
+ },
+ {
+  "file": "trap.mp3",
+  "genre": "trap",
+  "mood": "说唱·强拍",
+  "fit": "强钩子",
+  "mixkit_id": "400",
+  "source": "https://mixkit.co/free-stock-music/trap/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1120940
+ },
+ {
+  "file": "funk.mp3",
+  "genre": "funk",
+  "mood": "律动·轻快",
+  "fit": "餐饮/门店",
+  "mixkit_id": "872",
+  "source": "https://mixkit.co/free-stock-music/funk/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1120940
+ },
+ {
+  "file": "orchestral.mp3",
+  "genre": "orchestral",
+  "mood": "管弦·压迫",
+  "fit": "重话题",
+  "mixkit_id": "587",
+  "source": "https://mixkit.co/free-stock-music/orchestral/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1121195
+ },
+ {
+  "file": "upbeat.mp3",
+  "genre": "upbeat",
+  "mood": "明快·向上",
+  "fit": "通用",
+  "mixkit_id": "644",
+  "source": "https://mixkit.co/free-stock-music/upbeat/",
+  "license": "Mixkit Free Stock Music License",
+  "bytes": 1120940
+ }
+]

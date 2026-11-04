@@ -1,11 +1,22 @@
-// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
+﻿// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import type { Beat, PlanBeat, ThemeName } from './types';
 import { drawFrame, FPS, H, W } from './draw';
-import { buildTimeline, encodeAudio, voiceAll } from './audio';
+import { buildTimeline, encodeAudio, loadMusic, voiceAll } from './audio';
 import { fetchBroll } from './broll';
 
 import { api } from './api';
+
+/** 每套风格配一首 BGM（都在 public/music 下，可随时替换）。 */
+const BGM: Record<ThemeName, string> = {
+  poster: 'music/breakbeat.mp3',
+  magazine: 'music/cinematic.mp3',
+  dashboard: 'music/chill.mp3',
+  news: 'music/breakbeat.mp3',
+  night: 'music/cinematic.mp3',
+  newsroom: 'music/news.mp3',
+  ledger: 'music/corporate.mp3',
+};
 
 export async function planScript(text: string): Promise<PlanBeat[]> {
   const res = await fetch(api('/api/plan'), {
@@ -45,6 +56,7 @@ export async function renderVideo(
   title: string,
   onProgress: (p: Progress) => void,
   useBroll = false,
+  useMusic = true,
 ): Promise<Blob> {
   // 1. 实拍空镜（默认关：抓素材慢且不稳，需要时在界面上打开）
   onProgress({ stage: useBroll ? '找实拍空镜' : '准备', percent: 1 });
@@ -123,9 +135,10 @@ export async function renderVideo(
   await video.flush();
   video.close();
 
-  // 4. 音轨
+  // 4. 音轨（配音 + BGM，人声出现时自动压低音乐）
   onProgress({ stage: '合成音轨', percent: 86 });
-  const audioBuf = buildTimeline(voiced, 48000, 2);
+  const bgm = useMusic ? await loadMusic(BGM[theme] || BGM.poster) : null;
+  const audioBuf = buildTimeline(voiced, { sampleRate: 48000, channels: 2, bgm });
   await encodeAudio(audioBuf, (chunk, meta) => muxer.addAudioChunk(chunk, meta), (p) => {
     onProgress({ stage: '音轨编码', percent: 86 + Math.round(p * 12) });
   });
@@ -135,6 +148,7 @@ export async function renderVideo(
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
 
 
 

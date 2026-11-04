@@ -10,6 +10,8 @@ const STYLES: { id: Choice; name: string }[] = [
   { id: 'magazine', name: '杂志' },
   { id: 'dashboard', name: '数据' },
   { id: 'news', name: '新闻' },
+  { id: 'newsroom', name: '播报' },
+  { id: 'ledger', name: '财报' },
   { id: 'night', name: '夜行' },
 ];
 
@@ -39,6 +41,7 @@ export default function Workbench() {
   const [text, setText] = useState('');
   const [choice, setChoice] = useState<Choice>('auto');
   const [broll, setBroll] = useState(false);
+  const [music, setMusic] = useState(true);
   const [stage, setStage] = useState('');
   const [pct, setPct] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
@@ -59,6 +62,7 @@ export default function Workbench() {
     setErr(null); setUrl(null); setPct(0); setSecs(null);
     const t0 = performance.now();
     const theme = choice === 'auto' ? pickTheme(src) : choice;
+    console.log('[getcut] theme =', theme);
     try {
       setStage('读文案，拆镜头');
       const plan = await planScript(src);
@@ -66,7 +70,7 @@ export default function Workbench() {
       const blob = await renderVideo(plan, theme, title, ({ stage: s, percent }) => {
         setStage(s);
         setPct(percent);
-      }, broll);
+      }, broll, music);
       setSecs(Math.round((performance.now() - t0) / 1000));
       setUrl(URL.createObjectURL(blob));
       setPct(100);
@@ -132,10 +136,16 @@ export default function Workbench() {
                   >{s.name}</button>
                 ))}
               </div>
-              <label className="check">
-                <input type="checkbox" checked={broll} onChange={(e) => setBroll(e.target.checked)} />
-                配实拍画面
-              </label>
+              <span className="checks">
+                <label className="check">
+                  <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} />
+                  背景音乐
+                </label>
+                <label className="check">
+                  <input type="checkbox" checked={broll} onChange={(e) => setBroll(e.target.checked)} />
+                  实拍画面
+                </label>
+              </span>
             </div>
             <button className="primary" onClick={run} disabled={running}>
               {running ? (stage || '生成中') : '生成视频'}
@@ -202,6 +212,7 @@ export default function Workbench() {
           padding: 7px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; transition: all .18s; }
         .styles button:hover { color: var(--ink); border-color: rgba(244,239,228,.25); }
         .styles button.on { color: var(--gold-ink); background: var(--gold); border-color: var(--gold); }
+        .checks { display: inline-flex; gap: 16px; }
         .check { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--dim); cursor: pointer; }
         .check input { width: 15px; height: 15px; accent-color: var(--gold); }
 
@@ -237,4 +248,8 @@ export default function Workbench() {
     </div>
   );
 }
+
+
+
+
 
