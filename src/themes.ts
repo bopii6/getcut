@@ -1,4 +1,4 @@
-﻿export type ThemeName = 'magazine' | 'poster' | 'dashboard';
+export type ThemeName = 'magazine' | 'poster' | 'dashboard' | 'cartoon';
 
 export type Theme = ReturnType<typeof themeOf>;
 
@@ -50,6 +50,25 @@ export function themeOf(name: ThemeName) {
       hairline: 'rgba(233,242,255,0.16)',
       panel: 'rgba(233,242,255,0.06)',
       panelEdge: 'rgba(64,169,255,0.5)',
+    };
+  }
+  if (name === 'cartoon') {
+    return {
+      ...base,
+      music: 'music/breakbeat.mp3',
+      blobA: 'rgba(226,74,40,0.12)',
+      blobB: 'rgba(24,34,58,0.08)',
+      dark: false,
+      bg: '#f3ecdd',
+      glow: 'radial-gradient(820px 620px at 82% 4%, rgba(226,74,40,0.16), transparent 62%), radial-gradient(680px 560px at 0% 100%, rgba(24,34,58,0.10), transparent 60%)',
+      texture: 'repeating-radial-gradient(circle at 0 0, rgba(24,34,58,0.05) 0px, rgba(24,34,58,0.05) 1px, transparent 1px, transparent 3px)',
+      ink: '#18223a',
+      muted: 'rgba(24,34,58,0.55)',
+      accent: '#e0542a',
+      accentInk: '#fff8ee',
+      hairline: 'rgba(24,34,58,0.16)',
+      panel: 'rgba(255,253,247,0.92)',
+      panelEdge: 'rgba(24,34,58,0.6)',
     };
   }
   return {

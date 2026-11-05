@@ -11,7 +11,7 @@ import { fetchBroll } from './broll.mjs';
 import { envOf, applyEnv } from '../lib/env.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const COMPOSITION = { magazine: 'Magazine', poster: 'Poster', dashboard: 'Dashboard' };
+const COMPOSITION = { magazine: 'Magazine', poster: 'Poster', dashboard: 'Dashboard', cartoon: 'Cartoon' };
 
 // 钥匙只从本项目的 .env（或环境变量）来，不依赖其它目录
 applyEnv(['DEEPSEEK_API_KEY', 'PEXELS_API_KEY']);

@@ -1,8 +1,8 @@
-﻿// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
+// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import type { Beat, PlanBeat, ThemeName } from './types';
 import { drawFrame, FPS, H, W } from './draw';
-import { buildTimeline, encodeAudio, loadMusic, voiceAll } from './audio';
+import { buildTimeline, encodeAudio, loadMusic, pickAudioConfig, voiceAll } from './audio';
 import { fetchBroll } from './broll';
 
 import { api } from './api';
@@ -104,10 +104,17 @@ export async function renderVideo(
   }
   if (!codec) throw new Error('这个浏览器没有 H.264 编码器，换 Edge/Chrome 最新版试试');
 
+  // 音频能力必须在建封装器之前定下来：轨道声明的采样率/声道必须和真实编码一致，
+  // 否则部分手机播放器会认为音轨损坏（表现为喇叭按钮是灰的、点了没反应）
+  const audioCfg = await pickAudioConfig();
+  if (!audioCfg) {
+    throw new Error('这台设备不支持网页内音频编码（AAC），出不了带声音的片子。请换 Chrome/Edge 电脑，或换一部手机再试。');
+  }
+
   const muxer = new Muxer({
     target: new ArrayBufferTarget(),
     video: { codec: 'avc', width: W, height: H },
-    audio: { codec: 'aac', sampleRate: 48000, numberOfChannels: 2 },
+    audio: { codec: 'aac', sampleRate: audioCfg.sampleRate, numberOfChannels: audioCfg.numberOfChannels },
     fastStart: 'in-memory',
   });
 
@@ -120,12 +127,18 @@ export async function renderVideo(
   });
   video.configure({ codec, width: W, height: H, bitrate: 4_000_000, framerate: FPS });
 
-  // 3. 画帧
-  const canvas: HTMLCanvasElement | OffscreenCanvas = surface ?? new OffscreenCanvas(W, H);
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  // 3. 画帧：始终画在离屏 canvas 上（快），只把缩小版刷到可见画布做预览
+  const canvas = new OffscreenCanvas(W, H);
+  const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
   ctx.textBaseline = 'alphabetic';
+
+  const preview = surface ?? null;
+  const pctx = preview ? preview.getContext('2d') : null;
+  if (preview) {
+    preview.width = 270;
+    preview.height = 480;
+  }
+
   let globalFrame = 0;
   for (let bi = 0; bi < timeline.length; bi++) {
     const beat = timeline[bi];
@@ -139,6 +152,10 @@ export async function renderVideo(
       });
       video.encode(frame, { keyFrame: globalFrame % (FPS * 2) === 0 });
       frame.close();
+      // 预览每 6 帧刷一次，缩到 270×480，开销可以忽略
+      if (pctx && globalFrame % 6 === 0) {
+        pctx.drawImage(canvas, 0, 0, preview!.width, preview!.height);
+      }
       globalFrame++;
       if (video.encodeQueueSize > 6) await new Promise((r) => setTimeout(r, 0));
     }
@@ -150,19 +167,25 @@ export async function renderVideo(
   // 4. 音轨：按最终时间轴逐段铺，卡片段补静音，保证和画面等长、不跑偏
   onProgress({ stage: '合成音轨', percent: 86 });
   const bgm = useMusic ? await loadMusic(bgmFile || BGM[theme] || BGM.poster) : null;
+
   const audioBuf = buildTimeline(
     timeline.map((b) => ({ duration: b.duration, buffer: b.audio ?? null })),
-    { sampleRate: 48000, channels: 2, bgm },
+    { sampleRate: audioCfg.sampleRate, channels: audioCfg.numberOfChannels, bgm },
   );
-  await encodeAudio(audioBuf, (chunk, meta) => muxer.addAudioChunk(chunk, meta), (p) => {
+  let audioChunks = 0;
+  await encodeAudio(audioBuf, (chunk, meta) => { audioChunks += 1; muxer.addAudioChunk(chunk, meta); }, (p) => {
     onProgress({ stage: '音轨编码', percent: 86 + Math.round(p * 12) });
-  });
+  }, audioCfg);
+  if (audioChunks === 0) {
+    throw new Error('音频编码没有产出任何数据（设备编码器异常），这条片子会是无声的，已中止。请换电脑或换浏览器重试。');
+  }
 
   muxer.finalize();
   const { buffer } = muxer.target;
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
 
 
 

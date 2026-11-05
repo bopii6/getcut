@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
+import { pickAudioConfig } from './lib/audio';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
   createGen, deleteGen, getMe, listHistory, login, logout, redeem, register,
@@ -90,6 +91,19 @@ export default function MobileApp() {
     try { setHistory((await listHistory()).items); } catch { /* 同上 */ }
   };
   useEffect(() => { void refresh(); }, []);
+
+  // 进页面就自检：设备能不能编出声，不能的话提前讲清楚，别等出片才发现没声
+  const [audioOk, setAudioOk] = useState<boolean | null>(null);
+  const [audioDesc, setAudioDesc] = useState('检测中…');
+  useEffect(() => {
+    let alive = true;
+    void pickAudioConfig().then((c) => {
+      if (!alive) return;
+      setAudioOk(Boolean(c));
+      setAudioDesc(c ? `${(c.sampleRate / 1000).toFixed(1)}k · ${c.numberOfChannels === 2 ? '立体声' : '单声道'}` : '不可用');
+    });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     if (running && liveRef.current) liveRef.current.replaceChildren(liveCanvas);
@@ -205,6 +219,9 @@ export default function MobileApp() {
         </div>
       </header>
 
+      {audioOk === false ? (
+        <div className="merr">这台浏览器不支持音频编码，出片会没有声音。请换 Chrome 电脑，或更新系统后重试。</div>
+      ) : null}
       {err ? <div className="merr">{err}</div> : null}
 
       {step === 'write' ? (
@@ -377,6 +394,7 @@ export default function MobileApp() {
               <>
                 <p className="memail">{me.email}</p>
                 <p className="mmsg">{me.pro ? '已买断 · 不限条数' : `免费剩 ${me.remaining} 条`}</p>
+                <p className="mmsg">音频编码：{audioDesc}</p>
                 {!me.pro ? <button className="mbtn" onClick={() => setShowBuy(true)}>输入卡密解锁 · ¥599</button> : null}
                 <button className="mbtn ghost" onClick={async () => { await logout(); await refresh(); }}>退出登录</button>
               </>
@@ -540,6 +558,8 @@ export default function MobileApp() {
     </div>
   );
 }
+
+
 
 
 

@@ -5,6 +5,7 @@ import {
 } from 'remotion';
 import { themeOf, type ThemeName } from './themes';
 import { Card, Highlight } from './cards';
+import { CartoonBeat } from './cartoon';
 import { ensureChineseFont } from './font';
 
 export type Beat = {
@@ -167,8 +168,9 @@ export const Video: React.FC<VideoProps> = ({ theme: name, beats }) => {
         const frames = Math.max(1, Math.round(beat.duration * 30));
         const seq = (
           <Sequence key={i} from={from} durationInFrames={frames} name={`${i + 1}. ${beat.card}`}>
-            <BeatScene beat={beat} theme={theme} seconds={beat.duration} index={i} total={beats.length} />
-            {beat.audio ? <Audio src={staticFile(beat.audio)} /> : null}
+            {name === 'cartoon'
+              ? <CartoonBeat beat={beat} theme={theme} seconds={beat.duration} index={i} total={beats.length} />
+              : <BeatScene beat={beat} theme={theme} seconds={beat.duration} index={i} total={beats.length} />}            {beat.audio ? <Audio src={staticFile(beat.audio)} /> : null}
             <Audio src={staticFile('sfx/whoosh.mp3')} volume={0.10} />
             {beat.card === 'stat' ? <Audio src={staticFile('sfx/tick.mp3')} volume={0.3} /> : null}
             {beat.card === 'cta' ? <Audio src={staticFile('sfx/hit.mp3')} volume={0.26} /> : null}

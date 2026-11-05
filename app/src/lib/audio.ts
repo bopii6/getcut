@@ -108,6 +108,7 @@ export function buildTimeline(
   const buf = new AudioBuffer({ length: frames, numberOfChannels: channels, sampleRate });
 
   // 1. 配音（没有音频的段——片头卡、章节卡——留等长静音，保证音画严格同步）
+  //    源音频的采样率可能和输出不同（手机上有时只支持 44.1k），按比例取样，避免变调走速
   const voice = new Float32Array(frames);
   const speaking = new Uint8Array(frames);
   let offset = 0;
@@ -115,11 +116,16 @@ export function buildTimeline(
     const start = Math.round(offset * sampleRate);
     if (v.buffer) {
       const src = v.buffer.getChannelData(0);
-      for (let i = 0; i < src.length && start + i < frames; i++) voice[start + i] = src[i];
+      const ratio = v.buffer.sampleRate / sampleRate;
+      const outLen = Math.min(Math.ceil(src.length / ratio), Math.max(0, frames - start));
+      for (let i = 0; i < outLen; i++) {
+        const s = Math.min(src.length - 1, Math.floor(i * ratio));
+        voice[start + i] = src[s];
+      }
       // 说话区间（前后各留 80ms，避免 BGM 提早抬起）
       const pad = Math.round(0.08 * sampleRate);
       const from = Math.max(0, start - pad);
-      const to = Math.min(frames, start + src.length + pad);
+      const to = Math.min(frames, start + outLen + pad);
       for (let i = from; i < to; i++) speaking[i] = 1;
     }
     offset += v.duration;
@@ -130,6 +136,7 @@ export function buildTimeline(
   if (bgm) {
     const src = bgm.getChannelData(0);
     const n = src.length;
+    const step = bgm.sampleRate / sampleRate;
     const attack = 1 - Math.exp(-1 / (0.08 * sampleRate));   // 80ms
     const release = 1 - Math.exp(-1 / (0.35 * sampleRate));  // 350ms
     let env = 1;
@@ -141,7 +148,7 @@ export function buildTimeline(
       let g = bgmGain * env;
       if (i < fadeIn) g *= i / fadeIn;
       if (i > frames - fadeOut) g *= Math.max(0, (frames - i) / fadeOut);
-      music[i] = src[i % n] * g;
+      music[i] = src[Math.floor(i * step) % n] * g;
     }
   }
 
@@ -157,20 +164,57 @@ export function buildTimeline(
   return buf;
 }
 
-/** 把音轨按 1024 帧切片，交给 AudioEncoder 编 AAC。 */
+export type AudioCfg = { codec: string; sampleRate: number; numberOfChannels: number; bitrate: number };
+
+/**
+ * 挑一个这台设备真的支持的音频配置。
+ * 手机上有些机型只支持 44.1k，或者只支持单声道；支持不了就返回 null，让上层明确报错，
+ * 绝不能像以前那样"配不上也继续跑"，最后出个没声音的片子。
+ */
+export async function pickAudioConfig(): Promise<AudioCfg | null> {
+  if (typeof AudioEncoder === 'undefined') return null;
+  const candidates: AudioCfg[] = [
+    { codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 2, bitrate: 128000 },
+    { codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 2, bitrate: 128000 },
+    { codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 1, bitrate: 96000 },
+    { codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 1, bitrate: 96000 },
+  ];
+  for (const c of candidates) {
+    try {
+      const r = await AudioEncoder.isConfigSupported(c);
+      if (r.supported) return c;
+    } catch {
+      /* 试下一个 */
+    }
+  }
+  return null;
+}
+
+/** 把音轨按 1024 帧切片，交给 AudioEncoder 编 AAC；返回实际编出来的 chunk 数。 */
 export async function encodeAudio(
   buffer: AudioBuffer,
   onChunk: (chunk: EncodedAudioChunk, meta?: EncodedAudioChunkMetadata) => void,
   onProgress?: (p: number) => void,
-  bitrate = 128000,
-) {
+  cfg: AudioCfg = { codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 2, bitrate: 128000 },
+): Promise<number> {
   const channels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
+  let encoderError: Error | null = null;
+  let chunks = 0;
+
   const encoder = new AudioEncoder({
-    output: (chunk, meta) => onChunk(chunk, meta),
-    error: (e) => { throw e; },
+    output: (chunk, meta) => { chunks += 1; onChunk(chunk, meta); },
+    error: (e) => {
+      // 关键：以前这里直接 throw，异常落在回调里没人接，跑完就出无声片
+      encoderError = new Error(`音频编码器异常：${e instanceof Error ? e.message : String(e)}`);
+    },
   });
-  encoder.configure({ codec: 'mp4a.40.2', sampleRate, numberOfChannels: channels, bitrate });
+  encoder.configure({
+    codec: cfg.codec,
+    sampleRate,
+    numberOfChannels: channels,
+    bitrate: cfg.bitrate,
+  });
 
   const chunkFrames = 1024;
   const total = buffer.length;
@@ -178,6 +222,7 @@ export async function encodeAudio(
   for (let c = 0; c < channels; c++) chans.push(buffer.getChannelData(c));
 
   for (let start = 0; start < total; start += chunkFrames) {
+    if (encoderError) throw encoderError;
     const n = Math.min(chunkFrames, total - start);
     const interleaved = new Float32Array(n * channels);
     // f32-planar：先放所有声道的第 0 段，再放第 1 段…
@@ -200,8 +245,10 @@ export async function encodeAudio(
     }
   }
   await encoder.flush();
+  if (encoderError) throw encoderError;
   encoder.close();
   onProgress?.(1);
+  return chunks;
 }
 
 

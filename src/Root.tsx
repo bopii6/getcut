@@ -32,5 +32,9 @@ export const RemotionRoot: React.FC = () => (
       id="Dashboard" component={Video} defaultProps={{ ...demo, theme: 'dashboard' }}
       calculateMetadata={({ props }) => size(props as VideoProps)}
     />
+    <Composition
+      id="Cartoon" component={Video} defaultProps={{ ...demo, theme: 'cartoon' }}
+      calculateMetadata={({ props }) => size(props as VideoProps)}
+    />
   </>
 );
