@@ -185,7 +185,16 @@ export default function Workbench() {
   return (
     <div className="wb">
       <header className="top">
-        <div className="brand">GetCut<span>studio</span></div>
+        <button
+          className="brand"
+          title="回到首页"
+          onClick={() => {
+            // 回到起手式：清空项目状态，但保留账号
+            setText(''); setUrl(null); setPlan(null); setStarted(false);
+            setPct(0); setStage(''); setSecs(null); setErr(null); setShowTimeline(false);
+            setChoice('poster');
+          }}
+        >GetCut<span>studio</span></button>
         <div className="proj">
           <b>{text.trim().split(/[。！？\n]/)[0].slice(0, 20) || '未命名项目'}</b>
           <span>{running ? `${stage} ${pct}%` : url ? '已出片' : empty ? '新建' : '草稿'}</span>
@@ -420,9 +429,15 @@ export default function Workbench() {
         body { margin:0; background:var(--bg); color:var(--ink); font: 15px/1.6 "PingFang SC","Microsoft YaHei",system-ui,sans-serif; }
 
         .wb { height: 100vh; display: flex; flex-direction: column; }
-        .top { height: 62px; flex: none; display: flex; align-items: center; gap: 18px; padding: 0 22px;
+        .top { height: 62px; flex: none; display: flex; align-items: center; gap: 18px; padding: 0 72px;
+          max-width: 1320px; margin: 0 auto; width: 100%;
           border-bottom: 1px solid var(--line); }
-        .brand { font-weight: 900; font-size: 17px; }
+        /* 隐藏所有滚动条：滚轮照常可用，只是不显示那条丑条 */
+        .main, .preview, .strip, .sheet, .editor textarea, .tl { scrollbar-width: none; -ms-overflow-style: none; }
+        .main::-webkit-scrollbar, .preview::-webkit-scrollbar, .strip::-webkit-scrollbar,
+        .sheet::-webkit-scrollbar, .editor textarea::-webkit-scrollbar, .tl::-webkit-scrollbar { width: 0; height: 0; }        .brand { font-weight: 900; font-size: 17px; background: none; border: 0; color: var(--ink); cursor: pointer;
+          padding: 6px 4px; border-radius: 8px; font-family: inherit; }
+        .brand:hover { background: rgba(255,255,255,.06); }
         .brand span { color: var(--gold); font-size: 12px; margin-left: 5px; font-weight: 500; }
         .proj { flex: 1; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
         .proj b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -431,11 +446,12 @@ export default function Workbench() {
         .av { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line2); background: var(--panel2);
           color: var(--ink); font-weight: 800; cursor: pointer; }
 
-        .main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 34px;
-          padding: 26px 30px 10px; overflow: hidden; }
-        .main.empty { align-items: center; }
-        .pane { min-width: 0; display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
-        .main.empty .pane { justify-content: center; }
+        .main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 44px;
+          padding: 30px 72px 16px; overflow-y: auto; max-width: 1320px; margin: 0 auto; width: 100%; }
+        .main.empty { grid-template-columns: 1fr; align-items: start; padding-top: 40px; }
+        .main.empty .pane { max-width: 760px; }
+        .main.empty .preview { display: none; }
+        .pane { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
 
         /* 起手式 */
         .start { max-width: 620px; }
@@ -489,7 +505,7 @@ export default function Workbench() {
         /* 预览 */
         .preview { display: flex; flex-direction: column; align-items: center; gap: 10px; justify-content: flex-start;
           overflow-y: auto; padding-bottom: 10px; }
-        .phone { position: relative; width: min(34vh, 264px); aspect-ratio: 9/19.2; border-radius: 38px; padding: 9px;
+        .phone { flex: none; position: relative; width: min(34vh, 264px); aspect-ratio: 9/19.2; border-radius: 38px; padding: 9px;
           background: linear-gradient(160deg,#3C3C41,#16161A 60%,#2A2A2E);
           box-shadow: 0 30px 70px -30px #000, 0 0 0 1px #000, inset 0 0 0 1px rgba(255,255,255,.16); }
         .phone > * { border-radius: 30px; overflow: hidden; }
@@ -531,12 +547,35 @@ export default function Workbench() {
           border: 1px solid var(--line); border-radius: 10px; }
         .wrow b { display: block; font-size: 13px; }
         .wrow span { font-size: 11px; color: var(--dim); }
+        @media (max-width: 1100px) {
+          .main { display: flex; flex-direction: column; gap: 18px; padding: 16px 18px 10px; }
+          .preview { order: -1; align-self: center; flex: none; }
+          .phone { width: min(26vh, 190px); }
+          .start { max-width: none; }
+          .start h1 { font-size: 34px; }
+          .strip { gap: 8px; }
+          .card { flex: 0 0 96px; }
+        }
+        @media (max-height: 720px) {
+          .main.empty { padding-top: 20px; }
+          .start h1 { font-size: 34px; }
+          .start-sub { margin-bottom: 18px; }
+          .big { padding: 13px 18px; }
+        }
+
         .wact { display: flex; gap: 12px; font-size: 12px; }
         .wact a, .wact button { color: var(--gold); background: none; border: 0; font: inherit; cursor: pointer; }
       `}</style>
     </div>
   );
 }
+
+
+
+
+
+
+
 
 
 
