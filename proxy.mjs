@@ -10,7 +10,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { planScript, writeScript } from './scripts/plan.mjs';
+import { extractArticle, planScript, rewriteArticle, writeScript } from './scripts/plan.mjs';
 import { applyEnv, envOf } from './lib/env.mjs';
 import { format as fmtCard, normalize as normCard, validate as validCard } from './lib/cards.mjs';
 
@@ -241,6 +241,33 @@ const server = http.createServer(async (req, res) => {
       res.end(buf);
       return;
     }
+    if (req.method === 'POST' && req.url === '/api/link') {
+      // 给一个链接，抓正文改写成口播稿
+      const body = await readBody(req);
+      const url = String(body.url || '').trim();
+      if (!/^https?:\/\//i.test(url)) return json(res, 400, { error: '链接要以 http 开头' });
+      let html = '';
+      try {
+        const r = await fetch(url, {
+          headers: {
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
+            'accept-language': 'zh-CN,zh;q=0.9',
+          },
+          signal: AbortSignal.timeout(20000),
+        });
+        if (!r.ok) return json(res, 502, { error: `抓取失败（HTTP ${r.status}）` });
+        html = await r.text();
+      } catch (e) {
+        return json(res, 502, { error: `抓取失败：${e instanceof Error ? e.message.slice(0, 80) : '网络超时'}` });
+      }
+      const article = extractArticle(html);
+      if (article.length < 120) return json(res, 422, { error: '没抓到正文（可能要登录，或页面是纯图）' });
+      const out = await rewriteArticle(article, {
+        industry: String(body.industry || '通用'),
+        apiKey: envOf('DEEPSEEK_API_KEY'),
+      });
+      return json(res, 200, { ...out, chars: article.length });
+    }
     if (req.method === 'POST' && req.url === '/api/script') {
       // 只给一个主题，模型写成口播稿（省掉客户自己去别处找文案）
       const body = await readBody(req);
@@ -451,6 +478,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => console.log(`代理已起：http://127.0.0.1:${PORT}`));
+
 
 
 

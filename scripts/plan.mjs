@@ -217,3 +217,70 @@ export async function writeScript(topic, { industry = '通用', apiKey, model = 
   return { text: clean, words: clean.length };
 }
 
+/** 从一段网页正文里抽出可读文字（够长就行，不追求完美）。 */
+export function extractArticle(html) {
+  let s = String(html || '');
+  s = s.replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ');
+  // 公众号正文通常在 #js_content
+  const m = s.match(/<div[^>]+id=["']js_content["'][^>]*>([\s\S]*?)<\/div>/i);
+  if (m) s = m[1];
+  s = s.replace(/<\/(p|div|section|h[1-6]|li|br)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+  return s
+    .split('\n')
+    .map((line) => line.replace(/[ \t\u3000]+/g, ' ').trim())
+    .filter((line) => line.length >= 8)
+    .join('\n')
+    .slice(0, 8000);
+}
+
+/** 把一篇文章改写成竖屏口播稿。 */
+export async function rewriteArticle(article, { industry = '通用', apiKey, model = 'deepseek-chat', words = 260 } = {}) {
+  const src = String(article || '').trim();
+  if (src.length < 120) throw new Error('正文太短，抓不到内容（可能是需要登录的页面）');
+  if (!apiKey) throw new Error('服务端没配 DEEPSEEK_API_KEY');
+
+  const prompt = [
+    `把下面这篇材料改写成一条竖屏口播稿，行业：${industry}。`,
+    '要求：',
+    `1. 只输出正文，${words} 字左右，句子短，适合直接念。`,
+    '2. 开头一句是钩子；中间只讲 3 个点；结尾一句行动指令。',
+    '3. 保留原文里的关键数字和事实，不要编造。',
+    '4. 不要"大家好""下面我来分享"，不要分点编号，不要表情符号。',
+    '5. 合规：不写"保证""一定能""稳赚""包过"。',
+    '',
+    '材料：',
+    src.slice(0, 6000),
+  ].join('\n');
+
+  const res = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model,
+      temperature: 0.6,
+      messages: [
+        { role: 'system', content: '你是中文短视频口播稿作者，句子短、节奏紧、说人话。' },
+        { role: 'user', content: prompt },
+      ],
+    }),
+    signal: AbortSignal.timeout(120000),
+  });
+  if (!res.ok) throw new Error(`改写接口 ${res.status}`);
+  const data = await res.json();
+  const text = String(data.choices?.[0]?.message?.content || '').trim();
+  if (!text) throw new Error('模型没写出内容');
+  const clean = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\n{2,}/g, '\n').trim();
+  return { text: clean, words: clean.length };
+}
+
+

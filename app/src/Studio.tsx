@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
@@ -46,76 +46,6 @@ const BGMS = [
   { id: 'music/upbeat.mp3', name: '明快', desc: '向上 · 通用' },
   { id: 'music/breakbeat.mp3', name: '碎拍', desc: '动感 · 大字报' },
   { id: 'music/chill.mp3', name: '舒缓', desc: '氛围 · 纪实' },
-];
-
-const PRESETS = [
-  {
-    title: '加盟：回本周期怎么算',
-    industry: '餐饮加盟',
-    text: `想开一家店，总部说八个月回本，你信吗？
-先别信，自己算三个数。
-第一个数，前期总投入。加盟费、保证金、装修、设备、首批物料，加起来才是真数，不是海报上那个数。
-第二个数，每月固定支出。房租、人工、水电、物料，一分不能少。
-第三个数，日均流水。别问总部，去他现有的店里蹲三天，看真实客流。
-用前期投入除以每月净利，才是你的回本周期。
-总部说八个月，你就按十二个月算，多出来的四个月是你的活路。
-把品牌名发给我，我帮你把这三个数拆开算一遍。`,
-  },
-  {
-    title: '律师：货款要不回来怎么办',
-    industry: '律师',
-    text: `货款要不回来，很多老板第一反应是打电话催。
-催是没用的，对方早想好了怎么拖。
-第一步，把所有凭证收齐：合同、送货单、对账单、聊天记录，缺一样都麻烦。
-第二步，起诉的同时申请财产保全，先把他账户冻住，人一慌才肯谈。
-第三步，只谈一件事——什么时候付、付多少，别在电话里讲道理。
-拖过三年的，证据还在，钱可能就没了。
-把合同发我，我帮你看还能不能走这一步。`,
-  },
-  {
-    title: '教培：孩子成绩上不去',
-    industry: '教培',
-    text: `孩子成绩上不去，大部分家长第一件事就是报班。
-报之前，先看三个地方。
-第一，看他哪一科最差。瘸腿科目补十分，比优势科目多考五分容易得多。
-第二，看他错在哪。是不会，还是粗心，还是根本没听懂。
-第三，看他愿意学多久。坐不住四十分钟的孩子，先别报两小时的课。
-三个都看清了再花钱，一节课的钱够你试错三次。
-把孩子的卷子发我，我帮你看看问题出在哪。`,
-  },
-  {
-    title: '门店：选址的五个坑',
-    industry: '本地生活',
-    text: `选址选错，后面再努力都是给房东打工。
-第一个坑，只看人流不看客流。路过的人再多，不进店也没用。
-第二个坑，贪便宜选背街。省下的房租，会从营业额里十倍还回去。
-第三个坑，不算租金占比。房租超过营业额的两成，基本就很难赚了。
-第四个坑，不看邻居。隔壁是五金店还是奶茶店，决定你客人停不停。
-第五个坑，不蹲点数。白天、晚上、周末各蹲一天，数字最诚实。
-看中哪个铺，把位置发我，我帮你一起算。`,
-  },
-  {
-    title: '通用：为什么你的视频没人看',
-    industry: '通用',
-    text: `拍了三十条视频，播放还是三位数，问题多半不在画质。
-第一条，前三秒没钩子。观众划走的决定，比你说话还快。
-第二条，一屏放太多字。手机那么小，他只看得清一行。
-第三条，句子里全是形容词。说"很划算"不如说"便宜了三十块"。
-第四条，结尾没有动作。你不告诉他去哪，他就去哪了。
-第五条，一条视频讲五件事，等于一件没讲。
-挑一条你的片子，用这五条对一遍，你会发现问题一眼就能看出来。`,
-  },
-  {
-    title: '财税：小规模纳税人别乱开票',
-    industry: '通用',
-    text: `小规模纳税人，最容易在开票上吃亏。
-第一，别以为免税就不用管。免税有额度，超了就要交。
-第二，专票和普票不是一回事。开了专票，那一部分通常不能免。
-第三，季度末集中开票最容易踩线。平时不开，最后一周猛开，风险最高。
-第四，进项票要留好。该抵的不抵，等于自己多交钱。
-第五，别用个人卡收货款。流水对不上，解释起来很麻烦。
-把你的开票情况发我，我帮你看看有没有踩线。`,
-  },
 ];
 
 const DEMO = `想开一家小店，你最怕的是什么？不是没客人，是钱投进去，三个月就撑不住。
@@ -191,7 +121,10 @@ export default function Studio() {
   const [music, setMusic] = useState(true);
   const [voice, setVoice] = useState(VOICES[0].id);
   const [bgm, setBgm] = useState('');
-  const [srcMode, setSrcMode] = useState<'paste' | 'ai' | 'lib'>('paste');
+  const [srcMode, setSrcMode] = useState<'paste' | 'ai' | 'link'>('paste');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [editPos, setEditPos] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
   const [topic, setTopic] = useState('');
   const [industry, setIndustry] = useState('餐饮加盟');
   const [writing, setWriting] = useState(false);
@@ -398,6 +331,47 @@ export default function Studio() {
     }
   }
 
+  async function genLink() {
+    const u = linkUrl.trim();
+    if (!/^https?:\/\//i.test(u)) { setWriteMsg('先粘贴一个链接，http 开头'); return; }
+    setWriting(true);
+    setWriteMsg('');
+    try {
+      const res = await fetch('/api/link', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url: u, industry }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '抓取失败');
+      setText(data.text);
+      setWriteMsg('改好了 · ' + data.words + ' 字（原文 ' + data.chars + ' 字）');
+      setSrcMode('paste');
+    } catch (e) {
+      setWriteMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setWriting(false);
+    }
+  }
+
+  /** 双击片段改那一句：有分镜改分镜，没分镜改原文对应句 */
+  function applySceneEdit(pos: number, value: string) {
+    const v = value.trim();
+    if (!v) return;
+    const planIdx = order[pos];
+    if (plan && planIdx < plan.length) {
+      setPlan(plan.map((b, i) => (i === planIdx ? { ...b, text: v } : b)));
+    } else {
+      const parts = text.split(/(?<=[。！？!?；;\n])/).filter((p) => p.trim());
+      if (pos < parts.length) {
+        const tail = /[。！？!?；;]$/.exec(parts[pos])?.[0] || '。';
+        parts[pos] = v.replace(/[。！？!?；;]$/, '') + tail;
+      }
+      setText(parts.join(''));
+    }
+    setEditPos(null);
+    setEditText('');
+  }
+
   const sceneStart = (i: number) => ordered.slice(0, i).reduce((n, s) => n + s.duration, 0);
 
   return (
@@ -517,8 +491,34 @@ export default function Studio() {
               <div className="seg">
                 <button className={`seg-b ${srcMode === 'paste' ? 'on' : ''}`} onClick={() => setSrcMode('paste')}>粘贴文案</button>
                 <button className={`seg-b ${srcMode === 'ai' ? 'on' : ''}`} onClick={() => setSrcMode('ai')}>AI 帮我写</button>
-                <button className={`seg-b ${srcMode === 'lib' ? 'on' : ''}`} onClick={() => setSrcMode('lib')}>现成模板</button>
+                <button className={`seg-b ${srcMode === 'link' ? 'on' : ''}`} onClick={() => setSrcMode('link')}>链接改写</button>
               </div>
+
+              {srcMode === 'link' ? (
+                <div className="ai-box">
+                  <input
+                    className="topic"
+                    placeholder="粘贴公众号 / 新闻 / 知乎链接"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') void genLink(); }}
+                  />
+                  <div className="ai-row">
+                    <select className="select" value={industry} onChange={(e) => setIndustry(e.target.value)}>
+                      <option value="餐饮加盟">餐饮加盟</option>
+                      <option value="律师/法律服务">律师 / 法律服务</option>
+                      <option value="教培/教育">教培 / 教育</option>
+                      <option value="本地生活">本地生活</option>
+                      <option value="美业/医美">美业 / 医美</option>
+                      <option value="通用">通用</option>
+                    </select>
+                    <button className="primary" onClick={genLink} disabled={writing}>
+                      {writing ? '抓取中…' : '抓取并改写'}
+                    </button>
+                  </div>
+                  {writeMsg ? <p className="dim">{writeMsg}</p> : null}
+                </div>
+              ) : null}
 
               {srcMode === 'ai' ? (
                 <div className="ai-box">
@@ -546,21 +546,10 @@ export default function Studio() {
                 </div>
               ) : null}
 
-              {srcMode === 'lib' ? (
-                <div className="lib">
-                  {PRESETS.map((p) => (
-                    <button key={p.title} className="lib-item" onClick={() => { setText(p.text); setSrcMode('paste'); }}>
-                      <b>{p.title}</b>
-                      <span>{p.industry} · {p.text.length} 字</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder={'把口播稿粘在这里。\n\n不知道写什么？用上面「AI 帮我写」或「现成模板」。'}
+                placeholder={'把口播稿粘在这里。\n\n不知道写什么？用上面「AI 帮我写」或「链接改写」。'}
               />
               <div className="meta-row">
                 <span>{chars ? `${chars} 字 · 约 ${est} 秒` : '建议 200~600 字'}</span>
@@ -667,8 +656,25 @@ export default function Studio() {
           <b>时间轴</b>
           <span>{ordered.length} 个镜头 · 约 {Math.round(url ? playable : totalDur)} 秒</span>
           {running ? <span className="tl-run">{stage} {pct}%</span> : null}
-          <span className="tl-tip">点片段跳到那一句 · 按住拖动可换顺序</span>
+          <span className="tl-tip">点片段跳转 · 拖动换顺序 · 双击改字</span>
         </div>
+
+        {editPos !== null ? (
+          <div className="edit-bar">
+            <span>改第 {editPos + 1} 句</span>
+            <input
+              autoFocus
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applySceneEdit(editPos, editText);
+                if (e.key === 'Escape') { setEditPos(null); setEditText(''); }
+              }}
+            />
+            <button className="primary small" onClick={() => applySceneEdit(editPos, editText)}>保存</button>
+            <button className="ghost small" onClick={() => { setEditPos(null); setEditText(''); }}>取消</button>
+          </div>
+        ) : null}
         <div className="tl-body">
           <div className="tl-lane-label">主背景</div>
           <div className="tl-lane">
@@ -689,9 +695,8 @@ export default function Studio() {
                   if (from === null || from === i) return;
                   setOrder((prev) => {
                     const a = [...prev];
-                    const tmp = a[from];
-                    a[from] = a[i];
-                    a[i] = tmp;
+                    const [moved] = a.splice(from, 1);
+                    a.splice(i, 0, moved);
                     return a;
                   });
                   dragFrom.current = i;
@@ -700,7 +705,8 @@ export default function Studio() {
                 className={`clip ${selectedScene === i ? 'on' : ''}`}
                 style={{ flexGrow: s.duration }}
                 onClick={() => { setSelectedScene(i); seekRatio(sceneStart(i) / totalDur); }}
-                title={s.text}
+                onDoubleClick={() => { setEditPos(i); setEditText(s.text); }}
+                title={s.text + '（双击可改这一句）'}
               >
                 <span>{s.text.slice(0, 12)}</span>
               </button>
@@ -960,7 +966,16 @@ export default function Studio() {
         .tl-head b { color: var(--ink); font-size: 14px; letter-spacing: .05em; }
         .tl-tip { margin-left: auto; font-size: 12px; color: rgba(255,255,255,.35); }
         .tl-run { color: var(--gold); margin-left: auto; }
-        .tl-body { position: relative; flex: 1; display: grid; grid-template-columns: 52px 1fr; gap: 6px 10px; min-height: 0; }
+        .edit-bar { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 6px;
+          background: rgba(240,180,41,.10); border: 1px solid rgba(240,180,41,.35); border-radius: 8px; }
+        .edit-bar span { font-size: 13px; color: var(--gold); white-space: nowrap; }
+        .edit-bar input { flex: 1; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+          color: var(--ink); padding: 9px 11px; font: inherit; font-size: 14px; outline: none; }
+        .edit-bar input:focus { border-color: var(--gold); }
+        .primary.small { padding: 8px 14px; font-size: 13px; }
+        .ghost.small { padding: 8px 12px; font-size: 13px; }
+        .inspector { scrollbar-width: none; }
+        .inspector::-webkit-scrollbar { display: none; }        .tl-body { position: relative; flex: 1; display: grid; grid-template-columns: 52px 1fr; gap: 6px 10px; min-height: 0; }
         .tl-lane-label { font-size: 12px; color: var(--dim); align-self: center; }
         .tl-lane { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
         .clip { flex: 1 1 0; min-width: 0; background: linear-gradient(180deg, #34343E, #26262E);
@@ -995,6 +1010,10 @@ export default function Studio() {
     </div>
   );
 }
+
+
+
+
 
 
 
