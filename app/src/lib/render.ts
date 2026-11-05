@@ -1,4 +1,4 @@
-// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
+﻿// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import type { Beat, PlanBeat, ThemeName } from './types';
 import { drawFrame, FPS, H, W } from './draw';
@@ -65,6 +65,7 @@ export async function renderVideo(
   useMusic = true,
   voice = 'zh-CN-YunxiNeural',
   bgmFile = '',
+  surface?: HTMLCanvasElement,
 ): Promise<Blob> {
   // 1. 实拍空镜（默认关：抓素材慢且不稳，需要时在界面上打开）
   onProgress({ stage: useBroll ? '找实拍空镜' : '准备', percent: 1 });
@@ -119,8 +120,10 @@ export async function renderVideo(
   video.configure({ codec, width: W, height: H, bitrate: 4_000_000, framerate: FPS });
 
   // 3. 画帧
-  const canvas = new OffscreenCanvas(W, H);
-  const ctx = canvas.getContext('2d')!;
+  const canvas: HTMLCanvasElement | OffscreenCanvas = surface ?? new OffscreenCanvas(W, H);
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
   ctx.textBaseline = 'alphabetic';
   let globalFrame = 0;
   for (let bi = 0; bi < timeline.length; bi++) {
@@ -156,6 +159,8 @@ export async function renderVideo(
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
+
 
 
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
@@ -25,6 +25,8 @@ const STYLES: { id: Choice; name: string; thumb?: string; preview?: string }[] =
   { id: 'news', name: '新闻', thumb: 'style-thumbs/news.jpg', preview: 'style-previews/news.mp4' },
   { id: 'night', name: '夜行', thumb: 'style-thumbs/night.jpg', preview: 'style-previews/night.mp4' },
 ];
+
+const STEPS = ['拆稿', '配音', '画帧', '合成', '封装'];
 
 const VOICES = [
   { id: 'zh-CN-YunxiNeural', name: '云希', desc: '男声 · 年轻' },
@@ -153,6 +155,8 @@ export default function Studio() {
   const [jianyingMsg, setJianyingMsg] = useState('');
   const [zipUrl, setZipUrl] = useState('');
   const [playId, setPlayId] = useState('');
+  const liveRef = useRef<HTMLDivElement | null>(null);
+  const liveCanvas = useMemo(() => document.createElement('canvas'), []);
   const [tab, setTab] = useState<'text' | 'style' | 'voice' | 'works'>('text');
   const [selectedScene, setSelectedScene] = useState(0);
   const [hoverStyle, setHoverStyle] = useState<string>('');
@@ -172,6 +176,11 @@ export default function Studio() {
   };
   useEffect(() => { void refresh(); }, []);
 
+  // 画帧用的 canvas 挂到可见容器里，让用户看到正在画的内容
+  useEffect(() => {
+    if (running && liveRef.current) liveRef.current.replaceChildren(liveCanvas);
+  }, [running, liveCanvas]);
+
   const chars = text.trim().length;
   const est = Math.max(0, Math.round(chars / 4.6));
   const [order, setOrder] = useState<number[]>([]);
@@ -188,6 +197,7 @@ export default function Studio() {
   }, [scenes.length]);
 
   const ordered = order.length === scenes.length ? order.map((i) => scenes[i]) : scenes;
+  const stepIndex = /拆稿|准备/.test(stage) ? 0 : /配音/.test(stage) ? 1 : /画帧|编码器/.test(stage) ? 2 : /音轨|合成/.test(stage) ? 3 : /完成/.test(stage) ? 4 : 0;
   const totalDur = ordered.reduce((n, s) => n + s.duration, 0) || 1;
   const playable = dur || totalDur;
 
@@ -222,7 +232,7 @@ export default function Studio() {
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
       const blob = await renderVideo(orderedPlan, theme, title, ({ stage: s, percent }) => {
         setStage(s); setPct(percent);
-      }, broll, music, voice, bgm);
+      }, broll, music, voice, bgm, liveCanvas);
       setSecs(Math.round((performance.now() - t0) / 1000));
       setUrl(URL.createObjectURL(blob));
       setPct(100);
@@ -437,24 +447,45 @@ export default function Studio() {
         </nav>
 
         <main className="stage">
-          <div className="canvas" onClick={togglePlay}>
-            {url ? (
-              <video
-                ref={videoRef}
-                src={url}
-                playsInline
-                onLoadedData={(e) => { e.currentTarget.currentTime = 0.4; }}
-                onTimeUpdate={(e) => { const v = e.currentTarget; setNow(v.currentTime); setDur(v.duration || 0); }}
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-              />
-            ) : (
-              <div className="placeholder">
-                <img src="samples/poster.jpg" alt="" />
-              </div>
-            )}
-            {running ? <div className="hud">{stage} · {pct}%</div> : null}
+          <div className="phone">
+            <div className="phone-btn left1" /><div className="phone-btn left2" />
+            <div className="phone-btn right1" />
+            <div className="phone-screen canvas" onClick={togglePlay}>
+              <div className="phone-island" />
+              <div className="live" ref={liveRef} />
+              {!running && url ? (
+                <video
+                  ref={videoRef}
+                  src={url}
+                  playsInline
+                  onLoadedData={(e) => { e.currentTarget.currentTime = 0.4; }}
+                  onTimeUpdate={(e) => { const v = e.currentTarget; setNow(v.currentTime); setDur(v.duration || 0); }}
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                />
+              ) : null}
+              {!running && !url ? (
+                <div className="placeholder">
+                  <img src="samples/poster.jpg" alt="" />
+                </div>
+              ) : null}
+              {running ? <div className="hud">{stage} · {pct}%</div> : null}
+            </div>
           </div>
+
+          {running ? (
+            <div className="steps">
+              {STEPS.map((s, i) => {
+                const state = i < stepIndex ? 'done' : i === stepIndex ? 'now' : 'wait';
+                return (
+                  <div key={s} className={`step ${state}`}>
+                    <i>{state === 'done' ? '✓' : i + 1}</i>
+                    <span>{s}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
 
           <div className="transport">
             <button className="play" onClick={togglePlay} disabled={!url} aria-label="播放">
@@ -875,15 +906,37 @@ export default function Studio() {
         .rail-btn:hover { background: var(--panel-2); color: var(--ink); }
         .rail-btn.on { background: var(--panel-2); color: var(--gold); }
 
-        .stage { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        .stage { min-width: 0; display: grid; grid-template-rows: minmax(0,1fr) auto auto; justify-items: center; align-content: start;
           background: radial-gradient(1200px 600px at 50% 0%, rgba(255,255,255,.035), transparent 70%), var(--bg);
-          padding: 18px 24px 10px; gap: 14px; }
-        .canvas { position: relative; height: min(48vh, 430px); aspect-ratio: 9/16; background: #000;
+          padding: 12px 24px 8px; gap: 10px; overflow: hidden; }
+        .phone { position: relative; height: 100%; max-height: 420px; width: auto; aspect-ratio: 9/19.2;
+          background: linear-gradient(160deg, #3C3C41, #16161A 60%, #2A2A2E);
+          border-radius: 48px; padding: 11px;
+          box-shadow: 0 34px 80px -30px #000, 0 0 0 1px #000, inset 0 0 0 1px rgba(255,255,255,.18); }
+        .phone-screen { position: relative; height: 100%; border-radius: 38px; overflow: hidden;
+          background: #000; cursor: pointer; display: grid; place-items: center; }
+        .phone-island { position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+          width: 86px; height: 25px; border-radius: 16px; background: #000; z-index: 3;
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+        .phone-btn { position: absolute; width: 3px; border-radius: 2px; background: #3E3E44; }
+        .phone-btn.left1 { left: -3px; top: 128px; height: 30px; }
+        .phone-btn.left2 { left: -3px; top: 172px; height: 52px; }
+        .phone-btn.right1 { right: -3px; top: 148px; height: 74px; }
+        .live { position: absolute; inset: 0; pointer-events: none; }
+        .live canvas { width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
+        .steps { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .step { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim);
+          padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; }
+        .step i { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+          font-size: 10px; font-style: normal; background: var(--panel-2); }
+        .step.now { color: var(--gold); border-color: rgba(240,180,41,.55); }
+        .step.now i { background: var(--gold); color: #171207; }
+        .step.done { color: #8FD6A5; border-color: rgba(143,214,165,.4); }        .canvas { position: relative; height: min(48vh, 430px); aspect-ratio: 9/16; background: #000;
           border-radius: 10px; overflow: hidden; box-shadow: 0 20px 60px -30px #000, 0 0 0 1px var(--line-2);
           cursor: pointer; display: grid; place-items: center; }
-        .canvas video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .canvas video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
         .placeholder { position: absolute; inset: 0; display: grid; place-items: center; }
-        .placeholder img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .45; }
+        .placeholder img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: .5; }
         .placeholder::after { content: ''; position: absolute; inset: 26px; border: 1px dashed rgba(255,255,255,.2); pointer-events: none; }
         .hud { position: absolute; left: 12px; bottom: 12px; background: rgba(0,0,0,.65); color: #fff;
           font-size: 13px; padding: 5px 10px; border-radius: 6px; }
@@ -924,7 +977,7 @@ export default function Studio() {
         .lib-item b { font-size: 14px; }
         .lib-item span { font-size: 12px; color: var(--dim); }        .meta-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--dim); }
 
-        .thumbs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .thumb { position: relative; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
           background: var(--panel-2); cursor: pointer; aspect-ratio: 9/16; }
         .thumb img, .thumb .hover-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1010,6 +1063,19 @@ export default function Studio() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
