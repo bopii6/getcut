@@ -127,6 +127,20 @@ const Panel: React.FC<{ theme: Theme; beat: Beat; phase: number; bare?: boolean 
         }}>{beat.topic || '截图'}</div>
       </div>
       <div style={{ padding: '26px 30px', display: 'flex', flexDirection: 'column', gap: 18, flex: 1 }}>
+        {beat.screenshot ? (
+          /* 真截图：铺满卡片内容区，phase 里轻微推一下 */
+          <div style={{ flex: 1, overflow: 'hidden', borderRadius: 10, border: '1px solid rgba(24,34,58,0.12)' }}>
+            <Img
+              src={staticFile(beat.screenshot)}
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                objectPosition: 'top center',
+                transform: `scale(${1 + phase * 0.02})`, transformOrigin: 'top center',
+              }}
+            />
+          </div>
+        ) : (
+          <>
         {rows.map(([a, b], i) => (
           <div key={i} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -157,6 +171,8 @@ const Panel: React.FC<{ theme: Theme; beat: Beat; phase: number; bare?: boolean 
         }}>
           <span>近 28 天</span><span>↑ 播放曲线</span>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

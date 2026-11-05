@@ -21,6 +21,7 @@ export type Beat = {
   right?: string;
   cta?: string;
   broll?: string;
+  screenshot?: string;
   audio: string;
   duration: number;
 };

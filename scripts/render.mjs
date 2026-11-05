@@ -1,7 +1,8 @@
 // 一句话的入口：给一段文案，本机直接出片。
 //   node scripts/render.mjs --script 文案.txt --theme magazine -o out.mp4
 //   node scripts/render.mjs --text "文案内容" --theme poster
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, readdir, copyFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -67,6 +68,23 @@ const beats = voiced.map((b, i) => ({
   audio: path.posix.join('audio', id, path.basename(b.audio)),
   duration: Number(b.duration.toFixed(2)),
 }));
+
+// 真截图：--screens 目录里按文件名顺序，依次贴到每个正片段落上
+const screensDir = arg('--screens', null);
+if (screensDir && existsSync(screensDir)) {
+  const files = (await readdir(screensDir)).filter((f) => /\.(png|jpe?g|webp)$/i.test(f)).sort();
+  const destDir = path.join(ROOT, 'public', 'screens', id);
+  await mkdir(destDir, { recursive: true });
+  let k = 0;
+  for (const b of beats) {
+    const f = files[k % Math.max(1, files.length)];
+    if (!f) break;
+    await copyFile(path.join(screensDir, f), path.join(destDir, f));
+    b.screenshot = path.posix.join('screens', id, f);
+    k += 1;
+  }
+  console.log(`      ${k} 张真截图已接入（${files.length} 张循环用）`);
+}
 
 // 片头 + 章节页：把"第几部分"做成一张整屏，短视频靠它分段
 const title = String(text).trim().slice(0, 14);

@@ -188,8 +188,39 @@ export async function renderVideo(
     timeline.map((b) => ({ duration: b.duration, buffer: b.audio ?? null })),
     { sampleRate: audioCfg.sampleRate, channels: audioCfg.numberOfChannels, bgm },
   );
+  // iOS 的 AAC 编码器常常不给 AudioSpecificConfig；缺了它，Apple 播放器会认为音轨损坏
+  // （表现：画面正常、喇叭变灰）。这里按 MPEG-4 标准自己拼一份塞给封装器。
+  const asc = (() => {
+    const table: Record<number, number> = {
+      96000: 0, 88200: 1, 64000: 2, 48000: 3, 44100: 4, 32000: 5,
+      24000: 6, 22050: 7, 16000: 8, 12000: 9, 11025: 10, 8000: 11,
+    };
+    const idx = table[audioCfg.sampleRate] ?? 4;
+    const ch = Math.min(7, audioCfg.numberOfChannels);
+    return new Uint8Array([(2 << 3) | (idx >> 1), ((idx & 1) << 7) | (ch << 3)]);
+  })();
+
   let audioChunks = 0;
-  await encodeAudio(audioBuf, (chunk, meta) => { audioChunks += 1; muxer.addAudioChunk(chunk, meta); }, (p) => {
+  let sawDesc = false;
+  await encodeAudio(audioBuf, (chunk, meta) => {
+    audioChunks += 1;
+    const desc = meta?.decoderConfig?.description;
+    if (desc && (desc.byteLength ?? 0) >= 2) sawDesc = true;
+    let m = meta;
+    if (meta && (!desc || (desc.byteLength ?? 0) < 2)) {
+      m = {
+        ...meta,
+        decoderConfig: {
+          ...(meta.decoderConfig || {}),
+          codec: 'mp4a.40.2',
+          sampleRate: audioCfg.sampleRate,
+          numberOfChannels: audioCfg.numberOfChannels,
+          description: asc,
+        },
+      };
+    }
+    muxer.addAudioChunk(chunk, m);
+  }, (p) => {
     onProgress({ stage: '音轨编码', percent: 86 + Math.round(p * 12) });
   }, audioCfg);
   if (audioChunks === 0) {
@@ -202,6 +233,7 @@ export async function renderVideo(
     sampleRate: audioCfg.sampleRate,
     channels: audioCfg.numberOfChannels,
     audioChunks,
+    sawDesc,
     audioSec: Number(audioBuf.duration.toFixed(2)),
     videoSec: Number(timeline.reduce((n, b) => n + b.duration, 0).toFixed(2)),
   });
@@ -211,6 +243,7 @@ export async function renderVideo(
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
 
 
 
