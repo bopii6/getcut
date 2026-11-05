@@ -61,4 +61,4 @@ node scripts/render.mjs --script 文案.txt --theme cartoon
 
 - 截图是**画出来的假 UI**，不是真截图；要真截图得走 `broll` 字段，或后续加 `screenshot` 卡类型；
 - 主播只有嘴动，没有表情切换（要表情需要 3 张图 + 一个状态机，暂未做）；
-- 进度条按 `index/6` 估算，镜头多时会超过 100%，正式用得改成 `index/total`（已留 TODO）。
+- 管线仍会抓 Pexels b-roll（`fetchBroll`），但这个主题暂时没用上，等于多花几秒；后续可以把 `--no-broll` 开关接进 render.mjs。

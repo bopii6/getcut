@@ -1,6 +1,6 @@
 ﻿export type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
-import type { Beat, ThemeName } from './types';
+import type { Beat, LayoutMode, ThemeName } from './types';
 import { PALETTES, type Palette } from './theme';
 import { NEW_STYLES } from './styles';
 
@@ -342,6 +342,10 @@ const CARDS: Record<string, (ctx: Ctx2D, beat: Beat, t: number, pal: Palette) =>
   intro: cardIntro, chapter: cardChapter,
 };
 
+function isCoverCard(c: string) {
+  return c === 'intro' || c === 'chapter';
+}
+
 export function drawFrame(
   ctx: Ctx2D,
   beat: Beat,
@@ -349,9 +353,15 @@ export function drawFrame(
   theme: ThemeName,
   index: number,
   total: number,
+  layout: LayoutMode = 'auto',
 ) {
   const special = NEW_STYLES[theme];
-  if (special) { special(ctx, beat, t, index, total); return; }
+  if (special) { special(ctx, beat, t, index, total, layout); return; }
+  // 版式强制：大字版整屏一句、数字版只留结论，其余按卡片类型走
+  if (layout === 'big' && !isCoverCard(beat.card)) beat = { ...beat, card: 'quote' };
+  if (layout === 'data' && (beat.value || beat.card === 'stat')) beat = { ...beat, card: 'stat' };
+  if (layout === 'content' && beat.card === 'quote') beat = { ...beat, card: 'plain' };
+
   const pal = PALETTES[theme];
   ctx.save();
   drawBackground(ctx, pal);
@@ -391,6 +401,10 @@ export function drawFrame(
   }
   ctx.restore();
 }
+
+
+
+
 
 
 

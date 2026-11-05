@@ -278,15 +278,16 @@ const Duo: React.FC<{ theme: Theme; beat: Beat; phase: number }> = ({ theme, bea
 const Punch: React.FC<{ theme: Theme; beat: Beat; phase: number }> = ({ theme, beat, phase }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const big = String(beat.title || beat.value || beat.text).slice(0, 6);
+  const big = String(beat.title || beat.value || beat.text).slice(0, 14);
   const s = pop(frame, fps, 0, 230);
   const sub = beat.text && beat.text !== big ? beat.text : '';
+  const size = Math.max(112, Math.min(300, Math.floor(900 / Math.max(1, big.length))));
   return (
     <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingBottom: 220 }}>
       <div style={{
-        fontFamily: theme.heavy, fontSize: big.length > 3 ? 200 : 300, lineHeight: 1,
-        color: theme.accent, transform: `scale(${1.22 - s * 0.22}) rotate(-2deg)`,
-        opacity: Math.min(1, s * 1.6), letterSpacing: -6,
+        fontFamily: theme.heavy, fontSize: size, lineHeight: 1.06, width: '88%', textAlign: 'center',
+        color: theme.accent, transform: `scale(${1.18 - s * 0.18}) rotate(-2deg)`,
+        opacity: Math.min(1, s * 1.6), letterSpacing: -2,
       }}>{big}</div>
       {sub ? (
         <div style={{
@@ -300,7 +301,7 @@ const Punch: React.FC<{ theme: Theme; beat: Beat; phase: number }> = ({ theme, b
 };
 
 export const CartoonBeat: React.FC<{ beat: Beat; theme: Theme; seconds: number; index: number; total: number }> =
-  ({ beat, theme, seconds, index }) => {
+  ({ beat, theme, seconds, index, total }) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
     const frames = Math.max(2, Math.round(seconds * fps));

@@ -114,6 +114,7 @@ function Icon({ name }: { name: 'text' | 'style' | 'voice' | 'works' }) {
 export default function Studio() {
   const [text, setText] = useState('');
   const [choice, setChoice] = useState<Choice>('auto');
+  const [layout, setLayout] = useState<'auto' | 'big' | 'data' | 'content'>('auto');
   const [broll, setBroll] = useState(false);
   const [music, setMusic] = useState(true);
   const [voice, setVoice] = useState(VOICES[0].id);
@@ -227,7 +228,7 @@ export default function Studio() {
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
       const blob = await renderVideo(orderedPlan, theme, title, ({ stage: s, percent }) => {
         setStage(s); setPct(percent);
-      }, broll, music, voice, bgm, liveCanvas);
+      }, broll, music, voice, bgm, liveCanvas, layout);
       setSecs(Math.round((performance.now() - t0) / 1000));
       setUrl(URL.createObjectURL(blob));
       setPct(100);
@@ -585,7 +586,16 @@ export default function Studio() {
           ) : null}
 
           {tab === 'style' ? (
-            <div className="thumbs">
+            <>
+              <div className="layout-row">
+                <span>版式</span>
+                <div className="layout-seg">
+                  {([['auto', '自动'], ['big', '大字'], ['data', '数字'], ['content', '内容']] as const).map(([id, name]) => (
+                    <button key={id} className={layout === id ? 'on' : ''} onClick={() => setLayout(id)}>{name}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="thumbs">
               {STYLES.map((s) => (
                 <button
                   key={s.id}
@@ -601,7 +611,8 @@ export default function Studio() {
                   <i>{s.name}</i>
                 </button>
               ))}
-            </div>
+              </div>
+            </>
           ) : null}
 
           {tab === 'voice' ? (
@@ -972,7 +983,12 @@ export default function Studio() {
         .lib-item b { font-size: 14px; }
         .lib-item span { font-size: 12px; color: var(--dim); }        .meta-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--dim); }
 
-        .thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .layout-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .layout-row > span { font-size: 13px; color: var(--dim); white-space: nowrap; }
+        .layout-seg { display: flex; flex: 1; gap: 4px; }
+        .layout-seg button { flex: 1; background: var(--panel-2); border: 1px solid var(--line);
+          color: var(--dim); font: inherit; font-size: 13px; padding: 7px 4px; border-radius: 7px; cursor: pointer; }
+        .layout-seg button.on { border-color: var(--gold); color: var(--ink); font-weight: 700; }        .thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .thumb { position: relative; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
           background: var(--panel-2); cursor: pointer; aspect-ratio: 9/16; }
         .thumb img, .thumb .hover-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1126,6 +1142,8 @@ export default function Studio() {
     </div>
   );
 }
+
+
 
 
 

@@ -50,6 +50,7 @@ export default function MobileApp() {
   const [step, setStep] = useState<Step>('write');
   const [text, setText] = useState('');
   const [choice, setChoice] = useState<Choice>('auto');
+  const [layout, setLayout] = useState<'auto' | 'big' | 'data' | 'content'>('auto');
   const [voice, setVoice] = useState(VOICES[0].id);
   const [music, setMusic] = useState(true);
   const [srcMode, setSrcMode] = useState<'paste' | 'ai' | 'link'>('paste');
@@ -164,7 +165,7 @@ export default function MobileApp() {
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
       const blob = await renderVideo(planned, theme, title, ({ stage: s, percent }) => {
         setStage(s); setPct(percent);
-      }, false, music, voice, '', liveCanvas);
+      }, false, music, voice, '', liveCanvas, layout);
       setSecs(Math.round((performance.now() - t0) / 1000));
       setUrl(URL.createObjectURL(blob));
       setPct(100);
@@ -290,6 +291,15 @@ export default function MobileApp() {
                 {choice === s.id ? <em>✓</em> : null}
               </button>
             ))}
+          </div>
+
+          <div className="mrow">
+            <label>版式</label>
+            <div className="mseg2">
+              {([['auto', '自动轮换'], ['big', '大字'], ['data', '数字'], ['content', '内容']] as const).map(([id, name]) => (
+                <button key={id} className={layout === id ? 'on' : ''} onClick={() => setLayout(id)}>{name}</button>
+              ))}
+            </div>
           </div>
 
           <div className="mrow">
@@ -497,7 +507,10 @@ export default function MobileApp() {
           display: grid; place-items: center; }
 
         .mrow { display: flex; align-items: center; gap: 10px; }
-        .mrow label { font-size: 14px; color: var(--dim); white-space: nowrap; }
+        .mseg2 { display: flex; flex: 1; gap: 4px; }
+        .mseg2 button { flex: 1; background: var(--panel); border: 1px solid var(--line); color: var(--dim);
+          font: inherit; font-size: 13px; padding: 9px 4px; border-radius: 9px; }
+        .mseg2 button.on { border-color: var(--gold); color: var(--ink); font-weight: 700; }        .mrow label { font-size: 14px; color: var(--dim); white-space: nowrap; }
         .mrow select { flex: 1; }
         .mcheck { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--dim); }
         .mcheck input { width: 20px; height: 20px; accent-color: var(--gold); }
@@ -553,6 +566,7 @@ export default function MobileApp() {
     </div>
   );
 }
+
 
 
 

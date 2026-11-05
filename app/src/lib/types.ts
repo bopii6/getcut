@@ -1,6 +1,8 @@
 ﻿export type CardKind =
   | 'hook' | 'plain' | 'stat' | 'list' | 'compare' | 'quote' | 'cta' | 'intro' | 'chapter';
 
+export type LayoutMode = 'auto' | 'big' | 'data' | 'content';
+
 export type ThemeName = 'poster' | 'magazine' | 'dashboard' | 'news' | 'night' | 'newsroom' | 'ledger' | 'marker' | 'swiss' | 'terminal' | 'broadsheet' | 'cover' | 'reel';
 
 export type Beat = {
@@ -22,6 +24,7 @@ export type Beat = {
 };
 
 export type PlanBeat = Omit<Beat, 'duration' | 'audio' | 'bg'>;
+
 
 
 

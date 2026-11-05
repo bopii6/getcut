@@ -1,6 +1,6 @@
 // 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
-import type { Beat, PlanBeat, ThemeName } from './types';
+import type { Beat, LayoutMode, PlanBeat, ThemeName } from './types';
 import { drawFrame, FPS, H, W } from './draw';
 import { buildTimeline, encodeAudio, loadMusic, pickAudioConfig, voiceAll } from './audio';
 import { fetchBroll } from './broll';
@@ -66,6 +66,7 @@ export async function renderVideo(
   voice = 'zh-CN-YunxiNeural',
   bgmFile = '',
   surface?: HTMLCanvasElement,
+  layoutMode: LayoutMode = 'auto',
 ): Promise<Blob> {
   // 1. 实拍空镜（默认关：抓素材慢且不稳，需要时在界面上打开）
   onProgress({ stage: useBroll ? '找实拍空镜' : '准备', percent: 1 });
@@ -140,12 +141,25 @@ export async function renderVideo(
   }
 
   let globalFrame = 0;
+  let lastLayout: LayoutMode = 'content';
+  const layoutOf = (b: Beat): LayoutMode => {
+    if (layoutMode !== 'auto') return layoutMode;
+    const base: LayoutMode =
+      b.card === 'stat' && b.value ? 'data'
+        : (b.card === 'hook' || b.card === 'quote') ? 'big'
+          : 'content';
+    // 同一个版式绝不连着出现两屏：上一屏是什么就换另一个
+    const prev: LayoutMode = lastLayout;
+    if (base === prev) return prev === 'big' ? 'content' : 'big';
+    return base;
+  };
   for (let bi = 0; bi < timeline.length; bi++) {
     const beat = timeline[bi];
     const frames = Math.max(1, Math.round(beat.duration * FPS));
     for (let f = 0; f < frames; f++) {
       if (encoderError) throw encoderError;
-      drawFrame(ctx, beat, f / FPS, theme, bi, timeline.length);
+      const layout = layoutOf(beat);
+      drawFrame(ctx, beat, f / FPS, theme, bi, timeline.length, layout);
       const frame = new VideoFrame(canvas, {
         timestamp: Math.round((globalFrame * 1_000_000) / FPS),
         duration: Math.round(1_000_000 / FPS),
@@ -159,6 +173,7 @@ export async function renderVideo(
       globalFrame++;
       if (video.encodeQueueSize > 6) await new Promise((r) => setTimeout(r, 0));
     }
+    lastLayout = layoutOf(beat);
     onProgress({ stage: `画帧 ${bi + 1}/${timeline.length}`, percent: 34 + Math.round(((bi + 1) / timeline.length) * 50) });
   }
   await video.flush();
@@ -185,6 +200,8 @@ export async function renderVideo(
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
+
 
 
 

@@ -1,6 +1,6 @@
-﻿// 新风格：新闻播报（newsroom）与财报数据（ledger）
+// 新风格：新闻播报（newsroom）与财报数据（ledger）
 // 每个风格自己画顶部/中部/字幕，不走通用卡片，才能真正"换骨架"。
-import type { Beat, ThemeName } from './types';
+import type { Beat, LayoutMode, ThemeName } from './types';
 
 type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 export const W = 1080;
@@ -187,7 +187,11 @@ function newsBottom(ctx: Ctx, beat: Beat, t: number) {
   ctx.restore();
 }
 
-export function drawNewsroom(ctx: Ctx, beat: Beat, t: number, index: number, total: number) {
+export function drawNewsroom(ctx: Ctx, beat: Beat, t: number, index: number, total: number, layout: LayoutMode = 'auto') {
+  // 版式：大字 → 走标题版；数字 → 走数字特写；内容 → 走信息板
+  if (layout === 'big') beat = { ...beat, card: 'hook' };
+  if (layout === 'data') beat = { ...beat, card: 'stat', value: beat.value || '132' };
+  if (layout === 'content' && (beat.card === 'hook' || beat.card === 'quote')) beat = { ...beat, card: 'plain' };
   ctx.fillStyle = NEWS.bg;
   ctx.fillRect(0, 0, W, H);
   newsTop(ctx, beat, t, index, total);
@@ -337,7 +341,9 @@ function wobbleRect(ctx: Ctx, x: number, y: number, w: number, h: number, rnd: n
   ctx.closePath();
 }
 
-function drawMarker(ctx: Ctx, beat: Beat, t: number, index: number, _total: number) {
+function drawMarker(ctx: Ctx, beat: Beat, t: number, index: number, _total: number, layout: LayoutMode = 'auto') {
+  if (layout === 'big') beat = { ...beat, card: 'hook' };
+  if (layout === 'content' && (beat.card === 'hook' || beat.card === 'quote')) beat = { ...beat, card: 'list' };
   ctx.fillStyle = MK.bg;
   ctx.fillRect(0, 0, W, H);
 
@@ -472,7 +478,7 @@ function drawMarker(ctx: Ctx, beat: Beat, t: number, index: number, _total: numb
 // ───────────────────────── 极简瑞士 ─────────────────────────
 const SW = { bg: '#F7F7F5', ink: '#111111', red: '#E2231A', gray: '#8A8A8A' };
 
-function drawSwiss(ctx: Ctx, beat: Beat, t: number, index: number, total: number) {
+function drawSwiss(ctx: Ctx, beat: Beat, t: number, index: number, total: number, layout: LayoutMode = 'auto') {
   ctx.fillStyle = SW.bg;
   ctx.fillRect(0, 0, W, H);
 
@@ -488,6 +494,24 @@ function drawSwiss(ctx: Ctx, beat: Beat, t: number, index: number, total: number
   ctx.fillText(right, 1008 - ctx.measureText(right).width, 104);
   ctx.fillStyle = SW.ink;
   ctx.fillRect(72, 120, 936 * ease(t / 0.3), 1);
+
+  // 版式：大字 —— 整屏一句，不做数字与栅格；数字版跳过标题直接给数
+  if (layout === 'big' || (layout === 'auto' && (beat.card === 'hook' || beat.card === 'quote'))) {
+    ctx.font = '900 120px ' + HEAVY;
+    ctx.fillStyle = SW.ink;
+    const big = wrap(ctx, beat.title || beat.text, 900).slice(0, 4);
+    big.forEach((ln, i) => {
+      const p = ease((t - 0.15 - i * 0.1) / 0.3);
+      ctx.save();
+      ctx.globalAlpha = p;
+      ctx.fillText(ln, 72, 480 + i * 140);
+      ctx.restore();
+    });
+    ctx.fillStyle = SW.red;
+    const sq = 64 * ease((t - 0.3) / 0.25);
+    ctx.fillRect(72, 380, sq, sq);
+    return;
+  }
 
   // 标题
   ctx.font = '900 92px ' + HEAVY;
@@ -664,7 +688,9 @@ function halftone(ctx: Ctx, cx: number, cy: number, r: number, cell = 12) {
   }
 }
 
-function drawBroadsheet(ctx: Ctx, beat: Beat, t: number, index: number, _total: number) {
+function drawBroadsheet(ctx: Ctx, beat: Beat, t: number, index: number, _total: number, layout: LayoutMode = 'auto') {
+  if (layout === 'big') beat = { ...beat, card: 'hook' };
+  if (layout === 'content' && (beat.card === 'hook' || beat.card === 'quote')) beat = { ...beat, card: 'plain' };
   ctx.fillStyle = BS.paper;
   ctx.fillRect(0, 0, W, H);
 
@@ -774,7 +800,9 @@ function drawBroadsheet(ctx: Ctx, beat: Beat, t: number, index: number, _total: 
 // ───────────────────────── 杂志封面 ─────────────────────────
 const CV = { paper: '#EDE6DA', ink: '#141414', blue: '#2B3CFF', white: '#FFFFFF' };
 
-function drawCover(ctx: Ctx, beat: Beat, t: number, index: number, _total: number) {
+function drawCover(ctx: Ctx, beat: Beat, t: number, index: number, _total: number, layout: LayoutMode = 'auto') {
+  if (layout === 'big') beat = { ...beat, card: 'hook' };
+  if (layout === 'content' && beat.card === 'stat') beat = { ...beat, value: '' };
   ctx.fillStyle = CV.paper;
   ctx.fillRect(0, 0, W, H);
 
@@ -972,13 +1000,16 @@ export function drawReel(ctx: Ctx, beat: Beat, _t: number, index: number, _total
 }
 
 // 只登记真正立得住的风格：终端/胶片/财报/旧新闻/夜行已下架（信息空洞、辨识度低）
-export const NEW_STYLES: Partial<Record<ThemeName, (c: Ctx, b: Beat, t: number, i: number, n: number) => void>> = {
+export const NEW_STYLES: Partial<Record<ThemeName, (c: Ctx, b: Beat, t: number, i: number, n: number, layout?: LayoutMode) => void>> = {
   newsroom: drawNewsroom,
   marker: drawMarker,
   swiss: drawSwiss,
   broadsheet: drawBroadsheet,
   cover: drawCover,
 };
+
+
+
 
 
 
