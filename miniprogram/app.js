@@ -1,12 +1,16 @@
-// 服务端地址放这里改一处。上线前记得：
-//   1. 小程序后台 → 开发管理 → 开发设置 → 服务器域名，把域名加到 request 和 downloadFile 里
-//   2. 必须是 https，且域名已备案
-//   3. 开发阶段可以勾「不校验合法域名」，真机预览会失效，别指望它
-const API_BASE = 'https://getcut.example.com';
+// 服务端地址：只写到域名/IP，不带路径。三档，按你在哪跑选：
+//   'http://127.0.0.1:8902'      → 本机后端，只在微信开发者工具的模拟器里有效
+//   'http://115.190.113.128'     → 火山引擎那台（同一 WiFi 或模拟器可用，需勾「不校验合法域名」）
+//   'https://你的域名'            → 真机预览、体验版、正式版唯一合法的形态，必须备案 + HTTPS
+const API_BASE = 'http://127.0.0.1:8902';
+
+// 接口挂载前缀。服务器上 Web 端的旧后端占了 /api，所以出片服务挂在 /v1。
+const API_PREFIX = '/v1';
 
 App({
   globalData: {
     apiBase: API_BASE,
+    apiPrefix: API_PREFIX,
   },
 
   onLaunch() {

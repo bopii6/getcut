@@ -34,6 +34,15 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+/**
+ * 对外可见的接口前缀，取 GETCUT_API_PREFIX 的第一项。
+ * 只用一个环境变量，避免「路由挂一个前缀、返回的地址又是另一个」这种自相矛盾。
+ */
+function publicPrefix() {
+  const first = (process.env.GETCUT_API_PREFIX || '/api').split(',')[0].trim();
+  return first.startsWith('/') ? first.replace(/\/+$/, '') : '/' + first;
+}
+
 function publicView(job) {
   return {
     id: job.id,
@@ -42,8 +51,9 @@ function publicView(job) {
     percent: job.percent,
     theme: job.theme,
     title: job.title,
-    // 出片后给相对路径，让小程序拼自己的域名，不用把服务端地址写死
-    videoPath: job.status === 'done' ? `/api/video/${job.id}` : null,
+    // 出片后给相对路径，让小程序拼自己的域名，不用把服务端地址写死。
+    // 前缀取 GETCUT_API_PREFIX 的第一项：服务器上 Web 端的 proxy.mjs 占了 /api，这里挂 /v1。
+    videoPath: job.status === 'done' ? `${publicPrefix()}/video/${job.id}` : null,
     seconds: job.seconds ?? null,
     frames: job.frames ?? null,
     elapsedSec: job.elapsedSec ?? null,

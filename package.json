@@ -6,7 +6,12 @@
   "description": "输入文案，本机直接出片：AI 拆解 → Remotion 渲染 → MP4",
   "scripts": {
     "studio": "remotion studio src/index.ts",
-    "render": "node scripts/render.mjs"
+    "render": "node scripts/render.mjs",
+    "draw": "node server/build-draw.mjs",
+    "api": "node server/api.mjs",
+    "selftest": "node server/selftest.mjs",
+    "frames": "node server/preview-frames.mjs",
+    "smoke": "node server/smoke.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.1.0",

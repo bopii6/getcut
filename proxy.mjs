@@ -119,7 +119,7 @@ function edgeTts(text, outFile, voice, rate) {
     // Windows 上是 python，Linux 服务器通常只有 python3
     const py = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
     execFile(py, ['-m', 'edge_tts', '--text', text, '--voice', voice, '--rate', rate,
-      '--write-media', outFile, '--no-progress'], { timeout: 60000 }, (err, _out, stderr) => {
+      '--write-media', outFile], { timeout: 60000 }, (err, _out, stderr) => {
       if (err) reject(new Error(String(stderr || err.message).slice(-300)));
       else resolve();
     });

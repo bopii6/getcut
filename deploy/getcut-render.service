@@ -1,0 +1,20 @@
+[Unit]
+Description=GetCut render API (mini program backend)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/getcut-render
+Environment=NODE_ENV=production
+Environment=GETCUT_API_PORT=8902
+Environment=GETCUT_API_HOST=127.0.0.1
+Environment=GETCUT_API_PREFIX=/v1
+Environment=PYTHON=python3
+ExecStart=/usr/bin/env node server/api.mjs
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/getcut-render.log
+StandardError=append:/var/log/getcut-render.log
+
+[Install]
+WantedBy=multi-user.target

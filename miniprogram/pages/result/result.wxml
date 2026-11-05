@@ -1,0 +1,49 @@
+<view class="page">
+  <!-- 渲染中 -->
+  <block wx:if="{{status !== 'done' && status !== 'failed'}}">
+    <view class="stage-row">
+      <text class="stage">{{stage}}</text>
+      <text class="pct">{{percent}}%</text>
+    </view>
+
+    <view class="bar">
+      <view class="bar-fill" style="width: {{percent}}%"></view>
+    </view>
+
+    <text class="note" wx:if="{{queueAhead > 0}}">前面还有 {{queueAhead}} 条在渲，先别退出</text>
+    <text class="note" wx:else>一条 60 秒的片大约 3~5 分钟，别锁屏</text>
+
+    <view class="steps">
+      <text class="step">拆稿 · 配音 · 渲染 · 封装</text>
+    </view>
+  </block>
+
+  <!-- 完成 -->
+  <block wx:if="{{status === 'done'}}">
+    <video
+      class="player"
+      src="{{videoUrl}}"
+      autoplay
+      loop
+      object-fit="contain"
+      show-center-play-btn
+    />
+
+    <button class="go" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">
+      {{saved ? '已存相册 · 再存一次' : '保存到相册'}}
+    </button>
+    <button class="sub" bindtap="onPreview">全屏预览</button>
+
+    <text class="tip">{{tip || '存好后直接发抖音、视频号'}}</text>
+  </block>
+
+  <!-- 失败 -->
+  <block wx:if="{{status === 'failed'}}">
+    <view class="fail">
+      <text class="fail-title">这条没出来</text>
+      <text class="fail-msg">{{error}}</text>
+    </view>
+    <button class="go" bindtap="onRetry">重新查一次</button>
+    <button class="sub" bindtap="onBack">改文案重来</button>
+  </block>
+</view>

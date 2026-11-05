@@ -1,12 +1,12 @@
 // 小程序用的 HTTP 接口层。
 //
 // 六个接口就够跑完整条产品链路：
-//   GET  /api/health        探活
-//   POST /api/plan          只拆稿，给用户先看分镜（不渲染，秒回）
-//   POST /api/job           建出片任务 → 立刻返回 id，不等渲染
-//   GET  /api/job/:id       轮询进度
-//   GET  /api/jobs          最近任务
-//   GET  /api/video/:id     取 MP4（支持 Range，微信 video 组件要它才能拖进度）
+//   GET  /health        探活
+//   POST /plan          只拆稿，给用户先看分镜（不渲染，秒回）
+//   POST /job           建出片任务 → 立刻返回 id，不等渲染
+//   GET  /job/:id       轮询进度
+//   GET  /jobs          最近任务
+//   GET  /video/:id     取 MP4（支持 Range，微信 video 组件要它才能拖进度）
 import http from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -19,7 +19,23 @@ applyEnv(['DEEPSEEK_API_KEY']);
 
 const PORT = Number(process.env.GETCUT_API_PORT || 8902);
 const HOST = process.env.GETCUT_API_HOST || '127.0.0.1';
+// 这台服务器上 Web 端的 proxy.mjs 已经占了 /api，所以新服务默认也认 /v1。
+// 挂哪个前缀由反向代理决定，两套都认省得来回改配置。
+const PREFIXES = (process.env.GETCUT_API_PREFIX || '/api,/v1')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .sort((a, b) => b.length - a.length);
 const MAX_BODY = 256 * 1024;
+
+/** 把 /v1/job/abc 归一成 /job/abc，路由表只写一套。 */
+function stripPrefix(pathname) {
+  for (const pre of PREFIXES) {
+    if (pathname === pre) return '/';
+    if (pathname.startsWith(pre + '/')) return pathname.slice(pre.length);
+  }
+  return pathname;
+}
 
 function cors(res) {
   res.setHeader('access-control-allow-origin', '*');
@@ -113,7 +129,7 @@ async function sendVideo(req, res, id) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-  const p = url.pathname;
+  const p = stripPrefix(url.pathname);
 
   if (req.method === 'OPTIONS') {
     cors(res);
@@ -122,7 +138,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
-    if (p === '/api/health') {
+    if (p === '/health') {
       return json(res, 200, {
         ok: true,
         plan: Boolean(envOf('DEEPSEEK_API_KEY')),
@@ -131,7 +147,7 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    if (req.method === 'POST' && p === '/api/plan') {
+    if (req.method === 'POST' && p === '/plan') {
       const { text, model } = await readBody(req);
       const src = String(text || '').trim();
       if (src.length < 8) throw new Error('文案太短，至少 8 个字');
@@ -139,22 +155,22 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, plan);
     }
 
-    if (req.method === 'POST' && p === '/api/job') {
+    if (req.method === 'POST' && p === '/job') {
       const body = await readBody(req);
       return json(res, 200, createJob(body));
     }
 
-    if (req.method === 'GET' && p === '/api/jobs') {
+    if (req.method === 'GET' && p === '/jobs') {
       return json(res, 200, { items: listJobs(Number(url.searchParams.get('limit') || 20)) });
     }
 
-    const jobMatch = /^\/api\/job\/([a-f0-9]{4,32})$/.exec(p);
+    const jobMatch = /^\/job\/([a-f0-9]{4,32})$/.exec(p);
     if (req.method === 'GET' && jobMatch) {
       const job = getJob(jobMatch[1]);
       return job ? json(res, 200, job) : json(res, 404, { error: '任务不存在' });
     }
 
-    const videoMatch = /^\/api\/video\/([a-f0-9]{4,32})$/.exec(p);
+    const videoMatch = /^\/video\/([a-f0-9]{4,32})$/.exec(p);
     if (req.method === 'GET' && videoMatch) {
       return await sendVideo(req, res, videoMatch[1]);
     }

@@ -187,9 +187,16 @@ export async function renderVideo(opts) {
     const layoutOf = makeLayoutPicker(layoutMode);
 
     let drawn = 0;
+    let cumSec = 0;
     for (let bi = 0; bi < timeline.length; bi += 1) {
       const beat = timeline[bi];
-      const frames = Math.max(1, Math.round(beat.duration * FPS));
+      cumSec += beat.duration;
+      // 每段各自四舍五入会累积误差（计划 337、实画 336 就是这么来的，差一帧整条就废）。
+      // 改成按累计时间取边界，每段帧数 = 相邻边界之差，总和必然等于 totalFrames。
+      const boundary = bi === timeline.length - 1
+        ? totalFrames
+        : Math.max(drawn, Math.round(cumSec * FPS));
+      const frames = Math.max(0, boundary - drawn);
       const layout = layoutOf(beat);
       for (let f = 0; f < frames; f += 1) {
         ctx.setTransform(1, 0, 0, 1, 0, 0);

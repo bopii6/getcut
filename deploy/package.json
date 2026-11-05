@@ -1,0 +1,10 @@
+{
+  "name": "getcut-render",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "GetCut 出片服务（服务端渲染，只依赖 canvas 和 ffmpeg）",
+  "dependencies": {
+    "@napi-rs/canvas": "^1.1.0"
+  }
+}
