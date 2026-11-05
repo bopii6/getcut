@@ -6,6 +6,8 @@ import {
   uploadVideo, videoUrl, type GenItem, type Me,
 } from './lib/account';
 import { exportJianyingDraft } from './lib/jianying';
+import { cssVars } from './lib/design';
+import './workbench.css';
 
 type Choice = ThemeName | 'auto';
 
@@ -190,6 +192,9 @@ export default function Workbench() {
 
   return (
     <div className="wb">
+      <style>{`
+        :root { ${cssVars()} }
+      `}</style>
       <header className="top">
         <button
           className="brand"
@@ -219,7 +224,7 @@ export default function Workbench() {
           {empty ? (
             <div className="start">
               <h1>把一段文案<br />做成能发的片</h1>
-              <p className="start-sub">粘稿子，或者让 AI 写一篇。竖屏 1080×1920，直接发抖音。</p>
+              <p className="start-sub">粘稿子，或者给个主题。竖屏，直接发抖音。</p>
 
               <div className="start-actions">
                 <button className="big" onClick={() => { setStarted(true); setTimeout(() => textRef.current?.focus(), 30); }}>
@@ -231,9 +236,18 @@ export default function Workbench() {
                   <span>看看一条片长什么样</span>
                 </button>
                 <button className="big" onClick={() => setPanel('ai')}>
-                  <b>AI 帮我写</b>
-                  <span>给个主题，自动成稿</span>
+                  <b>帮我写一篇</b>
+                  <span>给个主题就行</span>
                 </button>
+              </div>
+
+              {/* 证据位：真的片子 + 可核对的事实，不写形容词 */}
+              <div className="proof">
+                <video src="samples/magazine.mp4" autoPlay muted loop playsInline />
+                <div>
+                  <b>真实成片</b>
+                  <span>律师口播 · 13 秒 · 1080×1920 · 4 句 · 白底杂志</span>
+                </div>
               </div>
             </div>
           ) : null}
@@ -252,7 +266,7 @@ export default function Workbench() {
           </div>
 
           {/* 风格横排：永不裁切，可横向滑 */}
-          <div className="strip">
+          {!empty ? <div className="strip">
             {STYLES.map((s) => (
               <button
                 key={s.id}
@@ -265,12 +279,11 @@ export default function Workbench() {
                   ? <video className="card-video" src={s.preview} autoPlay muted loop playsInline />
                   : <img src={s.thumb} alt="" />}
                 <b>{s.name}</b>
-                <i>{s.use}</i>
               </button>
             ))}
-          </div>
+          </div> : null}
 
-          {!running ? <div className="toolbar">
+          {!running && !empty ? <div className="toolbar">
             <select value={voice} onChange={(e) => setVoice(e.target.value)} disabled={running}>
               {VOICES.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
@@ -420,173 +433,12 @@ export default function Workbench() {
         </div>
       ) : null}
 
-      <style>{`
-        :root { --bg:#0B0B0C; --panel:#141417; --panel2:#1B1B20; --line:rgba(255,255,255,.1);
-          --line2:rgba(255,255,255,.18); --ink:#F2F2F4; --dim:#9C9CA6; --gold:#F0B429; }
-        * { box-sizing: border-box; }
-        html, body, #root { height: 100%; }
-        body { margin:0; background:var(--bg); color:var(--ink); font: 15px/1.6 "PingFang SC","Microsoft YaHei",system-ui,sans-serif; }
-
-        .wb { height: 100vh; display: flex; flex-direction: column; }
-        .top { height: 62px; flex: none; display: flex; align-items: center; gap: 18px; padding: 0 72px;
-          max-width: 1320px; margin: 0 auto; width: 100%;
-          border-bottom: 1px solid var(--line); }
-        /* 隐藏所有滚动条：滚轮照常可用，只是不显示那条丑条 */
-        .main, .preview, .strip, .sheet, .editor textarea, .tl { scrollbar-width: none; -ms-overflow-style: none; }
-        .main::-webkit-scrollbar, .preview::-webkit-scrollbar, .strip::-webkit-scrollbar,
-        .sheet::-webkit-scrollbar, .editor textarea::-webkit-scrollbar, .tl::-webkit-scrollbar { width: 0; height: 0; }        .brand { font-weight: 900; font-size: 17px; background: none; border: 0; color: var(--ink); cursor: pointer;
-          padding: 6px 4px; border-radius: 8px; font-family: inherit; }
-        .brand:hover { background: rgba(255,255,255,.06); }
-        .brand span { color: var(--gold); font-size: 12px; margin-left: 5px; font-weight: 500; }
-        .proj { flex: 1; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-        .proj b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .proj span { font-size: 12px; color: var(--dim); }
-        .topright { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--dim); }
-        .av { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line2); background: var(--panel2);
-          color: var(--ink); font-weight: 800; cursor: pointer; }
-
-        .main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 44px;
-          padding: 30px 72px 16px; overflow-y: auto; max-width: 1320px; margin: 0 auto; width: 100%; }
-        .main.empty { grid-template-columns: 1fr; align-items: start; padding-top: 40px; }
-        .main.empty .pane { max-width: 760px; }
-        .main.empty .preview { display: none; }
-        .pane { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
-
-        /* 起手式 */
-        .start { max-width: 620px; }
-        .start h1 { margin: 0; font-size: 46px; line-height: 1.2; letter-spacing: -.02em; }
-        .start-sub { margin: 14px 0 30px; color: var(--dim); font-size: 15px; }
-        .start-actions { display: grid; gap: 10px; }
-        .big { display: grid; gap: 3px; text-align: left; padding: 18px 22px; border-radius: 14px;
-          border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer;
-          transition: border-color .15s, transform .12s; }
-        .big b { font-size: 17px; }
-        .big span { font-size: 13px; color: var(--dim); }
-        .big:hover { border-color: var(--gold); transform: translateY(-1px); }
-        .big:first-child { background: linear-gradient(180deg,#1E1A10,#141417); border-color: rgba(240,180,41,.4); }
-
-        .editor-hidden { display: none; }
-        .editor textarea { width: 100%; height: 220px; resize: none; background: var(--panel); color: var(--ink);
-          border: 1px solid var(--line); border-radius: 14px; padding: 18px; font: inherit; font-size: 16px;
-          line-height: 1.9; outline: none; }
-        .editor textarea:focus { border-color: var(--gold); }
-        .meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--dim); }
-
-        /* 风格横排：不裁切 */
-        .strip { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: thin; }
-        .card { flex: 0 0 116px; display: grid; gap: 0; padding: 0 0 8px; border: 1px solid var(--line);
-          border-radius: 12px; background: var(--panel); color: var(--ink); cursor: pointer; overflow: hidden; }
-        .card img, .card .card-video { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
-        .card b { font-size: 13px; padding: 7px 9px 0; }
-        .card i { font-style: normal; font-size: 11px; color: var(--gold); padding: 2px 9px 0; }
-        .card.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(240,180,41,.3); }
-
-        .toolbar { display: flex; align-items: center; gap: 12px; }
-        .toolbar select { background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
-          border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; }
-        .chk { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: var(--dim); }
-        .chk input { width: 17px; height: 17px; accent-color: var(--gold); }
-        .go { flex: 1; padding: 15px 20px; border: 0; border-radius: 12px; background: var(--gold);
-          color: #171207; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; text-align: center;
-          text-decoration: none; }
-        .go:disabled { opacity: .45; cursor: not-allowed; }
-        .ghost { padding: 12px 16px; border: 1px solid var(--line2); border-radius: 10px; background: none;
-          color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
-        .link { background: none; border: 0; color: var(--gold); font: inherit; font-size: 13px; cursor: pointer; }
-        .prog { border: 1px solid rgba(240,180,41,.35); border-radius: 14px; padding: 18px 20px; display: grid; gap: 14px;
-          background: linear-gradient(180deg, rgba(240,180,41,.10), rgba(240,180,41,.02)); }
-        .prog-head { display: flex; align-items: flex-end; gap: 16px; }
-        .prog-head b { font-size: 58px; line-height: .95; letter-spacing: -.03em; color: var(--gold); font-weight: 900; }
-        .prog-head b i { font-size: 22px; font-style: normal; margin-left: 2px; }
-        .prog-meta { display: grid; gap: 4px; padding-bottom: 8px; }
-        .prog-meta span { font-size: 15px; color: var(--ink); }
-        .prog-meta em { font-style: normal; font-size: 12px; color: var(--dim); }
-        .prog-bar { height: 10px; background: rgba(255,255,255,.1); border-radius: 6px; overflow: hidden; }
-        .prog-bar i { display: block; height: 100%; border-radius: 6px; transition: width .4s ease;
-          background: linear-gradient(90deg, #C98A12, #F0B429 60%, #FFD469);
-          box-shadow: 0 0 14px rgba(240,180,41,.55); }
-        .prog-steps { display: flex; gap: 8px; flex-wrap: wrap; }
-        .prog-steps span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim);
-          padding: 5px 10px; border: 1px solid var(--line); border-radius: 99px; }
-        .prog-steps i { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
-          font-size: 10px; font-style: normal; background: rgba(255,255,255,.08); }
-        .prog-steps .now { color: var(--gold); border-color: rgba(240,180,41,.5); }
-        .prog-steps .now i { background: var(--gold); color: #171207; }
-        .prog-steps .done { color: #8FD6A5; border-color: rgba(143,214,165,.35); }        .bar { height: 3px; background: rgba(255,255,255,.1); border-radius: 2px; }
-        .bar i { display: block; height: 100%; background: var(--gold); }
-        .err { color: #ff9a86; font-size: 13px; margin: 0; }
-        .fine { color: var(--dim); font-size: 12px; }
-        .out { display: flex; align-items: center; gap: 10px; width: 100%; position: sticky; bottom: 0;
-          background: linear-gradient(180deg, transparent, var(--bg) 45%); padding-top: 8px; }
-        .out .go { flex: none; padding: 12px 18px; font-size: 14px; }
-
-        /* 预览 */
-        .preview { display: flex; flex-direction: column; align-items: center; gap: 10px; justify-content: flex-start;
-          overflow-y: auto; padding-bottom: 10px; }
-        .phone { flex: none; position: relative; width: min(34vh, 264px); aspect-ratio: 9/19.2; border-radius: 38px; padding: 9px;
-          background: linear-gradient(160deg,#3C3C41,#16161A 60%,#2A2A2E);
-          box-shadow: 0 30px 70px -30px #000, 0 0 0 1px #000, inset 0 0 0 1px rgba(255,255,255,.16); }
-        .phone > * { border-radius: 30px; overflow: hidden; }
-        .island { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); width: 74px; height: 20px;
-          border-radius: 12px; background: #000; z-index: 3; }
-        .phone video, .phone .live, .phone .ph { width: 100%; height: 100%; display: block; background: #000; }
-        .phone video { object-fit: contain; }
-        .live canvas { width: 100%; height: 100%; object-fit: contain; }
-        .ph img { width: 100%; height: 100%; object-fit: contain; opacity: .55; }
-        .transport { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--dim); }
-        .play { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line2); background: var(--panel2);
-          color: var(--ink); cursor: pointer; }
-        .hint { color: var(--dim); font-size: 12px; margin: 0; }
-
-        /* 时间轴 */
-        .tl { flex: none; height: 150px; border-top: 1px solid var(--line); padding: 10px 22px 12px;
-          display: flex; flex-direction: column; gap: 8px; background: var(--panel); }
-        .tl-head { display: flex; align-items: baseline; gap: 12px; font-size: 12px; color: var(--dim); }
-        .tl-head b { color: var(--ink); font-size: 13px; }
-        .tl-head .link { margin-left: auto; }
-        .tl-body { flex: 1; display: grid; grid-template-columns: 44px 1fr; gap: 6px 10px; min-height: 0; }
-        .lane-label { font-size: 11px; color: var(--dim); align-self: center; }
-        .lane { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
-        .clip { flex: 1 1 0; min-width: 0; background: #2A2A31; border: 1px solid var(--line); border-radius: 6px;
-          color: #D6D6DE; font-size: 11px; padding: 7px 8px; text-align: left; overflow: hidden; white-space: nowrap; }
-        .sub { flex: 1 1 0; min-width: 0; background: rgba(240,180,41,.12); border: 1px solid rgba(240,180,41,.28);
-          color: #E3CE9C; font-size: 11px; border-radius: 6px; padding: 7px 8px; text-align: left; overflow: hidden; white-space: nowrap; }
-
-        /* 抽屉 */
-        .mask { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: grid; place-items: center; z-index: 40; }
-        .sheet { width: min(420px, 92vw); background: var(--panel); border: 1px solid var(--line2); border-radius: 16px;
-          padding: 22px; display: grid; gap: 10px; }
-        .sheet.wide { width: min(560px, 92vw); max-height: 70vh; overflow-y: auto; }
-        .sheet h3 { margin: 0; font-size: 18px; }
-        .sheet input { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; color: var(--ink);
-          padding: 12px 14px; font: inherit; font-size: 15px; outline: none; }
-        .sheet input:focus { border-color: var(--gold); }
-        .wrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px;
-          border: 1px solid var(--line); border-radius: 10px; }
-        .wrow b { display: block; font-size: 13px; }
-        .wrow span { font-size: 11px; color: var(--dim); }
-        @media (max-width: 1100px) {
-          .main { display: flex; flex-direction: column; gap: 18px; padding: 16px 18px 10px; }
-          .preview { order: -1; align-self: center; flex: none; }
-          .phone { width: min(26vh, 190px); }
-          .start { max-width: none; }
-          .start h1 { font-size: 34px; }
-          .strip { gap: 8px; }
-          .card { flex: 0 0 96px; }
-        }
-        @media (max-height: 720px) {
-          .main.empty { padding-top: 20px; }
-          .start h1 { font-size: 34px; }
-          .start-sub { margin-bottom: 18px; }
-          .big { padding: 13px 18px; }
-        }
-
-        .wact { display: flex; gap: 12px; font-size: 12px; }
-        .wact a, .wact button { color: var(--gold); background: none; border: 0; font: inherit; cursor: pointer; }
-      `}</style>
+      
     </div>
   );
 }
+
+
 
 
 
