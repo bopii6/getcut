@@ -1,293 +1,543 @@
-import { useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
-import type { ThemeName } from './lib/types';
+import type { ThemeName, PlanBeat } from './lib/types';
+import {
+  createGen, deleteGen, getMe, listHistory, login, logout, redeem, register,
+  uploadVideo, videoUrl, type GenItem, type Me,
+} from './lib/account';
+import { exportJianyingDraft } from './lib/jianying';
 
-const THEMES: { id: ThemeName; name: string; hint: string; swatch: string; ink: string }[] = [
-  { id: 'poster', name: '大字报', hint: '黑金 · 一屏一句', swatch: 'linear-gradient(140deg,#0a0a09,#1d1708)', ink: '#ffd400' },
-  { id: 'magazine', name: '杂志风', hint: '暖纸 · 印章红', swatch: 'linear-gradient(140deg,#f6f2e9,#e3d9c6)', ink: '#c0392b' },
-  { id: 'dashboard', name: '数据面板', hint: '深蓝 · 数字', swatch: 'linear-gradient(140deg,#06101f,#0f2a44)', ink: '#40a9ff' },
-  { id: 'news', name: '新闻播报', hint: '白底 · 正红', swatch: 'linear-gradient(140deg,#faf8f5,#ece6de)', ink: '#d62828' },
-  { id: 'night', name: '夜行', hint: '深紫 · 冷光', swatch: 'linear-gradient(140deg,#0b0a16,#2a1f5c)', ink: '#a78bfa' },
+type Choice = ThemeName | 'auto';
+
+const STYLES: { id: Choice; name: string; use: string; thumb: string; preview?: string }[] = [
+  { id: 'poster', name: '冲击大字', use: '开场抛痛点', thumb: 'style-thumbs/poster.jpg?v=2', preview: 'style-previews/poster.mp4' },
+  { id: 'marker', name: '白板讲解', use: '讲方法步骤', thumb: 'style-thumbs/marker.jpg?v=2', preview: 'style-previews/marker.mp4' },
+  { id: 'dashboard', name: '数据说服', use: '算账讲回报', thumb: 'style-thumbs/dashboard.jpg?v=2', preview: 'style-previews/dashboard.mp4' },
+  { id: 'newsroom', name: '权威播报', use: '立信任讲案例', thumb: 'style-thumbs/newsroom.jpg?v=2', preview: 'style-previews/newsroom.mp4' },
+  { id: 'magazine', name: '杂志访谈', use: '专业形象', thumb: 'style-thumbs/magazine.jpg?v=2', preview: 'style-previews/magazine.mp4' },
 ];
 
-const DEMO = `想开一家小店，你最怕的是什么？
-不是没客人，是钱投进去，三个月就撑不住。
+const VOICES = [
+  { id: 'zh-CN-YunxiNeural', name: '云希 · 男声' },
+  { id: 'zh-CN-YunyangNeural', name: '云扬 · 播音' },
+  { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓 · 女声' },
+  { id: 'zh-CN-XiaoyiNeural', name: '晓伊 · 活泼' },
+  { id: 'zh-CN-YunjianNeural', name: '云健 · 厚实' },
+];
+
+const DEMO = `想开一家小店，你最怕的是什么？不是没客人，是钱投进去，三个月就撑不住。
 今天讲三个数，你记下来再去谈加盟。
 第一个数，前期总投入。加盟费、保证金、装修、设备、首批物料，加起来才是真数。
-第二个数，回本周期。总部说八个月，你就按十二个月算，多出来的四个月是你的活路。
+第二个数，回本周期。总部说八个月，你就按十二个月算。
 第三个数，日均流水。别问总部要，去他现有的店里蹲三天。
-这三个数算完，你大概就知道这门生意能不能做。
-如果你正在看某个项目，把品牌名发给我，我帮你把这三个数拆开算一遍。`;
+把品牌名发给我，我帮你把这三个数拆开算一遍。`;
 
-const STEPS = ['拆稿', '空镜', '配音', '画帧', '封片'];
+function pickTheme(text: string): ThemeName {
+  if (/\d+\s*(万|元|%|倍)/.test(text) || /(回本|投入|成本|流水)/.test(text)) return 'dashboard';
+  if (/(合同|条款|判决|律师|赔偿|仲裁)/.test(text)) return 'magazine';
+  if (/(考试|成绩|孩子|提分|上课|家长)/.test(text)) return 'newsroom';
+  return 'poster';
+}
+
+function fmt(t: number) {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 export default function Workbench() {
   const [text, setText] = useState('');
-  const [theme, setTheme] = useState<ThemeName>('poster');
-  const [useBroll, setUseBroll] = useState(false);
-  const [status, setStatus] = useState('待机');
+  const [choice, setChoice] = useState<Choice>('poster');
+  const [voice, setVoice] = useState(VOICES[0].id);
+  const [music, setMusic] = useState(true);
+  const [stage, setStage] = useState('');
   const [pct, setPct] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [ms, setMs] = useState<number | null>(null);
+  const [secs, setSecs] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
+  const [plan, setPlan] = useState<PlanBeat[] | null>(null);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [hover, setHover] = useState('');
+  const [started, setStarted] = useState(false);
   const busy = useRef(false);
+  const textRef = useRef<HTMLTextAreaElement | null>(null);
+  const liveCanvas = useMemo(() => document.createElement('canvas'), []);
+  const liveRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [now, setNow] = useState(0);
+  const [dur, setDur] = useState(0);
+
+  const [me, setMe] = useState<Me | null>(null);
+  const [history, setHistory] = useState<GenItem[]>([]);
+  const [panel, setPanel] = useState<'' | 'account' | 'works' | 'ai'>('');
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPass, setAuthPass] = useState('');
+  const [authErr, setAuthErr] = useState('');
+  const [buyCode, setBuyCode] = useState('');
+  const [showBuy, setShowBuy] = useState(false);
+
+  const refresh = async () => {
+    try { setMe(await getMe()); } catch { /* 离线可用 */ }
+    try { setHistory((await listHistory()).items); } catch { /* 同上 */ }
+  };
+  useEffect(() => { void refresh(); }, []);
+  useEffect(() => {
+    if (running && liveRef.current) liveRef.current.replaceChildren(liveCanvas);
+  }, [running, liveCanvas]);
 
   const chars = text.trim().length;
-  const seconds = Math.max(0, Math.round(chars / 4.6));
-  const active = running ? Math.min(4, Math.floor(pct / 22)) : -1;
+  const est = Math.max(0, Math.round(chars / 4.6));
+  const empty = chars === 0 && !started;
+  const scenes = useMemo(() => {
+    if (plan?.length) return plan.map((b) => ({ text: b.text, duration: Math.max(1.4, Math.round(b.text.length / 4.6)) }));
+    return text.split(/[。！？\n]/).map((s) => s.trim()).filter(Boolean).slice(0, 12)
+      .map((p) => ({ text: p, duration: Math.max(1.6, Math.round(p.length / 4.6)) }));
+  }, [plan, text]);
+  const totalDur = scenes.reduce((n, s) => n + s.duration, 0) || 1;
+
+  async function genScript() {
+    if (aiTopic.trim().length < 2) return;
+    setAiBusy(true);
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ topic: aiTopic.trim(), industry: '通用' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '写稿失败');
+      setText(data.text);
+      setPanel('');
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally { setAiBusy(false); }
+  }
+
+  async function doAuth(mode: 'login' | 'register') {
+    setAuthErr('');
+    try {
+      if (mode === 'register') await register(authEmail.trim(), authPass);
+      else await login(authEmail.trim(), authPass);
+      setAuthPass('');
+      await refresh();
+    } catch (e) { setAuthErr(e instanceof Error ? e.message : String(e)); }
+  }
 
   async function run() {
     if (busy.current) return;
     const src = text.trim();
-    if (src.length < 20) { setErr('文案太短了，至少 20 个字'); return; }
+    if (src.length < 20) { setErr('再写几句，至少 20 个字'); textRef.current?.focus(); return; }
     busy.current = true;
-    setRunning(true);
-    setErr(null); setUrl(null); setPct(0); setMs(null);
+    setRunning(true); setErr(null); setUrl(null); setPct(0); setSecs(null);
+    setShowTimeline(true);
     const t0 = performance.now();
+    const theme = choice === 'auto' ? pickTheme(src) : choice;
     try {
-      setStatus('AI 拆稿');
-      const plan = await planScript(src);
+      setStage('拆稿');
+      const planned = await planScript(src);
+      setPlan(planned);
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
-      const blob = await renderVideo(plan, theme, title, ({ stage, percent }) => {
-        setStatus(stage);
-        setPct(percent);
-      }, useBroll);
-      setMs(Math.round(performance.now() - t0));
+      const blob = await renderVideo(planned, theme, title, ({ stage: s, percent }) => {
+        setStage(s); setPct(percent);
+      }, false, music, voice, '', liveCanvas, 'auto', (d) => {
+        void fetch('/api/diag', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ...d, ua: navigator.userAgent, src: 'desktop', style: theme }),
+        });
+      });
+      setSecs(Math.round((performance.now() - t0) / 1000));
       setUrl(URL.createObjectURL(blob));
-      setStatus('完成');
       setPct(100);
+      try {
+        const rec = await createGen({ title, text: src, theme, duration: Math.round(planned.length * 2.5) });
+        await uploadVideo(rec.id, blob);
+        await refresh();
+      } catch { /* 额度用完也能下载 */ }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
-      setStatus('失败');
     } finally {
       busy.current = false;
       setRunning(false);
     }
   }
 
-  return (
-    <div className="app">
-      <div className="grain" />
+  async function exportDraft() {
+    if (!plan) return;
+    try {
+      const r = await exportJianyingDraft({
+        title: text.trim().split(/[。！？\n]/)[0].slice(0, 14) || 'getcut',
+        width: 1080, height: 1920, fps: 30,
+        beats: plan.map((b) => ({ text: b.text, duration: 2.5, card: b.card })),
+      });
+      if (!r.zipBlob) throw new Error('没有生成 zip');
+      const u = URL.createObjectURL(r.zipBlob);
+      const a = document.createElement('a');
+      a.href = u; a.download = 'getcut-剪映草稿.zip';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 5000);
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+  }
 
+  const free = me ? (me.pro ? '已买断' : `免费剩 ${me.remaining} 条`) : '免费 3 条';
+
+  return (
+    <div className="wb">
       <header className="top">
-        <div className="wordmark">Get<span>Cut</span></div>
-        <div className="top-meta">
-          <span>纯浏览器渲染</span>
-          <i />
-          <span>素材不上传</span>
-          <i />
-          <span>1080×1920</span>
+        <div className="brand">GetCut<span>studio</span></div>
+        <div className="proj">
+          <b>{text.trim().split(/[。！？\n]/)[0].slice(0, 20) || '未命名项目'}</b>
+          <span>{running ? `${stage} ${pct}%` : url ? '已出片' : empty ? '新建' : '草稿'}</span>
+        </div>
+        <div className="topright">
+          <span className="quota">{free}</span>
+          <button className="av" onClick={() => setPanel(panel === 'account' ? '' : 'account')}>
+            {me?.loggedIn ? (me.email || 'U').slice(0, 1).toUpperCase() : '登'}
+          </button>
         </div>
       </header>
 
-      <section className="hero">
-        <p className="eyebrow">获客短视频 · 本机产出</p>
-        <h1>把一段文案，<br /><em>做成一条能发的片。</em></h1>
-        <p className="sub">AI 拆镜 · 逐句配音 · 实拍空镜 · 浏览器里编码成 MP4。不装软件，不等排队。</p>
-      </section>
+      <main className={empty ? 'main empty' : 'main'}>
+        {/* 左：起手式 / 编辑区 */}
+        <section className="pane">
+          {empty ? (
+            <div className="start">
+              <h1>把一段文案<br />做成能发的片</h1>
+              <p className="start-sub">粘稿子，或者让 AI 写一篇。竖屏 1080×1920，直接发抖音。</p>
 
-      <main className="grid">
-        <section className="card">
-          <div className="block">
-            <div className="step"><b>01</b><span>文案</span></div>
+              <div className="start-actions">
+                <button className="big" onClick={() => { setStarted(true); setTimeout(() => textRef.current?.focus(), 30); }}>
+                  <b>粘贴文案</b>
+                  <span>把口播稿粘进来</span>
+                </button>
+                <button className="big" onClick={() => setText(DEMO)}>
+                  <b>用示例试试</b>
+                  <span>看看一条片长什么样</span>
+                </button>
+                <button className="big" onClick={() => setPanel('ai')}>
+                  <b>AI 帮我写</b>
+                  <span>给个主题，自动成稿</span>
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className={empty ? 'editor-hidden' : 'editor'}>
             <textarea
+              ref={textRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={'把口播稿粘进来。\n\n比如：想开一家小店，你最怕的是什么？不是没客人，是钱投进去三个月就撑不住……'}
+              placeholder="把口播稿粘在这里……"
             />
-            <div className="row">
-              <span className="dim">{chars} 字 · 约 {seconds} 秒</span>
-              <button className="link" onClick={() => setText(DEMO)}>填一段示例</button>
+            <div className="meta">
+              <span>{chars} 字 · 约 {est} 秒</span>
+              <button className="link" onClick={() => setText('')}>清空</button>
             </div>
           </div>
 
-          <div className="block">
-            <div className="step"><b>02</b><span>视觉</span></div>
-            <div className="swatches">
-              {THEMES.map((t) => (
-                <button
-                  key={t.id}
-                  className={`swatch ${theme === t.id ? 'on' : ''}`}
-                  onClick={() => setTheme(t.id)}
-                >
-                  <span className="chip" style={{ background: t.swatch }}>
-                    <i style={{ background: t.ink }} />
-                  </span>
-                  <b>{t.name}</b>
-                  <em>{t.hint}</em>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="block row between">
-            <label className="toggle">
-              <input type="checkbox" checked={useBroll} onChange={(e) => setUseBroll(e.target.checked)} />
-              <span className="dot" />
-              配实拍空镜<em>慢 1~2 分钟</em>
-            </label>
-            <span className="dim">Pexels 免费素材</span>
-          </div>
-
-          <button className="cta" onClick={run} disabled={running}>
-            {running ? '正在生成…' : '生成视频'}
-            <span className="arrow">→</span>
-          </button>
-
-          <div className="steps">
-            {STEPS.map((s, i) => (
-              <div key={s} className={`pipe ${i <= active ? 'on' : ''}`}>
-                <i />
-                {s}
-              </div>
+          {/* 风格横排：永不裁切，可横向滑 */}
+          <div className="strip">
+            {STYLES.map((s) => (
+              <button
+                key={s.id}
+                className={`card ${choice === s.id ? 'on' : ''}`}
+                onClick={() => setChoice(s.id)}
+                onMouseEnter={() => setHover(s.id)}
+                onMouseLeave={() => setHover('')}
+              >
+                {s.preview && hover === s.id
+                  ? <video className="card-video" src={s.preview} autoPlay muted loop playsInline />
+                  : <img src={s.thumb} alt="" />}
+                <b>{s.name}</b>
+                <i>{s.use}</i>
+              </button>
             ))}
           </div>
 
-          <div className="statusbar">
-            <span>{status}{pct ? ` · ${pct}%` : ''}{ms ? ` · ${(ms / 1000).toFixed(1)} 秒` : ''}</span>
-            {err ? <span className="err">{err}</span> : null}
+          <div className="toolbar">
+            <select value={voice} onChange={(e) => setVoice(e.target.value)}>
+              {VOICES.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+            </select>
+            <label className="chk">
+              <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} />配乐
+            </label>
+            <button className="go" onClick={run} disabled={running || empty}>
+              {running ? `${stage} · ${pct}%` : '生成视频'}
+            </button>
           </div>
 
-          <div className="progress"><i style={{ width: `${pct}%` }} /></div>
+          {running ? <div className="bar"><i style={{ width: `${pct}%` }} /></div> : null}
+          {err ? <p className="err">{err}</p> : null}
+
+          {url ? (
+            <div className="out">
+              <span className="fine">{secs ? `${secs} 秒渲染 · ` : ''}成片在右边，可直接下载</span>
+            </div>
+          ) : null}
         </section>
 
+        {/* 右：预览 */}
         <aside className="preview">
           <div className="phone">
-            {url ? <video src={url} controls playsInline /> : (
-              <div className="empty">
-                <span>成片在这里</span>
-                <em>1080 × 1920 · 30fps · H.264</em>
-              </div>
+            <div className="island" />
+            {running ? <div className="live" ref={liveRef} /> : url ? (
+              <video
+                ref={videoRef}
+                src={url}
+                playsInline
+                onLoadedData={(e) => { e.currentTarget.currentTime = 0.4; }}
+                onTimeUpdate={(e) => { setNow(e.currentTarget.currentTime); setDur(e.currentTarget.duration || 0); }}
+              />
+            ) : (
+              <div className="ph"><img src="style-thumbs/poster.jpg?v=2" alt="" /></div>
             )}
           </div>
-          <div className="preview-foot">
-            <span className="dim">{url ? '已生成 · 可直接下载' : '生成后可直接下载'}</span>
-            {url ? <a className="dl" href={url} download="getcut.mp4">下载 MP4</a> : <span className="dim">—</span>}
-          </div>
+          {url ? (
+            <>
+              <div className="transport">
+                <button className="play" onClick={() => {
+                  const v = videoRef.current;
+                  if (!v) return;
+                  if (v.paused) void v.play(); else v.pause();
+                }}>▶</button>
+                <span>{fmt(now)} / {fmt(dur || totalDur)}</span>
+              </div>
+              <div className="out">
+                <a className="go" href={url} download="getcut.mp4">下载 MP4</a>
+                <button className="ghost" onClick={exportDraft}>剪映草稿</button>
+              </div>
+            </>
+          ) : (
+            <p className="hint">{empty ? '生成后成片出现在这里' : '点「生成视频」开始'}</p>
+          )}
         </aside>
       </main>
 
-      <footer>
-        <span>GetCut · 本机出片</span>
-        <span>文案 20~1200 字</span>
-      </footer>
+      {/* 时间轴：有内容才出现 */}
+      {showTimeline && !empty ? (
+        <section className="tl">
+          <div className="tl-head">
+            <b>时间轴</b>
+            <span>{scenes.length} 个镜头 · 约 {Math.round(totalDur)} 秒</span>
+            <button className="link" onClick={() => setShowTimeline(false)}>收起</button>
+          </div>
+          <div className="tl-body">
+            <div className="lane-label">画面</div>
+            <div className="lane">
+              {scenes.slice(0, 12).map((s, i) => (
+                <button key={i} className="clip" style={{ flexGrow: s.duration }} title={s.text}>{s.text.slice(0, 12)}</button>
+              ))}
+            </div>
+            <div className="lane-label">字幕</div>
+            <div className="lane">
+              {scenes.slice(0, 12).map((s, i) => (
+                <button key={i} className="sub" style={{ flexGrow: s.duration }}>{s.text.slice(0, 16)}</button>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* 抽屉 */}
+      {panel === 'ai' ? (
+        <div className="mask" onClick={() => setPanel('')}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <h3>给个主题，我来写</h3>
+            <input value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} placeholder="例如：加盟回本周期怎么算" autoFocus />
+            <button className="go" onClick={genScript} disabled={aiBusy}>{aiBusy ? '正在写…' : '写一篇'}</button>
+            <button className="link" onClick={() => setPanel('')}>取消</button>
+          </div>
+        </div>
+      ) : null}
+
+      {panel === 'account' ? (
+        <div className="mask" onClick={() => setPanel('')}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <h3>账号</h3>
+            {me?.loggedIn ? (
+              <>
+                <p className="fine">{me.email}</p>
+                <p className="fine">{me.pro ? '已买断 · 不限条数' : `免费剩 ${me.remaining} 条`}</p>
+                {!me.pro ? <button className="go" onClick={() => { setShowBuy(true); setPanel(''); }}>输入卡密 · ¥599</button> : null}
+                <button className="ghost" onClick={async () => { await logout(); await refresh(); }}>退出登录</button>
+              </>
+            ) : (
+              <>
+                <input value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="邮箱" />
+                <input type="password" value={authPass} onChange={(e) => setAuthPass(e.target.value)} placeholder="密码，至少 6 位" />
+                {authErr ? <p className="err">{authErr}</p> : null}
+                <button className="go" onClick={() => doAuth('login')}>登录</button>
+                <button className="link" onClick={() => doAuth('register')}>没有账号，直接注册</button>
+              </>
+            )}
+            <button className="link" onClick={() => { setPanel('works'); }}>看我的作品</button>
+          </div>
+        </div>
+      ) : null}
+
+      {panel === 'works' ? (
+        <div className="mask" onClick={() => setPanel('')}>
+          <div className="sheet wide" onClick={(e) => e.stopPropagation()}>
+            <h3>我的作品</h3>
+            {history.length === 0 ? <p className="fine">还没有作品。</p> : null}
+            {history.map((g) => (
+              <div key={g.id} className="wrow">
+                <div>
+                  <b>{g.title || '未命名'}</b>
+                  <span>{new Date(g.created).toLocaleString('zh-CN')} · {g.duration || 0} 秒</span>
+                </div>
+                <div className="wact">
+                  {g.hasVideo ? <a href={videoUrl(g.id)} download={`${g.title || 'getcut'}.mp4`}>下载</a> : null}
+                  <button onClick={async () => { await deleteGen(g.id); await refresh(); }}>删</button>
+                </div>
+              </div>
+            ))}
+            <button className="link" onClick={() => setPanel('')}>关闭</button>
+          </div>
+        </div>
+      ) : null}
+
+      {showBuy ? (
+        <div className="mask" onClick={() => setShowBuy(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <h3>599 买断</h3>
+            <input value={buyCode} onChange={(e) => setBuyCode(e.target.value)} placeholder="GC-XXXX-XXXX-XXXX" />
+            <button className="go" onClick={async () => {
+              try { await redeem(buyCode); await refresh(); setShowBuy(false); }
+              catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+            }}>核销</button>
+            <button className="link" onClick={() => setShowBuy(false)}>关闭</button>
+          </div>
+        </div>
+      ) : null}
 
       <style>{`
-        :root {
-          --bg: #0a0908;
-          --panel: #131110;
-          --panel-2: #191614;
-          --line: rgba(244,239,228,0.10);
-          --line-2: rgba(244,239,228,0.18);
-          --ink: #f4efe4;
-          --dim: rgba(244,239,228,0.46);
-          --gold: #d8a94a;
-          --gold-ink: #171207;
-        }
+        :root { --bg:#0B0B0C; --panel:#141417; --panel2:#1B1B20; --line:rgba(255,255,255,.1);
+          --line2:rgba(255,255,255,.18); --ink:#F2F2F4; --dim:#9C9CA6; --gold:#F0B429; }
         * { box-sizing: border-box; }
-        html, body, #root { min-height: 100%; }
-        body { margin: 0; background: var(--bg); color: var(--ink);
-          font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-          -webkit-font-smoothing: antialiased; }
-        .app { position: relative; max-width: 1180px; margin: 0 auto; padding: 28px 28px 48px; }
-        .grain { pointer-events: none; position: fixed; inset: 0; opacity: .35;
-          background-image: radial-gradient(rgba(244,239,228,0.055) 1px, transparent 1px);
-          background-size: 3px 3px; }
+        html, body, #root { height: 100%; }
+        body { margin:0; background:var(--bg); color:var(--ink); font: 15px/1.6 "PingFang SC","Microsoft YaHei",system-ui,sans-serif; }
 
-        .top { display: flex; align-items: center; justify-content: space-between;
-          padding-bottom: 20px; border-bottom: 1px solid var(--line); position: relative; z-index: 1; }
-        .wordmark { font-size: 24px; font-weight: 900; letter-spacing: .5px; }
-        .wordmark span { color: var(--gold); }
-        .top-meta { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--dim); letter-spacing: 1px; }
-        .top-meta i { width: 3px; height: 3px; border-radius: 50%; background: var(--line-2); }
+        .wb { height: 100vh; display: flex; flex-direction: column; }
+        .top { height: 62px; flex: none; display: flex; align-items: center; gap: 18px; padding: 0 22px;
+          border-bottom: 1px solid var(--line); }
+        .brand { font-weight: 900; font-size: 17px; }
+        .brand span { color: var(--gold); font-size: 12px; margin-left: 5px; font-weight: 500; }
+        .proj { flex: 1; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+        .proj b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .proj span { font-size: 12px; color: var(--dim); }
+        .topright { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--dim); }
+        .av { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line2); background: var(--panel2);
+          color: var(--ink); font-weight: 800; cursor: pointer; }
 
-        .hero { padding: 54px 0 40px; position: relative; z-index: 1; }
-        .eyebrow { margin: 0 0 18px; font-size: 12px; letter-spacing: 4px; color: var(--gold); }
-        .hero h1 { margin: 0; font-size: 54px; line-height: 1.18; letter-spacing: -1px; font-weight: 900; }
-        .hero h1 em { font-style: normal; color: var(--gold); }
-        .sub { margin: 18px 0 0; color: var(--dim); font-size: 14px; letter-spacing: .5px; }
+        .main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 34px;
+          padding: 26px 30px 10px; overflow: hidden; }
+        .main.empty { align-items: center; }
+        .pane { min-width: 0; display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+        .main.empty .pane { justify-content: center; }
 
-        .grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; align-items: start; position: relative; z-index: 1; }
-        .card { background: linear-gradient(180deg, var(--panel-2), var(--panel));
-          border: 1px solid var(--line); border-radius: 18px; padding: 22px;
-          box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 24px 60px -30px rgba(0,0,0,.9); }
-        .block { margin-bottom: 22px; }
-        .step { display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
-          font-size: 12px; letter-spacing: 3px; color: var(--dim); }
-        .step b { display: inline-flex; align-items: center; justify-content: center;
-          width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line-2);
-          font-size: 11px; color: var(--ink); letter-spacing: 0; }
-        textarea { width: 100%; min-height: 260px; resize: vertical; background: #0c0b09; color: var(--ink);
-          border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; font-size: 15px;
-          line-height: 1.95; font-family: inherit; outline: none; transition: border-color .2s, box-shadow .2s; }
-        textarea::placeholder { color: rgba(244,239,228,0.28); }
-        textarea:focus { border-color: rgba(216,169,74,.65); box-shadow: 0 0 0 3px rgba(216,169,74,.12); }
-        .row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-        .row.between { justify-content: space-between; }
-        .dim { font-size: 12px; color: var(--dim); }
-        .link { background: none; border: 0; color: var(--gold); font-size: 12px; cursor: pointer; letter-spacing: .5px; }
-        .link:hover { text-decoration: underline; }
+        /* 起手式 */
+        .start { max-width: 620px; }
+        .start h1 { margin: 0; font-size: 46px; line-height: 1.2; letter-spacing: -.02em; }
+        .start-sub { margin: 14px 0 30px; color: var(--dim); font-size: 15px; }
+        .start-actions { display: grid; gap: 10px; }
+        .big { display: grid; gap: 3px; text-align: left; padding: 18px 22px; border-radius: 14px;
+          border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer;
+          transition: border-color .15s, transform .12s; }
+        .big b { font-size: 17px; }
+        .big span { font-size: 13px; color: var(--dim); }
+        .big:hover { border-color: var(--gold); transform: translateY(-1px); }
+        .big:first-child { background: linear-gradient(180deg,#1E1A10,#141417); border-color: rgba(240,180,41,.4); }
 
-        .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-        .swatch { background: transparent; border: 1px solid var(--line); border-radius: 12px; padding: 8px;
-          text-align: left; cursor: pointer; color: var(--ink); transition: border-color .2s, transform .2s; }
-        .swatch:hover { transform: translateY(-1px); border-color: var(--line-2); }
-        .swatch.on { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(216,169,74,.35); }
-        .swatch .chip { display: block; height: 46px; border-radius: 8px; margin-bottom: 8px; position: relative; overflow: hidden; }
-        .swatch .chip i { position: absolute; right: 8px; bottom: 8px; width: 10px; height: 10px; border-radius: 3px; }
-        .swatch b { display: block; font-size: 13px; font-weight: 700; }
-        .swatch em { display: block; font-style: normal; font-size: 11px; color: var(--dim); margin-top: 2px; }
+        .editor-hidden { display: none; }
+        .editor textarea { width: 100%; height: 220px; resize: none; background: var(--panel); color: var(--ink);
+          border: 1px solid var(--line); border-radius: 14px; padding: 18px; font: inherit; font-size: 16px;
+          line-height: 1.9; outline: none; }
+        .editor textarea:focus { border-color: var(--gold); }
+        .meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--dim); }
 
-        .toggle { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink); cursor: pointer; }
-        .toggle input { display: none; }
-        .toggle .dot { width: 34px; height: 20px; border-radius: 999px; background: rgba(244,239,228,.14); position: relative; transition: background .2s; }
-        .toggle .dot::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
-          border-radius: 50%; background: var(--ink); transition: transform .2s; }
-        .toggle input:checked + .dot { background: rgba(216,169,74,.85); }
-        .toggle input:checked + .dot::after { transform: translateX(14px); background: var(--gold-ink); }
-        .toggle em { font-style: normal; color: var(--dim); font-size: 11px; margin-left: 6px; }
+        /* 风格横排：不裁切 */
+        .strip { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: thin; }
+        .card { flex: 0 0 116px; display: grid; gap: 0; padding: 0 0 8px; border: 1px solid var(--line);
+          border-radius: 12px; background: var(--panel); color: var(--ink); cursor: pointer; overflow: hidden; }
+        .card img, .card .card-video { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+        .card b { font-size: 13px; padding: 7px 9px 0; }
+        .card i { font-style: normal; font-size: 11px; color: var(--gold); padding: 2px 9px 0; }
+        .card.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(240,180,41,.3); }
 
-        .cta { width: 100%; margin-top: 6px; border: 0; border-radius: 14px; cursor: pointer;
-          background: linear-gradient(180deg, #e6b95c, var(--gold)); color: var(--gold-ink);
-          font-size: 16px; font-weight: 900; letter-spacing: 2px; padding: 16px 20px;
-          display: flex; align-items: center; justify-content: space-between;
-          transition: transform .15s, box-shadow .2s; box-shadow: 0 10px 30px -12px rgba(216,169,74,.6); }
-        .cta:hover:not(:disabled) { transform: translateY(-1px); }
-        .cta:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
-        .cta .arrow { font-size: 20px; }
+        .toolbar { display: flex; align-items: center; gap: 12px; }
+        .toolbar select { background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+          border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14px; }
+        .chk { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: var(--dim); }
+        .chk input { width: 17px; height: 17px; accent-color: var(--gold); }
+        .go { flex: 1; padding: 15px 20px; border: 0; border-radius: 12px; background: var(--gold);
+          color: #171207; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; text-align: center;
+          text-decoration: none; }
+        .go:disabled { opacity: .45; cursor: not-allowed; }
+        .ghost { padding: 12px 16px; border: 1px solid var(--line2); border-radius: 10px; background: none;
+          color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+        .link { background: none; border: 0; color: var(--gold); font: inherit; font-size: 13px; cursor: pointer; }
+        .bar { height: 3px; background: rgba(255,255,255,.1); border-radius: 2px; }
+        .bar i { display: block; height: 100%; background: var(--gold); }
+        .err { color: #ff9a86; font-size: 13px; margin: 0; }
+        .fine { color: var(--dim); font-size: 12px; }
+        .out { display: flex; align-items: center; gap: 10px; width: 100%; position: sticky; bottom: 0;
+          background: linear-gradient(180deg, transparent, var(--bg) 45%); padding-top: 8px; }
+        .out .go { flex: none; padding: 12px 18px; font-size: 14px; }
 
-        .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 18px; }
-        .pipe { font-size: 11px; color: var(--dim); display: flex; align-items: center; gap: 6px; }
-        .pipe i { width: 100%; max-width: 18px; height: 2px; background: var(--line-2); display: block; }
-        .pipe.on { color: var(--gold); }
-        .pipe.on i { background: var(--gold); }
+        /* 预览 */
+        .preview { display: flex; flex-direction: column; align-items: center; gap: 10px; justify-content: flex-start;
+          overflow-y: auto; padding-bottom: 10px; }
+        .phone { position: relative; width: min(34vh, 264px); aspect-ratio: 9/19.2; border-radius: 38px; padding: 9px;
+          background: linear-gradient(160deg,#3C3C41,#16161A 60%,#2A2A2E);
+          box-shadow: 0 30px 70px -30px #000, 0 0 0 1px #000, inset 0 0 0 1px rgba(255,255,255,.16); }
+        .phone > * { border-radius: 30px; overflow: hidden; }
+        .island { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); width: 74px; height: 20px;
+          border-radius: 12px; background: #000; z-index: 3; }
+        .phone video, .phone .live, .phone .ph { width: 100%; height: 100%; display: block; background: #000; }
+        .phone video { object-fit: contain; }
+        .live canvas { width: 100%; height: 100%; object-fit: contain; }
+        .ph img { width: 100%; height: 100%; object-fit: contain; opacity: .55; }
+        .transport { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--dim); }
+        .play { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line2); background: var(--panel2);
+          color: var(--ink); cursor: pointer; }
+        .hint { color: var(--dim); font-size: 12px; margin: 0; }
 
-        .statusbar { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 12px; color: var(--dim); }
-        .err { color: #ff9a86; }
-        .progress { height: 3px; background: rgba(244,239,228,.08); border-radius: 999px; margin-top: 10px; overflow: hidden; }
-        .progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #b4432f, var(--gold)); transition: width .35s; }
+        /* 时间轴 */
+        .tl { flex: none; height: 150px; border-top: 1px solid var(--line); padding: 10px 22px 12px;
+          display: flex; flex-direction: column; gap: 8px; background: var(--panel); }
+        .tl-head { display: flex; align-items: baseline; gap: 12px; font-size: 12px; color: var(--dim); }
+        .tl-head b { color: var(--ink); font-size: 13px; }
+        .tl-head .link { margin-left: auto; }
+        .tl-body { flex: 1; display: grid; grid-template-columns: 44px 1fr; gap: 6px 10px; min-height: 0; }
+        .lane-label { font-size: 11px; color: var(--dim); align-self: center; }
+        .lane { display: flex; gap: 4px; min-width: 0; overflow: hidden; }
+        .clip { flex: 1 1 0; min-width: 0; background: #2A2A31; border: 1px solid var(--line); border-radius: 6px;
+          color: #D6D6DE; font-size: 11px; padding: 7px 8px; text-align: left; overflow: hidden; white-space: nowrap; }
+        .sub { flex: 1 1 0; min-width: 0; background: rgba(240,180,41,.12); border: 1px solid rgba(240,180,41,.28);
+          color: #E3CE9C; font-size: 11px; border-radius: 6px; padding: 7px 8px; text-align: left; overflow: hidden; white-space: nowrap; }
 
-        .preview { position: sticky; top: 24px; }
-        .phone { aspect-ratio: 9 / 16; border-radius: 26px; overflow: hidden; background: #070605;
-          border: 8px solid #171412; box-shadow: 0 30px 80px -40px rgba(0,0,0,.95), 0 0 0 1px rgba(244,239,228,.06); }
-        .phone video { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .empty { height: 100%; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;
-          color: rgba(244,239,228,.3); font-size: 13px; }
-        .empty em { font-style: normal; font-size: 11px; color: rgba(244,239,228,.2); letter-spacing: 1px; }
-        .preview-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
-        .dl { color: var(--gold); font-size: 13px; text-decoration: none; border-bottom: 1px solid rgba(216,169,74,.35); padding-bottom: 1px; }
-
-        footer { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 18px;
-          border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; letter-spacing: 1px; position: relative; z-index: 1; }
-
-        @media (max-width: 980px) {
-          .grid { grid-template-columns: 1fr; }
-          .hero h1 { font-size: 38px; }
-          .swatches { grid-template-columns: repeat(3, 1fr); }
-          .preview { position: static; }
-        }
+        /* 抽屉 */
+        .mask { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: grid; place-items: center; z-index: 40; }
+        .sheet { width: min(420px, 92vw); background: var(--panel); border: 1px solid var(--line2); border-radius: 16px;
+          padding: 22px; display: grid; gap: 10px; }
+        .sheet.wide { width: min(560px, 92vw); max-height: 70vh; overflow-y: auto; }
+        .sheet h3 { margin: 0; font-size: 18px; }
+        .sheet input { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; color: var(--ink);
+          padding: 12px 14px; font: inherit; font-size: 15px; outline: none; }
+        .sheet input:focus { border-color: var(--gold); }
+        .wrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px;
+          border: 1px solid var(--line); border-radius: 10px; }
+        .wrow b { display: block; font-size: 13px; }
+        .wrow span { font-size: 11px; color: var(--dim); }
+        .wact { display: flex; gap: 12px; font-size: 12px; }
+        .wact a, .wact button { color: var(--gold); background: none; border: 0; font: inherit; cursor: pointer; }
       `}</style>
     </div>
   );
 }
+
+
+
+

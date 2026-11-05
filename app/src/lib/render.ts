@@ -69,6 +69,11 @@ export async function renderVideo(
   layoutMode: LayoutMode = 'auto',
   onDiag?: (d: Record<string, unknown>) => void,
 ): Promise<Blob> {
+  // 字体没加载完就开始画，measureText 会用回退字体量宽度，导致中文溢出版面
+  if (typeof document !== 'undefined' && document.fonts?.ready) {
+    try { await document.fonts.ready; } catch { /* 忽略 */ }
+  }
+
   // 1. 实拍空镜（默认关：抓素材慢且不稳，需要时在界面上打开）
   onProgress({ stage: useBroll ? '找实拍空镜' : '准备', percent: 1 });
   const frames: Map<string, HTMLCanvasElement> = useBroll
@@ -243,6 +248,7 @@ export async function renderVideo(
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
 
 
 
