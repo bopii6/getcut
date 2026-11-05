@@ -14,10 +14,19 @@ type Step = 'write' | 'style' | 'run' | 'done';
 // 按"这条片子要干什么"组织，不按长相起名。客户先想用途，再挑长相。
 const STYLES: { id: Choice; name: string; hint: string; use: string; thumb?: string }[] = [
   { id: 'poster', name: '冲击大字', hint: '一屏一句，最抓人', use: '开场抛痛点', thumb: 'style-thumbs/poster.jpg' },
-  { id: 'marker', name: '白板讲解', hint: '手写框 + 步骤卡', use: '讲方法 / 步骤', thumb: 'style-thumbs/marker.jpg' },
+  { id: 'marker', name: '白板讲解', hint: '手写框 + 步骤卡', use: '讲方法 / 步骤', thumb: 'style-thumbs/marker.jpg?v=2' },
   { id: 'dashboard', name: '数据说服', hint: '巨数字 + 对比', use: '算账 / 讲回报', thumb: 'style-thumbs/dashboard.jpg' },
   { id: 'newsroom', name: '权威播报', hint: '电视新闻质感', use: '立信任 / 讲案例', thumb: 'style-thumbs/newsroom.jpg' },
   { id: 'magazine', name: '杂志访谈', hint: '暖纸 + 印章红', use: '专业形象', thumb: 'style-thumbs/magazine.jpg' },
+];
+
+// 每个风格配一段 3 秒动效，选中即播，客户不用生成也能看出差别
+const PLAY: { id: string; src: string }[] = [
+  { id: 'poster', src: 'style-previews/poster.mp4' },
+  { id: 'marker', src: 'style-previews/marker.mp4' },
+  { id: 'dashboard', src: 'style-previews/dashboard.mp4' },
+  { id: 'newsroom', src: 'style-previews/newsroom.mp4' },
+  { id: 'magazine', src: 'style-previews/magazine.mp4' },
 ];
 
 const VOICES = [
@@ -67,6 +76,7 @@ export default function MobileApp() {
   const liveRef = useRef<HTMLDivElement | null>(null);
   const liveCanvas = useMemo(() => document.createElement('canvas'), []);
   const [plan, setPlan] = useState<PlanBeat[] | null>(null);
+  const [reuse, setReuse] = useState(false);
 
   const [me, setMe] = useState<Me | null>(null);
   const [history, setHistory] = useState<GenItem[]>([]);
@@ -157,8 +167,10 @@ export default function MobileApp() {
     const theme = choice === 'auto' ? pickTheme(src) : choice;
     try {
       setStage('拆稿');
-      const planned = await planScript(src);
-      setPlan(planned);
+      // 换个风格重出：分镜已经拆好了，直接复用，省掉拆稿那十几秒
+      const planned = reuse && plan ? plan : await planScript(src);
+      if (!(reuse && plan)) setPlan(planned);
+      setReuse(false);
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
       const blob = await renderVideo(planned, theme, title, ({ stage: s, percent }) => {
         setStage(s); setPct(percent);
@@ -288,7 +300,10 @@ export default function MobileApp() {
           <div className="mgrid">
             {STYLES.map((s) => (
               <button key={s.id} className={`mcard ${choice === s.id ? 'on' : ''}`} onClick={() => setChoice(s.id)}>
-                {s.thumb ? <img src={s.thumb} alt="" /> : <span className="mnothumb" />}
+                {choice === s.id && s.id !== 'auto' && PLAY.find((p) => p.id === s.id) ? (
+                  // 选中就当场播 3 秒动效，看得见它怎么动
+                  <video className="mpreview" src={PLAY.find((p) => p.id === s.id)!.src} autoPlay muted loop playsInline />
+                ) : s.thumb ? <img src={s.thumb} alt="" /> : <span className="mnothumb" />}
                 <b>{s.name}</b>
                 <i>适合：{s.use}</i>
                 <u>{s.hint}</u>
@@ -344,11 +359,12 @@ export default function MobileApp() {
             <b>做好了</b>
             <span>{secs ? `${secs} 秒` : ''}</span>
           </div>
-          <div className="mvideobox">
+          <div className="mvideobox reveal">
             <video src={url} controls playsInline />
           </div>
           <div className="mactions">
             <a className="mbtn" href={url} download="getcut.mp4">下载到手机</a>
+            <button className="mbtn ghost" onClick={() => { setStep('style'); setReuse(true); }}>换个风格再出一条</button>
             <button className="mbtn ghost" onClick={exportDraft}>导出剪映草稿</button>
             <button className="mbtn ghost" onClick={() => { setUrl(null); setPct(0); setStep('write'); }}>
               再做一条
@@ -494,6 +510,12 @@ export default function MobileApp() {
         .mcard { position: relative; padding: 0 0 8px; border: 1px solid var(--line); border-radius: 12px;
           background: var(--panel); overflow: hidden; text-align: left; color: var(--ink); }
         .mcard img, .mnothumb { display: block; width: 100%; aspect-ratio: 3/4; object-fit: cover; }
+        .mpreview { display: block; width: 100%; aspect-ratio: 3/4; object-fit: cover; }
+        .reveal { animation: reveal .55s cubic-bezier(.16,1,.3,1) both; }
+        @keyframes reveal {
+          from { opacity: 0; transform: translateY(14px) scale(.97); }
+          to { opacity: 1; transform: none; }
+        }
         .mnothumb { background: linear-gradient(160deg, #2C2C36, #17171C); }
         .mcard b { display: block; font-size: 15px; padding: 8px 10px 0; }
         .mcard i { display: block; font-style: normal; font-size: 12px; color: var(--gold); padding: 3px 10px 0; }
@@ -560,6 +582,9 @@ export default function MobileApp() {
     </div>
   );
 }
+
+
+
 
 
 

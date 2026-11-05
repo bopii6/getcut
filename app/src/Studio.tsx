@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
@@ -12,7 +12,7 @@ type Choice = ThemeName | 'auto';
 const STYLES: { id: Choice; name: string; thumb?: string; preview?: string }[] = [
   { id: 'auto', name: '自动' },
   { id: 'poster', name: '冲击大字', thumb: 'style-thumbs/poster.jpg', preview: 'style-previews/poster.mp4' },
-  { id: 'marker', name: '白板讲解', thumb: 'style-thumbs/marker.jpg', preview: 'style-previews/marker.mp4' },
+  { id: 'marker', name: '白板讲解', thumb: 'style-thumbs/marker.jpg?v=2', preview: 'style-previews/marker.mp4' },
   { id: 'dashboard', name: '数据说服', thumb: 'style-thumbs/dashboard.jpg' },
   { id: 'newsroom', name: '权威播报', thumb: 'style-thumbs/newsroom.jpg', preview: 'style-previews/newsroom.mp4' },
   { id: 'magazine', name: '杂志访谈', thumb: 'style-thumbs/magazine.jpg', preview: 'style-previews/magazine.mp4' },
@@ -1130,6 +1130,7 @@ export default function Studio() {
     </div>
   );
 }
+
 
 
 
