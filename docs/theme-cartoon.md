@@ -57,6 +57,35 @@ node scripts/render.mjs --script 文案.txt --theme cartoon
 - 需要数字的句子写在 `title`，`Highlight` 会自动把数字/金额染成橙色；
 - `compare` 类型要填 `left` / `right`（左边"你以为"，右边"其实是"）。
 
+## 真截图
+
+不画假 UI 了，直接把后台/产品截图塞进去：
+
+```bash
+node scripts/render.mjs --script 文案.txt --theme cartoon --screens demo/screens -o out/x.mp4
+```
+
+- `--screens` 目录里放 png / jpg / webp，按文件名排序，逐个贴到正片段落（跳过片头和章节页）；
+- 张数不够会循环复用；多了会按顺序分配；
+- 截图以 `objectFit: cover` 铺满卡片内容区，`phase` 翻面时轻微推到 1.02；
+- 底层字段是 `beat.screenshot`（`src/Video.tsx` 的 Beat 类型里已加），也可以在 props JSON 里手写。
+
+## 批量出片
+
+```bash
+node scripts/batch.mjs --topics demo/topics.txt --theme cartoon --screens demo/screens --out out/batch
+```
+
+`topics.txt` 一行一条，`|` 后面是文件名：
+
+```
+做AI短视频三个月，播放128万，私信零。第一个坑…| 01-避坑
+隔壁同行一条691万播放，他只有7000粉…| 02-钩子
+```
+
+串行跑，每条独立拆稿 / 配音 / 渲染，失败不中断，最后汇总成功/失败清单。
+一条 30~40 秒的片子本机约 **2 分 20 秒**（拆稿 + 配音 + 抓实拍 + 渲染），批量就越跑越顺。
+
 ## 已知限制
 
 - 截图是**画出来的假 UI**，不是真截图；要真截图得走 `broll` 字段，或后续加 `screenshot` 卡类型；

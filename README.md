@@ -23,6 +23,7 @@ node scripts/render.mjs --text "直接写文案" --theme magazine
 | `magazine` | 暖纸底 + 印章红，适合律师/咨询/知识 |
 | `poster` | 黑金、一屏一句，适合加盟/观点 |
 | `dashboard` | 深蓝数字面板，适合教培/测评 |
+| `cartoon` | 卡通主播 + 截图 + 大字幕，五种版面轮换；支持真截图 `--screens`，详见 `docs/theme-cartoon.md` |
 
 ## 一条片子是怎么出来的
 

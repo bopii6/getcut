@@ -11,15 +11,13 @@ import { exportJianyingDraft } from './lib/jianying';
 type Choice = ThemeName | 'auto';
 type Step = 'write' | 'style' | 'run' | 'done';
 
-const STYLES: { id: Choice; name: string; hint: string; thumb?: string }[] = [
-  { id: 'poster', name: '大字报', hint: '黑金 · 一屏一句', thumb: 'style-thumbs/poster.jpg' },
-  { id: 'magazine', name: '杂志', hint: '暖纸 · 印章红', thumb: 'style-thumbs/magazine.jpg' },
-  { id: 'dashboard', name: '数据', hint: '深蓝 · 数字图表', thumb: 'style-thumbs/dashboard.jpg' },
-  { id: 'newsroom', name: '新闻播报', hint: 'LIVE 条 · 信息板', thumb: 'style-thumbs/newsroom.jpg' },
-  { id: 'marker', name: '白板', hint: '马克笔 · 手写', thumb: 'style-thumbs/marker.jpg' },
-  { id: 'swiss', name: '极简', hint: '栅格 · 大留白', thumb: 'style-thumbs/swiss.jpg' },
-  { id: 'broadsheet', name: '报纸', hint: '报头 · 双栏', thumb: 'style-thumbs/broadsheet.jpg' },
-  { id: 'cover', name: '封面', hint: '刊名 · 条形码', thumb: 'style-thumbs/cover.jpg' },
+// 按"这条片子要干什么"组织，不按长相起名。客户先想用途，再挑长相。
+const STYLES: { id: Choice; name: string; hint: string; use: string; thumb?: string }[] = [
+  { id: 'poster', name: '冲击大字', hint: '一屏一句，最抓人', use: '开场抛痛点', thumb: 'style-thumbs/poster.jpg' },
+  { id: 'marker', name: '白板讲解', hint: '手写框 + 步骤卡', use: '讲方法 / 步骤', thumb: 'style-thumbs/marker.jpg' },
+  { id: 'dashboard', name: '数据说服', hint: '巨数字 + 对比', use: '算账 / 讲回报', thumb: 'style-thumbs/dashboard.jpg' },
+  { id: 'newsroom', name: '权威播报', hint: '电视新闻质感', use: '立信任 / 讲案例', thumb: 'style-thumbs/newsroom.jpg' },
+  { id: 'magazine', name: '杂志访谈', hint: '暖纸 + 印章红', use: '专业形象', thumb: 'style-thumbs/magazine.jpg' },
 ];
 
 const VOICES = [
@@ -50,7 +48,6 @@ export default function MobileApp() {
   const [step, setStep] = useState<Step>('write');
   const [text, setText] = useState('');
   const [choice, setChoice] = useState<Choice>('auto');
-  const [layout, setLayout] = useState<'auto' | 'big' | 'data' | 'content'>('auto');
   const [voice, setVoice] = useState(VOICES[0].id);
   const [music, setMusic] = useState(true);
   const [srcMode, setSrcMode] = useState<'paste' | 'ai' | 'link'>('paste');
@@ -165,9 +162,9 @@ export default function MobileApp() {
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
       const blob = await renderVideo(planned, theme, title, ({ stage: s, percent }) => {
         setStage(s); setPct(percent);
-      }, false, music, voice, '', liveCanvas, layout, (d) => {
+      }, false, music, voice, '', liveCanvas, 'auto', (d) => {
         void fetch('/api/diag', { method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ ...d, ua: navigator.userAgent, src: 'mobile', style: theme, layout }) });
+          body: JSON.stringify({ ...d, ua: navigator.userAgent, src: 'mobile', style: theme, layout: 'auto' }) });
       });
       setSecs(Math.round((performance.now() - t0) / 1000));
       setUrl(URL.createObjectURL(blob));
@@ -183,7 +180,7 @@ export default function MobileApp() {
       setErr(msg);
       setStep('style');
       void fetch('/api/diag', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ok: false, error: msg, ua: navigator.userAgent, src: 'mobile', style: theme, layout }) });
+        body: JSON.stringify({ ok: false, error: msg, ua: navigator.userAgent, src: 'mobile', style: theme, layout: 'auto' }) });
     } finally {
       busy.current = false;
       setRunning(false);
@@ -293,20 +290,13 @@ export default function MobileApp() {
               <button key={s.id} className={`mcard ${choice === s.id ? 'on' : ''}`} onClick={() => setChoice(s.id)}>
                 {s.thumb ? <img src={s.thumb} alt="" /> : <span className="mnothumb" />}
                 <b>{s.name}</b>
-                <i>{s.hint}</i>
+                <i>适合：{s.use}</i>
+                <u>{s.hint}</u>
                 {choice === s.id ? <em>✓</em> : null}
               </button>
             ))}
           </div>
 
-          <div className="mrow">
-            <label>版式</label>
-            <div className="mseg2">
-              {([['auto', '自动轮换'], ['big', '大字'], ['data', '数字'], ['content', '内容']] as const).map(([id, name]) => (
-                <button key={id} className={layout === id ? 'on' : ''} onClick={() => setLayout(id)}>{name}</button>
-              ))}
-            </div>
-          </div>
 
           <div className="mrow">
             <label>声音</label>
@@ -506,17 +496,15 @@ export default function MobileApp() {
         .mcard img, .mnothumb { display: block; width: 100%; aspect-ratio: 3/4; object-fit: cover; }
         .mnothumb { background: linear-gradient(160deg, #2C2C36, #17171C); }
         .mcard b { display: block; font-size: 15px; padding: 8px 10px 0; }
-        .mcard i { display: block; font-style: normal; font-size: 12px; color: var(--dim); padding: 2px 10px 0; }
+        .mcard i { display: block; font-style: normal; font-size: 12px; color: var(--gold); padding: 3px 10px 0; }
+        .mcard u { display: block; text-decoration: none; font-size: 11px; color: var(--dim); padding: 2px 10px 0; }
         .mcard.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(240,180,41,.35); }
         .mcard em { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%;
           background: var(--gold); color: #171207; font-style: normal; font-size: 14px; font-weight: 900;
           display: grid; place-items: center; }
 
         .mrow { display: flex; align-items: center; gap: 10px; }
-        .mseg2 { display: flex; flex: 1; gap: 4px; }
-        .mseg2 button { flex: 1; background: var(--panel); border: 1px solid var(--line); color: var(--dim);
-          font: inherit; font-size: 13px; padding: 9px 4px; border-radius: 9px; }
-        .mseg2 button.on { border-color: var(--gold); color: var(--ink); font-weight: 700; }        .mrow label { font-size: 14px; color: var(--dim); white-space: nowrap; }
+        .mrow label { font-size: 14px; color: var(--dim); white-space: nowrap; }
         .mrow select { flex: 1; }
         .mcheck { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--dim); }
         .mcheck input { width: 20px; height: 20px; accent-color: var(--gold); }
@@ -572,6 +560,8 @@ export default function MobileApp() {
     </div>
   );
 }
+
+
 
 
 

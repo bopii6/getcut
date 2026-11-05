@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
@@ -11,14 +11,11 @@ type Choice = ThemeName | 'auto';
 
 const STYLES: { id: Choice; name: string; thumb?: string; preview?: string }[] = [
   { id: 'auto', name: '自动' },
-  { id: 'poster', name: '大字报', thumb: 'style-thumbs/poster.jpg', preview: 'style-previews/poster.mp4' },
-  { id: 'magazine', name: '杂志', thumb: 'style-thumbs/magazine.jpg', preview: 'style-previews/magazine.mp4' },
-  { id: 'dashboard', name: '数据', thumb: 'style-thumbs/dashboard.jpg' },
-  { id: 'newsroom', name: '播报', thumb: 'style-thumbs/newsroom.jpg', preview: 'style-previews/newsroom.mp4' },
-  { id: 'marker', name: '白板', thumb: 'style-thumbs/marker.jpg', preview: 'style-previews/marker.mp4' },
-  { id: 'swiss', name: '极简', thumb: 'style-thumbs/swiss.jpg', preview: 'style-previews/swiss.mp4' },
-  { id: 'broadsheet', name: '报纸', thumb: 'style-thumbs/broadsheet.jpg', preview: 'style-previews/broadsheet.mp4' },
-  { id: 'cover', name: '封面', thumb: 'style-thumbs/cover.jpg', preview: 'style-previews/cover.mp4' },
+  { id: 'poster', name: '冲击大字', thumb: 'style-thumbs/poster.jpg', preview: 'style-previews/poster.mp4' },
+  { id: 'marker', name: '白板讲解', thumb: 'style-thumbs/marker.jpg', preview: 'style-previews/marker.mp4' },
+  { id: 'dashboard', name: '数据说服', thumb: 'style-thumbs/dashboard.jpg' },
+  { id: 'newsroom', name: '权威播报', thumb: 'style-thumbs/newsroom.jpg', preview: 'style-previews/newsroom.mp4' },
+  { id: 'magazine', name: '杂志访谈', thumb: 'style-thumbs/magazine.jpg', preview: 'style-previews/magazine.mp4' },
 ];
 
 const STEPS = ['拆稿', '配音', '画帧', '合成', '封装'];
@@ -114,7 +111,6 @@ function Icon({ name }: { name: 'text' | 'style' | 'voice' | 'works' }) {
 export default function Studio() {
   const [text, setText] = useState('');
   const [choice, setChoice] = useState<Choice>('auto');
-  const [layout, setLayout] = useState<'auto' | 'big' | 'data' | 'content'>('auto');
   const [broll, setBroll] = useState(false);
   const [music, setMusic] = useState(true);
   const [voice, setVoice] = useState(VOICES[0].id);
@@ -228,7 +224,7 @@ export default function Studio() {
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
       const blob = await renderVideo(orderedPlan, theme, title, ({ stage: s, percent }) => {
         setStage(s); setPct(percent);
-      }, broll, music, voice, bgm, liveCanvas, layout);
+      }, broll, music, voice, bgm, liveCanvas, 'auto');
       setSecs(Math.round((performance.now() - t0) / 1000));
       setUrl(URL.createObjectURL(blob));
       setPct(100);
@@ -587,14 +583,6 @@ export default function Studio() {
 
           {tab === 'style' ? (
             <>
-              <div className="layout-row">
-                <span>版式</span>
-                <div className="layout-seg">
-                  {([['auto', '自动'], ['big', '大字'], ['data', '数字'], ['content', '内容']] as const).map(([id, name]) => (
-                    <button key={id} className={layout === id ? 'on' : ''} onClick={() => setLayout(id)}>{name}</button>
-                  ))}
-                </div>
-              </div>
               <div className="thumbs">
               {STYLES.map((s) => (
                 <button
@@ -1142,6 +1130,7 @@ export default function Studio() {
     </div>
   );
 }
+
 
 
 
