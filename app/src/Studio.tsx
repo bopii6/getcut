@@ -844,9 +844,9 @@ export default function Studio() {
           --dim: #A6A6B0;
           --gold: #F0B429;
         }
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body, #root { height: 100%; }
-        body { margin: 0; background: var(--bg); color: var(--ink);
+        body { margin: 0; background: var(--bg); color: var(--ink); -webkit-text-size-adjust: 100%; overscroll-behavior-y: contain;
           font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; overflow: hidden; font-size: 15px; }
         .studio { height: 100vh; display: flex; flex-direction: column; }
 
@@ -1059,10 +1059,79 @@ export default function Studio() {
           .body { grid-template-columns: 84px minmax(0,1fr) 320px; }
           .canvas { height: min(50vh, 440px); }
         }
+
+        /* ── 手机 / 竖屏：单列上下排 ── */
+        @media (max-width: 900px) {
+          html, body, #root { height: auto; }
+          body { overflow: auto; font-size: 16px; }
+          .studio { height: auto; min-height: 100vh; }
+
+          .top { height: 56px; gap: 10px; padding: 0 12px; position: sticky; top: 0; z-index: 20; }
+          .brand { font-size: 15px; }
+          .brand span { display: none; }
+          .project { display: none; }
+          .top-act { gap: 10px; }
+          .primary { padding: 11px 16px; font-size: 15px; }
+          .avatar { width: 38px; height: 38px; }
+          .menu { right: 8px; top: 54px; width: 240px; }
+
+          .body { display: flex; flex-direction: column; }
+
+          .rail { flex-direction: row; width: 100%; height: auto; padding: 6px;
+            border-right: 0; border-bottom: 1px solid var(--line); gap: 4px; }
+          .rail-btn { flex: 1; width: auto; height: 56px; padding: 4px 0;
+            grid-auto-flow: row; gap: 3px; font-size: 12px; }
+          .rail-btn svg { width: 24px; height: 24px; }
+
+          .stage { padding: 10px 12px 6px; gap: 8px; grid-template-rows: auto auto auto; }
+          .phone { height: 46vh; max-height: 400px; min-height: 260px; }
+          .steps { gap: 5px; }
+          .step { font-size: 11px; padding: 5px 8px; gap: 4px; }
+          .step i { width: 16px; height: 16px; font-size: 9px; }
+
+          .transport { width: 100%; max-width: none; padding: 0 4px; }
+          .play { width: 42px; height: 42px; }
+
+          .inspector { border-left: 0; border-top: 1px solid var(--line); padding: 14px 12px 18px;
+            overflow: visible; }
+          .ins-head b { font-size: 17px; }
+          textarea { min-height: 180px; font-size: 16px; }
+          .seg { position: sticky; top: 56px; z-index: 5; background: var(--panel); }
+          .seg-b { padding: 11px 6px; font-size: 15px; }
+          .topic, .select { font-size: 16px; }
+          .thumbs { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+          .thumb i { font-size: 11px; }
+          .voice-row { min-height: 52px; }
+          .try { padding: 0 18px; font-size: 14px; }
+          .check { font-size: 15px; min-height: 34px; }
+          .check input { width: 20px; height: 20px; }
+
+          .timeline { height: auto; padding: 10px 8px calc(16px + env(safe-area-inset-bottom)); }
+          .tl-head { flex-wrap: wrap; gap: 6px 10px; }
+          .tl-tip { width: 100%; font-size: 11px; }
+          .tl-body { grid-template-columns: 46px 1fr; gap: 5px 6px; }
+          .tl-lane-label { font-size: 11px; }
+          .clip { font-size: 11px; padding: 7px 6px; }
+          .texts .sub { font-size: 11px; padding: 6px; }
+          .lane-long { font-size: 11px; padding: 0 8px; min-height: 30px; }
+          .edit-bar { flex-wrap: wrap; }
+          .edit-bar input { min-width: 0; }
+
+          .dialog { max-width: 92vw; padding: 20px; }
+          .shell-pad { padding-bottom: env(safe-area-inset-bottom); }
+          .player { width: 92vw; }
+        }
+
+        @media (max-width: 420px) {
+          .phone { height: 40vh; min-height: 220px; }
+          .brand { font-size: 14px; }
+          .primary { padding: 10px 12px; }
+        }
       `}</style>
     </div>
   );
 }
+
 
 
 

@@ -2,7 +2,7 @@
 """v3: 9:16 'trap list' short, bizdevelo/vidguy format. Tighter layout, series frame."""
 import os, sys, math, asyncio, subprocess, wave
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageChops
 
 W, H, FPS = 1080, 1920, 30
 OUT_DIR = r"E:\getcut\build"
@@ -73,14 +73,14 @@ def paste_at(base, layer, xy):
 def beam(img, cx, cy, w, h, strength=1.0):
     lay = Image.new("RGB", (W, H), (0, 0, 0))
     d = ImageDraw.Draw(lay)
-    for i in range(10):
-        k = 1 - i / 10
+    for i in range(8):
+        k = 1 - i / 8
         d.rectangle([cx - w * k / 2, 0, cx + w * k / 2, cy + h * k],
-                    fill=tuple(int(c * 26 * k * strength / 10) for c in (255, 236, 205)))
-    d.ellipse([cx - w * .75, cy - h * .45, cx + w * .75, cy + h * .45],
-              fill=tuple(int(c * 40 * strength) for c in (255, 240, 215)))
-    lay = lay.filter(ImageFilter.GaussianBlur(90))
-    return Image.blend(img, Image.blend(img, lay, 0.95), 0.75)
+                    fill=tuple(int(c * .05 * k * strength) for c in (255, 236, 205)))
+    d.ellipse([cx - w * .6, cy - h * .32, cx + w * .6, cy + h * .32],
+              fill=tuple(int(c * .08 * strength) for c in (255, 242, 215)))
+    lay = lay.filter(ImageFilter.GaussianBlur(110))
+    return ImageChops.screen(img, lay)
 
 def chrome(d, series="AI 短视频避坑 · 第 01 期", dark=False):
     c = (150, 145, 135) if dark else GREY
@@ -107,11 +107,11 @@ SCENES = [
 ]
 
 TRAPS = {
-    "trap1": dict(n=1, l1="先做内容", l2="再想给谁看", hot=True),
-    "trap2": dict(n=2, l1="一直换工具", l2="从不换结构", hot=False),
-    "trap3": dict(n=3, l1="一条视频", l2="只发一次", hot=True),
-    "trap4": dict(n=4, l1="追得动热点", l2="留不住人", hot=True),
-    "trap5": dict(n=5, l1="只看播放量", l2="不看私信", hot=True),
+    "trap1": dict(n=1, l1="先做内容", l2="再想给谁看", hot=True, note="内容不差，差在不知道做给谁"),
+    "trap2": dict(n=2, l1="一直换工具", l2="从不换结构", hot=False, note="工具换一圈，问题一动不动"),
+    "trap3": dict(n=3, l1="一条视频", l2="只发一次", hot=True, note="只发一次，等于白发"),
+    "trap4": dict(n=4, l1="追得动热点", l2="留不住人", hot=True, note="热点吃完了，人没留下"),
+    "trap5": dict(n=5, l1="只看播放量", l2="不看私信", hot=True, note="播放是虚荣数字，私信才是生意"),
 }
 
 def dur_of(p):
@@ -192,20 +192,26 @@ def build_audio(scene_durs):
     return out, marks, total
 
 # ---------------------------------------------------------------- scenes
+def value_right(d, xr, y, num, unit, fs_lat, fs_cn, col):
+    """Right-aligned number with a CJK unit in the CJK font (Arial Black has no 万)."""
+    fl, fc = F(LAT, fs_lat), F(CN, fs_cn)
+    uw = fc.getlength(unit) if unit else 0
+    d.text((xr - (uw + 4 if unit else 0), y), num, font=fl, fill=col, anchor="rm")
+    if unit:
+        d.text((xr, y + (fs_lat - fs_cn) * 0.16), unit, font=fc, fill=col, anchor="rm")
+
 def s_hook(d, img, p, t):
-    q = ease_out(p / .35)
-    d.text((70, 300), "我的第一个 AI 短视频号", font=F(CN, 44), fill=GREY, anchor="lm")
-    rows = [("播放量", "128.4 万", INK, 108, 560), ("私信", "0", RED, 150, 810)]
-    for i, (lab, val, col, fs, y) in enumerate(rows):
+    d.text((70, 340), "我的第一个 AI 短视频号", font=F(CN, 44), fill=GREY, anchor="lm")
+    rows = [("播放量", "128.4", "万", INK, 116, 56, 640), ("私信", "0", "", RED, 162, 56, 920)]
+    for i, (lab, num, unit, col, fs, fsc, y) in enumerate(rows):
         qq = ease_out((p - .08 - i * .12) / .35)
         if qq <= 0:
             continue
-        d.text((70, y), lab, font=F(CN, 52), fill=GREY, anchor="lm")
-        off = (1 - qq) * 40
-        d.text((W - 70, y + off), val, font=F(LAT, fs), fill=col, anchor="rm")
-    for yy in (690, 940):
+        d.text((70, y), lab, font=F(CN, 54), fill=GREY, anchor="lm")
+        value_right(d, W - 70, y + (1 - qq) * 40, num, unit, fs, fsc, col)
+    for yy in (785, 1065):
         d.line([70, yy, W - 70, yy], fill=LINE, width=4)
-    if p > .45:
+    if p > .35:
         txt = "这 5 个坑，我全踩了"
         tw = F(CN, 66).getlength(txt) + 90
         lay = Image.new("RGBA", (int(tw + 40), 170), (0, 0, 0, 0))
@@ -213,7 +219,7 @@ def s_hook(d, img, p, t):
         ld.rounded_rectangle([14, 14, 14 + tw, 150], radius=16, fill=(252, 246, 232), outline=INK, width=6)
         ld.text((14 + tw / 2, 84), txt, font=F(CN, 66), fill=INK, anchor="mm")
         lay = lay.rotate(-1.6, resample=Image.BICUBIC)
-        img.paste(lay, (int(W / 2 - lay.width / 2), 1150), lay)
+        img.paste(lay, (int(W / 2 - lay.width / 2), 1300), lay)
     for i, (sx, sy, r) in enumerate([(120, 470, 24), (960, 380, 16), (900, 1080, 20)]):
         qq = ease_back((p - .2 - i * .07) / .3)
         if qq > 0:
@@ -224,26 +230,25 @@ def s_trap(d, p, t, key):
     paste_at(d._image, pill(f"{cfg['n']} / 5", F(LAT, 34)), (150, 300))
     d.text((W - 70, 300), f"0{cfg['n']}", font=F(LAT, 110), fill=(228, 219, 202), anchor="rm")
     a = ease_out(p / .42)
-    y = 900 + (1 - a) * 50
-    d.text((W / 2, y), cfg["l1"], font=F(CN, 126), fill=INK, anchor="mm")
+    y = 1040 + (1 - a) * 50
+    d.text((W / 2, y), cfg["l1"], font=F(CN, 132), fill=INK, anchor="mm")
     col2 = RED if cfg["hot"] else INK
-    d.text((W / 2, y + 176), cfg["l2"], font=F(CN, 126), fill=col2, anchor="mm")
+    d.text((W / 2, y + 182), cfg["l2"], font=F(CN, 132), fill=col2, anchor="mm")
     if cfg["hot"]:
-        wpx = F(CN, 126).getlength(cfg["l2"])
-        wobble(d, W / 2 - wpx / 2, W / 2 + wpx / 2, y + 176 + 92, col=RED, w=9, seed=cfg["n"])
-    if p > .5 and not cfg["hot"]:
-        d.text((W / 2, y + 330), "工具换了一圈，问题一动不动", font=F(CN, 42), fill=GREY, anchor="mm")
+        wpx = F(CN, 132).getlength(cfg["l2"])
+        wobble(d, W / 2 - wpx / 2, W / 2 + wpx / 2, y + 182 + 98, col=RED, w=9, seed=cfg["n"])
+    if p > .45:
+        d.text((W / 2, 1480), cfg["note"], font=F(CN, 44), fill=GREY, anchor="mm")
 
 def art_icon1(d, p):
-    q = ease_back(p / .4); cx, cy = W / 2, 560
-    d.ellipse([cx - 70, cy - 70, cx + 70, cy + 70], fill=(208, 200, 186), outline=INK, width=6)
-    d.rounded_rectangle([cx - 100, cy + 78, cx + 100, cy + 205], radius=58,
+    q = ease_back(p / .4); cx, cy = W / 2, 625
+    d.ellipse([cx - 74, cy - 74, cx + 74, cy + 74], fill=(208, 200, 186), outline=INK, width=6)
+    d.rounded_rectangle([cx - 104, cy + 82, cx + 104, cy + 214], radius=58,
                         fill=(208, 200, 186), outline=INK, width=6)
-    d.text((cx, cy - 10), "?", font=F(LAT, 74 * q), fill=INK, anchor="mm")
-    d.text((cx, cy + 285), "谁在看？给谁看？", font=F(CN, 40), fill=GREY, anchor="mm")
+    d.text((cx, cy - 10), "?", font=F(LAT, 78 * q), fill=INK, anchor="mm")
 
 def art_icon2(d, p):
-    cx, cy = W / 2, 520
+    cx, cy = W / 2, 600
     for i, lab in enumerate(["工具 A", "工具 B", "工具 C"]):
         x = cx - 265 + i * 265
         d.rounded_rectangle([x - 96, cy - 105, x + 96, cy + 45], radius=16,
@@ -258,7 +263,7 @@ def art_icon2(d, p):
     d.text((cx + 250, cy + 206), "结构", font=F(CN, 34), fill=GREY, anchor="mm")
 
 def art_icon3(d, p):
-    cx, cy = W / 2, 520
+    cx, cy = W / 2, 600
     d.rounded_rectangle([cx - 430, cy - 100, cx - 200, cy + 110], radius=14,
                         outline=INK, width=6, fill=(252, 246, 232))
     d.polygon([(cx - 348, cy - 42), (cx - 348, cy + 40), (cx - 275, cy - 1)], fill=RED)
@@ -274,7 +279,7 @@ def art_icon3(d, p):
     d.polygon([(cx + 22, cy), (cx - 4, cy - 16), (cx - 4, cy + 16)], fill=INK)
 
 def art_icon4(d, p):
-    cx, cy = W / 2, 540
+    cx, cy = W / 2, 615
     d.polygon([(cx - 70, cy + 110), (cx - 12, cy - 120), (cx + 18, cy + 8),
                (cx + 72, cy - 60), (cx + 92, cy + 110)], fill=RED)
     d.polygon([(cx - 26, cy + 110), (cx + 6, cy - 16), (cx + 52, cy + 110)], fill=(246, 176, 60))
@@ -287,7 +292,7 @@ def art_icon4(d, p):
     d.line([x0, cy + 4, x0 + 46, cy - 26], fill=INK, width=9)
 
 def art_icon5(d, p):
-    cx, cy = W / 2, 540
+    cx, cy = W / 2, 615
     cw, ch = 800, 350
     d.rounded_rectangle([cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2],
                         radius=26, outline=INK, width=7, fill=(255, 252, 246))
@@ -295,7 +300,7 @@ def art_icon5(d, p):
     d.ellipse([cx - cw / 2 + 34, cy - 128, cx - cw / 2 + 58, cy - 104], fill=(232, 120, 96))
     d.text((cx - cw / 2 + 74, cy - 116), "后台数据", font=F(CN, 32), fill=GREY, anchor="lm")
     d.text((cx - cw / 2 + 40, cy - 8), "播放", font=F(CN, 42), fill=GREY, anchor="lm")
-    d.text((cx + cw / 2 - 40, cy - 12), "128.4 万", font=F(LAT, 68), fill=INK, anchor="rm")
+    value_right(d, cx + cw / 2 - 40, cy - 6, "128.4", "万", 68, 40, INK)
     d.text((cx - cw / 2 + 40, cy + 104), "私信", font=F(CN, 42), fill=GREY, anchor="lm")
     d.text((cx + cw / 2 - 40, cy + 100), "0", font=F(LAT, 72), fill=RED, anchor="rm")
 
@@ -308,6 +313,13 @@ def s_twist(d, img, p, t):
         d.text((W / 2, 640), "在那个词", font=F(CN, 54), fill=(150, 144, 134), anchor="mm")
     q3 = clamp01((p - .38) / .3)
     if q3 > 0:
+        halo = Image.new("RGB", (W, H), (0, 0, 0))
+        rr = 430 * ease_out(q3)
+        ImageDraw.Draw(halo).ellipse([W / 2 - rr, 940 - rr * .8, W / 2 + rr, 940 + rr * .8],
+                                     fill=(34, 24, 16))
+        halo = halo.filter(ImageFilter.GaussianBlur(130))
+        img.paste(ImageChops.screen(img, halo))
+        d = ImageDraw.Draw(img)
         d.text((W / 2, 940), "重复", font=F(CN, 330 * (1.34 - .34 * ease_back(q3))),
                fill=(255, 250, 240), anchor="mm")
     if q3 > .55:
