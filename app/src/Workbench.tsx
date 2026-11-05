@@ -25,6 +25,8 @@ const VOICES = [
   { id: 'zh-CN-YunjianNeural', name: '云健 · 厚实' },
 ];
 
+const STEPS = ['读稿', '配音', '画帧', '合成', '封装'];
+
 const DEMO = `想开一家小店，你最怕的是什么？不是没客人，是钱投进去，三个月就撑不住。
 今天讲三个数，你记下来再去谈加盟。
 第一个数，前期总投入。加盟费、保证金、装修、设备、首批物料，加起来才是真数。
@@ -57,10 +59,10 @@ export default function Workbench() {
   const [secs, setSecs] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const [plan, setPlan] = useState<PlanBeat[] | null>(null);
-  const [showTimeline, setShowTimeline] = useState(false);
   const [hover, setHover] = useState('');
   const [started, setStarted] = useState(false);
   const busy = useRef(false);
+  const startRef = useRef(0);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
   const liveCanvas = useMemo(() => document.createElement('canvas'), []);
   const liveRef = useRef<HTMLDivElement | null>(null);
@@ -90,6 +92,11 @@ export default function Workbench() {
 
   const chars = text.trim().length;
   const est = Math.max(0, Math.round(chars / 4.6));
+  const stepIndex = /拆稿|读稿/.test(stage) ? 0 : /配音/.test(stage) ? 1
+    : /画帧|编码器/.test(stage) ? 2 : /音轨|合成/.test(stage) ? 3 : /完成|封装/.test(stage) ? 4 : 0;
+  const elapsed = startRef.current ? (Date.now() - startRef.current) / 1000 : 0;
+  const remain = pct > 3 ? Math.max(1, Math.round((elapsed / pct) * (100 - pct))) : 0;
+  const eta = running ? (remain > 0 ? `约还剩 ${remain} 秒` : '正在启动…') : '';
   const empty = chars === 0 && !started;
   const scenes = useMemo(() => {
     if (plan?.length) return plan.map((b) => ({ text: b.text, duration: Math.max(1.4, Math.round(b.text.length / 4.6)) }));
@@ -130,8 +137,8 @@ export default function Workbench() {
     const src = text.trim();
     if (src.length < 20) { setErr('再写几句，至少 20 个字'); textRef.current?.focus(); return; }
     busy.current = true;
+    startRef.current = Date.now();
     setRunning(true); setErr(null); setUrl(null); setPct(0); setSecs(null);
-    setShowTimeline(true);
     const t0 = performance.now();
     const theme = choice === 'auto' ? pickTheme(src) : choice;
     try {
@@ -191,7 +198,7 @@ export default function Workbench() {
           onClick={() => {
             // 回到起手式：清空项目状态，但保留账号
             setText(''); setUrl(null); setPlan(null); setStarted(false);
-            setPct(0); setStage(''); setSecs(null); setErr(null); setShowTimeline(false);
+            setPct(0); setStage(''); setSecs(null); setErr(null);
             setChoice('poster');
           }}
         >GetCut<span>studio</span></button>
@@ -264,19 +271,37 @@ export default function Workbench() {
             ))}
           </div>
 
-          <div className="toolbar">
-            <select value={voice} onChange={(e) => setVoice(e.target.value)}>
+          {!running ? <div className="toolbar">
+            <select value={voice} onChange={(e) => setVoice(e.target.value)} disabled={running}>
               {VOICES.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
             <label className="chk">
-              <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} />配乐
+              <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} disabled={running} />配乐
             </label>
             <button className="go" onClick={run} disabled={running || empty}>
-              {running ? `${stage} · ${pct}%` : '生成视频'}
+              '生成视频'
             </button>
-          </div>
+          </div> : null}
 
-          {running ? <div className="bar"><i style={{ width: `${pct}%` }} /></div> : null}
+          {running ? (
+            <div className="prog">
+              <div className="prog-head">
+                <b>{pct}<i>%</i></b>
+                <div className="prog-meta">
+                  <span>{stage || '准备中'}</span>
+                  <em>{eta}</em>
+                </div>
+              </div>
+              <div className="prog-bar"><i style={{ width: `${Math.max(pct, 2)}%` }} /></div>
+              <div className="prog-steps">
+                {STEPS.map((s, i) => (
+                  <span key={s} className={i < stepIndex ? 'done' : i === stepIndex ? 'now' : ''}>
+                    <i>{i < stepIndex ? '✓' : i + 1}</i>{s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {err ? <p className="err">{err}</p> : null}
 
           {url ? (
@@ -290,7 +315,7 @@ export default function Workbench() {
         <aside className="preview">
           <div className="phone">
             <div className="island" />
-            {running ? <div className="live" ref={liveRef} /> : url ? (
+            {running ? (<><div className="ph"><img src="style-thumbs/poster.jpg?v=2" alt="" /></div><div className="live" ref={liveRef} /></>) : url ? (
               <video
                 ref={videoRef}
                 src={url}
@@ -322,31 +347,6 @@ export default function Workbench() {
           )}
         </aside>
       </main>
-
-      {/* 时间轴：有内容才出现 */}
-      {showTimeline && !empty ? (
-        <section className="tl">
-          <div className="tl-head">
-            <b>时间轴</b>
-            <span>{scenes.length} 个镜头 · 约 {Math.round(totalDur)} 秒</span>
-            <button className="link" onClick={() => setShowTimeline(false)}>收起</button>
-          </div>
-          <div className="tl-body">
-            <div className="lane-label">画面</div>
-            <div className="lane">
-              {scenes.slice(0, 12).map((s, i) => (
-                <button key={i} className="clip" style={{ flexGrow: s.duration }} title={s.text}>{s.text.slice(0, 12)}</button>
-              ))}
-            </div>
-            <div className="lane-label">字幕</div>
-            <div className="lane">
-              {scenes.slice(0, 12).map((s, i) => (
-                <button key={i} className="sub" style={{ flexGrow: s.duration }}>{s.text.slice(0, 16)}</button>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
 
       {/* 抽屉 */}
       {panel === 'ai' ? (
@@ -494,7 +494,26 @@ export default function Workbench() {
         .ghost { padding: 12px 16px; border: 1px solid var(--line2); border-radius: 10px; background: none;
           color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
         .link { background: none; border: 0; color: var(--gold); font: inherit; font-size: 13px; cursor: pointer; }
-        .bar { height: 3px; background: rgba(255,255,255,.1); border-radius: 2px; }
+        .prog { border: 1px solid rgba(240,180,41,.35); border-radius: 14px; padding: 18px 20px; display: grid; gap: 14px;
+          background: linear-gradient(180deg, rgba(240,180,41,.10), rgba(240,180,41,.02)); }
+        .prog-head { display: flex; align-items: flex-end; gap: 16px; }
+        .prog-head b { font-size: 58px; line-height: .95; letter-spacing: -.03em; color: var(--gold); font-weight: 900; }
+        .prog-head b i { font-size: 22px; font-style: normal; margin-left: 2px; }
+        .prog-meta { display: grid; gap: 4px; padding-bottom: 8px; }
+        .prog-meta span { font-size: 15px; color: var(--ink); }
+        .prog-meta em { font-style: normal; font-size: 12px; color: var(--dim); }
+        .prog-bar { height: 10px; background: rgba(255,255,255,.1); border-radius: 6px; overflow: hidden; }
+        .prog-bar i { display: block; height: 100%; border-radius: 6px; transition: width .4s ease;
+          background: linear-gradient(90deg, #C98A12, #F0B429 60%, #FFD469);
+          box-shadow: 0 0 14px rgba(240,180,41,.55); }
+        .prog-steps { display: flex; gap: 8px; flex-wrap: wrap; }
+        .prog-steps span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim);
+          padding: 5px 10px; border: 1px solid var(--line); border-radius: 99px; }
+        .prog-steps i { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+          font-size: 10px; font-style: normal; background: rgba(255,255,255,.08); }
+        .prog-steps .now { color: var(--gold); border-color: rgba(240,180,41,.5); }
+        .prog-steps .now i { background: var(--gold); color: #171207; }
+        .prog-steps .done { color: #8FD6A5; border-color: rgba(143,214,165,.35); }        .bar { height: 3px; background: rgba(255,255,255,.1); border-radius: 2px; }
         .bar i { display: block; height: 100%; background: var(--gold); }
         .err { color: #ff9a86; font-size: 13px; margin: 0; }
         .fine { color: var(--dim); font-size: 12px; }
@@ -569,6 +588,11 @@ export default function Workbench() {
     </div>
   );
 }
+
+
+
+
+
 
 
 
