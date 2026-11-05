@@ -1,4 +1,4 @@
-// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
+﻿// 一条片子：拆稿 → 配音 → 画帧 → 编视频 → 编音频 → 封 MP4
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import type { Beat, LayoutMode, PlanBeat, ThemeName } from './types';
 import { drawFrame, FPS, H, W } from './draw';
@@ -67,6 +67,7 @@ export async function renderVideo(
   bgmFile = '',
   surface?: HTMLCanvasElement,
   layoutMode: LayoutMode = 'auto',
+  onDiag?: (d: Record<string, unknown>) => void,
 ): Promise<Blob> {
   // 1. 实拍空镜（默认关：抓素材慢且不稳，需要时在界面上打开）
   onProgress({ stage: useBroll ? '找实拍空镜' : '准备', percent: 1 });
@@ -195,11 +196,22 @@ export async function renderVideo(
     throw new Error('音频编码没有产出任何数据（设备编码器异常），这条片子会是无声的，已中止。请换电脑或换浏览器重试。');
   }
 
+  onDiag?.({
+    ok: true,
+    audioCodec: audioCfg.codec,
+    sampleRate: audioCfg.sampleRate,
+    channels: audioCfg.numberOfChannels,
+    audioChunks,
+    audioSec: Number(audioBuf.duration.toFixed(2)),
+    videoSec: Number(timeline.reduce((n, b) => n + b.duration, 0).toFixed(2)),
+  });
+
   muxer.finalize();
   const { buffer } = muxer.target;
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
 
 
 

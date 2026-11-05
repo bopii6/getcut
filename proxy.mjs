@@ -241,6 +241,24 @@ const server = http.createServer(async (req, res) => {
       res.end(buf);
       return;
     }
+    if (req.method === 'POST' && req.url === '/api/diag') {
+      // 客户端出片自检上报：设备音频能力、实际编码块数、成片大小、报错
+      const body = await readBody(req);
+      const file = path.join(DATA_DIR, 'diag.json');
+      let list = [];
+      try { list = JSON.parse(readFileSync(file, 'utf8')); } catch { list = []; }
+      list.unshift({ at: Date.now(), ...body });
+      if (list.length > 50) list = list.slice(0, 50);
+      mkdirSync(DATA_DIR, { recursive: true });
+      writeFileSync(file, JSON.stringify(list));
+      return json(res, 200, { ok: true, n: list.length });
+    }
+    if (req.method === 'GET' && req.url === '/api/diag') {
+      const file = path.join(DATA_DIR, 'diag.json');
+      let list = [];
+      try { list = JSON.parse(readFileSync(file, 'utf8')); } catch { list = []; }
+      return json(res, 200, { items: list });
+    }
     if (req.method === 'POST' && req.url === '/api/link') {
       // 给一个链接，抓正文改写成口播稿
       const body = await readBody(req);

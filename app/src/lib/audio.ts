@@ -1,4 +1,4 @@
-// 配音：走本机代理（部署时换成 Worker）。拿 mp3 → WebAudio 解码 → 拼成一条音轨。
+﻿// 配音：走本机代理（部署时换成 Worker）。拿 mp3 → WebAudio 解码 → 拼成一条音轨。
 import { api } from './api';
 
 export async function tts(text: string, voice = 'zh-CN-YunxiNeural'): Promise<ArrayBuffer> {
@@ -214,6 +214,7 @@ export async function encodeAudio(
     sampleRate,
     numberOfChannels: channels,
     bitrate: cfg.bitrate,
+    aac: { format: 'aac' },   // 必须是 raw AAC；ADTS 会让 MP4 的音轨不可播
   });
 
   const chunkFrames = 1024;
@@ -250,6 +251,7 @@ export async function encodeAudio(
   onProgress?.(1);
   return chunks;
 }
+
 
 
 

@@ -165,7 +165,10 @@ export default function MobileApp() {
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
       const blob = await renderVideo(planned, theme, title, ({ stage: s, percent }) => {
         setStage(s); setPct(percent);
-      }, false, music, voice, '', liveCanvas, layout);
+      }, false, music, voice, '', liveCanvas, layout, (d) => {
+        void fetch('/api/diag', { method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ...d, ua: navigator.userAgent, src: 'mobile', style: theme, layout }) });
+      });
       setSecs(Math.round((performance.now() - t0) / 1000));
       setUrl(URL.createObjectURL(blob));
       setPct(100);
@@ -176,8 +179,11 @@ export default function MobileApp() {
         await refresh();
       } catch { /* 额度用完也能下载 */ }
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setErr(msg);
       setStep('style');
+      void fetch('/api/diag', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ok: false, error: msg, ua: navigator.userAgent, src: 'mobile', style: theme, layout }) });
     } finally {
       busy.current = false;
       setRunning(false);
@@ -566,6 +572,7 @@ export default function MobileApp() {
     </div>
   );
 }
+
 
 
 
