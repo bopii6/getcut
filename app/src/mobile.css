@@ -1,0 +1,168 @@
+/* 手机端：与桌面共用同一套令牌（黑/白/灰 + 一个强调色，圆角 8，无阴影，五档字号）。
+   手机上标题用 --t-h2（28），不另造字号。 */
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: var(--t-body) / var(--lh) "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.m { min-height: 100vh; display: flex; flex-direction: column; padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+
+/* 顶栏 */
+.mbar {
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between;
+  height: 52px; padding: 0 var(--s2); background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.mbrand { font-weight: 700; font-size: var(--t-h3); letter-spacing: var(--track); }
+.mright { display: flex; align-items: center; gap: 10px; }
+.mquota { font-size: var(--t-aux); color: var(--faint); }
+.mavatar {
+  width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line);
+  background: none; color: var(--dim); font: inherit; font-size: var(--t-aux);
+}
+
+/* 页面骨架 */
+.mpage { flex: 1; padding: var(--s2); display: flex; flex-direction: column; gap: var(--s1); }
+.mpage.hascta { padding-bottom: 150px; }
+.mpage h1 {
+  margin: 0; font-size: var(--t-h2); line-height: 1.25; letter-spacing: var(--track); font-weight: 700;
+}
+.msub { margin: 0; font-size: var(--t-aux); color: var(--dim); line-height: 1.7; }
+.mmsg { margin: 0; font-size: var(--t-aux); color: var(--faint); }
+.merr { margin: 0 var(--s2); padding: 10px; border-radius: var(--r); background: rgba(232, 131, 111, .1); color: #E8836F; font-size: var(--t-aux); }
+.merr-inline { margin: 0; font-size: var(--t-aux); color: #E8836F; }
+
+/* 分段：无底板，靠下划线 */
+.mseg { display: flex; gap: var(--s2); border-bottom: 1px solid var(--line); }
+.mseg button {
+  background: none; border: 0; color: var(--faint); font: inherit; font-size: var(--t-body);
+  padding: 10px 0; border-bottom: 1px solid transparent; margin-bottom: -1px;
+}
+.mseg button.on { color: var(--ink); border-bottom-color: var(--accent); }
+
+.mbox { display: flex; flex-direction: column; gap: 8px; }
+input, select, textarea {
+  width: 100%; background: var(--surface); color: var(--ink); border: 0; border-radius: var(--r);
+  padding: 13px 14px; font: inherit; font-size: var(--t-body); outline: none;
+}
+input:focus, textarea:focus { background: var(--surface2); }
+select { color: var(--dim); font-size: var(--t-aux); }
+textarea { min-height: 180px; line-height: 1.9; resize: vertical; }
+
+.mmeta { display: flex; justify-content: space-between; font-size: var(--t-aux); color: var(--faint); }
+.mmeta button { background: none; border: 0; color: var(--dim); font: inherit; font-size: var(--t-aux); }
+
+/* 唯一主按钮 */
+.mbtn {
+  display: block; width: 100%; border: 0; border-radius: var(--r); padding: 15px;
+  background: var(--accent); color: var(--accent-ink);
+  font: inherit; font-size: var(--t-h3); font-weight: 600; letter-spacing: var(--track);
+  text-align: center; text-decoration: none;
+  transition: transform var(--fast) ease, opacity var(--base) ease;
+}
+.mbtn:active { transform: scale(.98); }
+.mbtn:disabled { opacity: .35; }
+.mbtn.ghost {
+  background: none; color: var(--dim); border: 1px solid var(--line);
+  font-weight: 400; font-size: var(--t-body); padding: 12px;
+}
+.mlink { background: none; border: 0; color: var(--dim); font: inherit; font-size: var(--t-aux); padding: 6px; }
+
+.mbottom {
+  position: fixed; left: 0; right: 0; bottom: calc(56px + env(safe-area-inset-bottom));
+  padding: 10px var(--s2); background: linear-gradient(180deg, transparent, var(--bg) 45%);
+}
+
+/* 页内小标题 */
+.mhead { display: flex; align-items: baseline; gap: 10px; }
+.mhead b { font-size: var(--t-h3); font-weight: 600; letter-spacing: var(--track); }
+.mhead span { font-size: var(--t-aux); color: var(--faint); margin-left: auto; }
+.mback {
+  background: none; border: 0; color: var(--dim); font-size: var(--t-h3); line-height: 1;
+  padding: 0 6px 0 0;
+}
+
+/* 风格：只有图 + 名字，无边框 */
+.mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s1); }
+.mcard {
+  position: relative; padding: 0; border: 0; background: none; color: var(--ink);
+  text-align: left; font: inherit; transition: transform var(--fast) ease;
+}
+.mcard:active { transform: scale(.98); }
+.mcard img, .mcard .mpreview, .mnothumb {
+  display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover;
+  border-radius: var(--r); background: var(--surface2); opacity: .8;
+  transition: opacity var(--base) ease;
+}
+.mcard.on img, .mcard.on .mpreview, .mcard.on .mnothumb { opacity: 1; outline: 1px solid var(--accent); outline-offset: -1px; }
+.mcard b { display: block; font-size: var(--t-aux); font-weight: 500; color: var(--dim); padding: 7px 2px 0; }
+.mcard.on b { color: var(--ink); }
+.mcard em { display: none; }
+
+.mrow { display: flex; align-items: center; gap: 10px; }
+.mrow label { font-size: var(--t-aux); color: var(--faint); white-space: nowrap; }
+.mrow select { flex: 1; }
+.mcheck { display: flex; align-items: center; gap: 10px; font-size: var(--t-aux); color: var(--dim); }
+.mcheck input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+/* 生成中：这里允许强调色发光 */
+.mpage.run { align-items: center; justify-content: flex-start; gap: var(--s2); padding-top: var(--s2); }
+.mphone {
+  position: relative; width: min(62vw, 232px); aspect-ratio: 9 / 19.2; border-radius: var(--r);
+  background: #000; overflow: hidden;
+}
+.mlive { position: absolute; inset: 0; }
+.mlive canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
+.mposter { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: .35; }
+.misland { display: none; }
+.mwait { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); font-size: var(--t-aux); }
+.msteps { display: flex; gap: var(--s1); width: 100%; justify-content: space-between; }
+.mstep { display: flex; align-items: center; gap: 4px; font-size: var(--t-aux); color: var(--faint); white-space: nowrap; }
+.mstep i { font-style: normal; }
+.mstep.now { color: var(--ink); }
+.mstep.done { color: var(--dim); }
+.mprogress { width: 100%; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.mprogress i {
+  display: block; height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, #B8860B, var(--accent));
+  box-shadow: 0 0 12px rgba(240, 180, 41, .45);
+  transition: width var(--slow) ease;
+}
+.mhint { font-size: var(--t-aux); color: var(--faint); text-align: center; margin: 0; }
+
+/* 出片 */
+.mvideobox { border-radius: var(--r); overflow: hidden; background: #000; }
+.mvideobox video { width: 100%; display: block; }
+.mactions { display: flex; flex-direction: column; gap: 8px; }
+
+/* 底部导航 */
+.mnav {
+  position: fixed; left: 0; right: 0; bottom: 0; height: calc(56px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom); display: flex;
+  background: var(--bg); border-top: 1px solid var(--line); z-index: 30;
+}
+.mnav button { flex: 1; background: none; border: 0; color: var(--faint); font: inherit; font-size: var(--t-aux); }
+.mnav button.on { color: var(--ink); }
+
+/* 抽屉 */
+.msheet { position: fixed; inset: 0; background: rgba(0, 0, 0, .72); z-index: 40; display: flex; align-items: flex-end; }
+.msheet-body {
+  width: 100%; max-height: 82vh; overflow-y: auto; background: var(--surface);
+  border-radius: var(--r) var(--r) 0 0; padding: var(--s2) var(--s2) calc(20px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 10px;
+}
+.msheet-head { display: flex; align-items: center; justify-content: space-between; }
+.msheet-head b { font-size: var(--t-h3); font-weight: 600; }
+.msheet-head button { background: none; border: 0; color: var(--dim); font: inherit; font-size: var(--t-aux); }
+.memail { margin: 0; font-size: var(--t-body); word-break: break-all; }
+.mwork { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.mwork b { display: block; font-size: var(--t-body); font-weight: 400; }
+.mwork span { font-size: var(--t-aux); color: var(--faint); }
+.mwork-act { display: flex; gap: 10px; }
+.mwork-act a, .mwork-act button { color: var(--dim); background: none; border: 0; font: inherit; font-size: var(--t-aux); }
+
+.msheet-body, .mpage, .mgrid { scrollbar-width: none; -ms-overflow-style: none; }
+.msheet-body::-webkit-scrollbar, .mpage::-webkit-scrollbar, .mgrid::-webkit-scrollbar { width: 0; height: 0; }

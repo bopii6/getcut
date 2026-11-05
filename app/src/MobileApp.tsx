@@ -1,6 +1,8 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import { pickAudioConfig } from './lib/audio';
+import { cssVars } from './lib/design';
+import './mobile.css';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
   createGen, deleteGen, getMe, listHistory, login, logout, redeem, register,
@@ -218,6 +220,9 @@ export default function MobileApp() {
 
   return (
     <div className="m">
+      <style>{`
+        :root { ${cssVars()} }
+      `}</style>
       <header className="mbar">
         <div className="mbrand">GetCut</div>
         <div className="mright">
@@ -236,11 +241,11 @@ export default function MobileApp() {
       {step === 'write' ? (
         <div className="mpage hascta">
           <h1>把一段文案<br />做成能发的片</h1>
-          <p className="msub">粘稿子，或让 AI 帮你写。竖屏 1080×1920，直接发抖音。</p>
+          <p className="msub">粘稿子，或让我帮你写。竖屏，直接发抖音。</p>
 
           <div className="mseg">
             <button className={srcMode === 'paste' ? 'on' : ''} onClick={() => setSrcMode('paste')}>粘贴</button>
-            <button className={srcMode === 'ai' ? 'on' : ''} onClick={() => setSrcMode('ai')}>AI 写</button>
+            <button className={srcMode === 'ai' ? 'on' : ''} onClick={() => setSrcMode('ai')}>帮我写</button>
             <button className={srcMode === 'link' ? 'on' : ''} onClick={() => setSrcMode('link')}>链接</button>
           </div>
 
@@ -271,7 +276,7 @@ export default function MobileApp() {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={'把口播稿粘在这里。\n\n不知道写什么？点上面的「AI 写」。'}
+            placeholder={'把口播稿粘在这里。\n\n不知道写什么？点上面的「帮我写」。'}
           />
           <div className="mmeta">
             <span>{chars ? `${chars} 字 · 约 ${est} 秒` : '建议 200~600 字'}</span>
@@ -303,8 +308,6 @@ export default function MobileApp() {
                   <video className="mpreview" src={PLAY.find((p) => p.id === s.id)!.src} autoPlay muted loop playsInline />
                 ) : s.thumb ? <img src={s.thumb} alt="" /> : <span className="mnothumb" />}
                 <b>{s.name}</b>
-                <i>适合：{s.use}</i>
-                <u>{s.hint}</u>
                 {choice === s.id ? <em>✓</em> : null}
               </button>
             ))}
@@ -358,7 +361,7 @@ export default function MobileApp() {
             <span>{secs ? `${secs} 秒` : ''}</span>
           </div>
           <div className="mvideobox reveal">
-            <video src={url} controls playsInline />
+            <video src={url} controls playsInline onLoadedMetadata={(e) => { e.currentTarget.currentTime = 0.4; }} />
           </div>
           <div className="mactions">
             <a className="mbtn" href={url} download="getcut.mp4">下载到手机</a>
@@ -446,140 +449,13 @@ export default function MobileApp() {
         </div>
       ) : null}
 
-      <style>{`
-        :root { --bg:#0B0B0C; --panel:#15151A; --line:rgba(255,255,255,.12); --ink:#F2F2F4; --dim:#9C9CA6; --gold:#F0B429; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body, #root { height: 100%; }
-        body { margin: 0; background: var(--bg); color: var(--ink); font-size: 16px;
-          font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-          -webkit-text-size-adjust: 100%; }
-        .m { min-height: 100vh; display: flex; flex-direction: column; padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
-
-        .mbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between;
-          height: 54px; padding: 0 16px; background: rgba(11,11,12,.92); backdrop-filter: blur(10px);
-          border-bottom: 1px solid var(--line); }
-        .mbrand { font-weight: 900; font-size: 17px; letter-spacing: .02em; }
-        .mright { display: flex; align-items: center; gap: 10px; }
-        .mquota { font-size: 12px; color: var(--dim); }
-        .mavatar { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line);
-          background: var(--panel); color: var(--ink); font-size: 14px; font-weight: 800; }
-
-        .mpage { flex: 1; padding: 18px 16px 8px; display: flex; flex-direction: column; gap: 14px; }
-        .mpage.hascta { padding-bottom: 176px; }
-        .mpage h1 { margin: 4px 0 0; font-size: 27px; line-height: 1.3; letter-spacing: -.02em; }
-        .msub { margin: 0; font-size: 13px; color: var(--dim); line-height: 1.7; }
-        .mmsg { margin: 0; font-size: 13px; color: var(--dim); }
-        .merr { margin: 10px 16px 0; padding: 10px 12px; border-radius: 10px; background: rgba(255,90,70,.14);
-          color: #ffb0a2; font-size: 13px; }
-        .merr-inline { margin: 0; font-size: 13px; color: #ffb0a2; }
-
-        .mseg { display: flex; gap: 6px; background: var(--panel); padding: 4px; border-radius: 12px; }
-        .mseg button { flex: 1; border: 0; background: none; color: var(--dim); font: inherit; font-size: 15px;
-          padding: 11px 0; border-radius: 9px; }
-        .mseg button.on { background: #26262E; color: var(--ink); font-weight: 700; }
-
-        .mbox { display: flex; flex-direction: column; gap: 8px; }
-        input, select, textarea { width: 100%; background: var(--panel); color: var(--ink);
-          border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; font: inherit; font-size: 16px;
-          outline: none; }
-        input:focus, textarea:focus { border-color: var(--gold); }
-        textarea { min-height: 190px; line-height: 1.9; resize: vertical; }
-        .mmeta { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); }
-        .mmeta button { background: none; border: 0; color: var(--gold); font: inherit; font-size: 12px; }
-
-        .mbtn { display: block; width: 100%; border: 0; border-radius: 14px; padding: 16px;
-          background: var(--gold); color: #171207; font: inherit; font-size: 17px; font-weight: 800;
-          letter-spacing: .02em; text-align: center; text-decoration: none; }
-        .mbtn:disabled { opacity: .45; }
-        .mbtn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 600; font-size: 15px; }
-        .mlink { background: none; border: 0; color: var(--gold); font: inherit; font-size: 14px; padding: 8px; }
-
-        .mbottom { position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom));
-          padding: 10px 16px; background: linear-gradient(180deg, transparent, var(--bg) 40%); }
-        .mbottom .mbtn { box-shadow: 0 10px 30px -12px rgba(240,180,41,.6); }
-
-        .mhead { display: flex; align-items: baseline; gap: 10px; }
-        .mhead b { font-size: 19px; }
-        .mhead span { font-size: 12px; color: var(--dim); margin-left: auto; }
-        .mback { background: none; border: 1px solid var(--line); color: var(--ink); width: 34px; height: 34px;
-          border-radius: 10px; font-size: 20px; line-height: 1; }
-
-        .mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .mcard { position: relative; padding: 0 0 8px; border: 1px solid var(--line); border-radius: 12px;
-          background: var(--panel); overflow: hidden; text-align: left; color: var(--ink); }
-        .mcard img, .mnothumb { display: block; width: 100%; aspect-ratio: 3/4; object-fit: cover; }
-        .mpreview { display: block; width: 100%; aspect-ratio: 3/4; object-fit: cover; }
-        .reveal { animation: reveal .55s cubic-bezier(.16,1,.3,1) both; }
-        @keyframes reveal {
-          from { opacity: 0; transform: translateY(14px) scale(.97); }
-          to { opacity: 1; transform: none; }
-        }
-        .mnothumb { background: linear-gradient(160deg, #2C2C36, #17171C); }
-        .mcard b { display: block; font-size: 15px; padding: 8px 10px 0; }
-        .mcard i { display: block; font-style: normal; font-size: 12px; color: var(--gold); padding: 3px 10px 0; }
-        .mcard u { display: block; text-decoration: none; font-size: 11px; color: var(--dim); padding: 2px 10px 0; }
-        .mcard.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(240,180,41,.35); }
-        .mcard em { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%;
-          background: var(--gold); color: #171207; font-style: normal; font-size: 14px; font-weight: 900;
-          display: grid; place-items: center; }
-
-        .mrow { display: flex; align-items: center; gap: 10px; }
-        .mrow label { font-size: 14px; color: var(--dim); white-space: nowrap; }
-        .mrow select { flex: 1; }
-        .mcheck { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--dim); }
-        .mcheck input { width: 20px; height: 20px; accent-color: var(--gold); }
-
-        .mpage.run { align-items: center; justify-content: flex-start; gap: 16px; padding-top: 24px; }
-        .mphone { position: relative; width: min(62vw, 248px); aspect-ratio: 9/19.2; border-radius: 34px;
-          border: 8px solid #232329; background: #000; overflow: hidden; box-shadow: 0 20px 50px -20px #000; }
-        .mlive { position: absolute; inset: 0; }
-        .mlive canvas { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
-        .misland { position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-          width: 70px; height: 20px; border-radius: 12px; background: #000; }
-        .mposter { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .6; filter: saturate(.9); }
-        .mphone::after { content: ''; position: absolute; inset: 0; pointer-events: none;
-          background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.55)); }
-        .mwait { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 14px; }
-        .msteps { display: flex; gap: 5px; justify-content: center; width: 100%; }
-        .mstep { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--dim);
-          padding: 6px 8px; border: 1px solid var(--line); border-radius: 99px; white-space: nowrap; }
-        .mstep i { width: 16px; height: 16px; border-radius: 50%; background: #26262E; display: grid;
-          place-items: center; font-style: normal; font-size: 10px; }
-        .mstep.now { color: var(--gold); border-color: rgba(240,180,41,.5); }
-        .mstep.now i { background: var(--gold); color: #171207; }
-        .mstep.done { color: #8FD6A5; border-color: rgba(143,214,165,.35); }
-        .mprogress { width: 80%; height: 6px; background: rgba(255,255,255,.1); border-radius: 99px; overflow: hidden; }
-        .mprogress i { display: block; height: 100%; background: var(--gold); transition: width .3s; }
-        .mhint { font-size: 12px; color: var(--dim); text-align: center; margin: 0; }
-
-        .mvideobox { border-radius: 14px; overflow: hidden; background: #000; }
-        .mvideobox video { width: 100%; display: block; }
-        .mactions { display: flex; flex-direction: column; gap: 8px; }
-
-        .mnav { position: fixed; left: 0; right: 0; bottom: 0; height: calc(58px + env(safe-area-inset-bottom));
-          padding-bottom: env(safe-area-inset-bottom); display: flex; background: rgba(15,15,18,.96);
-          backdrop-filter: blur(10px); border-top: 1px solid var(--line); z-index: 30; }
-        .mnav button { flex: 1; background: none; border: 0; color: var(--dim); font: inherit; font-size: 13px; }
-        .mnav button.on { color: var(--gold); font-weight: 700; }
-
-        .msheet { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 40; display: flex; align-items: flex-end; }
-        .msheet-body { width: 100%; max-height: 82vh; overflow-y: auto; background: #14141A;
-          border-radius: 18px 18px 0 0; padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
-          display: flex; flex-direction: column; gap: 10px; }
-        .msheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-        .msheet-head b { font-size: 17px; }
-        .msheet-head button { background: none; border: 0; color: var(--dim); font: inherit; font-size: 14px; }
-        .memail { margin: 0; font-size: 15px; word-break: break-all; }
-        .mwork { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-          padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
-        .mwork b { display: block; font-size: 14px; }
-        .mwork span { font-size: 12px; color: var(--dim); }
-        .mwork-act { display: flex; gap: 12px; font-size: 13px; }
-        .mwork-act a, .mwork-act button { color: var(--gold); background: none; border: 0; font: inherit; font-size: 13px; }
-      `}</style>
+      
     </div>
   );
 }
+
+
+
 
 
 
