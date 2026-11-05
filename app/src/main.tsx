@@ -1,11 +1,24 @@
-﻿import { StrictMode } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import Workbench from './Studio.tsx';
+import Studio from './Studio.tsx';
+import MobileApp from './MobileApp.tsx';
+
+/** 手机 / 竖屏走向导版，桌面走编辑器版 */
+function Root() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)');
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return isMobile ? <MobileApp /> : <Studio />;
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Workbench />
+    <Root />
   </StrictMode>,
 );
-
-
