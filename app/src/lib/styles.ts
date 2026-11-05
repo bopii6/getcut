@@ -99,6 +99,27 @@ function newsStage(ctx: Ctx, beat: Beat, t: number) {
   ctx.fillRect(90, 430, 4, 64);
 
   const items = (beat.items?.length ? beat.items : String(beat.text).split(/[，。；]/)).filter(Boolean).slice(0, 3);
+
+  // 版式变体 A：有数字就做「数字特写」，不要每屏都是同一块信息板
+  const numRaw = String(beat.value || '').replace(/[^\d.]/g, '');
+  if (numRaw && (beat.card === 'stat' || beat.card === 'compare' || beat.card === 'plain')) {
+    const p = Math.min(1, t / 0.5);
+    const shown = String(Math.round(Number(numRaw) * p));
+    ctx.fillStyle = NEWS.red;
+    ctx.fillRect(140, 520, 120 * ease(t / 0.3), 6);
+    ctx.font = '900 300px ' + HEAVY;
+    ctx.fillStyle = '#fff';
+    ctx.fillText(shown, 120, 860);
+    const nw = ctx.measureText(shown).width;
+    ctx.font = '900 72px ' + HEAVY;
+    ctx.fillStyle = NEWS.red;
+    ctx.fillText(beat.unit || '', 120 + nw + 24, 850);
+    ctx.font = '900 44px ' + HEAVY;
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.fillText((beat.label || beat.title || '').slice(0, 14), 120, 960);
+    return;
+  }
+
   if (beat.card === 'hook' || beat.card === 'quote' || items.length === 0) {
     ctx.font = '900 92px ' + HEAVY;
     ctx.fillStyle = '#fff';
@@ -333,6 +354,40 @@ function drawMarker(ctx: Ctx, beat: Beat, t: number, index: number, _total: numb
   }
   ctx.restore();
 
+  // 版式变体 A：开场/金句 —— 一屏一句大字，配手绘下划线，不做卡片
+  if (beat.card === 'hook' || beat.card === 'quote') {
+    const big = wrap(ctx, beat.title || beat.text, 860).slice(0, 4);
+    ctx.font = '900 104px ' + HEAVY;
+    ctx.fillStyle = MK.ink;
+    big.forEach((ln, i) => {
+      const p = ease((t - 0.12 - i * 0.1) / 0.3);
+      ctx.save();
+      ctx.globalAlpha = p;
+      ctx.fillText(ln, 78, 620 + i * 132);
+      ctx.restore();
+    });
+    // 手绘下划线
+    const uw = 700 * ease((t - 0.4) / 0.4);
+    ctx.strokeStyle = MK.yellow;
+    ctx.lineWidth = 16;
+    ctx.beginPath();
+    for (let x = 0; x < uw; x += 9) {
+      const y = 690 + Math.sin(x / 30) * 7;
+      if (x === 0) ctx.moveTo(80 + x, y); else ctx.lineTo(80 + x, y);
+    }
+    ctx.stroke();
+    // 右上角手绘圈序号
+    ctx.strokeStyle = MK.red;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.ellipse(940, 180, 56, 52, 0.1, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = '900 54px ' + HEAVY;
+    ctx.fillStyle = MK.red;
+    ctx.fillText(String(index + 1).padStart(2, '0'), 910, 200);
+    return;
+  }
+
   // 标题 + 手抖框
   const title = beat.title || beat.topic || beat.text;
   ctx.font = '900 66px ' + HEAVY;
@@ -487,7 +542,7 @@ function drawSwiss(ctx: Ctx, beat: Beat, t: number, index: number, total: number
 // ───────────────────────── 赛博终端 ─────────────────────────
 const TM = { bg: '#050607', ink: '#E8FFF2', green: '#39FF88', dim: '#4A5A50', pane: '#0A0F0C', line: '#16201A' };
 
-function drawTerminal(ctx: Ctx, beat: Beat, t: number, index: number, _total: number) {
+export function drawTerminal(ctx: Ctx, beat: Beat, t: number, index: number, _total: number) {
   ctx.fillStyle = TM.bg;
   ctx.fillRect(0, 0, W, H);
 
@@ -609,7 +664,7 @@ function halftone(ctx: Ctx, cx: number, cy: number, r: number, cell = 12) {
   }
 }
 
-function drawBroadsheet(ctx: Ctx, beat: Beat, _t: number, index: number, _total: number) {
+function drawBroadsheet(ctx: Ctx, beat: Beat, t: number, index: number, _total: number) {
   ctx.fillStyle = BS.paper;
   ctx.fillRect(0, 0, W, H);
 
@@ -649,6 +704,26 @@ function drawBroadsheet(ctx: Ctx, beat: Beat, _t: number, index: number, _total:
   ctx.fillText('独家', 82, 232);
   ctx.fillStyle = BS.ink;
   ctx.fillRect(64, 440, 952, 2);
+
+  // 版式变体：开场/金句 —— 整版一个大标题，不排双栏
+  if (beat.card === 'hook' || beat.card === 'quote') {
+    ctx.font = '900 116px ' + HEAVY;
+    ctx.fillStyle = BS.ink;
+    const big = wrap(ctx, beat.title || beat.text, 920).slice(0, 4);
+    big.forEach((ln, i) => {
+      const p = ease((t - 0.12 - i * 0.08) / 0.3);
+      ctx.save();
+      ctx.globalAlpha = p;
+      ctx.fillText(ln, 64, 600 + i * 140);
+      ctx.restore();
+    });
+    ctx.fillStyle = BS.red;
+    ctx.fillRect(64, 560, 160 * ease(t / 0.35), 8);
+    ctx.font = '400 28px ' + LIGHT;
+    ctx.fillStyle = BS.gray;
+    ctx.fillText('—— 本报记者', 64, 1240);
+    return;
+  }
 
   // 双栏
   ctx.fillRect(506, 460, 1, 500);
@@ -713,7 +788,29 @@ function drawCover(ctx: Ctx, beat: Beat, t: number, index: number, _total: numbe
   ctx.fillStyle = CV.ink;
   ctx.fillRect(56, 216, 960, 1);
 
-  // 蓝色主几何（微旋转）
+    // 版式变体：有数字时，蓝块里换成巨型数字（封面人物的位置让给数据）
+  const cvNum = String(beat.value || '').replace(/[^\d.]/g, '');
+  if (cvNum && beat.card === 'stat') {
+    const pp = ease(t / 0.5);
+    ctx.save();
+    ctx.translate(540, 700);
+    ctx.rotate(-2 * Math.PI / 180);
+    ctx.fillStyle = CV.blue;
+    ctx.fillRect(-450, -280 * pp, 900, 560 * pp);
+    ctx.restore();
+    ctx.font = '900 300px ' + HEAVY;
+    ctx.fillStyle = CV.paper;
+    const shown = String(Math.round(Number(cvNum) * Math.min(1, t / 0.5)));
+    ctx.fillText(shown, 96, 800);
+    ctx.font = '900 64px ' + HEAVY;
+    ctx.fillText(beat.unit || '', 100 + ctx.measureText(shown).width + 20, 790);
+    ctx.font = '400 26px ' + LIGHT;
+    ctx.fillStyle = CV.ink;
+    ctx.fillText((beat.label || '').slice(0, 18), 100, 900);
+    return;
+  }
+
+// 蓝色主几何（微旋转）
   const p = ease(t / 0.5);
   ctx.save();
   ctx.translate(540, 700);
@@ -791,7 +888,7 @@ function drawCover(ctx: Ctx, beat: Beat, t: number, index: number, _total: numbe
 // ───────────────────────── 胶片纪实 ─────────────────────────
 const RL = { black: '#0B0A09', cream: '#F0E6D6', brown: '#6B4A32', orange: '#D9822B', dim: '#8C7B6B' };
 
-function drawReel(ctx: Ctx, beat: Beat, _t: number, index: number, _total: number) {
+export function drawReel(ctx: Ctx, beat: Beat, _t: number, index: number, _total: number) {
   ctx.fillStyle = RL.black;
   ctx.fillRect(0, 0, W, H);
 
@@ -874,16 +971,20 @@ function drawReel(ctx: Ctx, beat: Beat, _t: number, index: number, _total: numbe
   ctx.fillText(end, (W - ctx.measureText(end).width) / 2, 1620);
 }
 
+// 只登记真正立得住的风格：终端/胶片/财报/旧新闻/夜行已下架（信息空洞、辨识度低）
 export const NEW_STYLES: Partial<Record<ThemeName, (c: Ctx, b: Beat, t: number, i: number, n: number) => void>> = {
   newsroom: drawNewsroom,
-  ledger: drawLedger,
   marker: drawMarker,
   swiss: drawSwiss,
-  terminal: drawTerminal,
   broadsheet: drawBroadsheet,
   cover: drawCover,
-  reel: drawReel,
 };
+
+
+
+
+
+
 
 
 

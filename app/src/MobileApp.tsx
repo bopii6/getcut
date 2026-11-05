@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import { pickAudioConfig } from './lib/audio';
 import type { ThemeName, PlanBeat } from './lib/types';
@@ -16,15 +16,10 @@ const STYLES: { id: Choice; name: string; hint: string; thumb?: string }[] = [
   { id: 'magazine', name: '杂志', hint: '暖纸 · 印章红', thumb: 'style-thumbs/magazine.jpg' },
   { id: 'dashboard', name: '数据', hint: '深蓝 · 数字图表', thumb: 'style-thumbs/dashboard.jpg' },
   { id: 'newsroom', name: '新闻播报', hint: 'LIVE 条 · 信息板', thumb: 'style-thumbs/newsroom.jpg' },
-  { id: 'ledger', name: '财报', hint: '巨数字 · 指标' },
   { id: 'marker', name: '白板', hint: '马克笔 · 手写', thumb: 'style-thumbs/marker.jpg' },
   { id: 'swiss', name: '极简', hint: '栅格 · 大留白', thumb: 'style-thumbs/swiss.jpg' },
-  { id: 'terminal', name: '终端', hint: '黑底绿字', thumb: 'style-thumbs/terminal.jpg' },
   { id: 'broadsheet', name: '报纸', hint: '报头 · 双栏', thumb: 'style-thumbs/broadsheet.jpg' },
   { id: 'cover', name: '封面', hint: '刊名 · 条形码', thumb: 'style-thumbs/cover.jpg' },
-  { id: 'reel', name: '胶片', hint: '齿孔 · 颗粒', thumb: 'style-thumbs/reel.jpg' },
-  { id: 'news', name: '新闻', hint: '白底红条', thumb: 'style-thumbs/news.jpg' },
-  { id: 'night', name: '夜行', hint: '深紫冷光', thumb: 'style-thumbs/night.jpg' },
 ];
 
 const VOICES = [
@@ -558,6 +553,7 @@ export default function MobileApp() {
     </div>
   );
 }
+
 
 
 

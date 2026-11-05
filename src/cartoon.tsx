@@ -28,8 +28,17 @@ const ROTA: Record<string, Layout[]> = {
 };
 
 const layoutOf = (beat: Beat, i: number): Layout => {
-  const arr = ROTA[beat.card] || ['stage'];
-  return arr[i % arr.length];
+  switch (beat.card) {
+    case 'hook': return 'fullbleed';
+    case 'stat': return beat.value ? 'split' : 'stage';
+    case 'compare': return 'duo';
+    case 'quote':
+    case 'cta':
+    case 'chapter':
+    case 'intro': return 'punch';
+    case 'list': return i % 2 === 0 ? 'stage' : 'fullbleed';
+    default: return 'stage';
+  }
 };
 
 const pop = (frame: number, fps: number, delay = 0, stiffness = 190) =>
@@ -94,7 +103,7 @@ const Caption: React.FC<{ theme: Theme; kicker?: string; text: string; big?: boo
 
 /** 那张"截图"：带窗口 chrome 的白卡，内容按 card 类型变 */
 const Panel: React.FC<{ theme: Theme; beat: Beat; phase: number; bare?: boolean }> = ({ theme, beat, phase, bare }) => {
-  const items = (beat.items?.length ? beat.items : beat.text.split(/[、，,；;]/)).filter(Boolean).slice(0, 4);
+  const items = (beat.items?.length ? beat.items : String(beat.text || beat.title || '').split(/[、，,；;]/)).filter(Boolean).slice(0, 4);
   const rows = beat.card === 'stat'
     ? [[beat.label || '当期', String(beat.value || '—') + (beat.unit || '')], ['上期', '—'], ['变化', '↑']]
     : items.map((t, i) => [t, i === 0 ? '进行中' : '—']);
@@ -117,7 +126,7 @@ const Panel: React.FC<{ theme: Theme; beat: Beat; phase: number; bare?: boolean 
           flex: 1, textAlign: 'center', fontFamily: theme.heavy, fontSize: 24, color: 'rgba(24,34,58,0.45)',
         }}>{beat.topic || '截图'}</div>
       </div>
-      <div style={{ padding: '26px 30px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ padding: '26px 30px', display: 'flex', flexDirection: 'column', gap: 18, flex: 1 }}>
         {rows.map(([a, b], i) => (
           <div key={i} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -132,6 +141,22 @@ const Panel: React.FC<{ theme: Theme; beat: Beat; phase: number; bare?: boolean 
             }}>{b}</div>
           </div>
         ))}
+        {/* 假图表：让"截图"看起来像真的 */}
+        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', gap: 12, height: 210 }}>
+          {[0.32, 0.5, 0.38, 0.72, 0.58, 0.86, 1].map((h, i) => (
+            <div key={i} style={{
+              flex: 1, height: `${h * 100}%`, borderRadius: 6,
+              background: i >= 5 ? theme.accent : 'rgba(24,34,58,0.13)',
+              opacity: i % 2 === 0 ? 0.9 : 1,
+            }} />
+          ))}
+        </div>
+        <div style={{
+          marginTop: 10, display: 'flex', justifyContent: 'space-between',
+          fontFamily: theme.heavy, fontSize: 24, color: 'rgba(24,34,58,0.42)',
+        }}>
+          <span>近 28 天</span><span>↑ 播放曲线</span>
+        </div>
       </div>
     </div>
   );
@@ -161,27 +186,34 @@ const Stage: React.FC<{ theme: Theme; beat: Beat; phase: number; index: number }
 const FullBleed: React.FC<{ theme: Theme; beat: Beat; phase: number }> = ({ theme, beat, phase }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const zoom = interpolate(frame, [0, 90], [1.0, 1.03], { extrapolateRight: 'clamp' });
+  const zoom = interpolate(frame, [0, 100], [1.0, 1.025], { extrapolateRight: 'clamp' });
   const s = pop(frame, fps, 0, 200);
+  const claim = String(beat.title || beat.text);
   return (
     <AbsoluteFill>
-      <div style={{ position: 'absolute', inset: 26, transform: `scale(${zoom})` }}>
+      {/* 截图占下半屏 */}
+      <div style={{
+        position: 'absolute', left: 42, right: 42, top: 520, bottom: 40,
+        transform: `scale(${zoom})`, opacity: Math.min(1, s * 1.4),
+      }}>
         <Panel theme={theme} beat={beat} phase={phase} bare />
       </div>
-      <AbsoluteFill style={{ background: 'linear-gradient(180deg, rgba(10,12,16,0.82) 0%, rgba(10,12,16,0.35) 34%, transparent 62%)' }} />
-      <div style={{ position: 'absolute', left: 62, right: 62, top: 120, opacity: Math.min(1, s * 1.5), transform: `translateY(${(1 - s) * 30}px)` }}>
+      {/* 大字压在上半屏 */}
+      <div style={{
+        position: 'absolute', left: 62, right: 62, top: 118,
+        opacity: Math.min(1, s * 1.6), transform: `translateY(${(1 - s) * 30}px)`,
+      }}>
         {beat.topic ? (
-          <div style={{ fontFamily: theme.heavy, fontSize: 30, letterSpacing: 3, color: 'rgba(255,255,255,0.6)' }}>{beat.topic}</div>
+          <div style={{ fontFamily: theme.heavy, fontSize: 32, letterSpacing: 3, color: theme.muted }}>{beat.topic}</div>
         ) : null}
         <div style={{
-          fontFamily: theme.heavy, fontSize: beat.text.length > 12 ? 78 : 96, lineHeight: 1.14,
-          color: '#fff', marginTop: 10,
-          textShadow: '0 4px 0 rgba(0,0,0,0.35)',
+          fontFamily: theme.heavy, fontSize: claim.length > 9 ? 92 : 112, lineHeight: 1.1,
+          color: theme.accent, marginTop: 12,
         }}>
-          <Highlight text={beat.title || beat.text} theme={theme} base="#fff" />
+          <Highlight text={claim} theme={theme} base={theme.accent} />
         </div>
       </div>
-      <Host theme={theme} height={430} bottom={-30} left={0.78} talk={false} delay={4} />
+      <Host theme={theme} height={540} bottom={-34} talk={!beat.text?.includes('。')} delay={4} />
     </AbsoluteFill>
   );
 };
@@ -250,7 +282,7 @@ const Punch: React.FC<{ theme: Theme; beat: Beat; phase: number }> = ({ theme, b
   const s = pop(frame, fps, 0, 230);
   const sub = beat.text && beat.text !== big ? beat.text : '';
   return (
-    <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
+    <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingBottom: 220 }}>
       <div style={{
         fontFamily: theme.heavy, fontSize: big.length > 3 ? 200 : 300, lineHeight: 1,
         color: theme.accent, transform: `scale(${1.22 - s * 0.22}) rotate(-2deg)`,
@@ -286,17 +318,13 @@ export const CartoonBeat: React.FC<{ beat: Beat; theme: Theme; seconds: number; 
         {layout === 'punch' && <Punch theme={theme} beat={beat} phase={phase} />}
 
         <div style={{
-          position: 'absolute', left: 0, bottom: 0, height: 8, width: `${((index + 1) / 6) * 100}%`,
+          position: 'absolute', left: 0, bottom: 0, height: 8, width: `${((index + 1) / Math.max(1, total)) * 100}%`,
           background: theme.accent, opacity: 0.9,
         }} />
         <div style={{
           position: 'absolute', left: 62, bottom: 56, fontFamily: theme.heavy, fontSize: 26,
           letterSpacing: 3, color: theme.muted,
         }}>@你的账号</div>
-        <div style={{
-          position: 'absolute', right: 62, bottom: 56, fontFamily: theme.heavy, fontSize: 26,
-          letterSpacing: 2, color: theme.muted,
-        }}>卡通主播模板 · {String(index + 1).padStart(2, '0')}</div>
       </AbsoluteFill>
     );
   };

@@ -15,15 +15,10 @@ const STYLES: { id: Choice; name: string; thumb?: string; preview?: string }[] =
   { id: 'magazine', name: '杂志', thumb: 'style-thumbs/magazine.jpg', preview: 'style-previews/magazine.mp4' },
   { id: 'dashboard', name: '数据', thumb: 'style-thumbs/dashboard.jpg' },
   { id: 'newsroom', name: '播报', thumb: 'style-thumbs/newsroom.jpg', preview: 'style-previews/newsroom.mp4' },
-  { id: 'ledger', name: '财报' },
   { id: 'marker', name: '白板', thumb: 'style-thumbs/marker.jpg', preview: 'style-previews/marker.mp4' },
   { id: 'swiss', name: '极简', thumb: 'style-thumbs/swiss.jpg', preview: 'style-previews/swiss.mp4' },
-  { id: 'terminal', name: '终端', thumb: 'style-thumbs/terminal.jpg', preview: 'style-previews/terminal.mp4' },
   { id: 'broadsheet', name: '报纸', thumb: 'style-thumbs/broadsheet.jpg', preview: 'style-previews/broadsheet.mp4' },
   { id: 'cover', name: '封面', thumb: 'style-thumbs/cover.jpg', preview: 'style-previews/cover.mp4' },
-  { id: 'reel', name: '胶片', thumb: 'style-thumbs/reel.jpg', preview: 'style-previews/reel.mp4' },
-  { id: 'news', name: '新闻', thumb: 'style-thumbs/news.jpg', preview: 'style-previews/news.mp4' },
-  { id: 'night', name: '夜行', thumb: 'style-thumbs/night.jpg', preview: 'style-previews/night.mp4' },
 ];
 
 const STEPS = ['拆稿', '配音', '画帧', '合成', '封装'];
@@ -1131,6 +1126,7 @@ export default function Studio() {
     </div>
   );
 }
+
 
 
 
