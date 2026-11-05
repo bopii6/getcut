@@ -23,7 +23,7 @@ const STYLES: { id: Choice; name: string; thumb?: string; preview?: string }[] =
   { id: 'cover', name: '封面', thumb: 'style-thumbs/cover.jpg', preview: 'style-previews/cover.mp4' },
   { id: 'reel', name: '胶片', thumb: 'style-thumbs/reel.jpg', preview: 'style-previews/reel.mp4' },
   { id: 'news', name: '新闻', thumb: 'style-thumbs/news.jpg', preview: 'style-previews/news.mp4' },
-  { id: 'night', name: '夜行' },
+  { id: 'night', name: '夜行', thumb: 'style-thumbs/night.jpg', preview: 'style-previews/night.mp4' },
 ];
 
 const VOICES = [
@@ -995,6 +995,7 @@ export default function Studio() {
     </div>
   );
 }
+
 
 
 
