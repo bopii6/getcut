@@ -10,7 +10,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { planScript } from './scripts/plan.mjs';
+import { planScript, writeScript } from './scripts/plan.mjs';
 import { applyEnv, envOf } from './lib/env.mjs';
 import { format as fmtCard, normalize as normCard, validate as validCard } from './lib/cards.mjs';
 
@@ -240,6 +240,17 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'content-type': 'video/mp4', 'content-length': String(buf.length), 'cache-control': 'public, max-age=86400' });
       res.end(buf);
       return;
+    }
+    if (req.method === 'POST' && req.url === '/api/script') {
+      // 只给一个主题，模型写成口播稿（省掉客户自己去别处找文案）
+      const body = await readBody(req);
+      const topic = String(body.topic || '').trim();
+      if (topic.length < 2) return json(res, 400, { error: '主题太短了' });
+      const out = await writeScript(topic, {
+        industry: String(body.industry || '通用'),
+        apiKey: envOf('DEEPSEEK_API_KEY'),
+      });
+      return json(res, 200, out);
     }
     if (req.method === 'POST' && req.url === '/api/tts') {
       const { text, voice, rate } = await readBody(req);

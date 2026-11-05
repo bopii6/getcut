@@ -22,7 +22,7 @@ const STYLES: { id: Choice; name: string; thumb?: string; preview?: string }[] =
   { id: 'broadsheet', name: '报纸', thumb: 'style-thumbs/broadsheet.jpg', preview: 'style-previews/broadsheet.mp4' },
   { id: 'cover', name: '封面', thumb: 'style-thumbs/cover.jpg', preview: 'style-previews/cover.mp4' },
   { id: 'reel', name: '胶片', thumb: 'style-thumbs/reel.jpg', preview: 'style-previews/reel.mp4' },
-  { id: 'news', name: '新闻' },
+  { id: 'news', name: '新闻', thumb: 'style-thumbs/news.jpg', preview: 'style-previews/news.mp4' },
   { id: 'night', name: '夜行' },
 ];
 
@@ -35,7 +35,7 @@ const VOICES = [
 ];
 
 const BGMS = [
-  { id: '', name: '跟随风格', desc: '按长相自动配' },
+  { id: '', name: '跟随风格', desc: '按模板自动配' },
   { id: 'music/corporate.mp3', name: '商务', desc: '稳 · 律师/教培' },
   { id: 'music/cinematic.mp3', name: '电影', desc: '推进 · 观点/加盟' },
   { id: 'music/news.mp3', name: '新闻', desc: '紧迫 · 资讯' },
@@ -48,8 +48,77 @@ const BGMS = [
   { id: 'music/chill.mp3', name: '舒缓', desc: '氛围 · 纪实' },
 ];
 
-const DEMO = `想开一家小店，你最怕的是什么？
-不是没客人，是钱投进去，三个月就撑不住。
+const PRESETS = [
+  {
+    title: '加盟：回本周期怎么算',
+    industry: '餐饮加盟',
+    text: `想开一家店，总部说八个月回本，你信吗？
+先别信，自己算三个数。
+第一个数，前期总投入。加盟费、保证金、装修、设备、首批物料，加起来才是真数，不是海报上那个数。
+第二个数，每月固定支出。房租、人工、水电、物料，一分不能少。
+第三个数，日均流水。别问总部，去他现有的店里蹲三天，看真实客流。
+用前期投入除以每月净利，才是你的回本周期。
+总部说八个月，你就按十二个月算，多出来的四个月是你的活路。
+把品牌名发给我，我帮你把这三个数拆开算一遍。`,
+  },
+  {
+    title: '律师：货款要不回来怎么办',
+    industry: '律师',
+    text: `货款要不回来，很多老板第一反应是打电话催。
+催是没用的，对方早想好了怎么拖。
+第一步，把所有凭证收齐：合同、送货单、对账单、聊天记录，缺一样都麻烦。
+第二步，起诉的同时申请财产保全，先把他账户冻住，人一慌才肯谈。
+第三步，只谈一件事——什么时候付、付多少，别在电话里讲道理。
+拖过三年的，证据还在，钱可能就没了。
+把合同发我，我帮你看还能不能走这一步。`,
+  },
+  {
+    title: '教培：孩子成绩上不去',
+    industry: '教培',
+    text: `孩子成绩上不去，大部分家长第一件事就是报班。
+报之前，先看三个地方。
+第一，看他哪一科最差。瘸腿科目补十分，比优势科目多考五分容易得多。
+第二，看他错在哪。是不会，还是粗心，还是根本没听懂。
+第三，看他愿意学多久。坐不住四十分钟的孩子，先别报两小时的课。
+三个都看清了再花钱，一节课的钱够你试错三次。
+把孩子的卷子发我，我帮你看看问题出在哪。`,
+  },
+  {
+    title: '门店：选址的五个坑',
+    industry: '本地生活',
+    text: `选址选错，后面再努力都是给房东打工。
+第一个坑，只看人流不看客流。路过的人再多，不进店也没用。
+第二个坑，贪便宜选背街。省下的房租，会从营业额里十倍还回去。
+第三个坑，不算租金占比。房租超过营业额的两成，基本就很难赚了。
+第四个坑，不看邻居。隔壁是五金店还是奶茶店，决定你客人停不停。
+第五个坑，不蹲点数。白天、晚上、周末各蹲一天，数字最诚实。
+看中哪个铺，把位置发我，我帮你一起算。`,
+  },
+  {
+    title: '通用：为什么你的视频没人看',
+    industry: '通用',
+    text: `拍了三十条视频，播放还是三位数，问题多半不在画质。
+第一条，前三秒没钩子。观众划走的决定，比你说话还快。
+第二条，一屏放太多字。手机那么小，他只看得清一行。
+第三条，句子里全是形容词。说"很划算"不如说"便宜了三十块"。
+第四条，结尾没有动作。你不告诉他去哪，他就去哪了。
+第五条，一条视频讲五件事，等于一件没讲。
+挑一条你的片子，用这五条对一遍，你会发现问题一眼就能看出来。`,
+  },
+  {
+    title: '财税：小规模纳税人别乱开票',
+    industry: '通用',
+    text: `小规模纳税人，最容易在开票上吃亏。
+第一，别以为免税就不用管。免税有额度，超了就要交。
+第二，专票和普票不是一回事。开了专票，那一部分通常不能免。
+第三，季度末集中开票最容易踩线。平时不开，最后一周猛开，风险最高。
+第四，进项票要留好。该抵的不抵，等于自己多交钱。
+第五，别用个人卡收货款。流水对不上，解释起来很麻烦。
+把你的开票情况发我，我帮你看看有没有踩线。`,
+  },
+];
+
+const DEMO = `想开一家小店，你最怕的是什么？不是没客人，是钱投进去，三个月就撑不住。
 今天讲三个数，你记下来再去谈加盟。
 第一个数，前期总投入。加盟费、保证金、装修、设备、首批物料，加起来才是真数。
 第二个数，回本周期。总部说八个月，你就按十二个月算，多出来的四个月是你的活路。
@@ -122,6 +191,11 @@ export default function Studio() {
   const [music, setMusic] = useState(true);
   const [voice, setVoice] = useState(VOICES[0].id);
   const [bgm, setBgm] = useState('');
+  const [srcMode, setSrcMode] = useState<'paste' | 'ai' | 'lib'>('paste');
+  const [topic, setTopic] = useState('');
+  const [industry, setIndustry] = useState('餐饮加盟');
+  const [writing, setWriting] = useState(false);
+  const [writeMsg, setWriteMsg] = useState('');
   const [menu, setMenu] = useState(false);
   const [stage, setStage] = useState('');
   const [pct, setPct] = useState(0);
@@ -167,11 +241,21 @@ export default function Studio() {
 
   const chars = text.trim().length;
   const est = Math.max(0, Math.round(chars / 4.6));
+  const [order, setOrder] = useState<number[]>([]);
+  const dragFrom = useRef<number | null>(null);
+
   const scenes = useMemo(() => {
     if (plan?.length) return plan.map((b) => ({ text: b.text, duration: Math.max(1.4, Math.round(b.text.length / 4.6)) }));
     return draftScenes(text);
   }, [plan, text]);
-  const totalDur = scenes.reduce((n, s) => n + s.duration, 0) || 1;
+
+  // 顺序：默认按稿子来；用户拖动剪辑块后按 order 排
+  useEffect(() => {
+    setOrder(scenes.map((_, i) => i));
+  }, [scenes.length]);
+
+  const ordered = order.length === scenes.length ? order.map((i) => scenes[i]) : scenes;
+  const totalDur = ordered.reduce((n, s) => n + s.duration, 0) || 1;
   const playable = dur || totalDur;
 
   async function doAuth() {
@@ -198,10 +282,12 @@ export default function Studio() {
     const theme = choice === 'auto' ? pickTheme(src) : choice;
     try {
       setStage('拆稿');
-      const plan = await planScript(src);
-      setPlan(plan);
+      const planned = await planScript(src);
+      setPlan(planned);
+      // 用户拖过顺序：按当前 order 重排后再渲染
+      const orderedPlan = order.length === planned.length ? order.map((i) => planned[i]) : planned;
       const title = src.split(/[。！？\n]/)[0].slice(0, 14);
-      const blob = await renderVideo(plan, theme, title, ({ stage: s, percent }) => {
+      const blob = await renderVideo(orderedPlan, theme, title, ({ stage: s, percent }) => {
         setStage(s); setPct(percent);
       }, broll, music, voice, bgm);
       setSecs(Math.round((performance.now() - t0) / 1000));
@@ -209,7 +295,7 @@ export default function Studio() {
       setPct(100);
       setSaveState('saving');
       try {
-        const rec = await createGen({ title, text: src, theme, duration: Math.round(plan.length * 2.5) });
+        const rec = await createGen({ title, text: src, theme, duration: Math.round(planned.length * 2.5) });
         await uploadVideo(rec.id, blob);
         setSaveState('saved');
         await refresh();
@@ -290,7 +376,29 @@ export default function Studio() {
     seekRatio((clientX - rect.left) / rect.width);
   };
 
-  const sceneStart = (i: number) => scenes.slice(0, i).reduce((n, s) => n + s.duration, 0);
+  async function genScript() {
+    const t = topic.trim();
+    if (t.length < 2) { setWriteMsg('先写个主题，比如「加盟回本周期怎么算」'); return; }
+    setWriting(true);
+    setWriteMsg('');
+    try {
+      const res = await fetch('/api/script', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ topic: t, industry }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '写稿失败');
+      setText(data.text);
+      setWriteMsg('写好了 · ' + data.words + ' 字，可以直接改');
+      setSrcMode('paste');
+    } catch (e) {
+      setWriteMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setWriting(false);
+    }
+  }
+
+  const sceneStart = (i: number) => ordered.slice(0, i).reduce((n, s) => n + s.duration, 0);
 
   return (
     <div className="studio">
@@ -343,7 +451,7 @@ export default function Studio() {
         <nav className="rail">
           {([
             ['text', '文案'],
-            ['style', '长相'],
+            ['style', '模板'],
             ['voice', '声音'],
             ['works', '作品'],
           ] as const).map(([id, label]) => (
@@ -400,16 +508,59 @@ export default function Studio() {
 
         <aside className="inspector">
           <div className="ins-head">
-            <b>{tab === 'text' ? '文案' : tab === 'style' ? '长相' : tab === 'voice' ? '声音' : '作品'}</b>
+            <b>{tab === 'text' ? '文案' : tab === 'style' ? '剪辑模板' : tab === 'voice' ? '声音' : '作品'}</b>
             {tab === 'text' ? <button className="tlink" onClick={() => setText(DEMO)}>插入示例</button> : null}
           </div>
 
           {tab === 'text' ? (
             <>
+              <div className="seg">
+                <button className={`seg-b ${srcMode === 'paste' ? 'on' : ''}`} onClick={() => setSrcMode('paste')}>粘贴文案</button>
+                <button className={`seg-b ${srcMode === 'ai' ? 'on' : ''}`} onClick={() => setSrcMode('ai')}>AI 帮我写</button>
+                <button className={`seg-b ${srcMode === 'lib' ? 'on' : ''}`} onClick={() => setSrcMode('lib')}>现成模板</button>
+              </div>
+
+              {srcMode === 'ai' ? (
+                <div className="ai-box">
+                  <input
+                    className="topic"
+                    placeholder="想讲什么？例如：加盟回本周期怎么算"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') void genScript(); }}
+                  />
+                  <div className="ai-row">
+                    <select className="select" value={industry} onChange={(e) => setIndustry(e.target.value)}>
+                      <option value="餐饮加盟">餐饮加盟</option>
+                      <option value="律师/法律服务">律师 / 法律服务</option>
+                      <option value="教培/教育">教培 / 教育</option>
+                      <option value="本地生活">本地生活</option>
+                      <option value="美业/医美">美业 / 医美</option>
+                      <option value="通用">通用</option>
+                    </select>
+                    <button className="primary" onClick={genScript} disabled={writing}>
+                      {writing ? '正在写…' : '写一篇给我'}
+                    </button>
+                  </div>
+                  {writeMsg ? <p className="dim">{writeMsg}</p> : null}
+                </div>
+              ) : null}
+
+              {srcMode === 'lib' ? (
+                <div className="lib">
+                  {PRESETS.map((p) => (
+                    <button key={p.title} className="lib-item" onClick={() => { setText(p.text); setSrcMode('paste'); }}>
+                      <b>{p.title}</b>
+                      <span>{p.industry} · {p.text.length} 字</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder={'把口播稿粘在这里。\n\n想开一家小店，你最怕的是什么？……'}
+                placeholder={'把口播稿粘在这里。\n\n不知道写什么？用上面「AI 帮我写」或「现成模板」。'}
               />
               <div className="meta-row">
                 <span>{chars ? `${chars} 字 · 约 ${est} 秒` : '建议 200~600 字'}</span>
@@ -514,9 +665,9 @@ export default function Studio() {
       <section className="timeline">
         <div className="tl-head">
           <b>时间轴</b>
-          <span>{scenes.length} 个镜头 · 约 {Math.round(url ? playable : totalDur)} 秒</span>
+          <span>{ordered.length} 个镜头 · 约 {Math.round(url ? playable : totalDur)} 秒</span>
           {running ? <span className="tl-run">{stage} {pct}%</span> : null}
-          <span className="tl-tip">点片段跳到那一句</span>
+          <span className="tl-tip">点片段跳到那一句 · 按住拖动可换顺序</span>
         </div>
         <div className="tl-body">
           <div className="tl-lane-label">主背景</div>
@@ -528,9 +679,24 @@ export default function Studio() {
 
           <div className="tl-lane-label">画面</div>
           <div className="tl-lane">
-            {scenes.slice(0, 12).map((s, i) => (
+            {ordered.slice(0, 12).map((s, i) => (
               <button
                 key={i}
+                draggable
+                onDragStart={() => { dragFrom.current = i; }}
+                onDragEnter={() => {
+                  const from = dragFrom.current;
+                  if (from === null || from === i) return;
+                  setOrder((prev) => {
+                    const a = [...prev];
+                    const tmp = a[from];
+                    a[from] = a[i];
+                    a[i] = tmp;
+                    return a;
+                  });
+                  dragFrom.current = i;
+                }}
+                onDragEnd={() => { dragFrom.current = null; }}
                 className={`clip ${selectedScene === i ? 'on' : ''}`}
                 style={{ flexGrow: s.duration }}
                 onClick={() => { setSelectedScene(i); seekRatio(sceneStart(i) / totalDur); }}
@@ -539,12 +705,12 @@ export default function Studio() {
                 <span>{s.text.slice(0, 12)}</span>
               </button>
             ))}
-            {!scenes.length ? <div className="clip empty">等待文案</div> : null}
+            {!ordered.length ? <div className="clip empty">等待文案</div> : null}
           </div>
 
           <div className="tl-lane-label">配音</div>
           <div className="tl-lane">
-            {scenes.slice(0, 12).map((s, i) => (
+            {ordered.slice(0, 12).map((s, i) => (
               <button
                 key={i}
                 className="clip voice"
@@ -555,12 +721,12 @@ export default function Studio() {
                 <span>{VOICES.find((v) => v.id === voice)?.name || '配音'}</span>
               </button>
             ))}
-            {!scenes.length ? <div className="clip empty">—</div> : null}
+            {!ordered.length ? <div className="clip empty">—</div> : null}
           </div>
 
           <div className="tl-lane-label">字幕</div>
           <div className="tl-lane texts">
-            {scenes.slice(0, 12).map((s, i) => (
+            {ordered.slice(0, 12).map((s, i) => (
               <button
                 key={i}
                 className="sub"
@@ -570,7 +736,7 @@ export default function Studio() {
                 {s.text.slice(0, 16)}
               </button>
             ))}
-            {!scenes.length ? <div className="sub empty">—</div> : null}
+            {!ordered.length ? <div className="sub empty">—</div> : null}
           </div>
 
           <div className="tl-lane-label">音乐</div>
@@ -735,7 +901,22 @@ export default function Studio() {
           border: 1px solid var(--line); border-radius: 10px; padding: 14px; font: inherit; font-size: 15px;
           line-height: 1.95; outline: none; }
         textarea:focus { border-color: var(--gold); }
-        .meta-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--dim); }
+        .seg { display: flex; gap: 6px; background: var(--panel-2); padding: 4px; border-radius: 10px; }
+        .seg-b { flex: 1; border: 0; background: none; color: var(--dim); font: inherit; font-size: 14px;
+          padding: 9px 6px; border-radius: 8px; cursor: pointer; }
+        .seg-b.on { background: var(--panel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-2); }
+        .ai-box { display: grid; gap: 8px; }
+        .topic { width: 100%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+          padding: 13px; color: var(--ink); font: inherit; font-size: 15px; outline: none; }
+        .topic:focus { border-color: var(--gold); }
+        .ai-row { display: flex; gap: 8px; }
+        .ai-row .primary { flex: none; padding: 11px 14px; font-size: 14px; }
+        .lib { display: grid; gap: 8px; max-height: 300px; overflow: auto; }
+        .lib-item { text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+          padding: 11px 12px; color: var(--ink); cursor: pointer; display: grid; gap: 3px; }
+        .lib-item:hover { border-color: var(--gold); }
+        .lib-item b { font-size: 14px; }
+        .lib-item span { font-size: 12px; color: var(--dim); }        .meta-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--dim); }
 
         .thumbs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
         .thumb { position: relative; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
@@ -814,6 +995,14 @@ export default function Studio() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
 
 
 

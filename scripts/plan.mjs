@@ -172,3 +172,48 @@ export async function planScript(text, { apiKey, model = 'deepseek-chat' } = {})
 export async function readScript(path) {
   return readFile(path, 'utf8');
 }
+
+/**
+ * 客户只给一个主题，模型写成口播稿。
+ * 目标是"能直接念"的短句、有钩子、有数字、结尾有行动。
+ */
+export async function writeScript(topic, { industry = '通用', apiKey, model = 'deepseek-chat', words = 260 } = {}) {
+  const t = String(topic || '').trim();
+  if (!t) throw new Error('主题是空的');
+  if (!apiKey) throw new Error('服务端没配 DEEPSEEK_API_KEY，暂时不能自动写稿');
+
+  const prompt = [
+    `你给${industry}行业的老板写一条竖屏口播稿。`,
+    `主题：${t}`,
+    `要求：`,
+    `1. 直接输出正文，不要标题、不要解释、不要分点编号。`,
+    `2. 开头一句必须是钩子（提问或反常识），能让人停住。`,
+    `3. 全文 ${words} 字左右，每句一个意思，句子短，适合念出来。`,
+    `4. 至少有一个具体数字或对比，显得可信。`,
+    `5. 结尾一句是行动指令（让对方私信/评论/来店里）。`,
+    `6. 不要"大家好""今天给大家分享"这类废话，不要表情符号。`,
+    `7. 合规：不做绝对化承诺（不写"保证""一定能""稳赚""包过"）。`,
+  ].join('\n');
+
+  const res = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model,
+      temperature: 0.8,
+      messages: [
+        { role: 'system', content: '你是中文短视频口播稿作者，句子短、节奏紧、说人话。' },
+        { role: 'user', content: prompt },
+      ],
+    }),
+    signal: AbortSignal.timeout(120000),
+  });
+  if (!res.ok) throw new Error(`写稿接口 ${res.status}：${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  const text = String(data.choices?.[0]?.message?.content || '').trim();
+  if (!text) throw new Error('模型没写出内容');
+  // 去掉可能出现的 markdown 标记与多余空行
+  const clean = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\n{2,}/g, '\n').trim();
+  return { text: clean, words: clean.length };
+}
+
