@@ -1,0 +1,45 @@
+<view class="page">
+  <view class="head">
+    <text class="brand">GETCUT</text>
+    <text class="slogan">把口播稿粘进来，直接出一条竖屏片</text>
+  </view>
+
+  <view class="editor-wrap">
+    <textarea
+      class="editor"
+      value="{{text}}"
+      placeholder="粘贴你的口播稿。建议 300~1200 字，约 1~4 分钟。"
+      placeholder-class="ph"
+      maxlength="1200"
+      bindinput="onInput"
+      auto-height
+      show-confirm-bar="{{false}}"
+    />
+    <text class="counter">{{counter}}</text>
+  </view>
+
+  <view class="label">选一种长相</view>
+  <scroll-view class="themes" scroll-x enable-flex show-scrollbar="{{false}}">
+    <view
+      wx:for="{{themes}}"
+      wx:key="id"
+      class="theme {{theme === item.id ? 'on' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="pickTheme"
+    >
+      <view class="swatch" style="background: {{item.color}}"></view>
+      <text class="tname">{{item.name}}</text>
+      <text class="tdesc">{{item.desc}}</text>
+    </view>
+  </scroll-view>
+
+  <view class="foot">
+    <button
+      class="go"
+      bindtap="onGenerate"
+      loading="{{submitting}}"
+      disabled="{{submitting || !canGo}}"
+    >{{submitting ? '提交中' : '生成视频'}}</button>
+    <text class="hint">{{hint || '一条 60 秒的片，大约 3~5 分钟'}}</text>
+  </view>
+</view>

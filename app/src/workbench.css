@@ -86,7 +86,7 @@ body {
   transition: opacity var(--base) ease;
 }
 .card img, .card .card-video {
-  width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block;
+  width: 100%; aspect-ratio: 9 / 16; object-fit: cover; display: block;
   border-radius: var(--r); background: var(--surface2);
   opacity: .82; transition: opacity var(--base) ease;
 }
@@ -102,7 +102,7 @@ body {
   background: none; color: var(--dim); border: 0; padding: 6px 0; font: inherit;
   font-size: var(--t-aux); cursor: pointer;
 }
-.chk { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-aux); color: var(--dim); }
+.chk { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-aux); color: var(--dim); white-space: nowrap; flex: none; }
 .chk input { width: 14px; height: 14px; accent-color: var(--accent); }
 .go {
   flex: 1; padding: 14px 20px; border: 0; border-radius: var(--r);
@@ -210,3 +210,5 @@ body {
 .proof video { width: 64px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: var(--r); background: #000; }
 .proof b { display: block; font-size: var(--t-body); font-weight: 500; color: var(--ink); }
 .proof span { font-size: var(--t-aux); color: var(--faint); }
+
+

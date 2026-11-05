@@ -1,4 +1,4 @@
-/* 手机端：与桌面共用同一套令牌（黑/白/灰 + 一个强调色，圆角 8，无阴影，五档字号）。
+﻿/* 手机端：与桌面共用同一套令牌（黑/白/灰 + 一个强调色，圆角 8，无阴影，五档字号）。
    手机上标题用 --t-h2（28），不另造字号。 */
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -44,13 +44,13 @@ body {
 .mseg button.on { color: var(--ink); border-bottom-color: var(--accent); }
 
 .mbox { display: flex; flex-direction: column; gap: 8px; }
-input, select, textarea {
+.m input, .m select, .m textarea, .msheet-body input, .msheet-body select {
   width: 100%; background: var(--surface); color: var(--ink); border: 0; border-radius: var(--r);
   padding: 13px 14px; font: inherit; font-size: var(--t-body); outline: none;
 }
-input:focus, textarea:focus { background: var(--surface2); }
-select { color: var(--dim); font-size: var(--t-aux); }
-textarea { min-height: 180px; line-height: 1.9; resize: vertical; }
+.m input:focus, .m textarea:focus, .msheet-body input:focus { background: var(--surface2); }
+.m select, .msheet-body select { color: var(--dim); font-size: var(--t-aux); }
+.m textarea { min-height: 180px; line-height: 1.9; resize: vertical; }
 
 .mmeta { display: flex; justify-content: space-between; font-size: var(--t-aux); color: var(--faint); }
 .mmeta button { background: none; border: 0; color: var(--dim); font: inherit; font-size: var(--t-aux); }
@@ -93,7 +93,7 @@ textarea { min-height: 180px; line-height: 1.9; resize: vertical; }
 }
 .mcard:active { transform: scale(.98); }
 .mcard img, .mcard .mpreview, .mnothumb {
-  display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover;
+  display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover;
   border-radius: var(--r); background: var(--surface2); opacity: .8;
   transition: opacity var(--base) ease;
 }
@@ -166,3 +166,5 @@ textarea { min-height: 180px; line-height: 1.9; resize: vertical; }
 
 .msheet-body, .mpage, .mgrid { scrollbar-width: none; -ms-overflow-style: none; }
 .msheet-body::-webkit-scrollbar, .mpage::-webkit-scrollbar, .mgrid::-webkit-scrollbar { width: 0; height: 0; }
+
+

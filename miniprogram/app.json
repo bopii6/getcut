@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/result/result"
+  ],
+  "window": {
+    "navigationBarTitleText": "GetCut",
+    "navigationBarBackgroundColor": "#0b0b0a",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#0b0b0a",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

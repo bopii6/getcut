@@ -1,0 +1,20 @@
+{
+  "name": "getcut",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GetCut 微信小程序端：粘文案，云端出竖屏片",
+  "appid": "touristappid",
+  "projectname": "getcut",
+  "libVersion": "3.5.0",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "packNpmManually": false,
+    "ignoreUploadUnusedFiles": true
+  },
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./"
+}

@@ -15,18 +15,18 @@ type Step = 'write' | 'style' | 'run' | 'done';
 
 // 按"这条片子要干什么"组织，不按长相起名。客户先想用途，再挑长相。
 const STYLES: { id: Choice; name: string; hint: string; use: string; thumb?: string }[] = [
-  { id: 'poster', name: '冲击大字', hint: '一屏一句，最抓人', use: '开场抛痛点', thumb: 'style-thumbs/poster.jpg' },
-  { id: 'marker', name: '白板讲解', hint: '手写框 + 步骤卡', use: '讲方法 / 步骤', thumb: 'style-thumbs/marker.jpg?v=2' },
-  { id: 'dashboard', name: '数据说服', hint: '巨数字 + 对比', use: '算账 / 讲回报', thumb: 'style-thumbs/dashboard.jpg' },
-  { id: 'magazine', name: '杂志访谈', hint: '暖纸 + 印章红', use: '专业形象', thumb: 'style-thumbs/magazine.jpg' },
+  { id: 'poster', name: '冲击大字', hint: '一屏一句，最抓人', use: '开场抛痛点', thumb: 'style-thumbs/v3-poster.jpg' },
+  { id: 'marker', name: '白板讲解', hint: '手写框 + 步骤卡', use: '讲方法 / 步骤', thumb: 'style-thumbs/v3-marker.jpg' },
+  { id: 'dashboard', name: '数据说服', hint: '巨数字 + 对比', use: '算账 / 讲回报', thumb: 'style-thumbs/v3-dashboard.jpg' },
+  { id: 'magazine', name: '杂志访谈', hint: '暖纸 + 印章红', use: '专业形象', thumb: 'style-thumbs/v3-magazine.jpg' },
 ];
 
 // 每个风格配一段 3 秒动效，选中即播，客户不用生成也能看出差别
 const PLAY: { id: string; src: string }[] = [
-  { id: 'poster', src: 'style-previews/poster.mp4' },
-  { id: 'marker', src: 'style-previews/marker.mp4' },
-  { id: 'dashboard', src: 'style-previews/dashboard.mp4' },
-  { id: 'magazine', src: 'style-previews/magazine.mp4' },
+  { id: 'poster', src: 'style-previews/v3-poster.mp4' },
+  { id: 'marker', src: 'style-previews/v3-marker.mp4' },
+  { id: 'dashboard', src: 'style-previews/v3-dashboard.mp4' },
+  { id: 'magazine', src: 'style-previews/v3-magazine.mp4' },
 ];
 
 const VOICES = [
@@ -453,6 +453,7 @@ export default function MobileApp() {
     </div>
   );
 }
+
 
 
 

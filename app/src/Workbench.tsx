@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
@@ -12,10 +12,10 @@ import './workbench.css';
 type Choice = ThemeName | 'auto';
 
 const STYLES: { id: Choice; name: string; use: string; thumb: string; preview?: string }[] = [
-  { id: 'poster', name: '冲击大字', use: '开场抛痛点', thumb: 'style-thumbs/poster.jpg?v=2', preview: 'style-previews/poster.mp4' },
-  { id: 'marker', name: '白板讲解', use: '讲方法步骤', thumb: 'style-thumbs/marker.jpg?v=2', preview: 'style-previews/marker.mp4' },
-  { id: 'dashboard', name: '数据说服', use: '算账讲回报', thumb: 'style-thumbs/dashboard.jpg?v=2', preview: 'style-previews/dashboard.mp4' },
-  { id: 'magazine', name: '杂志访谈', use: '专业形象', thumb: 'style-thumbs/magazine.jpg?v=2', preview: 'style-previews/magazine.mp4' },
+  { id: 'poster', name: '冲击大字', use: '开场抛痛点', thumb: 'style-thumbs/v3-poster.jpg', preview: 'style-previews/v3-poster.mp4' },
+  { id: 'marker', name: '白板讲解', use: '讲方法步骤', thumb: 'style-thumbs/v3-marker.jpg', preview: 'style-previews/v3-marker.mp4' },
+  { id: 'dashboard', name: '数据说服', use: '算账讲回报', thumb: 'style-thumbs/v3-dashboard.jpg', preview: 'style-previews/v3-dashboard.mp4' },
+  { id: 'magazine', name: '杂志访谈', use: '专业形象', thumb: 'style-thumbs/v3-magazine.jpg', preview: 'style-previews/v3-magazine.mp4' },
 ];
 
 const VOICES = [
@@ -437,6 +437,7 @@ export default function Workbench() {
     </div>
   );
 }
+
 
 
 

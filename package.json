@@ -9,6 +9,7 @@
     "render": "node scripts/render.mjs"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.1.0",
     "@remotion/cli": "^4.0.0",
     "@remotion/fonts": "^4.0.540",
     "adm-zip": "^0.5.16",

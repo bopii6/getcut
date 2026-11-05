@@ -1,0 +1,26 @@
+/* 克制的做法：一个强调色、圆角 8、五档字号、没有阴影 */
+page {
+  --bg: #0b0b0a;
+  --surface: #161614;
+  --line: rgba(255, 255, 255, 0.12);
+  --ink: #f2f0ea;
+  --muted: rgba(242, 240, 234, 0.55);
+  --accent: #ffd400;
+  --accent-ink: #0a0906;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 40rpx 40rpx 60rpx;
+  box-sizing: border-box;
+}
+
+button::after {
+  border: none;
+}
