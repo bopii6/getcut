@@ -87,6 +87,7 @@ export async function renderVideo(
     return {
       ...b,
       bg: frames.get(String(i)) || null,
+      audio: v?.buffer,
       duration: v ? Math.max(1.4, v.duration) : 2,
     };
   });
@@ -146,10 +147,13 @@ export async function renderVideo(
   await video.flush();
   video.close();
 
-  // 4. 音轨（配音 + BGM，人声出现时自动压低音乐）
+  // 4. 音轨：按最终时间轴逐段铺，卡片段补静音，保证和画面等长、不跑偏
   onProgress({ stage: '合成音轨', percent: 86 });
   const bgm = useMusic ? await loadMusic(bgmFile || BGM[theme] || BGM.poster) : null;
-  const audioBuf = buildTimeline(voiced, { sampleRate: 48000, channels: 2, bgm });
+  const audioBuf = buildTimeline(
+    timeline.map((b) => ({ duration: b.duration, buffer: b.audio ?? null })),
+    { sampleRate: 48000, channels: 2, bgm },
+  );
   await encodeAudio(audioBuf, (chunk, meta) => muxer.addAudioChunk(chunk, meta), (p) => {
     onProgress({ stage: '音轨编码', percent: 86 + Math.round(p * 12) });
   });
@@ -159,6 +163,7 @@ export async function renderVideo(
   onProgress({ stage: '完成', percent: 100 });
   return new Blob([buffer], { type: 'video/mp4' });
 }
+
 
 
 

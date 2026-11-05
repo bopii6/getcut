@@ -1,4 +1,4 @@
-﻿// 配音：走本机代理（部署时换成 Worker）。拿 mp3 → WebAudio 解码 → 拼成一条音轨。
+// 配音：走本机代理（部署时换成 Worker）。拿 mp3 → WebAudio 解码 → 拼成一条音轨。
 import { api } from './api';
 
 export async function tts(text: string, voice = 'zh-CN-YunxiNeural'): Promise<ArrayBuffer> {
@@ -98,28 +98,30 @@ export async function loadMusic(url: string): Promise<AudioBuffer | null> {
  * - 开头 0.4 秒淡入、结尾 1.2 秒淡出
  */
 export function buildTimeline(
-  voiced: Voiced[],
+  segments: { duration: number; buffer?: AudioBuffer | null }[],
   { sampleRate = 48000, channels = 2, bgm = null, bgmGain = 0.34, duckTo = 0.42 } = {} as {
     sampleRate?: number; channels?: number; bgm?: AudioBuffer | null; bgmGain?: number; duckTo?: number;
   },
 ): AudioBuffer {
-  const total = voiced.reduce((n, v) => n + v.duration, 0);
+  const total = segments.reduce((n, v) => n + v.duration, 0);
   const frames = Math.max(1, Math.ceil(total * sampleRate));
   const buf = new AudioBuffer({ length: frames, numberOfChannels: channels, sampleRate });
 
-  // 1. 配音
+  // 1. 配音（没有音频的段——片头卡、章节卡——留等长静音，保证音画严格同步）
   const voice = new Float32Array(frames);
   const speaking = new Uint8Array(frames);
   let offset = 0;
-  for (const v of voiced) {
+  for (const v of segments) {
     const start = Math.round(offset * sampleRate);
-    const src = v.buffer.getChannelData(0);
-    for (let i = 0; i < src.length && start + i < frames; i++) voice[start + i] = src[i];
-    // 说话区间（前后各留 80ms，避免 BGM 提早抬起）
-    const pad = Math.round(0.08 * sampleRate);
-    const from = Math.max(0, start - pad);
-    const to = Math.min(frames, start + src.length + pad);
-    for (let i = from; i < to; i++) speaking[i] = 1;
+    if (v.buffer) {
+      const src = v.buffer.getChannelData(0);
+      for (let i = 0; i < src.length && start + i < frames; i++) voice[start + i] = src[i];
+      // 说话区间（前后各留 80ms，避免 BGM 提早抬起）
+      const pad = Math.round(0.08 * sampleRate);
+      const from = Math.max(0, start - pad);
+      const to = Math.min(frames, start + src.length + pad);
+      for (let i = from; i < to; i++) speaking[i] = 1;
+    }
     offset += v.duration;
   }
 
