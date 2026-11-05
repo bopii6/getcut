@@ -16,7 +16,6 @@ const STYLES: { id: Choice; name: string; hint: string; use: string; thumb?: str
   { id: 'poster', name: '冲击大字', hint: '一屏一句，最抓人', use: '开场抛痛点', thumb: 'style-thumbs/poster.jpg' },
   { id: 'marker', name: '白板讲解', hint: '手写框 + 步骤卡', use: '讲方法 / 步骤', thumb: 'style-thumbs/marker.jpg?v=2' },
   { id: 'dashboard', name: '数据说服', hint: '巨数字 + 对比', use: '算账 / 讲回报', thumb: 'style-thumbs/dashboard.jpg' },
-  { id: 'newsroom', name: '权威播报', hint: '电视新闻质感', use: '立信任 / 讲案例', thumb: 'style-thumbs/newsroom.jpg' },
   { id: 'magazine', name: '杂志访谈', hint: '暖纸 + 印章红', use: '专业形象', thumb: 'style-thumbs/magazine.jpg' },
 ];
 
@@ -25,7 +24,6 @@ const PLAY: { id: string; src: string }[] = [
   { id: 'poster', src: 'style-previews/poster.mp4' },
   { id: 'marker', src: 'style-previews/marker.mp4' },
   { id: 'dashboard', src: 'style-previews/dashboard.mp4' },
-  { id: 'newsroom', src: 'style-previews/newsroom.mp4' },
   { id: 'magazine', src: 'style-previews/magazine.mp4' },
 ];
 
@@ -42,7 +40,7 @@ const STEPS = ['读稿', '配音', '画帧', '合成', '封装'];
 function pickTheme(text: string): ThemeName {
   if (/\d+\s*(万|元|%|倍)/.test(text) || /(回本|投入|成本|流水)/.test(text)) return 'dashboard';
   if (/(合同|条款|判决|律师|赔偿|仲裁)/.test(text)) return 'magazine';
-  if (/(考试|成绩|孩子|提分|上课|家长)/.test(text)) return 'newsroom';
+  if (/(考试|成绩|孩子|提分|上课|家长)/.test(text)) return 'marker';
   return 'poster';
 }
 
@@ -582,6 +580,7 @@ export default function MobileApp() {
     </div>
   );
 }
+
 
 
 

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { planScript, renderVideo } from './lib/render';
 import type { ThemeName, PlanBeat } from './lib/types';
 import {
@@ -13,7 +13,6 @@ const STYLES: { id: Choice; name: string; use: string; thumb: string; preview?: 
   { id: 'poster', name: '冲击大字', use: '开场抛痛点', thumb: 'style-thumbs/poster.jpg?v=2', preview: 'style-previews/poster.mp4' },
   { id: 'marker', name: '白板讲解', use: '讲方法步骤', thumb: 'style-thumbs/marker.jpg?v=2', preview: 'style-previews/marker.mp4' },
   { id: 'dashboard', name: '数据说服', use: '算账讲回报', thumb: 'style-thumbs/dashboard.jpg?v=2', preview: 'style-previews/dashboard.mp4' },
-  { id: 'newsroom', name: '权威播报', use: '立信任讲案例', thumb: 'style-thumbs/newsroom.jpg?v=2', preview: 'style-previews/newsroom.mp4' },
   { id: 'magazine', name: '杂志访谈', use: '专业形象', thumb: 'style-thumbs/magazine.jpg?v=2', preview: 'style-previews/magazine.mp4' },
 ];
 
@@ -37,7 +36,7 @@ const DEMO = `想开一家小店，你最怕的是什么？不是没客人，是
 function pickTheme(text: string): ThemeName {
   if (/\d+\s*(万|元|%|倍)/.test(text) || /(回本|投入|成本|流水)/.test(text)) return 'dashboard';
   if (/(合同|条款|判决|律师|赔偿|仲裁)/.test(text)) return 'magazine';
-  if (/(考试|成绩|孩子|提分|上课|家长)/.test(text)) return 'newsroom';
+  if (/(考试|成绩|孩子|提分|上课|家长)/.test(text)) return 'marker';
   return 'poster';
 }
 
@@ -279,7 +278,7 @@ export default function Workbench() {
               <input type="checkbox" checked={music} onChange={(e) => setMusic(e.target.checked)} disabled={running} />配乐
             </label>
             <button className="go" onClick={run} disabled={running || empty}>
-              '生成视频'
+              生成视频
             </button>
           </div> : null}
 
@@ -588,6 +587,7 @@ export default function Workbench() {
     </div>
   );
 }
+
 
 
 
